@@ -1,0 +1,48 @@
+[package]
+name = "helios"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Shared core library
+antimony-core = { path = "../antimony-core" }
+
+# Math library (matches too.foo)
+glam = { version = "0.29", features = ["rand"] }
+
+# WASM bindings (matches too.foo exactly)
+wasm-bindgen = "=0.2.93"
+console_error_panic_hook = "0.1"
+
+# WebGPU graphics for 3D sun simulation
+wgpu = { version = "22.1", features = ["webgpu", "webgl"] }
+
+# Async runtime for wgpu
+pollster = "0.3"
+
+[dependencies.web-sys]
+version = "0.3"
+features = [
+    # Canvas features
+    "CanvasRenderingContext2d",
+    "HtmlCanvasElement",
+    # Window/Document features
+    "Document",
+    "Element",
+    "HtmlElement",
+    "Window",
+    "Location",
+    # GPU/WebGPU features
+    "Gpu",
+    "GpuAdapter",
+    "GpuDevice",
+    "GpuCanvasContext",
+    "GpuTextureFormat",
+    # Animation & timing
+    "AnimationEvent",
+    "Performance",
+    # Utility features
+    "console",
+    "HtmlCollection",
+    "DomRect",
+]
