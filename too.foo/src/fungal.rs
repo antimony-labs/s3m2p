@@ -158,6 +158,35 @@ impl FungalNetwork {
         }
     }
 
+    /// Seed at position, checking exclusion zones
+    pub fn seed_at_safe(&mut self, pos: Vec2, exclusion_zones: &[crate::ExclusionZone]) {
+        // Check exclusion zones
+        for zone in exclusion_zones {
+            if pos.distance(zone.center) < zone.radius {
+                return;
+            }
+        }
+        self.seed_at(pos);
+    }
+
+    /// Check if position is in any exclusion zone
+    fn is_in_exclusion(&self, pos: Vec2, exclusion_zones: &[crate::ExclusionZone]) -> bool {
+        for zone in exclusion_zones {
+            if pos.distance(zone.center) < zone.radius {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Count active nodes in a cell for density calculation
+    fn get_cell_density(&self, cell_idx: usize) -> usize {
+        if cell_idx >= self.spatial_grid.len() {
+            return 0;
+        }
+        self.spatial_grid[cell_idx].len()
+    }
+
     fn determine_branch_type(&self, parent_type: BranchType) -> BranchType {
         use rand::Rng;
         let mut rng = rand::thread_rng();
@@ -211,6 +240,13 @@ impl FungalNetwork {
     }
 
     pub fn update(&mut self) {
+        // Call update with empty exclusion zones for backwards compatibility
+        self.update_with_exclusions(&[]);
+    }
+
+    /// Update with exclusion zones - prevents growth in UI areas
+    pub fn update_with_exclusions(&mut self, exclusion_zones: &[crate::ExclusionZone]) {
+        use rand::Rng;
         self.growth_timer += 1.0;
         
         if self.growth_timer % 60.0 == 0.0 {
@@ -228,11 +264,10 @@ impl FungalNetwork {
              }
         }
 
-        // Grow
+        // Grow (avoid exclusion zones)
         let mut new_nodes = Vec::new();
 
         if self.growth_timer % 5.0 == 0.0 {
-            use rand::Rng;
             let mut rng = rand::thread_rng();
             
             for i in 0..limit {
@@ -250,8 +285,10 @@ impl FungalNetwork {
                         let dir = Vec2::new(new_angle.cos(), new_angle.sin());
                         let new_pos = self.nodes[i].pos + dir * GROWTH_DISTANCE;
                         
+                        // Check bounds and exclusion zones
                         if new_pos.x >= 0.0 && new_pos.x <= self.width && new_pos.y >= 0.0 && new_pos.y <= self.height {
-                            if !self.is_space_occupied(new_pos, GROWTH_DISTANCE * 0.8) {
+                            if !self.is_space_occupied(new_pos, GROWTH_DISTANCE * 0.8) 
+                               && !self.is_in_exclusion(new_pos, exclusion_zones) {
                                 let new_type = self.determine_branch_type(parent_type);
                                 new_nodes.push((new_pos, i as u16, new_angle, new_type));
                             }
@@ -265,17 +302,55 @@ impl FungalNetwork {
             self.add_node(pos, Some(parent), angle, b_type);
         }
 
-        // Decay
+        // Decay with density-based acceleration
+        let mut rng = rand::thread_rng();
+        
+        // Count active nodes for culling decision
+        let active_count = self.nodes.iter().filter(|n| n.active).count();
+        let near_capacity = active_count > (MAX_NODES * 8 / 10); // 80% full
+        
         for i in 0..limit {
             if !self.nodes[i].active { continue; }
             
-            self.nodes[i].age += 1.0;
-            if self.nodes[i].age > 3000.0 {
-                self.nodes[i].health -= 0.0005;
+            let pos = self.nodes[i].pos;
+            
+            // Kill nodes in exclusion zones
+            if self.is_in_exclusion(pos, exclusion_zones) {
+                self.nodes[i].active = false;
+                self.nodes[i].health = 0.0;
+                continue;
             }
             
+            self.nodes[i].age += 1.0;
+            
+            // Base age decay
+            if self.nodes[i].age > 2000.0 {
+                self.nodes[i].health -= 0.001;
+            }
+            
+            // Density-based decay: nodes in crowded areas decay faster
+            if let Some(cell_idx) = self.get_cell_index(pos) {
+                let density = self.get_cell_density(cell_idx);
+                if density > 8 {
+                    // High density area - faster decay to prevent trapping
+                    self.nodes[i].health -= 0.005 * (density as f32 / 8.0);
+                }
+            }
+            
+            // Stagnation decay: old nodes that haven't been eaten decay
+            if self.nodes[i].health > 0.85 && self.nodes[i].age > 1500.0 {
+                // Hasn't been interacted with - decay faster
+                self.nodes[i].health -= 0.002;
+            }
+            
+            // Random culling when near capacity
+            if near_capacity && rng.gen::<f32>() < 0.001 {
+                self.nodes[i].health -= 0.1;
+            }
+            
+            // Standard decay for damaged nodes
             if self.nodes[i].health < 0.95 {
-                self.nodes[i].health -= 0.01; 
+                self.nodes[i].health -= 0.008; 
             }
             
             if self.nodes[i].health <= 0.0 {

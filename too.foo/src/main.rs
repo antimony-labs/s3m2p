@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsValue;
-use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement, Document, HtmlElement, Performance};
+use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement, Document, Performance};
 use antimony_core::{
     BoidArena, SpatialGrid, Obstacle, FoodSource, Genome, SimConfig,
     SeasonCycle, PredatorZone, BoidRole, BoidState,
@@ -32,25 +32,59 @@ struct SimulationStats {
     max_generation: u16,
 }
 
-/// Append a log event to the console-log div
+/// Update the single-line console log (replaces content)
 fn log_event(document: &Document, msg: &str, event_class: &str) {
     if let Some(console_log) = document.get_element_by_id("console-log") {
-        if let Ok(p) = document.create_element("p") {
-            p.set_text_content(Some(msg));
-            let _ = p.set_attribute("class", event_class);
-            let _ = console_log.append_child(&p);
+        // Create a span with the message and class
+        let styled_msg = format!("<span class=\"{}\">{}</span>", event_class, msg);
+        console_log.set_inner_html(&styled_msg);
+    }
+}
+
+/// Exclusion zone around UI elements where nothing should spawn/grow
+#[derive(Clone, Copy, Debug)]
+struct ExclusionZone {
+    center: Vec2,
+    radius: f32,
+}
+
+/// Scan DOM for monolith elements and create exclusion zones
+fn scan_exclusion_zones(document: &Document) -> Vec<ExclusionZone> {
+    let mut zones = Vec::new();
+    let elements = document.get_elements_by_class_name("monolith");
+    
+    for i in 0..elements.length() {
+        if let Some(element) = elements.item(i) {
+            let rect = element.get_bounding_client_rect();
+            let center_x = rect.left() as f32 + rect.width() as f32 / 2.0;
+            let center_y = rect.top() as f32 + rect.height() as f32 / 2.0;
+            // Larger exclusion radius to keep things away from icons
+            let radius = (rect.width().max(rect.height()) as f32) / 2.0 + 40.0;
             
-            if let Ok(html_el) = console_log.dyn_into::<HtmlElement>() {
-                html_el.set_scroll_top(html_el.scroll_height());
-            }
+            zones.push(ExclusionZone {
+                center: Vec2::new(center_x, center_y),
+                radius,
+            });
         }
     }
+    zones
+}
+
+/// Check if a position is inside any exclusion zone
+fn is_in_exclusion_zone(pos: Vec2, zones: &[ExclusionZone]) -> bool {
+    for zone in zones {
+        if pos.distance(zone.center) < zone.radius {
+            return true;
+        }
+    }
+    false
 }
 
 struct World {
     arena: BoidArena<ARENA_CAPACITY>,
     grid: SpatialGrid<CELL_CAPACITY>,
     obstacles: Vec<Obstacle>,
+    exclusion_zones: Vec<ExclusionZone>,
     food_sources: Vec<FoodSource>,
     fungal_network: FungalNetwork,
     predators: Vec<PredatorZone>,
@@ -58,7 +92,6 @@ struct World {
     config: SimConfig,
     width: f32,
     height: f32,
-    event_cooldown: f32,
     last_season: &'static str,
 }
 
@@ -197,18 +230,32 @@ fn main() {
 
     let paused = is_paused();
 
-    let w = window.inner_width().unwrap().as_f64().unwrap();
-    let h = window.inner_height().unwrap().as_f64().unwrap();
+    // Get simulation area dimensions (canvas parent, excludes telemetry bar)
+    let sim_area = document.get_element_by_id("simulation-area");
+    let (w, h) = if let Some(area) = &sim_area {
+        let rect = area.get_bounding_client_rect();
+        (rect.width(), rect.height())
+    } else {
+        (window.inner_width().unwrap().as_f64().unwrap(),
+         window.inner_height().unwrap().as_f64().unwrap())
+    };
     canvas.set_width(w as u32);
     canvas.set_height(h as u32);
 
     // Resize handler
     {
         let canvas = canvas.clone();
+        let document_for_closure = document.clone();
         let window_for_closure = window.clone();
         let closure = Closure::wrap(Box::new(move || {
-            let w = window_for_closure.inner_width().unwrap().as_f64().unwrap();
-            let h = window_for_closure.inner_height().unwrap().as_f64().unwrap();
+            let sim_area = document_for_closure.get_element_by_id("simulation-area");
+            let (w, h) = if let Some(area) = &sim_area {
+                let rect = area.get_bounding_client_rect();
+                (rect.width(), rect.height())
+            } else {
+                (window_for_closure.inner_width().unwrap().as_f64().unwrap(),
+                 window_for_closure.inner_height().unwrap().as_f64().unwrap())
+            };
             canvas.set_width(w as u32);
             canvas.set_height(h as u32);
         }) as Box<dyn FnMut()>);
@@ -226,21 +273,32 @@ fn main() {
     let width = w as f32;
     let height = h as f32;
 
-    // Initialize arena with starting population
+    // Get initial exclusion zones around monoliths
+    let exclusion_zones = scan_exclusion_zones(&document);
+
+    // Initialize arena with starting population (avoid exclusion zones)
     let mut arena: BoidArena<ARENA_CAPACITY> = BoidArena::new();
     let mut rng = rand::thread_rng();
     use rand::Rng;
     
     for _ in 0..150 {
-        let pos = Vec2::new(
-            rng.gen_range(0.0..width),
-            rng.gen_range(0.0..height),
-        );
-        let vel = Vec2::new(
-            rng.gen_range(-1.0..1.0),
-            rng.gen_range(-1.0..1.0),
-        );
-        arena.spawn(pos, vel, Genome::random());
+        // Try to spawn outside exclusion zones
+        let mut attempts = 0;
+        loop {
+            let pos = Vec2::new(
+                rng.gen_range(0.0..width),
+                rng.gen_range(0.0..height),
+            );
+            if !is_in_exclusion_zone(pos, &exclusion_zones) || attempts > 10 {
+                let vel = Vec2::new(
+                    rng.gen_range(-1.0..1.0),
+                    rng.gen_range(-1.0..1.0),
+                );
+                arena.spawn(pos, vel, Genome::random());
+                break;
+            }
+            attempts += 1;
+        }
     }
 
     let grid = SpatialGrid::new(width, height, VISION_RADIUS);
@@ -252,7 +310,7 @@ fn main() {
     // Initialize Fungal Network
     let mut fungal_network = FungalNetwork::new(width, height);
     
-    // Initial seeding
+    // Initial seeding (avoid exclusion zones)
     for _ in 0..10 {
         fungal_network.spawn_root();
     }
@@ -265,6 +323,7 @@ fn main() {
         arena,
         grid,
         obstacles,
+        exclusion_zones,
         food_sources,
         fungal_network,
         predators: Vec::new(),
@@ -272,7 +331,6 @@ fn main() {
         config,
         width,
         height,
-        event_cooldown: 0.0,
         last_season: "SPRING",
     }));
 
@@ -280,6 +338,7 @@ fn main() {
     let stat_pop = document.get_element_by_id("stat-pop");
     let stat_gen = document.get_element_by_id("stat-gen");
     let stat_fps = document.get_element_by_id("stat-fps");
+    let stat_season = document.get_element_by_id("stat-season");
 
     let performance: Performance = window.performance().unwrap();
 
@@ -308,9 +367,10 @@ fn main() {
         fps_accumulator += delta;
         fps_frame_count += 1;
         
-        // Rescan DOM obstacles occasionally
+        // Rescan DOM obstacles and exclusion zones occasionally
         if frame_count % 60 == 0 {
             s.obstacles = scan_dom_obstacles(&document_clone);
+            s.exclusion_zones = scan_exclusion_zones(&document_clone);
         }
         
         // Update dashboard every 30 frames
@@ -340,6 +400,11 @@ fn main() {
                 }
                 fps_accumulator = 0.0;
                 fps_frame_count = 0;
+            }
+            
+            // Update season display
+            if let Some(ref el) = stat_season {
+                el.set_text_content(Some(&format!("SEASON: {}", s.season.season_name())));
             }
             
             // Log events
@@ -373,7 +438,8 @@ fn main() {
         let World { 
             arena, 
             grid, 
-            obstacles, 
+            obstacles,
+            exclusion_zones,
             food_sources,
             fungal_network,
             predators,
@@ -402,54 +468,68 @@ fn main() {
             }
         }
         
-        // Update Fungal Network
-        fungal_network.update();
+        // Update Fungal Network with exclusion zones
+        fungal_network.update_with_exclusions(exclusion_zones);
         
-            // Boids interactions with network
-            // 1. Spore Trail: Chance to seed new root at boid pos
-            // 2. Infect / Interact: Boids contacting nodes
+        // Boids interactions with network
+        // 1. Spore Trail: Chance to seed new root at boid pos
+        // 2. Infect / Interact: Boids contacting nodes
+        
+        // Collect interaction results and push forces first to avoid borrow conflicts
+        let mut interactions = Vec::new();
+        let mut push_forces: Vec<(usize, Vec2)> = Vec::new();
+        
+        for idx in arena.iter_alive() {
+            let pos = arena.positions[idx];
+            let role = arena.roles[idx];
             
-            // Collect interaction results first to avoid borrow conflicts
-            // Map (index, InteractionResult, position)
-            let mut interactions = Vec::new();
-            
-            for idx in arena.iter_alive() {
-                let pos = arena.positions[idx];
-                let role = arena.roles[idx];
-                
-                // Seed (Spore) - only herbivores spread spores
-                if role == BoidRole::Herbivore {
-                    use rand::Rng;
-                    let mut rng = rand::thread_rng();
-                    if rng.gen::<f32>() < 0.005 {
-                        fungal_network.seed_at(pos);
-                    }
-                }
-                
-                // Check for interaction - only Herbivores and Scavengers eat fungus
-                if (role == BoidRole::Herbivore || role == BoidRole::Scavenger) && frame_count % 2 == 0 {
-                    let result = fungal_network.interact(pos, BOID_SIZE * 3.0);
-                    if result != InteractionResult::None {
-                        interactions.push((idx, result));
-                    }
+            // Seed (Spore) - only herbivores spread spores, not in exclusion zones
+            if role == BoidRole::Herbivore && !is_in_exclusion_zone(pos, exclusion_zones) {
+                use rand::Rng;
+                let mut rng = rand::thread_rng();
+                if rng.gen::<f32>() < 0.005 {
+                    fungal_network.seed_at_safe(pos, exclusion_zones);
                 }
             }
             
-            // Apply interactions
-            for (idx, result) in interactions {
-                match result {
-                    InteractionResult::Nutrient(amt) => {
-                        arena.energy[idx] = (arena.energy[idx] + amt).min(200.0);
-                    },
-                    InteractionResult::Damage(amt) => {
-                        arena.energy[idx] -= amt;
-                    },
-                    InteractionResult::Death => {
-                        arena.energy[idx] = -100.0; // Ensure death in next sim step
-                    },
-                    InteractionResult::None => {}
+            // Collect push forces from exclusion zones
+            for zone in exclusion_zones.iter() {
+                let dist = pos.distance(zone.center);
+                if dist < zone.radius && dist > 0.001 {
+                    let push = (pos - zone.center).normalize() * 3.0;
+                    push_forces.push((idx, push));
                 }
             }
+            
+            // Check for interaction - only Herbivores and Scavengers eat fungus
+            if (role == BoidRole::Herbivore || role == BoidRole::Scavenger) && frame_count % 2 == 0 {
+                let result = fungal_network.interact(pos, BOID_SIZE * 3.0);
+                if result != InteractionResult::None {
+                    interactions.push((idx, result));
+                }
+            }
+        }
+        
+        // Apply push forces from exclusion zones
+        for (idx, push) in push_forces {
+            arena.velocities[idx] += push;
+        }
+        
+        // Apply interactions
+        for (idx, result) in interactions {
+            match result {
+                InteractionResult::Nutrient(amt) => {
+                    arena.energy[idx] = (arena.energy[idx] + amt).min(200.0);
+                },
+                InteractionResult::Damage(amt) => {
+                    arena.energy[idx] -= amt;
+                },
+                InteractionResult::Death => {
+                    arena.energy[idx] = -100.0; // Ensure death in next sim step
+                },
+                InteractionResult::None => {}
+            }
+        }
 
         // Update predators
         for pred in predators.iter_mut() {

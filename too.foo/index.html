@@ -16,13 +16,33 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            touch-action: none; /* Prevent pull-to-refresh */
+            touch-action: none;
+            background: #0a0a12;
         }
+
+        /* ============================================
+           MAIN LAYOUT: Simulation + Telemetry Bar
+           ============================================ */
+        #app-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        #simulation-area {
+            position: relative;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+        }
+
         canvas {
             display: block;
             width: 100%;
             height: 100%;
         }
+
         #ui-layer {
             position: absolute;
             top: 0;
@@ -34,7 +54,6 @@
 
         /* ============================================
            MONOLITHS - THE USP - Project Links
-           Priority: Maximum visibility & tap targets
            ============================================ */
         .monolith {
             pointer-events: auto;
@@ -47,7 +66,6 @@
             align-items: center;
             justify-content: center;
             text-decoration: none;
-            /* Mobile-first: Large touch targets */
             width: 80px;
             height: 80px;
             -webkit-tap-highlight-color: transparent;
@@ -71,7 +89,6 @@
             transition: opacity 0.2s, color 0.2s, text-shadow 0.2s;
         }
         
-        /* Hover/Active states */
         .monolith:hover,
         .monolith:active {
             transform: translate(-50%, -50%) scale(1.15);
@@ -89,269 +106,219 @@
             text-shadow: 0 0 10px #00ff88, 0 0 20px rgba(0,255,136,0.5);
         }
 
-        /* ============================================
-           MOBILE PORTRAIT (Default - < 480px)
-           Vertical stack, centered
-           ============================================ */
+        /* Mobile Portrait (Default) */
         .pos-helios { top: 25%; left: 50%; }
         .pos-cam    { top: 50%; left: 50%; }
         .pos-ml     { top: 75%; left: 50%; }
         
-        /* ============================================
-           MOBILE LANDSCAPE (< 768px height, wide)
-           Horizontal spread
-           ============================================ */
+        /* Mobile Landscape */
         @media (max-height: 500px) and (min-width: 480px) {
-            .monolith {
-                width: 70px;
-                height: 70px;
-            }
-            .monolith span {
-                font-size: 0.65rem;
-                margin-top: 5px;
-            }
+            .monolith { width: 70px; height: 70px; }
+            .monolith span { font-size: 0.65rem; margin-top: 5px; }
             .pos-helios { top: 50%; left: 20%; }
             .pos-cam    { top: 50%; left: 50%; }
             .pos-ml     { top: 50%; left: 80%; }
         }
 
-        /* ============================================
-           TABLET PORTRAIT (480px - 768px)
-           Diagonal arrangement
-           ============================================ */
+        /* Tablet Portrait */
         @media (min-width: 480px) and (min-height: 501px) {
-            .monolith {
-                width: 100px;
-                height: 100px;
-            }
-            .monolith span {
-                font-size: 0.85rem;
-                margin-top: 10px;
-            }
+            .monolith { width: 100px; height: 100px; }
+            .monolith span { font-size: 0.85rem; margin-top: 10px; }
             .pos-helios { top: 25%; left: 30%; }
             .pos-cam    { top: 50%; left: 50%; }
             .pos-ml     { top: 75%; left: 70%; }
         }
 
-        /* ============================================
-           DESKTOP (>= 768px)
-           Full diagonal spread
-           ============================================ */
+        /* Desktop */
         @media (min-width: 768px) {
-            .monolith {
-                width: 120px;
-                height: 120px;
-            }
-            .monolith span {
-                font-size: 1rem;
-                margin-top: 12px;
-            }
+            .monolith { width: 120px; height: 120px; }
+            .monolith span { font-size: 1rem; margin-top: 12px; }
             .pos-helios { top: 28%; left: 25%; }
             .pos-cam    { top: 50%; left: 50%; }
             .pos-ml     { top: 72%; left: 75%; }
         }
 
-        /* ============================================
-           LARGE DESKTOP (>= 1200px)
-           Even more spread
-           ============================================ */
+        /* Large Desktop */
         @media (min-width: 1200px) {
-            .monolith {
-                width: 140px;
-                height: 140px;
-            }
-            .monolith span {
-                font-size: 1.1rem;
-            }
+            .monolith { width: 140px; height: 140px; }
+            .monolith span { font-size: 1.1rem; }
             .pos-helios { top: 25%; left: 20%; }
             .pos-cam    { top: 50%; left: 50%; }
             .pos-ml     { top: 75%; left: 80%; }
         }
 
         /* ============================================
-           TELEMETRY - Minimal on mobile
+           TELEMETRY BAR - Fixed at bottom
+           Clean area, no simulation
            ============================================ */
-        #telemetry {
-            position: fixed;
-            bottom: 0;
-            left: 0;
+        #telemetry-bar {
+            flex-shrink: 0;
+            height: 44px;
+            background: #050508;
+            border-top: 1px solid rgba(0, 255, 0, 0.15);
             font-family: 'Courier New', Courier, monospace;
-            color: #00ff00;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 4px 8px;
-            border-top-right-radius: 4px;
-            font-size: 0.65rem;
-            letter-spacing: 0.5px;
-            text-shadow: 0 0 5px #00ff00;
-            z-index: 50;
-            pointer-events: auto;
             display: flex;
-            gap: 10px;
-            opacity: 0.8;
+            flex-direction: column;
+            justify-content: center;
+            padding: 0 10px;
+            position: relative;
         }
-        #telemetry span::before {
+
+        /* Row 1: Stats */
+        #stats-row {
+            display: flex;
+            gap: 8px;
+            color: #00ff00;
+            font-size: 0.6rem;
+            letter-spacing: 0.5px;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+            flex-wrap: wrap;
+        }
+        #stats-row span {
+            white-space: nowrap;
+        }
+        #stats-row span::before {
             content: '>';
             margin-right: 3px;
-            opacity: 0.5;
-        }
-        
-        @media (min-width: 768px) {
-            #telemetry {
-                padding: 8px 12px;
-                font-size: 0.8rem;
-                gap: 15px;
-                opacity: 1;
-            }
+            opacity: 0.4;
         }
 
-        /* ============================================
-           SYSTEM INFO - Hidden on small mobile
-           ============================================ */
-        #system-info {
-            position: fixed;
-            top: 8px;
-            left: 8px;
-            font-family: 'Courier New', Courier, monospace;
-            color: #00ff00;
+        /* Row 2: Console Log (single scrolling line) */
+        #log-row {
+            display: flex;
+            align-items: center;
+            color: #00aa00;
             font-size: 0.55rem;
-            opacity: 0;
-            pointer-events: none;
-            text-shadow: 0 0 2px #00ff00;
-            z-index: 50;
-            transition: opacity 0.3s;
-        }
-        #system-info div {
-            margin-bottom: 1px;
-        }
-        #system-info div::before {
-            content: '>';
-            margin-right: 4px;
-            opacity: 0.5;
-        }
-        
-        /* Show system info on larger screens */
-        @media (min-width: 600px) and (min-height: 400px) {
-            #system-info {
-                opacity: 0.6;
-                font-size: 0.6rem;
-            }
-        }
-        @media (min-width: 768px) {
-            #system-info {
-                opacity: 0.7;
-                font-size: 0.7rem;
-                top: 10px;
-                left: 10px;
-            }
-        }
-
-        /* ============================================
-           CONSOLE LOG - Compact on mobile
-           ============================================ */
-        #console-log {
-            position: fixed;
-            top: 0;
-            right: 0;
-            width: 180px;
-            max-height: 60px;
-            overflow-y: hidden;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.55rem;
-            color: #00ff00;
-            background: rgba(0, 0, 0, 0.5);
-            opacity: 0.7;
-            padding: 5px 8px;
-            border-bottom-left-radius: 4px;
-            z-index: 50;
-            pointer-events: none;
-            text-shadow: 0 0 3px #00ff00;
-        }
-        #console-log p {
-            margin: 0 0 2px 0;
-            padding: 0;
-            white-space: nowrap;
+            opacity: 0.8;
             overflow: hidden;
+            white-space: nowrap;
             text-overflow: ellipsis;
+            margin-top: 2px;
         }
-        #console-log p::before {
-            content: '• ';
+        #log-row::before {
+            content: '[LOG]';
+            margin-right: 6px;
             opacity: 0.5;
+            flex-shrink: 0;
+        }
+        #console-log {
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
         }
         #console-log .event-birth { color: #00ffaa; }
         #console-log .event-death { color: #ff6666; }
         #console-log .event-record { color: #ffff00; }
 
-        /* Landscape mobile - move console to bottom right */
-        @media (max-height: 500px) and (min-width: 480px) {
-            #console-log {
-                top: auto;
-                bottom: 0;
-                right: 0;
-                max-height: 50px;
-                width: 200px;
-                border-bottom-left-radius: 0;
-                border-top-left-radius: 4px;
+        /* Tech Info - Right side, very subtle */
+        #tech-info {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.5rem;
+            color: #00ff00;
+            opacity: 0.35;
+            text-align: right;
+            transition: opacity 0.3s;
+            pointer-events: auto;
+        }
+        #tech-info:hover {
+            opacity: 0.7;
+        }
+        #tech-info a {
+            color: #00ff00;
+            text-decoration: none;
+            border-bottom: 1px dotted rgba(0, 255, 0, 0.3);
+        }
+        #tech-info a:hover {
+            color: #00ff88;
+            border-bottom-color: rgba(0, 255, 136, 0.5);
+        }
+
+        /* Tablet+ */
+        @media (min-width: 480px) {
+            #telemetry-bar {
+                height: 48px;
+                padding: 0 15px;
+            }
+            #stats-row {
+                font-size: 0.65rem;
+                gap: 12px;
+            }
+            #log-row {
+                font-size: 0.6rem;
+            }
+            #tech-info {
+                font-size: 0.55rem;
             }
         }
 
+        /* Desktop */
         @media (min-width: 768px) {
-            #console-log {
-                top: auto;
-                bottom: 0;
-                width: 280px;
-                max-height: 100px;
-                font-size: 0.7rem;
-                background: rgba(0, 0, 0, 0.75);
-                opacity: 0.9;
-                padding: 8px 10px;
-                border-top-left-radius: 5px;
-                border-bottom-left-radius: 0;
+            #telemetry-bar {
+                height: 52px;
+                padding: 0 20px;
             }
-            #console-log p::before {
-                content: '[LOG] ';
+            #stats-row {
+                font-size: 0.75rem;
+                gap: 20px;
+            }
+            #log-row {
+                font-size: 0.65rem;
+            }
+            #tech-info {
+                font-size: 0.6rem;
+                opacity: 0.4;
             }
         }
 
-        @media (min-width: 1200px) {
-            #console-log {
-                width: 320px;
-                max-height: 120px;
-                font-size: 0.75rem;
+        /* Hide tech stack on very small screens */
+        @media (max-width: 400px) {
+            #tech-info {
+                display: none;
             }
         }
     </style>
 </head>
 <body>
-    <canvas id="simulation"></canvas>
-    <div id="ui-layer">
-        <div id="system-info">
-            <div>STACK: RUST + WASM + CANVAS</div>
-            <div>ALGO: REYNOLDS BOIDS + SPATIAL GRID</div>
-            <div>ARCH: DATA-ORIENTED (SOA) + GLAM</div>
+    <div id="app-container">
+        <!-- Simulation Area -->
+        <div id="simulation-area">
+            <canvas id="simulation"></canvas>
+            <div id="ui-layer">
+                <a href="https://helios.too.foo" class="monolith pos-helios">
+                    <img src="assets/islands/helios.svg" alt="Helios" />
+                    <span>HELIOS</span>
+                </a>
+                <a href="#" class="monolith pos-cam">
+                    <img src="assets/islands/cam.svg" alt="Cam" />
+                    <span>CAM</span>
+                </a>
+                <a href="#" class="monolith pos-ml">
+                    <img src="assets/islands/ml.svg" alt="ML" />
+                    <span>ML</span>
+                </a>
+            </div>
         </div>
 
-        <a href="https://helios.too.foo" class="monolith pos-helios">
-            <img src="assets/islands/helios.svg" alt="Helios" />
-            <span>HELIOS</span>
-        </a>
-        <a href="#" class="monolith pos-cam">
-            <img src="assets/islands/cam.svg" alt="Cam" />
-            <span>CAM</span>
-        </a>
-        <a href="#" class="monolith pos-ml">
-            <img src="assets/islands/ml.svg" alt="ML" />
-            <span>ML</span>
-        </a>
-        
-        <!-- Telemetry Dashboard -->
-        <div id="telemetry">
-            <span id="stat-pop">POP: 0</span>
-            <span id="stat-gen">GEN: 0</span>
-            <span id="stat-fps">FPS: 60</span>
+        <!-- Telemetry Bar - Clean area at bottom -->
+        <div id="telemetry-bar">
+            <div id="stats-row">
+                <span id="stat-pop">POP: 0</span>
+                <span id="stat-gen">GEN: 0</span>
+                <span id="stat-fps">FPS: 60</span>
+                <span id="stat-season">SEASON: SPRING</span>
+            </div>
+            <div id="log-row">
+                <span id="console-log">System initialized...</span>
+            </div>
+            <div id="tech-info">
+                RUST • WASM • CANVAS | BOIDS • SoA • SPATIAL GRID
+                <br>
+                <a href="WHITEPAPER.md" target="_blank">WHITEPAPER</a>
+            </div>
         </div>
-        
-        <!-- Console Log -->
-        <div id="console-log"></div>
     </div>
 </body>
 </html>
