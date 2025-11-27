@@ -28,4 +28,5 @@ features = [
     "DomRect",
     "Performance",
     "CanvasGradient",
+    "ImageData", 
 ]
