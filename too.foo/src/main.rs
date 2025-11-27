@@ -714,8 +714,8 @@ fn main() {
         if let Some(chakravyu) = chakravyu_zone {
             for idx in chakravyu_victims {
                 // EXTREME DRAIN: Kill in < 1 second.
-                // Increased drain to 15.0 per frame to ensure VERY faster death
-                arena.energy[idx] -= 15.0; 
+                // Increased drain to 25.0 per frame to ensure VERY faster death
+                arena.energy[idx] -= 25.0; 
                 
                 // Accelerated death for those deep inside
                 let dist = arena.positions[idx].distance(chakravyu.center);
