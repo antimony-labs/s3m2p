@@ -11,6 +11,9 @@ use antimony_core::{
 };
 use glam::Vec2;
 
+mod fungal;
+use fungal::FungalNetwork;
+
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]
@@ -20,228 +23,13 @@ extern "C" {
 // Fixed capacity - no runtime allocations
 const ARENA_CAPACITY: usize = 1024;
 const CELL_CAPACITY: usize = 32;
-
-// --- Fungal Growth System (Space Colonization / Node Graph) ---
-// Replacing dense grid with vector node graph
-const MAX_NODES: usize = 2000;
-const GROWTH_DISTANCE: f32 = 15.0;
-const KILL_DISTANCE: f32 = 30.0;
-
-#[derive(Clone, Copy)]
-struct FungalNode {
-    pos: Vec2,
-    parent_idx: Option<u16>,
-    health: f32, // 0.0 - 1.0
-    age: f32,
-    active: bool,
-}
-
-impl Default for FungalNode {
-    fn default() -> Self {
-        Self {
-            pos: Vec2::ZERO,
-            parent_idx: None,
-            health: 0.0,
-            age: 0.0,
-            active: false,
-        }
-    }
-}
-
-struct FungalNetwork {
-    nodes: Vec<FungalNode>, // Fixed capacity vec
-    count: usize,
-    width: f32,
-    height: f32,
-    growth_timer: f32,
-}
-
-impl FungalNetwork {
-    fn new(width: f32, height: f32) -> Self {
-        Self {
-            nodes: vec![FungalNode::default(); MAX_NODES],
-            count: 0,
-            width,
-            height,
-            growth_timer: 0.0,
-        }
-    }
-
-    fn resize(&mut self, width: f32, height: f32) {
-        self.width = width;
-        self.height = height;
-    }
-
-    // Randomly spawn a new root in empty space
-    fn spawn_root(&mut self) {
-        if self.count >= MAX_NODES { return; }
-        
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
-        
-        let x = rng.gen_range(0.0..self.width);
-        let y = rng.gen_range(0.0..self.height);
-        
-        // Find free slot
-        let idx = self.count;
-        self.nodes[idx] = FungalNode {
-            pos: Vec2::new(x, y),
-            parent_idx: None,
-            health: 1.0,
-            age: 0.0,
-            active: true,
-        };
-        self.count += 1;
-    }
-
-    // Boids trigger this: "seeding" new growth or "spores"
-    fn seed_at(&mut self, pos: Vec2) {
-        if self.count >= MAX_NODES { return; }
-        
-        // Check proximity to existing nodes to prevent clumping? 
-        // For simple logic, just spawn if random chance passes
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
-        if rng.gen::<f32>() > 0.05 { return; } // 5% chance per frame per boid? Callee handles frequency
-
-        let idx = self.count;
-        self.nodes[idx] = FungalNode {
-            pos,
-            parent_idx: None,
-            health: 1.0,
-            age: 0.0,
-            active: true,
-        };
-        self.count += 1;
-    }
-
-    fn update(&mut self) {
-        self.growth_timer += 1.0;
-        
-        // Random root spawning
-        if self.growth_timer % 60.0 == 0.0 {
-            self.spawn_root();
-        }
-
-        let mut new_nodes = Vec::new(); // Temp buffer for new growth to avoid mutating self.nodes while iterating
-        
-        // Grow tips
-        // Only grow if count < MAX and some time passed
-        if self.count < MAX_NODES && self.growth_timer % 5.0 == 0.0 {
-            use rand::Rng;
-            let mut rng = rand::thread_rng();
-            
-            // Iterate active nodes, try to branch
-            for i in 0..self.count {
-                if !self.nodes[i].active || self.nodes[i].health < 0.5 { continue; }
-                
-                // Random chance to branch based on health
-                if rng.gen::<f32>() < 0.02 {
-                    let angle = rng.gen_range(0.0..std::f32::consts::TAU);
-                    let dir = Vec2::new(angle.cos(), angle.sin());
-                    let new_pos = self.nodes[i].pos + dir * GROWTH_DISTANCE;
-                    
-                    // Check bounds
-                    if new_pos.x < 0.0 || new_pos.x > self.width || new_pos.y < 0.0 || new_pos.y > self.height {
-                        continue;
-                    }
-                    
-                    new_nodes.push(FungalNode {
-                        pos: new_pos,
-                        parent_idx: Some(i as u16),
-                        health: 1.0,
-                        age: 0.0,
-                        active: true,
-                    });
-                }
-            }
-        }
-        
-        // Append new nodes
-        for node in new_nodes {
-            if self.count < MAX_NODES {
-                self.nodes[self.count] = node;
-                self.count += 1;
-            }
-        }
-
-        // Decay / Age
-        for i in 0..self.count {
-            if !self.nodes[i].active { continue; }
-            self.nodes[i].age += 1.0;
-            
-            // Natural decay of very old nodes
-            if self.nodes[i].age > 2000.0 {
-                self.nodes[i].health -= 0.001;
-            }
-            
-            if self.nodes[i].health <= 0.0 {
-                self.nodes[i].active = false;
-            }
-        }
-        
-        // TODO: Compact list if too many dead? For now, simple implementation keeps them.
-    }
-
-    // Infection: Boids kill nodes they touch
-    fn infect(&mut self, pos: Vec2, radius: f32) {
-        let radius_sq = radius * radius;
-        
-        for i in 0..self.count {
-            if !self.nodes[i].active { continue; }
-            
-            let dist_sq = self.nodes[i].pos.distance_squared(pos);
-            if dist_sq < radius_sq {
-                // Infection! Rapid decay
-                self.nodes[i].health -= 0.1;
-                // Propagate? Maybe later. Simple cutting for now.
-            }
-        }
-    }
-
-    fn draw(&self, ctx: &CanvasRenderingContext2d) {
-        ctx.set_line_cap("round");
-        
-        // Draw branches
-        for i in 0..self.count {
-            if !self.nodes[i].active { continue; }
-            
-            if let Some(parent_idx) = self.nodes[i].parent_idx {
-                let parent = self.nodes[parent_idx as usize];
-                if parent.active {
-                    let health = self.nodes[i].health;
-                    let alpha = 0.2 + health * 0.6;
-                    let width = 0.5 + health * 2.5;
-                    
-                    // Color shift based on health: Green -> Brown/Grey
-                    let hue = 120.0 * health; // 120=Green, 0=Red/Brown ish
-                    
-                    ctx.set_stroke_style(&JsValue::from_str(&format!("hsla({}, 60%, 50%, {})", hue, alpha)));
-                    ctx.set_line_width(width as f64);
-                    
-                    ctx.begin_path();
-                    ctx.move_to(parent.pos.x as f64, parent.pos.y as f64);
-                    ctx.line_to(self.nodes[i].pos.x as f64, self.nodes[i].pos.y as f64);
-                    ctx.stroke();
-                }
-            } else {
-                // Root node
-                let health = self.nodes[i].health;
-                ctx.set_fill_style(&JsValue::from_str(&format!("hsla(120, 60%, 50%, {})", 0.3 * health)));
-                ctx.begin_path();
-                ctx.arc(self.nodes[i].pos.x as f64, self.nodes[i].pos.y as f64, (2.0 * health) as f64, 0.0, std::f64::consts::TAU).unwrap();
-                ctx.fill();
-            }
-        }
-    }
-}
+const BOID_SIZE: f32 = 6.0;
+const VISION_RADIUS: f32 = 60.0;
 
 /// Simulation state tracking
 struct SimulationStats {
     max_speed_record: f32,
     max_generation: u16,
-    total_births: u64,
-    total_deaths: u64,
 }
 
 /// Append a log event to the console-log div
@@ -264,7 +52,7 @@ struct World {
     grid: SpatialGrid<CELL_CAPACITY>,
     obstacles: Vec<Obstacle>,
     food_sources: Vec<FoodSource>,
-    fungal_network: FungalNetwork, // CHANGED: Replaced FungalGrid
+    fungal_network: FungalNetwork,
     predators: Vec<PredatorZone>,
     season: SeasonCycle,
     config: SimConfig,
@@ -273,9 +61,6 @@ struct World {
     event_cooldown: f32,
     last_season: &'static str,
 }
-
-const BOID_SIZE: f32 = 6.0;
-const VISION_RADIUS: f32 = 60.0;
 
 fn scan_dom_obstacles(document: &Document) -> Vec<Obstacle> {
     let mut obstacles = Vec::new();
@@ -447,8 +232,6 @@ fn main() {
     let mut stats = SimulationStats {
         max_speed_record: 0.0,
         max_generation: 0,
-        total_births: 0,
-        total_deaths: 0,
     };
     
     *g.borrow_mut() = Some(Closure::new(move || {
@@ -599,7 +382,7 @@ fn main() {
         // 3. Feed from food sources (season-affected)
         // Replaced by feeding from fungal network? 
         // For now, let's keep food_sources empty and maybe add logic later to feed from network nodes.
-        // feed_from_sources(arena, food_sources, season);
+        feed_from_sources(arena, food_sources, season);
         
         // Obstacle feeding - still works near monoliths
         let obstacle_feeders: Vec<usize> = (0..ARENA_CAPACITY)
@@ -644,7 +427,44 @@ fn main() {
         ctx.fill_rect(0.0, 0.0, canvas_w as f64, canvas_h as f64);
         
         // Draw Fungal Network
-        fungal_network.draw(&ctx);
+        // Draw logic moved here since it interacts with Canvas context
+        let ctx_ref = &ctx;
+        ctx_ref.set_line_cap("round");
+        
+        // Draw branches
+        for i in 0..fungal_network.count {
+            if !fungal_network.nodes[i].active { continue; }
+            
+            if let Some(parent_idx) = fungal_network.nodes[i].parent_idx {
+                let parent = fungal_network.nodes[parent_idx as usize];
+                if parent.active {
+                    let health = fungal_network.nodes[i].health;
+                    let alpha = 0.2 + health * 0.6;
+                    let width = 0.5 + health * 2.5;
+                    
+                    // Color shift based on health: Green -> Brown/Grey
+                    let hue = 120.0 * health; 
+                    
+                    ctx_ref.set_stroke_style(&JsValue::from_str(&format!("hsla({}, 60%, 50%, {})", hue, alpha)));
+                    ctx_ref.set_line_width(width as f64);
+                    
+                    ctx_ref.begin_path();
+                    ctx_ref.move_to(parent.pos.x as f64, parent.pos.y as f64);
+                    ctx_ref.line_to(fungal_network.nodes[i].pos.x as f64, fungal_network.nodes[i].pos.y as f64);
+                    ctx_ref.stroke();
+                }
+            } else {
+                let health = fungal_network.nodes[i].health;
+                ctx_ref.set_fill_style(&JsValue::from_str(&format!("hsla(120, 60%, 50%, {})", 0.3 * health)));
+                ctx_ref.begin_path();
+                
+                // FIX: Clamp radius to be non-negative to avoid IndexSizeError
+                let radius = (2.0 * health).max(0.0);
+                
+                ctx_ref.arc(fungal_network.nodes[i].pos.x as f64, fungal_network.nodes[i].pos.y as f64, radius as f64, 0.0, std::f64::consts::TAU).unwrap();
+                ctx_ref.fill();
+            }
+        }
         
         // Draw predators
         for pred in &s.predators {
