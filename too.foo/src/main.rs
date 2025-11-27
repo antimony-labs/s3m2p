@@ -14,6 +14,9 @@ use glam::Vec2;
 mod fungal;
 use fungal::{FungalNetwork, InteractionResult};
 
+mod shader;
+use shader::BackgroundEffect;
+
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]
@@ -49,24 +52,40 @@ struct ExclusionZone {
 }
 
 /// Scan DOM for monolith elements and create exclusion zones
+/// Updated for circular layout: creates a large exclusion circle in the center
 fn scan_exclusion_zones(document: &Document) -> Vec<ExclusionZone> {
     let mut zones = Vec::new();
-    let elements = document.get_elements_by_class_name("monolith");
     
-    for i in 0..elements.length() {
-        if let Some(element) = elements.item(i) {
-            let rect = element.get_bounding_client_rect();
-            let center_x = rect.left() as f32 + rect.width() as f32 / 2.0;
-            let center_y = rect.top() as f32 + rect.height() as f32 / 2.0;
-            // Larger exclusion radius to keep things away from icons
-            let radius = (rect.width().max(rect.height()) as f32) / 2.0 + 40.0;
-            
-            zones.push(ExclusionZone {
-                center: Vec2::new(center_x, center_y),
-                radius,
-            });
+    // Center constellation exclusion
+    if let Some(constellation) = document.get_element_by_id("constellation") {
+        let rect = constellation.get_bounding_client_rect();
+        let center_x = rect.left() as f32 + rect.width() as f32 / 2.0;
+        let center_y = rect.top() as f32 + rect.height() as f32 / 2.0;
+        // Radius covers the whole ring + padding
+        let radius = (rect.width().max(rect.height()) as f32) / 2.0 + 20.0;
+        
+        zones.push(ExclusionZone {
+            center: Vec2::new(center_x, center_y),
+            radius,
+        });
+    } else {
+        // Fallback to scanning individual monoliths if constellation not found
+        let elements = document.get_elements_by_class_name("monolith");
+        for i in 0..elements.length() {
+            if let Some(element) = elements.item(i) {
+                let rect = element.get_bounding_client_rect();
+                let center_x = rect.left() as f32 + rect.width() as f32 / 2.0;
+                let center_y = rect.top() as f32 + rect.height() as f32 / 2.0;
+                let radius = (rect.width().max(rect.height()) as f32) / 2.0 + 40.0;
+                
+                zones.push(ExclusionZone {
+                    center: Vec2::new(center_x, center_y),
+                    radius,
+                });
+            }
         }
     }
+    
     zones
 }
 
@@ -87,6 +106,7 @@ struct World {
     exclusion_zones: Vec<ExclusionZone>,
     food_sources: Vec<FoodSource>,
     fungal_network: FungalNetwork,
+    background: BackgroundEffect,
     predators: Vec<PredatorZone>,
     season: SeasonCycle,
     config: SimConfig,
@@ -315,6 +335,9 @@ fn main() {
         fungal_network.spawn_root();
     }
 
+    // Initialize Background Effect
+    let background = BackgroundEffect::new(width as f64, height as f64);
+
     let mut config = SimConfig::default();
     config.reproduction_threshold = 140.0;
     config.base_mortality = 0.00005;
@@ -326,6 +349,7 @@ fn main() {
         exclusion_zones,
         food_sources,
         fungal_network,
+        background,
         predators: Vec::new(),
         season: SeasonCycle::new(),
         config,
@@ -430,6 +454,7 @@ fn main() {
             s.height = canvas_h;
             s.grid.resize(canvas_w, canvas_h);
             s.fungal_network.resize(canvas_w, canvas_h);
+            s.background.resize(canvas_w as f64, canvas_h as f64);
         }
 
         // === SIMULATION STEP ===
@@ -442,6 +467,7 @@ fn main() {
             exclusion_zones,
             food_sources,
             fungal_network,
+            background,
             predators,
             season,
             config, 
@@ -586,9 +612,9 @@ fn main() {
 
         // === RENDERING ===
         
-        // Background
-        ctx.set_fill_style(&JsValue::from_str("#0a0a12"));
-        ctx.fill_rect(0.0, 0.0, canvas_w as f64, canvas_h as f64);
+        // Update background effect
+        background.update(0.016); // Approx 60fps dt
+        background.draw(&ctx);
         
         // Draw Fungal Network
         fungal_network.draw(&ctx);

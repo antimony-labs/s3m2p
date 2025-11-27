@@ -21,7 +21,7 @@
         }
 
         /* ============================================
-           MAIN LAYOUT: Simulation + Telemetry Bar
+           MAIN LAYOUT
            ============================================ */
         #app-container {
             display: flex;
@@ -50,107 +50,230 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         /* ============================================
-           MONOLITHS - THE USP - Project Links
+           CONSTELLATION LAYOUT - Circular Arrangement
            ============================================ */
+        #constellation {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            pointer-events: none;
+        }
+
+        /* Central Fluctuating Text */
+        #center-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Courier New', monospace;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
+            letter-spacing: 2px;
+            text-align: center;
+            z-index: 50;
+            pointer-events: auto;
+            mix-blend-mode: screen;
+            animation: flicker 4s infinite;
+        }
+        
+        @keyframes flicker {
+            0% { opacity: 0.8; text-shadow: 0 0 5px #00ffaa; }
+            5% { opacity: 0.4; text-shadow: 0 0 2px #00ffaa; }
+            10% { opacity: 0.8; text-shadow: 0 0 5px #00ffaa; }
+            50% { opacity: 0.8; text-shadow: 0 0 5px #00ffaa; }
+            52% { opacity: 0.2; text-shadow: 0 0 10px #ff0055; transform: translate(-52%, -48%) skew(10deg); }
+            54% { opacity: 0.8; text-shadow: 0 0 5px #00ffaa; transform: translate(-50%, -50%) skew(0deg); }
+            100% { opacity: 0.8; text-shadow: 0 0 5px #00ffaa; }
+        }
+
+        /* Monolith Icons */
         .monolith {
             pointer-events: auto;
             position: absolute;
-            transition: transform 0.2s ease-out, filter 0.2s;
-            transform: translate(-50%, -50%);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.27), filter 0.3s;
             z-index: 100;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-decoration: none;
-            width: 80px;
-            height: 80px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(2px);
             -webkit-tap-highlight-color: transparent;
+            
+            /* Circular Positioning handled by CSS transforms */
+            top: 50%;
+            left: 50%;
+            margin: -30px 0 0 -30px; /* Center offset */
         }
+        
         .monolith img {
-            width: 100%;
-            height: 100%;
-            filter: drop-shadow(0 0 15px rgba(0,0,0,0.7)) 
-                    drop-shadow(0 0 30px rgba(255,255,255,0.15));
-            transition: filter 0.2s, transform 0.2s;
+            width: 60%;
+            height: 60%;
+            filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));
+            transition: filter 0.2s;
         }
+        
         .monolith span {
-            margin-top: 8px;
+            position: absolute;
+            bottom: -20px;
             font-family: 'Courier New', monospace;
             color: white;
-            font-size: 0.75rem;
+            font-size: 0.6rem;
             font-weight: bold;
-            text-shadow: 0 0 8px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.5);
-            opacity: 0.9;
-            letter-spacing: 2px;
-            transition: opacity 0.2s, color 0.2s, text-shadow 0.2s;
+            text-shadow: 0 0 5px rgba(0,0,0,0.8);
+            opacity: 0;
+            letter-spacing: 1px;
+            transition: opacity 0.3s, transform 0.3s;
+            white-space: nowrap;
+            background: rgba(0,0,0,0.6);
+            padding: 2px 4px;
+            border-radius: 3px;
         }
         
-        .monolith:hover,
-        .monolith:active {
-            transform: translate(-50%, -50%) scale(1.15);
+        .monolith:hover {
+            transform: scale(1.2);
+            border-color: rgba(0, 255, 136, 0.5);
+            background: rgba(0, 20, 10, 0.6);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
             z-index: 200;
         }
-        .monolith:hover img,
-        .monolith:active img {
-            filter: drop-shadow(0 0 25px rgba(255,255,255,0.5)) 
-                    drop-shadow(0 0 50px rgba(0,255,100,0.3));
-        }
-        .monolith:hover span,
-        .monolith:active span {
-            opacity: 1;
-            color: #00ff88;
-            text-shadow: 0 0 10px #00ff88, 0 0 20px rgba(0,255,136,0.5);
-        }
-
-        /* Mobile Portrait (Default) */
-        .pos-helios { top: 25%; left: 50%; }
-        .pos-cam    { top: 50%; left: 50%; }
-        .pos-ml     { top: 75%; left: 50%; }
         
-        /* Mobile Landscape */
-        @media (max-height: 500px) and (min-width: 480px) {
-            .monolith { width: 70px; height: 70px; }
-            .monolith span { font-size: 0.65rem; margin-top: 5px; }
-            .pos-helios { top: 50%; left: 20%; }
-            .pos-cam    { top: 50%; left: 50%; }
-            .pos-ml     { top: 50%; left: 80%; }
+        .monolith:hover img {
+            filter: drop-shadow(0 0 8px rgba(0, 255, 136, 0.8));
+        }
+        
+        .monolith:hover span {
+            opacity: 1;
+            transform: translateY(5px);
+            color: #00ff88;
         }
 
-        /* Tablet Portrait */
-        @media (min-width: 480px) and (min-height: 501px) {
-            .monolith { width: 100px; height: 100px; }
-            .monolith span { font-size: 0.85rem; margin-top: 10px; }
-            .pos-helios { top: 25%; left: 30%; }
-            .pos-cam    { top: 50%; left: 50%; }
-            .pos-ml     { top: 75%; left: 70%; }
-        }
+        /* Positioning 8 items in a circle */
+        /* transform: rotate(DEG) translate(RADIUS) rotate(-DEG) */
+        /* 360 / 8 = 45 degrees per item */
+        
+        /* Item 1: Helios (Top) - 270 deg (-90) */
+        .pos-1 { transform: rotate(270deg) translate(120px) rotate(-270deg); }
+        .monolith.pos-1:hover { transform: rotate(270deg) translate(120px) rotate(-270deg) scale(1.2); }
 
-        /* Desktop */
+        /* Item 2: Cam (Top Right) - 315 deg (-45) */
+        .pos-2 { transform: rotate(315deg) translate(120px) rotate(-315deg); }
+        .monolith.pos-2:hover { transform: rotate(315deg) translate(120px) rotate(-315deg) scale(1.2); }
+
+        /* Item 3: ML (Right) - 0 deg */
+        .pos-3 { transform: rotate(0deg) translate(120px) rotate(0deg); }
+        .monolith.pos-3:hover { transform: rotate(0deg) translate(120px) rotate(0deg) scale(1.2); }
+
+        /* Item 4: Crates (Bottom Right) - 45 deg */
+        .pos-4 { transform: rotate(45deg) translate(120px) rotate(-45deg); }
+        .monolith.pos-4:hover { transform: rotate(45deg) translate(120px) rotate(-45deg) scale(1.2); }
+
+        /* Item 5: About (Bottom) - 90 deg */
+        .pos-5 { transform: rotate(90deg) translate(120px) rotate(-90deg); }
+        .monolith.pos-5:hover { transform: rotate(90deg) translate(120px) rotate(-90deg) scale(1.2); }
+
+        /* Item 6: Sims (Bottom Left) - 135 deg */
+        .pos-6 { transform: rotate(135deg) translate(120px) rotate(-135deg); }
+        .monolith.pos-6:hover { transform: rotate(135deg) translate(120px) rotate(-135deg) scale(1.2); }
+
+        /* Item 7: Blog (Left) - 180 deg */
+        .pos-7 { transform: rotate(180deg) translate(120px) rotate(-180deg); }
+        .monolith.pos-7:hover { transform: rotate(180deg) translate(120px) rotate(-180deg) scale(1.2); }
+
+        /* Item 8: Contact (Top Left) - 225 deg */
+        .pos-8 { transform: rotate(225deg) translate(120px) rotate(-225deg); }
+        .monolith.pos-8:hover { transform: rotate(225deg) translate(120px) rotate(-225deg) scale(1.2); }
+
+
+        /* Responsive Sizing */
         @media (min-width: 768px) {
-            .monolith { width: 120px; height: 120px; }
-            .monolith span { font-size: 1rem; margin-top: 12px; }
-            .pos-helios { top: 28%; left: 25%; }
-            .pos-cam    { top: 50%; left: 50%; }
-            .pos-ml     { top: 72%; left: 75%; }
+            #constellation {
+                width: 450px;
+                height: 450px;
+            }
+            .monolith {
+                width: 70px;
+                height: 70px;
+                margin: -35px 0 0 -35px;
+            }
+            /* Radius = 180px */
+            .pos-1 { transform: rotate(270deg) translate(180px) rotate(-270deg); }
+            .monolith.pos-1:hover { transform: rotate(270deg) translate(180px) rotate(-270deg) scale(1.2); }
+            
+            .pos-2 { transform: rotate(315deg) translate(180px) rotate(-315deg); }
+            .monolith.pos-2:hover { transform: rotate(315deg) translate(180px) rotate(-315deg) scale(1.2); }
+            
+            .pos-3 { transform: rotate(0deg) translate(180px) rotate(0deg); }
+            .monolith.pos-3:hover { transform: rotate(0deg) translate(180px) rotate(0deg) scale(1.2); }
+            
+            .pos-4 { transform: rotate(45deg) translate(180px) rotate(-45deg); }
+            .monolith.pos-4:hover { transform: rotate(45deg) translate(180px) rotate(-45deg) scale(1.2); }
+            
+            .pos-5 { transform: rotate(90deg) translate(180px) rotate(-90deg); }
+            .monolith.pos-5:hover { transform: rotate(90deg) translate(180px) rotate(-90deg) scale(1.2); }
+            
+            .pos-6 { transform: rotate(135deg) translate(180px) rotate(-135deg); }
+            .monolith.pos-6:hover { transform: rotate(135deg) translate(180px) rotate(-135deg) scale(1.2); }
+            
+            .pos-7 { transform: rotate(180deg) translate(180px) rotate(-180deg); }
+            .monolith.pos-7:hover { transform: rotate(180deg) translate(180px) rotate(-180deg) scale(1.2); }
+            
+            .pos-8 { transform: rotate(225deg) translate(180px) rotate(-225deg); }
+            .monolith.pos-8:hover { transform: rotate(225deg) translate(180px) rotate(-225deg) scale(1.2); }
+            
+            #center-text {
+                font-size: 1.5rem;
+            }
         }
 
-        /* Large Desktop */
         @media (min-width: 1200px) {
-            .monolith { width: 140px; height: 140px; }
-            .monolith span { font-size: 1.1rem; }
-            .pos-helios { top: 25%; left: 20%; }
-            .pos-cam    { top: 50%; left: 50%; }
-            .pos-ml     { top: 75%; left: 80%; }
+            #constellation {
+                width: 550px;
+                height: 550px;
+            }
+            .monolith {
+                width: 80px;
+                height: 80px;
+                margin: -40px 0 0 -40px;
+            }
+            /* Radius = 220px */
+            .pos-1 { transform: rotate(270deg) translate(220px) rotate(-270deg); }
+            .monolith.pos-1:hover { transform: rotate(270deg) translate(220px) rotate(-270deg) scale(1.2); }
+            
+            .pos-2 { transform: rotate(315deg) translate(220px) rotate(-315deg); }
+            .monolith.pos-2:hover { transform: rotate(315deg) translate(220px) rotate(-315deg) scale(1.2); }
+            
+            .pos-3 { transform: rotate(0deg) translate(220px) rotate(0deg); }
+            .monolith.pos-3:hover { transform: rotate(0deg) translate(220px) rotate(0deg) scale(1.2); }
+            
+            .pos-4 { transform: rotate(45deg) translate(220px) rotate(-45deg); }
+            .monolith.pos-4:hover { transform: rotate(45deg) translate(220px) rotate(-45deg) scale(1.2); }
+            
+            .pos-5 { transform: rotate(90deg) translate(220px) rotate(-90deg); }
+            .monolith.pos-5:hover { transform: rotate(90deg) translate(220px) rotate(-90deg) scale(1.2); }
+            
+            .pos-6 { transform: rotate(135deg) translate(220px) rotate(-135deg); }
+            .monolith.pos-6:hover { transform: rotate(135deg) translate(220px) rotate(-135deg) scale(1.2); }
+            
+            .pos-7 { transform: rotate(180deg) translate(220px) rotate(-180deg); }
+            .monolith.pos-7:hover { transform: rotate(180deg) translate(220px) rotate(-180deg) scale(1.2); }
+            
+            .pos-8 { transform: rotate(225deg) translate(220px) rotate(-225deg); }
+            .monolith.pos-8:hover { transform: rotate(225deg) translate(220px) rotate(-225deg) scale(1.2); }
         }
 
-        /* ============================================
-           TELEMETRY BAR - Fixed at bottom
-           Clean area, no simulation
-           ============================================ */
+        /* Telemetry Bar */
         #telemetry-bar {
             flex-shrink: 0;
             height: 44px;
@@ -162,9 +285,9 @@
             justify-content: center;
             padding: 0 10px;
             position: relative;
+            z-index: 1000;
         }
 
-        /* Row 1: Stats */
         #stats-row {
             display: flex;
             gap: 8px;
@@ -174,16 +297,12 @@
             text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
             flex-wrap: wrap;
         }
-        #stats-row span {
-            white-space: nowrap;
-        }
         #stats-row span::before {
             content: '>';
             margin-right: 3px;
             opacity: 0.4;
         }
 
-        /* Row 2: Console Log (single scrolling line) */
         #log-row {
             display: flex;
             align-items: center;
@@ -210,7 +329,6 @@
         #console-log .event-death { color: #ff6666; }
         #console-log .event-record { color: #ffff00; }
 
-        /* Tech Info - Right side, very subtle */
         #tech-info {
             position: absolute;
             right: 10px;
@@ -231,78 +349,65 @@
             text-decoration: none;
             border-bottom: 1px dotted rgba(0, 255, 0, 0.3);
         }
-        #tech-info a:hover {
-            color: #00ff88;
-            border-bottom-color: rgba(0, 255, 136, 0.5);
-        }
 
-        /* Tablet+ */
-        @media (min-width: 480px) {
-            #telemetry-bar {
-                height: 48px;
-                padding: 0 15px;
-            }
-            #stats-row {
-                font-size: 0.65rem;
-                gap: 12px;
-            }
-            #log-row {
-                font-size: 0.6rem;
-            }
-            #tech-info {
-                font-size: 0.55rem;
-            }
-        }
-
-        /* Desktop */
         @media (min-width: 768px) {
-            #telemetry-bar {
-                height: 52px;
-                padding: 0 20px;
-            }
-            #stats-row {
-                font-size: 0.75rem;
-                gap: 20px;
-            }
-            #log-row {
-                font-size: 0.65rem;
-            }
-            #tech-info {
-                font-size: 0.6rem;
-                opacity: 0.4;
-            }
+            #telemetry-bar { height: 52px; padding: 0 20px; }
+            #stats-row { font-size: 0.75rem; gap: 20px; }
+            #log-row { font-size: 0.65rem; }
+            #tech-info { font-size: 0.6rem; opacity: 0.4; }
         }
-
-        /* Hide tech stack on very small screens */
         @media (max-width: 400px) {
-            #tech-info {
-                display: none;
-            }
+            #tech-info { display: none; }
         }
     </style>
 </head>
 <body>
     <div id="app-container">
-        <!-- Simulation Area -->
         <div id="simulation-area">
             <canvas id="simulation"></canvas>
             <div id="ui-layer">
-                <a href="https://helios.too.foo" class="monolith pos-helios">
-                    <img src="assets/islands/helios.svg" alt="Helios" />
-                    <span>HELIOS</span>
-                </a>
-                <a href="#" class="monolith pos-cam">
-                    <img src="assets/islands/cam.svg" alt="Cam" />
-                    <span>CAM</span>
-                </a>
-                <a href="#" class="monolith pos-ml">
-                    <img src="assets/islands/ml.svg" alt="ML" />
-                    <span>ML</span>
-                </a>
+                <!-- Constellation Layout -->
+                <div id="constellation">
+                    <!-- Central Fluctuating Text -->
+                    <div id="center-text">Sb</div>
+
+                    <!-- 8 Icons Circle -->
+                    <a href="https://helios.too.foo" class="monolith pos-1">
+                        <img src="assets/islands/helios.svg" alt="Helios" />
+                        <span>HELIOS</span>
+                    </a>
+                    <a href="#" class="monolith pos-2">
+                        <img src="assets/islands/cam.svg" alt="Cam" />
+                        <span>CAM</span>
+                    </a>
+                    <a href="#" class="monolith pos-3">
+                        <img src="assets/islands/ml.svg" alt="ML" />
+                        <span>ML</span>
+                    </a>
+                    <a href="#" class="monolith pos-4">
+                        <img src="assets/islands/crates.svg" alt="Crates" />
+                        <span>CRATES</span>
+                    </a>
+                    <a href="#" class="monolith pos-5">
+                        <img src="assets/islands/about.svg" alt="About" />
+                        <span>ABOUT</span>
+                    </a>
+                    <a href="#" class="monolith pos-6">
+                        <img src="assets/islands/sims.svg" alt="Sims" />
+                        <span>SIMS</span>
+                    </a>
+                    <a href="#" class="monolith pos-7">
+                        <img src="assets/islands/blog.svg" alt="Blog" />
+                        <span>BLOG</span>
+                    </a>
+                    <a href="#" class="monolith pos-8">
+                        <img src="assets/islands/contact.svg" alt="Contact" />
+                        <span>CONTACT</span>
+                    </a>
+                </div>
             </div>
         </div>
 
-        <!-- Telemetry Bar - Clean area at bottom -->
         <div id="telemetry-bar">
             <div id="stats-row">
                 <span id="stat-pop">POP: 0</span>
@@ -320,5 +425,22 @@
             </div>
         </div>
     </div>
+
+    <!-- Text Fluctuation Script -->
+    <script>
+        const textElement = document.getElementById('center-text');
+        const words = ['Sb', 'Antimony', 'him', '@at.lazyshivam'];
+        let index = 0;
+        
+        setInterval(() => {
+            index = (index + 1) % words.length;
+            // Glitch effect
+            textElement.style.opacity = 0.1;
+            setTimeout(() => {
+                textElement.innerText = words[index];
+                textElement.style.opacity = 0.8;
+            }, 100);
+        }, 3000);
+    </script>
 </body>
 </html>
