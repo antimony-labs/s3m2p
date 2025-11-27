@@ -6,6 +6,7 @@
     <title>too.foo</title>
     <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" />
     <link data-trunk rel="copy-dir" href="assets" />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -18,6 +19,7 @@
             overflow: hidden;
             touch-action: none;
             background: #0a0a12;
+            font-family: 'IBM Plex Mono', 'Courier New', monospace;
         }
 
         /* ============================================
@@ -65,135 +67,135 @@
             pointer-events: none;
         }
 
-        /* Central Fluctuating Text */
+        /* Central Fluctuating Text - Only Sb / Antimony */
         #center-text {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-family: 'Courier New', monospace;
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 1rem;
-            letter-spacing: 2px;
+            font-family: 'IBM Plex Mono', monospace;
+            color: rgba(0, 255, 170, 0.85);
+            font-size: 1.2rem;
+            font-weight: 500;
+            letter-spacing: 3px;
             text-align: center;
             z-index: 50;
             pointer-events: auto;
-            mix-blend-mode: screen;
-            animation: flicker 4s infinite;
+            text-shadow: 0 0 10px rgba(0, 255, 170, 0.5), 0 0 20px rgba(0, 255, 170, 0.2);
+            animation: subtle-pulse 6s ease-in-out infinite;
         }
         
-        @keyframes flicker {
-            0% { opacity: 0.8; text-shadow: 0 0 5px #00ffaa; }
-            5% { opacity: 0.4; text-shadow: 0 0 2px #00ffaa; }
-            10% { opacity: 0.8; text-shadow: 0 0 5px #00ffaa; }
-            50% { opacity: 0.8; text-shadow: 0 0 5px #00ffaa; }
-            52% { opacity: 0.2; text-shadow: 0 0 10px #ff0055; transform: translate(-52%, -48%) skew(10deg); }
-            54% { opacity: 0.8; text-shadow: 0 0 5px #00ffaa; transform: translate(-50%, -50%) skew(0deg); }
-            100% { opacity: 0.8; text-shadow: 0 0 5px #00ffaa; }
+        @keyframes subtle-pulse {
+            0%, 100% { opacity: 0.85; filter: blur(0px); }
+            50% { opacity: 0.95; filter: blur(0px); }
+            52% { opacity: 0.3; filter: blur(1px); letter-spacing: 5px; }
+            54% { opacity: 0.85; filter: blur(0px); letter-spacing: 3px; }
         }
 
-        /* Monolith Icons */
+        /* Monolith Icons - Helios-quality styling */
         .monolith {
             pointer-events: auto;
             position: absolute;
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.27), filter 0.3s;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.27), filter 0.3s, box-shadow 0.3s;
             z-index: 100;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-decoration: none;
-            width: 60px;
-            height: 60px;
+            width: 64px;
+            height: 64px;
             border-radius: 50%;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(2px);
+            border: 1.5px solid rgba(255, 255, 255, 0.15);
+            background: radial-gradient(circle at 30% 30%, rgba(40, 40, 60, 0.6), rgba(10, 10, 20, 0.8));
+            backdrop-filter: blur(4px);
             -webkit-tap-highlight-color: transparent;
+            box-shadow: 
+                0 0 15px rgba(0, 0, 0, 0.5),
+                inset 0 0 20px rgba(255, 255, 255, 0.03);
             
-            /* Circular Positioning handled by CSS transforms */
             top: 50%;
             left: 50%;
-            margin: -30px 0 0 -30px; /* Center offset */
+            margin: -32px 0 0 -32px;
+        }
+        
+        .monolith::before {
+            content: '';
+            position: absolute;
+            inset: -3px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            pointer-events: none;
         }
         
         .monolith img {
-            width: 60%;
-            height: 60%;
-            filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));
-            transition: filter 0.2s;
+            width: 55%;
+            height: 55%;
+            filter: drop-shadow(0 0 3px rgba(255,255,255,0.4));
+            transition: filter 0.2s, transform 0.2s;
         }
         
         .monolith span {
             position: absolute;
-            bottom: -20px;
-            font-family: 'Courier New', monospace;
-            color: white;
-            font-size: 0.6rem;
-            font-weight: bold;
-            text-shadow: 0 0 5px rgba(0,0,0,0.8);
+            bottom: -22px;
+            font-family: 'IBM Plex Mono', monospace;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.55rem;
+            font-weight: 500;
+            text-shadow: 0 0 8px rgba(0,0,0,0.9);
             opacity: 0;
-            letter-spacing: 1px;
+            letter-spacing: 1.5px;
             transition: opacity 0.3s, transform 0.3s;
             white-space: nowrap;
-            background: rgba(0,0,0,0.6);
-            padding: 2px 4px;
-            border-radius: 3px;
+            text-transform: uppercase;
         }
         
         .monolith:hover {
-            transform: scale(1.2);
-            border-color: rgba(0, 255, 136, 0.5);
-            background: rgba(0, 20, 10, 0.6);
-            box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+            transform: scale(1.15);
+            border-color: rgba(0, 255, 170, 0.4);
+            background: radial-gradient(circle at 30% 30%, rgba(0, 40, 30, 0.7), rgba(0, 15, 10, 0.9));
+            box-shadow: 
+                0 0 25px rgba(0, 255, 170, 0.15),
+                0 0 50px rgba(0, 255, 170, 0.05),
+                inset 0 0 20px rgba(0, 255, 170, 0.05);
             z-index: 200;
         }
         
         .monolith:hover img {
-            filter: drop-shadow(0 0 8px rgba(0, 255, 136, 0.8));
+            filter: drop-shadow(0 0 8px rgba(0, 255, 170, 0.7));
+            transform: scale(1.05);
         }
         
         .monolith:hover span {
             opacity: 1;
-            transform: translateY(5px);
-            color: #00ff88;
+            transform: translateY(3px);
+            color: #00ffaa;
         }
 
-        /* Positioning 8 items in a circle */
-        /* transform: rotate(DEG) translate(RADIUS) rotate(-DEG) */
-        /* 360 / 8 = 45 degrees per item */
-        
-        /* Item 1: Helios (Top) - 270 deg (-90) */
+        /* Positioning 8 items in a circle - 45 degrees apart */
         .pos-1 { transform: rotate(270deg) translate(120px) rotate(-270deg); }
-        .monolith.pos-1:hover { transform: rotate(270deg) translate(120px) rotate(-270deg) scale(1.2); }
+        .monolith.pos-1:hover { transform: rotate(270deg) translate(120px) rotate(-270deg) scale(1.15); }
 
-        /* Item 2: Cam (Top Right) - 315 deg (-45) */
         .pos-2 { transform: rotate(315deg) translate(120px) rotate(-315deg); }
-        .monolith.pos-2:hover { transform: rotate(315deg) translate(120px) rotate(-315deg) scale(1.2); }
+        .monolith.pos-2:hover { transform: rotate(315deg) translate(120px) rotate(-315deg) scale(1.15); }
 
-        /* Item 3: ML (Right) - 0 deg */
         .pos-3 { transform: rotate(0deg) translate(120px) rotate(0deg); }
-        .monolith.pos-3:hover { transform: rotate(0deg) translate(120px) rotate(0deg) scale(1.2); }
+        .monolith.pos-3:hover { transform: rotate(0deg) translate(120px) rotate(0deg) scale(1.15); }
 
-        /* Item 4: Crates (Bottom Right) - 45 deg */
         .pos-4 { transform: rotate(45deg) translate(120px) rotate(-45deg); }
-        .monolith.pos-4:hover { transform: rotate(45deg) translate(120px) rotate(-45deg) scale(1.2); }
+        .monolith.pos-4:hover { transform: rotate(45deg) translate(120px) rotate(-45deg) scale(1.15); }
 
-        /* Item 5: About (Bottom) - 90 deg */
         .pos-5 { transform: rotate(90deg) translate(120px) rotate(-90deg); }
-        .monolith.pos-5:hover { transform: rotate(90deg) translate(120px) rotate(-90deg) scale(1.2); }
+        .monolith.pos-5:hover { transform: rotate(90deg) translate(120px) rotate(-90deg) scale(1.15); }
 
-        /* Item 6: Sims (Bottom Left) - 135 deg */
         .pos-6 { transform: rotate(135deg) translate(120px) rotate(-135deg); }
-        .monolith.pos-6:hover { transform: rotate(135deg) translate(120px) rotate(-135deg) scale(1.2); }
+        .monolith.pos-6:hover { transform: rotate(135deg) translate(120px) rotate(-135deg) scale(1.15); }
 
-        /* Item 7: Blog (Left) - 180 deg */
         .pos-7 { transform: rotate(180deg) translate(120px) rotate(-180deg); }
-        .monolith.pos-7:hover { transform: rotate(180deg) translate(120px) rotate(-180deg) scale(1.2); }
+        .monolith.pos-7:hover { transform: rotate(180deg) translate(120px) rotate(-180deg) scale(1.15); }
 
-        /* Item 8: Contact (Top Left) - 225 deg */
         .pos-8 { transform: rotate(225deg) translate(120px) rotate(-225deg); }
-        .monolith.pos-8:hover { transform: rotate(225deg) translate(120px) rotate(-225deg) scale(1.2); }
+        .monolith.pos-8:hover { transform: rotate(225deg) translate(120px) rotate(-225deg) scale(1.15); }
 
 
         /* Responsive Sizing */
@@ -203,37 +205,29 @@
                 height: 450px;
             }
             .monolith {
-                width: 70px;
-                height: 70px;
-                margin: -35px 0 0 -35px;
+                width: 72px;
+                height: 72px;
+                margin: -36px 0 0 -36px;
             }
-            /* Radius = 180px */
             .pos-1 { transform: rotate(270deg) translate(180px) rotate(-270deg); }
-            .monolith.pos-1:hover { transform: rotate(270deg) translate(180px) rotate(-270deg) scale(1.2); }
-            
+            .monolith.pos-1:hover { transform: rotate(270deg) translate(180px) rotate(-270deg) scale(1.15); }
             .pos-2 { transform: rotate(315deg) translate(180px) rotate(-315deg); }
-            .monolith.pos-2:hover { transform: rotate(315deg) translate(180px) rotate(-315deg) scale(1.2); }
-            
+            .monolith.pos-2:hover { transform: rotate(315deg) translate(180px) rotate(-315deg) scale(1.15); }
             .pos-3 { transform: rotate(0deg) translate(180px) rotate(0deg); }
-            .monolith.pos-3:hover { transform: rotate(0deg) translate(180px) rotate(0deg) scale(1.2); }
-            
+            .monolith.pos-3:hover { transform: rotate(0deg) translate(180px) rotate(0deg) scale(1.15); }
             .pos-4 { transform: rotate(45deg) translate(180px) rotate(-45deg); }
-            .monolith.pos-4:hover { transform: rotate(45deg) translate(180px) rotate(-45deg) scale(1.2); }
-            
+            .monolith.pos-4:hover { transform: rotate(45deg) translate(180px) rotate(-45deg) scale(1.15); }
             .pos-5 { transform: rotate(90deg) translate(180px) rotate(-90deg); }
-            .monolith.pos-5:hover { transform: rotate(90deg) translate(180px) rotate(-90deg) scale(1.2); }
-            
+            .monolith.pos-5:hover { transform: rotate(90deg) translate(180px) rotate(-90deg) scale(1.15); }
             .pos-6 { transform: rotate(135deg) translate(180px) rotate(-135deg); }
-            .monolith.pos-6:hover { transform: rotate(135deg) translate(180px) rotate(-135deg) scale(1.2); }
-            
+            .monolith.pos-6:hover { transform: rotate(135deg) translate(180px) rotate(-135deg) scale(1.15); }
             .pos-7 { transform: rotate(180deg) translate(180px) rotate(-180deg); }
-            .monolith.pos-7:hover { transform: rotate(180deg) translate(180px) rotate(-180deg) scale(1.2); }
-            
+            .monolith.pos-7:hover { transform: rotate(180deg) translate(180px) rotate(-180deg) scale(1.15); }
             .pos-8 { transform: rotate(225deg) translate(180px) rotate(-225deg); }
-            .monolith.pos-8:hover { transform: rotate(225deg) translate(180px) rotate(-225deg) scale(1.2); }
+            .monolith.pos-8:hover { transform: rotate(225deg) translate(180px) rotate(-225deg) scale(1.15); }
             
             #center-text {
-                font-size: 1.5rem;
+                font-size: 1.8rem;
             }
         }
 
@@ -247,68 +241,70 @@
                 height: 80px;
                 margin: -40px 0 0 -40px;
             }
-            /* Radius = 220px */
             .pos-1 { transform: rotate(270deg) translate(220px) rotate(-270deg); }
-            .monolith.pos-1:hover { transform: rotate(270deg) translate(220px) rotate(-270deg) scale(1.2); }
-            
+            .monolith.pos-1:hover { transform: rotate(270deg) translate(220px) rotate(-270deg) scale(1.15); }
             .pos-2 { transform: rotate(315deg) translate(220px) rotate(-315deg); }
-            .monolith.pos-2:hover { transform: rotate(315deg) translate(220px) rotate(-315deg) scale(1.2); }
-            
+            .monolith.pos-2:hover { transform: rotate(315deg) translate(220px) rotate(-315deg) scale(1.15); }
             .pos-3 { transform: rotate(0deg) translate(220px) rotate(0deg); }
-            .monolith.pos-3:hover { transform: rotate(0deg) translate(220px) rotate(0deg) scale(1.2); }
-            
+            .monolith.pos-3:hover { transform: rotate(0deg) translate(220px) rotate(0deg) scale(1.15); }
             .pos-4 { transform: rotate(45deg) translate(220px) rotate(-45deg); }
-            .monolith.pos-4:hover { transform: rotate(45deg) translate(220px) rotate(-45deg) scale(1.2); }
-            
+            .monolith.pos-4:hover { transform: rotate(45deg) translate(220px) rotate(-45deg) scale(1.15); }
             .pos-5 { transform: rotate(90deg) translate(220px) rotate(-90deg); }
-            .monolith.pos-5:hover { transform: rotate(90deg) translate(220px) rotate(-90deg) scale(1.2); }
-            
+            .monolith.pos-5:hover { transform: rotate(90deg) translate(220px) rotate(-90deg) scale(1.15); }
             .pos-6 { transform: rotate(135deg) translate(220px) rotate(-135deg); }
-            .monolith.pos-6:hover { transform: rotate(135deg) translate(220px) rotate(-135deg) scale(1.2); }
-            
+            .monolith.pos-6:hover { transform: rotate(135deg) translate(220px) rotate(-135deg) scale(1.15); }
             .pos-7 { transform: rotate(180deg) translate(220px) rotate(-180deg); }
-            .monolith.pos-7:hover { transform: rotate(180deg) translate(220px) rotate(-180deg) scale(1.2); }
-            
+            .monolith.pos-7:hover { transform: rotate(180deg) translate(220px) rotate(-180deg) scale(1.15); }
             .pos-8 { transform: rotate(225deg) translate(220px) rotate(-225deg); }
-            .monolith.pos-8:hover { transform: rotate(225deg) translate(220px) rotate(-225deg) scale(1.2); }
+            .monolith.pos-8:hover { transform: rotate(225deg) translate(220px) rotate(-225deg) scale(1.15); }
+            
+            #center-text {
+                font-size: 2rem;
+            }
         }
 
-        /* Telemetry Bar */
+        /* ============================================
+           TELEMETRY BAR - Improved Mobile Layout
+           ============================================ */
         #telemetry-bar {
             flex-shrink: 0;
-            height: 44px;
-            background: #050508;
-            border-top: 1px solid rgba(0, 255, 0, 0.15);
-            font-family: 'Courier New', Courier, monospace;
+            height: 48px;
+            background: linear-gradient(180deg, #080810 0%, #050508 100%);
+            border-top: 1px solid rgba(0, 255, 100, 0.12);
+            font-family: 'IBM Plex Mono', monospace;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            padding: 0 10px;
+            padding: 4px 12px;
             position: relative;
             z-index: 1000;
         }
 
         #stats-row {
-            display: flex;
-            gap: 8px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 4px 12px;
             color: #00ff00;
             font-size: 0.6rem;
             letter-spacing: 0.5px;
-            text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
-            flex-wrap: wrap;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.4);
+        }
+        #stats-row span {
+            display: flex;
+            align-items: center;
         }
         #stats-row span::before {
             content: '>';
-            margin-right: 3px;
-            opacity: 0.4;
+            margin-right: 4px;
+            opacity: 0.35;
         }
 
         #log-row {
             display: flex;
             align-items: center;
             color: #00aa00;
-            font-size: 0.55rem;
-            opacity: 0.8;
+            font-size: 0.5rem;
+            opacity: 0.75;
             overflow: hidden;
             white-space: nowrap;
             text-overflow: ellipsis;
@@ -317,7 +313,7 @@
         #log-row::before {
             content: '[LOG]';
             margin-right: 6px;
-            opacity: 0.5;
+            opacity: 0.4;
             flex-shrink: 0;
         }
         #console-log {
@@ -331,33 +327,174 @@
 
         #tech-info {
             position: absolute;
-            right: 10px;
+            right: 12px;
             top: 50%;
             transform: translateY(-50%);
-            font-size: 0.5rem;
+            font-size: 0.45rem;
             color: #00ff00;
-            opacity: 0.35;
+            opacity: 0.3;
             text-align: right;
             transition: opacity 0.3s;
             pointer-events: auto;
+            line-height: 1.4;
         }
         #tech-info:hover {
-            opacity: 0.7;
+            opacity: 0.6;
         }
         #tech-info a {
-            color: #00ff00;
+            color: #00ffaa;
             text-decoration: none;
-            border-bottom: 1px dotted rgba(0, 255, 0, 0.3);
+            border-bottom: 1px dotted rgba(0, 255, 170, 0.3);
+            cursor: pointer;
+        }
+        #tech-info a:hover {
+            border-bottom-color: rgba(0, 255, 170, 0.6);
+        }
+
+        @media (min-width: 600px) {
+            #stats-row {
+                grid-template-columns: repeat(4, auto);
+                justify-content: start;
+                gap: 0 20px;
+            }
         }
 
         @media (min-width: 768px) {
-            #telemetry-bar { height: 52px; padding: 0 20px; }
-            #stats-row { font-size: 0.75rem; gap: 20px; }
-            #log-row { font-size: 0.65rem; }
-            #tech-info { font-size: 0.6rem; opacity: 0.4; }
+            #telemetry-bar { height: 52px; padding: 4px 20px; }
+            #stats-row { font-size: 0.7rem; gap: 0 28px; }
+            #log-row { font-size: 0.6rem; }
+            #tech-info { font-size: 0.55rem; opacity: 0.35; }
         }
-        @media (max-width: 400px) {
+        
+        @media (max-width: 480px) {
             #tech-info { display: none; }
+        }
+
+        /* ============================================
+           WHITEPAPER OVERLAY
+           ============================================ */
+        #whitepaper-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 10000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        #whitepaper-overlay.visible {
+            display: flex;
+            opacity: 1;
+        }
+
+        #whitepaper-panel {
+            background: linear-gradient(180deg, #0d0d14 0%, #080810 100%);
+            border: 1px solid rgba(0, 255, 170, 0.15);
+            border-radius: 8px;
+            max-width: 720px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 40px 48px;
+            position: relative;
+            box-shadow: 
+                0 0 60px rgba(0, 0, 0, 0.8),
+                0 0 30px rgba(0, 255, 170, 0.05);
+        }
+
+        #whitepaper-close {
+            position: absolute;
+            top: 16px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.2s;
+            font-family: sans-serif;
+        }
+        #whitepaper-close:hover {
+            color: #00ffaa;
+        }
+
+        #whitepaper-content {
+            font-family: 'Crimson Pro', Georgia, serif;
+            color: rgba(255, 255, 255, 0.88);
+            font-size: 1.05rem;
+            line-height: 1.75;
+        }
+        #whitepaper-content h1 {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #00ffaa;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+        #whitepaper-content h2 {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: rgba(0, 255, 170, 0.85);
+            margin: 32px 0 12px 0;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(0, 255, 170, 0.15);
+        }
+        #whitepaper-content h3 {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.7);
+            margin: 24px 0 8px 0;
+        }
+        #whitepaper-content p {
+            margin: 12px 0;
+            text-align: justify;
+        }
+        #whitepaper-content ul {
+            margin: 12px 0 12px 24px;
+        }
+        #whitepaper-content li {
+            margin: 6px 0;
+        }
+        #whitepaper-content strong {
+            color: #00ffaa;
+            font-weight: 600;
+        }
+        #whitepaper-content code {
+            font-family: 'IBM Plex Mono', monospace;
+            background: rgba(0, 255, 170, 0.08);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9em;
+            color: #00ffaa;
+        }
+        #whitepaper-content hr {
+            border: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin: 32px 0;
+        }
+        #whitepaper-content em {
+            font-style: italic;
+            opacity: 0.8;
+        }
+
+        @media (max-width: 600px) {
+            #whitepaper-panel {
+                padding: 28px 24px;
+                max-height: 90vh;
+            }
+            #whitepaper-content {
+                font-size: 0.95rem;
+            }
+            #whitepaper-content h1 {
+                font-size: 1.3rem;
+            }
         }
     </style>
 </head>
@@ -368,13 +505,13 @@
             <div id="ui-layer">
                 <!-- Constellation Layout -->
                 <div id="constellation">
-                    <!-- Central Fluctuating Text -->
+                    <!-- Central Fluctuating Text - Only Sb / Antimony -->
                     <div id="center-text">Sb</div>
 
                     <!-- 8 Icons Circle -->
                     <a href="https://helios.too.foo" class="monolith pos-1">
                         <img src="assets/islands/helios.svg" alt="Helios" />
-                        <span>HELIOS</span>
+                        <span>Helios</span>
                     </a>
                     <a href="#" class="monolith pos-2">
                         <img src="assets/islands/cam.svg" alt="Cam" />
@@ -386,23 +523,23 @@
                     </a>
                     <a href="#" class="monolith pos-4">
                         <img src="assets/islands/crates.svg" alt="Crates" />
-                        <span>CRATES</span>
+                        <span>Crates</span>
                     </a>
                     <a href="#" class="monolith pos-5">
                         <img src="assets/islands/about.svg" alt="About" />
-                        <span>ABOUT</span>
+                        <span>About</span>
                     </a>
                     <a href="#" class="monolith pos-6">
                         <img src="assets/islands/sims.svg" alt="Sims" />
-                        <span>SIMS</span>
+                        <span>Sims</span>
                     </a>
                     <a href="#" class="monolith pos-7">
                         <img src="assets/islands/blog.svg" alt="Blog" />
-                        <span>BLOG</span>
+                        <span>Blog</span>
                     </a>
                     <a href="#" class="monolith pos-8">
                         <img src="assets/islands/contact.svg" alt="Contact" />
-                        <span>CONTACT</span>
+                        <span>Contact</span>
                     </a>
                 </div>
             </div>
@@ -413,34 +550,130 @@
                 <span id="stat-pop">POP: 0</span>
                 <span id="stat-gen">GEN: 0</span>
                 <span id="stat-fps">FPS: 60</span>
-                <span id="stat-season">SEASON: SPRING</span>
+                <span id="stat-season">SPRING</span>
             </div>
             <div id="log-row">
                 <span id="console-log">System initialized...</span>
             </div>
             <div id="tech-info">
-                RUST • WASM • CANVAS | BOIDS • SoA • SPATIAL GRID
-                <br>
-                <a href="WHITEPAPER.md" target="_blank">WHITEPAPER</a>
+                RUST • WASM • CANVAS<br>
+                BOIDS • SoA • SPATIAL GRID<br>
+                <a id="whitepaper-link">WHITEPAPER</a>
             </div>
         </div>
     </div>
 
-    <!-- Text Fluctuation Script -->
+    <!-- Whitepaper Overlay -->
+    <div id="whitepaper-overlay">
+        <div id="whitepaper-panel">
+            <button id="whitepaper-close">&times;</button>
+            <div id="whitepaper-content">
+                <h1>TOO.FOO: The Infinite Resolution Engine</h1>
+                
+                <h2>Abstract</h2>
+                <p>Too.foo is a research-grade platform dedicated to the next generation of internet architecture: <strong>Data-Driven Rendering</strong>. We believe the future of the web lies not in static assets or client-side processing, but in the seamless streaming of massive, server-processed datasets that are rendered instantly on the client.</p>
+                
+                <h2>Mission</h2>
+                <p>To build the infrastructure for "Infinite Resolution" simulations. We aim to decouple simulation complexity from rendering latency. Whether it's a galaxy-scale simulation or a molecular dynamics model, the user should experience it in real-time, limited only by bandwidth and display resolution, not by local compute power.</p>
+                
+                <h2>Architecture: The Spatial Streaming Protocol</h2>
+                
+                <h3>1. Server-Side Heavy Lifting</h3>
+                <p>Instead of running physics or LLM inference on the user's device, we utilize powerful GPU clusters in data centers.</p>
+                <ul>
+                    <li><strong>Simulation</strong>: Rust-based physics engines (Antimony Core) run continuous simulations (N-body, Fluid Dynamics, Plasma).</li>
+                    <li><strong>Spatial Indexing</strong>: Data is dynamically indexed into a <strong>Cube Sphere Quadtree</strong> (Spherical Coordinate System).</li>
+                    <li><strong>Storage</strong>: Processed chunks are stored in a high-performance binary format, indexed by <code>(Face, Level, X, Y)</code>.</li>
+                </ul>
+                
+                <h3>2. The Retrieval Engine (Antimony Core)</h3>
+                <p>The core library (<code>antimony-core</code>) implements a sophisticated caching and retrieval logic:</p>
+                <ul>
+                    <li><strong>LOD (Level of Detail)</strong>: The client requests data based on its camera position and Field of View (FOV).</li>
+                    <li><strong>Frustum Culling</strong>: Only chunks visible to the user are fetched.</li>
+                    <li><strong>Predictive Prefetching</strong>: The engine anticipates user movement to stream data before it's needed.</li>
+                </ul>
+                
+                <h3>3. Client-Side Rendering (Helios)</h3>
+                <p>The frontend (<code>helios.too.foo</code>) is a lightweight WASM + WebGPU application.</p>
+                <ul>
+                    <li><strong>Zero-Copy Rendering</strong>: Binary data from the server is mapped directly to GPU buffers.</li>
+                    <li><strong>Compute Shaders</strong>: Final visual effects (bloom, trails) are applied locally.</li>
+                </ul>
+                
+                <h2>Projects</h2>
+                
+                <h3>HELIOS (helios.too.foo)</h3>
+                <p>A sun-centric simulation of the heliosphere.</p>
+                <ul>
+                    <li><strong>Scale</strong>: From the solar surface to the termination shock (100+ AU).</li>
+                    <li><strong>Data</strong>: Real-time streaming of solar wind plasma density, magnetic fields, and stellar positions.</li>
+                    <li><strong>Tech</strong>: Rust, WebGPU, Antimony Spatial Store.</li>
+                </ul>
+                
+                <h3>CAM</h3>
+                <p>[Coming Soon] A camera-first interface for exploring latent spaces in generative models.</p>
+                
+                <h3>ML</h3>
+                <p>[Coming Soon] Machine learning integration for predictive simulation steering.</p>
+                
+                <h2>Technology Stack</h2>
+                <ul>
+                    <li><strong>Language</strong>: Rust (Server &amp; Client via WASM)</li>
+                    <li><strong>Graphics</strong>: WebGPU (wgpu)</li>
+                    <li><strong>Network</strong>: HTTP/3, WebSocket, Custom Binary Protocol</li>
+                    <li><strong>Compute</strong>: CUDA / WGPU Compute Shaders</li>
+                </ul>
+                
+                <hr>
+                <p><em>Built by Curious. Powered by Rust.</em></p>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // Center text fluctuation - Only Sb and Antimony
         const textElement = document.getElementById('center-text');
-        const words = ['Sb', 'Antimony', 'him', '@at.lazyshivam'];
+        const words = ['Sb', 'Antimony'];
         let index = 0;
         
         setInterval(() => {
             index = (index + 1) % words.length;
-            // Glitch effect
-            textElement.style.opacity = 0.1;
+            textElement.style.opacity = 0.2;
+            textElement.style.filter = 'blur(2px)';
             setTimeout(() => {
                 textElement.innerText = words[index];
-                textElement.style.opacity = 0.8;
-            }, 100);
-        }, 3000);
+                textElement.style.opacity = 0.85;
+                textElement.style.filter = 'blur(0px)';
+            }, 150);
+        }, 5000);
+
+        // Whitepaper overlay
+        const overlay = document.getElementById('whitepaper-overlay');
+        const link = document.getElementById('whitepaper-link');
+        const closeBtn = document.getElementById('whitepaper-close');
+
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            overlay.classList.add('visible');
+        });
+
+        closeBtn.addEventListener('click', () => {
+            overlay.classList.remove('visible');
+        });
+
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                overlay.classList.remove('visible');
+            }
+        });
+
+        // Escape key to close
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && overlay.classList.contains('visible')) {
+                overlay.classList.remove('visible');
+            }
+        });
     </script>
 </body>
 </html>

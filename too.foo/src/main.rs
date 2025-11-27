@@ -7,7 +7,7 @@ use antimony_core::{
     BoidArena, SpatialGrid, Obstacle, FoodSource, Genome, SimConfig,
     SeasonCycle, PredatorZone, BoidRole, BoidState,
     compute_flocking_forces, simulation_step, feed_from_sources, get_boid_color,
-    apply_predator_zones,
+    apply_predator_zones, compute_diversity, trigger_mass_extinction,
 };
 use glam::Vec2;
 
@@ -33,6 +33,16 @@ const VISION_RADIUS: f32 = 60.0;
 struct SimulationStats {
     max_speed_record: f32,
     max_generation: u16,
+    low_diversity_frames: u32,
+}
+
+/// Chakravyu zone - the deadly center where boids can enter but not escape
+#[derive(Clone, Copy, Debug)]
+struct ChakravyuZone {
+    center: Vec2,
+    radius: f32,
+    energy_drain: f32,
+    inward_force: f32,
 }
 
 /// Update the single-line console log (replaces content)
@@ -53,20 +63,31 @@ struct ExclusionZone {
 
 /// Scan DOM for monolith elements and create exclusion zones
 /// Updated for circular layout: creates a large exclusion circle in the center
-fn scan_exclusion_zones(document: &Document) -> Vec<ExclusionZone> {
+fn scan_exclusion_zones(document: &Document) -> (Vec<ExclusionZone>, Option<ChakravyuZone>) {
     let mut zones = Vec::new();
+    let mut chakravyu = None;
     
     // Center constellation exclusion
     if let Some(constellation) = document.get_element_by_id("constellation") {
         let rect = constellation.get_bounding_client_rect();
         let center_x = rect.left() as f32 + rect.width() as f32 / 2.0;
         let center_y = rect.top() as f32 + rect.height() as f32 / 2.0;
-        // Radius covers the whole ring + padding
-        let radius = (rect.width().max(rect.height()) as f32) / 2.0 + 20.0;
+        // Radius covers the whole ring + padding (for fungus exclusion)
+        let outer_radius = (rect.width().max(rect.height()) as f32) / 2.0 + 20.0;
         
         zones.push(ExclusionZone {
             center: Vec2::new(center_x, center_y),
-            radius,
+            radius: outer_radius,
+        });
+        
+        // Chakravyu zone - smaller inner circle where boids get trapped and die
+        // Boids CAN enter but will be pulled inward and drained
+        let chakravyu_radius = outer_radius * 0.7; // Inner deadly zone
+        chakravyu = Some(ChakravyuZone {
+            center: Vec2::new(center_x, center_y),
+            radius: chakravyu_radius,
+            energy_drain: 0.5, // Energy loss per frame inside
+            inward_force: 2.0, // Pull toward center
         });
     } else {
         // Fallback to scanning individual monoliths if constellation not found
@@ -86,7 +107,7 @@ fn scan_exclusion_zones(document: &Document) -> Vec<ExclusionZone> {
         }
     }
     
-    zones
+    (zones, chakravyu)
 }
 
 /// Check if a position is inside any exclusion zone
@@ -104,6 +125,7 @@ struct World {
     grid: SpatialGrid<CELL_CAPACITY>,
     obstacles: Vec<Obstacle>,
     exclusion_zones: Vec<ExclusionZone>,
+    chakravyu: Option<ChakravyuZone>,
     food_sources: Vec<FoodSource>,
     fungal_network: FungalNetwork,
     background: BackgroundEffect,
@@ -293,8 +315,8 @@ fn main() {
     let width = w as f32;
     let height = h as f32;
 
-    // Get initial exclusion zones around monoliths
-    let exclusion_zones = scan_exclusion_zones(&document);
+    // Get initial exclusion zones and chakravyu around monoliths
+    let (exclusion_zones, chakravyu) = scan_exclusion_zones(&document);
 
     // Initialize arena with starting population (avoid exclusion zones)
     let mut arena: BoidArena<ARENA_CAPACITY> = BoidArena::new();
@@ -347,6 +369,7 @@ fn main() {
         grid,
         obstacles,
         exclusion_zones,
+        chakravyu,
         food_sources,
         fungal_network,
         background,
@@ -378,6 +401,7 @@ fn main() {
     let mut stats = SimulationStats {
         max_speed_record: 0.0,
         max_generation: 0,
+        low_diversity_frames: 0,
     };
     
     *g.borrow_mut() = Some(Closure::new(move || {
@@ -394,7 +418,9 @@ fn main() {
         // Rescan DOM obstacles and exclusion zones occasionally
         if frame_count % 60 == 0 {
             s.obstacles = scan_dom_obstacles(&document_clone);
-            s.exclusion_zones = scan_exclusion_zones(&document_clone);
+            let (zones, chakravyu) = scan_exclusion_zones(&document_clone);
+            s.exclusion_zones = zones;
+            s.chakravyu = chakravyu;
         }
         
         // Update dashboard every 30 frames
@@ -465,6 +491,7 @@ fn main() {
             grid, 
             obstacles,
             exclusion_zones,
+            chakravyu,
             food_sources,
             fungal_network,
             background,
@@ -504,6 +531,10 @@ fn main() {
         // Collect interaction results and push forces first to avoid borrow conflicts
         let mut interactions = Vec::new();
         let mut push_forces: Vec<(usize, Vec2)> = Vec::new();
+        let mut chakravyu_victims: Vec<usize> = Vec::new();
+        
+        // Get chakravyu zone info
+        let chakravyu_zone = *chakravyu;
         
         for idx in arena.iter_alive() {
             let pos = arena.positions[idx];
@@ -518,11 +549,27 @@ fn main() {
                 }
             }
             
-            // Collect push forces from exclusion zones
+            // CHAKRAVYU MECHANICS - boids can enter but get pulled in and die
+            // This replaces the outward push for the inner zone
+            if let Some(chakravyu) = chakravyu_zone {
+                let dist = pos.distance(chakravyu.center);
+                if dist < chakravyu.radius && dist > 0.001 {
+                    // Inside the Chakravyu - pull INWARD (toward death)
+                    let inward = (chakravyu.center - pos).normalize() * chakravyu.inward_force;
+                    push_forces.push((idx, inward));
+                    
+                    // Mark for energy drain
+                    chakravyu_victims.push(idx);
+                }
+            }
+            
+            // Only push from exclusion zones for FUNGUS protection (icons)
+            // But NOT for the central area - that's the Chakravyu trap
             for zone in exclusion_zones.iter() {
                 let dist = pos.distance(zone.center);
-                if dist < zone.radius && dist > 0.001 {
-                    let push = (pos - zone.center).normalize() * 3.0;
+                // Only push near the outer edge (icon protection), not deep inside
+                if dist < zone.radius && dist > zone.radius * 0.8 && dist > 0.001 {
+                    let push = (pos - zone.center).normalize() * 1.5;
                     push_forces.push((idx, push));
                 }
             }
@@ -536,9 +583,22 @@ fn main() {
             }
         }
         
-        // Apply push forces from exclusion zones
+        // Apply push forces
         for (idx, push) in push_forces {
             arena.velocities[idx] += push;
+        }
+        
+        // Apply Chakravyu energy drain - rapid death inside the circle
+        if let Some(chakravyu) = chakravyu_zone {
+            for idx in chakravyu_victims {
+                arena.energy[idx] -= chakravyu.energy_drain;
+                // Accelerated death for those deep inside
+                let dist = arena.positions[idx].distance(chakravyu.center);
+                if dist < chakravyu.radius * 0.3 {
+                    // Very close to center - instant death
+                    arena.energy[idx] -= 5.0;
+                }
+            }
         }
         
         // Apply interactions
@@ -609,6 +669,39 @@ fn main() {
         }
         
         let _ = births; // Suppress unused warnings
+        
+        // === MASS EXTINCTION CHECK ===
+        // When diversity collapses, trigger a reset event
+        if frame_count % 60 == 0 && arena.alive_count > 50 {
+            let diversity = compute_diversity(arena);
+            
+            if diversity < 0.25 {
+                stats.low_diversity_frames += 1;
+                
+                // Sustained low diversity triggers extinction
+                if stats.low_diversity_frames > 10 {
+                    log_event(&document_clone, "☄ MASS EXTINCTION - Ecosystem collapsing!", "event-death");
+                    trigger_mass_extinction(arena, 0.8); // Kill 80%
+                    
+                    // Also trim the fungal network
+                    for node in fungal_network.nodes.iter_mut() {
+                        if node.active {
+                            use rand::Rng;
+                            let mut rng = rand::thread_rng();
+                            if rng.gen::<f32>() < 0.5 {
+                                node.active = false;
+                            }
+                        }
+                    }
+                    
+                    stats.low_diversity_frames = 0;
+                    log_event(&document_clone, "🌱 New founders seeded...", "event-birth");
+                }
+            } else {
+                // Reset counter if diversity recovers
+                stats.low_diversity_frames = 0;
+            }
+        }
 
         // === RENDERING ===
         

@@ -553,18 +553,18 @@ pub fn compute_flocking_forces<const CAP: usize, const CELL_CAP: usize>(
                 if let Some(prey_idx) = closest_prey {
                     let diff = arena.positions[prey_idx] - pos;
                     seek_force = diff.normalize() * 2.0;
-                }
+        }
                 force += seek_force;
             }
             BoidState::Forage => {
                 // Wander with slight cohesion to same-species
                 if neighbor_count > 0 {
-                    let mut cohesion = Vec2::ZERO;
-                    let mut separation = Vec2::ZERO;
+        let mut cohesion = Vec2::ZERO;
+        let mut separation = Vec2::ZERO;
                     let mut same_species_count = 0;
-                    
-                    for i in 0..neighbor_count {
-                        let other_idx = neighbors[i] as usize;
+        
+        for i in 0..neighbor_count {
+            let other_idx = neighbors[i] as usize;
                         if arena.roles[other_idx] == role && arena.alive[other_idx] {
                             let diff = arena.positions[other_idx] - pos;
                             let dist = diff.length();
@@ -608,22 +608,22 @@ pub fn compute_flocking_forces<const CAP: usize, const CELL_CAP: usize>(
                         let other_idx = neighbors[i] as usize;
                         if arena.roles[other_idx] == role && arena.alive[other_idx] {
                             let diff = arena.positions[other_idx] - pos;
-                            let dist = diff.length();
-                            
+            let dist = diff.length();
+            
                             cohesion += arena.positions[other_idx];
                             alignment += arena.velocities[other_idx];
-                            if dist > 0.001 {
-                                separation -= diff / dist;
+            if dist > 0.001 {
+                separation -= diff / dist;
                             }
                             same_species_count += 1;
-                        }
-                    }
-                    
+            }
+        }
+        
                     if same_species_count > 0 {
                         let n = same_species_count as f32;
-                        cohesion = cohesion / n - pos;
-                        alignment /= n;
-                        separation /= n;
+        cohesion = cohesion / n - pos;
+        alignment /= n;
+        separation /= n;
                         force += cohesion * 1.0 + alignment * 1.0 + separation * 1.5;
                     }
                 }
@@ -920,9 +920,9 @@ pub fn simulation_step<const CAP: usize, const CELL_CAP: usize>(
             }
             
             if has_mate {
-                let handle = arena.spawn_child(parent_idx);
-                if handle.is_valid() {
-                    births += 1;
+            let handle = arena.spawn_child(parent_idx);
+            if handle.is_valid() {
+                births += 1;
                 }
             }
         }
@@ -1198,6 +1198,94 @@ pub fn trigger_earthquake<const CAP: usize>(arena: &mut BoidArena<CAP>) {
             // Stress from earthquake
             arena.energy[idx] -= 5.0;
         }
+    }
+}
+
+// ============================================================================
+// DIVERSITY & ECOSYSTEM HEALTH
+// ============================================================================
+
+/// Compute ecosystem diversity score (0.0 = monoculture, 1.0 = highly diverse)
+/// Based on role distribution and trait variance
+pub fn compute_diversity<const CAP: usize>(arena: &BoidArena<CAP>) -> f32 {
+    if arena.alive_count < 10 {
+        return 1.0; // Too few to measure, assume diverse
+    }
+    
+    let mut herbivore_count = 0usize;
+    let mut carnivore_count = 0usize;
+    let mut scavenger_count = 0usize;
+    let mut speed_sum = 0.0f32;
+    let mut speed_sq_sum = 0.0f32;
+    
+    for idx in arena.iter_alive() {
+        match arena.roles[idx] {
+            BoidRole::Herbivore => herbivore_count += 1,
+            BoidRole::Carnivore => carnivore_count += 1,
+            BoidRole::Scavenger => scavenger_count += 1,
+        }
+        let speed = arena.genes[idx].max_speed;
+        speed_sum += speed;
+        speed_sq_sum += speed * speed;
+    }
+    
+    let total = arena.alive_count as f32;
+    
+    // Role diversity: Shannon entropy normalized
+    // Perfect balance = 0.33, 0.33, 0.33 -> entropy = log2(3) ≈ 1.58
+    let h_frac = herbivore_count as f32 / total;
+    let c_frac = carnivore_count as f32 / total;
+    let s_frac = scavenger_count as f32 / total;
+    
+    let mut entropy = 0.0f32;
+    if h_frac > 0.0 { entropy -= h_frac * h_frac.log2(); }
+    if c_frac > 0.0 { entropy -= c_frac * c_frac.log2(); }
+    if s_frac > 0.0 { entropy -= s_frac * s_frac.log2(); }
+    
+    let max_entropy = 3.0f32.log2(); // ~1.58
+    let role_diversity = (entropy / max_entropy).clamp(0.0, 1.0);
+    
+    // Trait diversity: coefficient of variation of speed
+    let speed_mean = speed_sum / total;
+    let speed_variance = (speed_sq_sum / total) - (speed_mean * speed_mean);
+    let speed_std = speed_variance.max(0.0).sqrt();
+    let cv = if speed_mean > 0.0 { speed_std / speed_mean } else { 0.0 };
+    // CV of 0.3+ is healthy diversity, normalize
+    let trait_diversity = (cv / 0.4).clamp(0.0, 1.0);
+    
+    // Combined score (weighted)
+    0.7 * role_diversity + 0.3 * trait_diversity
+}
+
+/// Trigger mass extinction - kills most boids, resets ecosystem
+pub fn trigger_mass_extinction<const CAP: usize>(arena: &mut BoidArena<CAP>, kill_fraction: f32) {
+    let mut rng = rand::thread_rng();
+    use rand::Rng;
+    
+    let mut killed = 0usize;
+    let target_kills = (arena.alive_count as f32 * kill_fraction) as usize;
+    
+    for idx in 0..CAP {
+        if !arena.alive[idx] { continue; }
+        if killed >= target_kills { break; }
+        
+        // Random chance to survive (larger/stronger have slight advantage)
+        let survival_bonus = arena.genes[idx].strength * 0.1;
+        if rng.gen::<f32>() > survival_bonus {
+            arena.kill(idx);
+            killed += 1;
+        }
+    }
+    
+    // Spawn a few diverse founders to reseed
+    let founders = 10.min(CAP - arena.alive_count);
+    for _ in 0..founders {
+        let pos = Vec2::new(
+            rng.gen_range(100.0..900.0),
+            rng.gen_range(100.0..700.0),
+        );
+        let vel = Vec2::new(rng.gen_range(-1.0..1.0), rng.gen_range(-1.0..1.0));
+        arena.spawn(pos, vel, Genome::random());
     }
 }
 
