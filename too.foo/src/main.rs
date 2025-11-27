@@ -585,22 +585,27 @@ fn main() {
                 let damping = -arena.velocities[idx] * 0.05; // 5% drag
                 push_forces.push((idx, damping));
                 
-                // Heal to full health constantly
+                // Heal to full health constantly, but still allow death logic from base simulation
                 if arena.energy[idx] < 200.0 {
                     // Side effect: heal
                     energy_adjustments.push((idx, 5.0));
                 }
                 
-                // They will die naturally from age or population pressure (base sim logic), 
-                // but energy won't run out here.
-                
-                // Visual: if they just entered, pop a message? Or maybe when they die?
-                // Let's keep the Swaaha/Moksh on death.
-                
-                // Special logic: If they die INSIDE from age, give them a special popup
-                // But we can't detect "about to die from age" easily here without checking age vs max_age
-                // Let's just let them spin.
-                
+                // Natural death logic enhancement for inside Chakravyu
+                // If they are very old, they should die here peacefully or dramatically
+                // We check age vs max_age logic that happens in base simulation_step
+                // But here we can add a visual or force it if they've lingered too long
+                if arena.age[idx] > config.max_age * 0.9 {
+                     // Show they are about to die naturally in the trap
+                     if rng.gen::<f32>() < 0.01 {
+                        popups.push(PopUp {
+                            text: "मोक्ष".to_string(), // Moksh on natural death inside
+                            pos: pos + Vec2::new(0.0, -10.0),
+                            life: 1.0,
+                            color: "rgba(100, 255, 200, {})".to_string(),
+                        });
+                     }
+                }
             } else {
                 // Outside: If dying (low energy), RUSH to center
                 if arena.energy[idx] < 50.0 {
