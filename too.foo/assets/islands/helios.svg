@@ -1,43 +1,55 @@
 <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <filter id="glow">
-      <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+    <filter id="glow-helios">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
       <feMerge>
         <feMergeNode in="coloredBlur"/>
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
-    <radialGradient id="sunGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-      <stop offset="0%" style="stop-color:#ffdd00;stop-opacity:1" />
-      <stop offset="80%" style="stop-color:#ff8800;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#ff4400;stop-opacity:0" />
-    </radialGradient>
   </defs>
+
+  <style>
+    @keyframes spin-slow {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes pulse-sun {
+      0%, 100% { r: 15; opacity: 0.8; }
+      50% { r: 17; opacity: 1; }
+    }
+    .orbit {
+      transform-origin: 100px 100px;
+      animation: spin-slow 20s linear infinite;
+    }
+    .sun-core {
+      animation: pulse-sun 3s infinite ease-in-out;
+      transform-origin: center;
+    }
+  </style>
   
-  <!-- Orbital Rings -->
-  <circle cx="100" cy="100" r="80" fill="none" stroke="#ffaa00" stroke-width="1" stroke-opacity="0.3" />
-  <circle cx="100" cy="100" r="65" fill="none" stroke="#ffaa00" stroke-width="1" stroke-opacity="0.5" stroke-dasharray="10, 5" />
+  <!-- Orbits -->
+  <circle cx="100" cy="100" r="60" fill="none" stroke="#FFD700" stroke-width="0.5" stroke-opacity="0.3" stroke-dasharray="4,4" class="orbit" style="animation-duration: 15s;" />
+  <circle cx="100" cy="100" r="80" fill="none" stroke="#FFD700" stroke-width="0.5" stroke-opacity="0.2" stroke-dasharray="8,4" class="orbit" style="animation-direction: reverse; animation-duration: 25s;" />
   
-  <!-- Corona rays -->
-  <g stroke="#ffaa00" stroke-width="2" stroke-linecap="round">
-    <line x1="100" y1="20" x2="100" y2="40" />
-    <line x1="100" y1="180" x2="100" y2="160" />
-    <line x1="20" y1="100" x2="40" y2="100" />
-    <line x1="180" y1="100" x2="160" y2="100" />
-    
-    <line x1="43" y1="43" x2="57" y2="57" />
-    <line x1="157" y1="157" x2="143" y2="143" />
-    <line x1="43" y1="157" x2="57" y2="143" />
-    <line x1="157" y1="43" x2="143" y2="57" />
+  <g filter="url(#glow-helios)">
+      <!-- Sun -->
+      <circle cx="100" cy="100" r="15" fill="#FFD700" class="sun-core" />
+      
+      <!-- Rays -->
+      <path d="M100 70 L100 60" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
+      <path d="M100 130 L100 140" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
+      <path d="M70 100 L60 100" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
+      <path d="M130 100 L140 100" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
+      
+      <!-- Diagonals -->
+      <path d="M79 79 L72 72" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
+      <path d="M121 121 L128 128" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
+      <path d="M121 79 L128 72" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
+      <path d="M79 121 L72 128" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
   </g>
-
-  <!-- Main Body -->
-  <circle cx="100" cy="100" r="45" fill="url(#sunGradient)" filter="url(#glow)" />
   
-  <!-- Wireframe overlay -->
-  <path d="M 55 100 Q 100 145 145 100" fill="none" stroke="#ffffff" stroke-width="0.5" stroke-opacity="0.3" />
-  <path d="M 55 100 Q 100 55 145 100" fill="none" stroke="#ffffff" stroke-width="0.5" stroke-opacity="0.3" />
-  <path d="M 100 55 Q 145 100 100 145" fill="none" stroke="#ffffff" stroke-width="0.5" stroke-opacity="0.3" />
-  <path d="M 100 55 Q 55 100 100 145" fill="none" stroke="#ffffff" stroke-width="0.5" stroke-opacity="0.3" />
+  <!-- Planets -->
+  <circle cx="160" cy="100" r="4" fill="#ffffff" class="orbit" />
+  <circle cx="40" cy="100" r="3" fill="#ffffff" class="orbit" style="animation-delay: -5s;" />
 </svg>
-

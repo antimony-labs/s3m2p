@@ -3,15 +3,15 @@ use web_sys::CanvasRenderingContext2d;
 use wasm_bindgen::JsValue;
 
 const MAX_NODES: usize = 2000;
-const GROWTH_DISTANCE: f32 = 15.0;
+const GROWTH_DISTANCE: f32 = 20.0;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BranchType {
-    EnergyHigh, // Gold - High nutrition
-    EnergyMed,  // Green - Medium nutrition
-    EnergyLow,  // Blue - Low nutrition
-    Poison,     // Purple - Damages energy
-    Death,      // Red - Instant kill
+    EnergyHigh, // Gold - High power
+    EnergyMed,  // Cyan - Standard circuit
+    EnergyLow,  // Blue - Low power
+    Poison,     // Purple - Corrupted sector
+    Death,      // Red - Firewall/Trap
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -139,7 +139,8 @@ impl FungalNetwork {
         let mut rng = rand::thread_rng();
         let x = rng.gen_range(0.0..self.width);
         let y = rng.gen_range(0.0..self.height);
-        let angle = rng.gen_range(0.0..std::f32::consts::TAU);
+        // Cardinal directions for circuit look
+        let angle = (rng.gen_range(0..4) as f32 * 90.0).to_radians();
         
         let pos = Vec2::new(x, y);
         if !self.is_space_occupied(pos, GROWTH_DISTANCE * 0.8) {
@@ -151,7 +152,7 @@ impl FungalNetwork {
     pub fn seed_at(&mut self, pos: Vec2) {
         use rand::Rng;
         let mut rng = rand::thread_rng();
-        let angle = rng.gen_range(0.0..std::f32::consts::TAU);
+        let angle = (rng.gen_range(0..4) as f32 * 90.0).to_radians();
         
         if !self.is_space_occupied(pos, GROWTH_DISTANCE * 0.5) {
             self.add_node(pos, None, angle, BranchType::EnergyMed);
@@ -239,8 +240,9 @@ impl FungalNetwork {
         self.add_to_grid(idx as u16, pos);
     }
 
+    #[cfg(test)]
+    // Helper for tests to advance state
     pub fn update(&mut self) {
-        // Call update with empty exclusion zones for backwards compatibility
         self.update_with_exclusions(&[]);
     }
 
@@ -279,11 +281,20 @@ impl FungalNetwork {
                     let parent_type = self.nodes[i].branch_type;
                     
                     for _ in 0..branches {
-                        let offset_deg = rng.gen_range(-1..=1) as f32 * 30.0; 
-                        let new_angle = current_angle + offset_deg.to_radians();
+                        // Circuit logic: 90 degree turns only
+                        let turn = rng.gen_range(-1..=1) as f32; // -1, 0, 1
+                        let new_angle = current_angle + (turn * 90.0).to_radians();
                         
                         let dir = Vec2::new(new_angle.cos(), new_angle.sin());
-                        let new_pos = self.nodes[i].pos + dir * GROWTH_DISTANCE;
+                        
+                        // Quantize direction to align to grid perfectly (avoid floating point drift)
+                        let q_dir = if dir.x.abs() > dir.y.abs() {
+                            Vec2::new(dir.x.signum(), 0.0)
+                        } else {
+                            Vec2::new(0.0, dir.y.signum())
+                        };
+                        
+                        let new_pos = self.nodes[i].pos + q_dir * GROWTH_DISTANCE;
                         
                         // Check bounds and exclusion zones
                         if new_pos.x >= 0.0 && new_pos.x <= self.width && new_pos.y >= 0.0 && new_pos.y <= self.height {
@@ -412,42 +423,28 @@ impl FungalNetwork {
     }
 
     pub fn draw(&self, ctx: &CanvasRenderingContext2d) {
-        ctx.set_line_cap("round");
+        // Draw circuits
+        ctx.set_line_cap("square");
         
-        // Iterate up to limit to cover recycled nodes correctly
         let limit = if self.count < MAX_NODES { self.count } else { MAX_NODES };
 
         for i in 0..limit {
             if !self.nodes[i].active { continue; }
             
-            // Skip drawing line if parent is invalid (recycled/dead)
             if let Some(parent_idx) = self.nodes[i].parent_idx {
                 let parent = &self.nodes[parent_idx as usize];
                 
-                // FIX: Only draw connection if parent is active AND actually older (prevent linking to recycled slot that is now a new unrelated node)
-                // Simple heuristic: check distance. If "parent" jumped across screen, don't draw line.
                 if parent.active && parent.pos.distance_squared(self.nodes[i].pos) < (GROWTH_DISTANCE * 2.0).powi(2) {
                     let health = self.nodes[i].health;
                     let alpha = 0.2 + health * 0.6;
-                    let width = (0.5 + health * 2.5) as f64;
+                    let width = (0.5 + health * 1.5) as f64;
                     
-                    // Visual variety for branches (thorns, berries) based on type
-                    let mut has_thorns = false;
-                    let mut has_berries = false;
-                    
-                    // Color based on type
                     let color = match self.nodes[i].branch_type {
-                        BranchType::EnergyHigh => {
-                            has_berries = true;
-                            format!("hsla(50, 90%, 60%, {})", alpha) // Gold
-                        },
-                        BranchType::EnergyMed => format!("hsla(120, 70%, 50%, {})", alpha), // Green
-                        BranchType::EnergyLow => format!("hsla(200, 70%, 50%, {})", alpha), // Blue
-                        BranchType::Poison => format!("hsla(280, 80%, 40%, {})", alpha),    // Purple
-                        BranchType::Death => {
-                            has_thorns = true;
-                            format!("hsla(0, 90%, 40%, {})", alpha)       // Red
-                        },
+                        BranchType::EnergyHigh => format!("rgba(255, 215, 0, {})", alpha), // Gold
+                        BranchType::EnergyMed => format!("rgba(0, 255, 255, {})", alpha), // Cyan
+                        BranchType::EnergyLow => format!("rgba(0, 100, 255, {})", alpha), // Blue
+                        BranchType::Poison => format!("rgba(255, 0, 255, {})", alpha),    // Magenta
+                        BranchType::Death => format!("rgba(255, 50, 50, {})", alpha),     // Red
                     };
 
                     ctx.set_stroke_style(&JsValue::from_str(&color));
@@ -458,48 +455,30 @@ impl FungalNetwork {
                     ctx.line_to(self.nodes[i].pos.x as f64, self.nodes[i].pos.y as f64);
                     ctx.stroke();
                     
-                    // Draw Thorns for Death branches
-                    if has_thorns && health > 0.5 {
-                        let mid_x = (parent.pos.x + self.nodes[i].pos.x) * 0.5;
-                        let mid_y = (parent.pos.y + self.nodes[i].pos.y) * 0.5;
-                        
-                        // Draw a small cross/spike
-                        ctx.set_line_width(1.0);
-                        ctx.begin_path();
-                        ctx.move_to((mid_x - 2.0) as f64, (mid_y - 2.0) as f64);
-                        ctx.line_to((mid_x + 2.0) as f64, (mid_y + 2.0) as f64);
-                        ctx.move_to((mid_x + 2.0) as f64, (mid_y - 2.0) as f64);
-                        ctx.line_to((mid_x - 2.0) as f64, (mid_y + 2.0) as f64);
-                        ctx.stroke();
-                    }
-                    
-                    // Draw Berries for EnergyHigh branches
-                    if has_berries && health > 0.6 {
-                        let mid_x = (parent.pos.x + self.nodes[i].pos.x) * 0.5;
-                        let mid_y = (parent.pos.y + self.nodes[i].pos.y) * 0.5;
-                        
+                    // Circuit Nodes (Junctions)
+                    if health > 0.6 {
                         ctx.set_fill_style(&JsValue::from_str(&color));
                         ctx.begin_path();
-                        ctx.arc(mid_x as f64, mid_y as f64, 2.0, 0.0, std::f64::consts::TAU).unwrap();
+                        ctx.rect(
+                            self.nodes[i].pos.x as f64 - 1.5, 
+                            self.nodes[i].pos.y as f64 - 1.5, 
+                            3.0, 3.0
+                        );
                         ctx.fill();
                     }
                 }
             } else {
-                // Root
+                // Root Node (CPU/Power Source)
                 let health = self.nodes[i].health;
-                let color = match self.nodes[i].branch_type {
-                    BranchType::EnergyHigh => format!("hsla(50, 90%, 60%, {})", 0.3 * health),
-                    BranchType::EnergyMed => format!("hsla(120, 70%, 50%, {})", 0.3 * health),
-                    BranchType::EnergyLow => format!("hsla(200, 70%, 50%, {})", 0.3 * health),
-                    BranchType::Poison => format!("hsla(280, 80%, 40%, {})", 0.3 * health),
-                    BranchType::Death => format!("hsla(0, 90%, 40%, {})", 0.3 * health),
-                };
+                let color = format!("rgba(0, 255, 255, {})", 0.5 * health);
                 
                 ctx.set_fill_style(&JsValue::from_str(&color));
                 ctx.begin_path();
-                // Clamp radius to non-negative
-                let r = (2.0 * health).max(0.0) as f64;
-                ctx.arc(self.nodes[i].pos.x as f64, self.nodes[i].pos.y as f64, r, 0.0, std::f64::consts::TAU).unwrap();
+                ctx.rect(
+                    self.nodes[i].pos.x as f64 - 3.0, 
+                    self.nodes[i].pos.y as f64 - 3.0, 
+                    6.0, 6.0
+                );
                 ctx.fill();
             }
         }

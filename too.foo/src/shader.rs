@@ -22,47 +22,85 @@ impl BackgroundEffect {
     }
 
     pub fn update(&mut self, dt: f64) {
-        self.time += dt * 0.5; // Slow movement
+        self.time += dt; 
     }
 
     pub fn draw(&self, ctx: &CanvasRenderingContext2d) {
-        // Create a subtle gradient background
-        // 5-10% opacity as requested
-        
         let t = self.time;
         
-        // Base dark background
-        ctx.set_fill_style(&JsValue::from_str("#0a0a12"));
+        // 1. Darker Tech Background
+        ctx.set_fill_style(&JsValue::from_str("#050508"));
         ctx.fill_rect(0.0, 0.0, self.width, self.height);
         
-        // Wave 1: Cyan/Blue
-        let x1 = (t.sin() * 0.5 + 0.5) * self.width;
-        let y1 = (t.cos() * 0.3 + 0.5) * self.height;
-        let r1 = self.width.min(self.height) * 0.8;
+        // 2. Moving Grid Lines (Perspective Floor)
+        // A rolling grid in 3D-ish perspective or just a flat scrolling grid
         
-        let grad1 = ctx.create_radial_gradient(x1, y1, 0.0, x1, y1, r1).unwrap();
-        grad1.add_color_stop(0.0, "rgba(0, 255, 200, 0.05)").unwrap(); // 5% opacity
-        grad1.add_color_stop(1.0, "rgba(0, 255, 200, 0.0)").unwrap();
+        let grid_size = 60.0;
+        let scroll_y = (t * 20.0) % grid_size;
+        let scroll_x = (t * 10.0) % grid_size;
         
-        ctx.set_fill_style(&grad1);
+        ctx.set_stroke_style(&JsValue::from_str("rgba(0, 255, 255, 0.03)")); // Very faint cyan
+        ctx.set_line_width(1.0);
+        
+        // Vertical lines
+        let start_x = -scroll_x;
+        let mut x = start_x;
+        while x < self.width {
+            ctx.begin_path();
+            ctx.move_to(x, 0.0);
+            ctx.line_to(x, self.height);
+            ctx.stroke();
+            x += grid_size;
+        }
+        
+        // Horizontal lines
+        let start_y = -scroll_y;
+        let mut y = start_y;
+        while y < self.height {
+            ctx.begin_path();
+            ctx.move_to(0.0, y);
+            ctx.line_to(self.width, y);
+            ctx.stroke();
+            y += grid_size;
+        }
+
+        // 3. Digital Rain / Matrix Data Stream drops
+        // Random vertical streaks
+        // Use a pseudo-random number generator based on time and position
+        
+        ctx.set_fill_style(&JsValue::from_str("rgba(0, 255, 100, 0.05)"));
+        
+        let columns = (self.width / 20.0) as usize;
+        for i in 0..columns {
+            // Pseudo-random offset for each column
+            let seed = i as f64 * 13.37; 
+            let speed = 50.0 + (seed.sin() * 25.0).abs(); // Varying speeds
+            let offset = t * speed;
+            let y_pos = (offset + seed * 100.0) % (self.height + 200.0) - 100.0;
+            
+            // Only draw some columns
+            if seed.cos() > 0.5 {
+                 let x = i as f64 * 20.0;
+                 ctx.fill_rect(x, y_pos, 2.0, 40.0 + (seed.sin() * 20.0));
+            }
+        }
+
+        // 4. Vignette (Dark corners)
+        // Use a radial gradient to darken edges
+        let center_x = self.width / 2.0;
+        let center_y = self.height / 2.0;
+        let radius = self.width.max(self.height) * 0.8;
+        
+        let grad = ctx.create_radial_gradient(center_x, center_y, radius * 0.5, center_x, center_y, radius).unwrap();
+        grad.add_color_stop(0.0, "transparent").unwrap();
+        grad.add_color_stop(1.0, "rgba(0, 0, 0, 0.6)").unwrap();
+        
+        ctx.set_fill_style(&grad);
         ctx.fill_rect(0.0, 0.0, self.width, self.height);
         
-        // Wave 2: Purple/Magenta
-        let t2 = t * 0.7 + 2.0;
-        let x2 = (t2.cos() * 0.5 + 0.5) * self.width;
-        let y2 = (t2.sin() * 0.4 + 0.5) * self.height;
-        let r2 = self.width.min(self.height) * 0.9;
-        
-        let grad2 = ctx.create_radial_gradient(x2, y2, 0.0, x2, y2, r2).unwrap();
-        grad2.add_color_stop(0.0, "rgba(150, 0, 255, 0.04)").unwrap(); // 4% opacity
-        grad2.add_color_stop(1.0, "rgba(150, 0, 255, 0.0)").unwrap();
-        
-        ctx.set_fill_style(&grad2);
-        ctx.fill_rect(0.0, 0.0, self.width, self.height);
-        
-        // Subtle scanline effect
-        ctx.set_fill_style(&JsValue::from_str("rgba(0, 0, 0, 0.1)"));
-        for i in (0..self.height as i32).step_by(4) {
+        // 5. Scanline Overlay
+        ctx.set_fill_style(&JsValue::from_str("rgba(0, 0, 0, 0.2)"));
+        for i in (0..self.height as i32).step_by(3) {
             ctx.fill_rect(0.0, i as f64, self.width, 1.0);
         }
     }

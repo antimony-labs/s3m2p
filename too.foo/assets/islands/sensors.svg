@@ -1,0 +1,73 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="glow-sensors">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <style>
+    @keyframes scan-wave {
+      0% { opacity: 0; transform: scale(0.5); }
+      50% { opacity: 0.5; }
+      100% { opacity: 0; transform: scale(1.2); }
+    }
+    .wave {
+      transform-origin: center;
+      animation: scan-wave 3s infinite ease-out;
+    }
+    .wave-delayed {
+      transform-origin: center;
+      animation: scan-wave 3s infinite ease-out 1.5s;
+    }
+    @keyframes pulse-chip {
+      0%, 100% { fill-opacity: 0.1; }
+      50% { fill-opacity: 0.3; }
+    }
+    .chip-core {
+      animation: pulse-chip 4s infinite ease-in-out;
+    }
+  </style>
+  
+  <!-- Outer ring guides -->
+  <circle cx="100" cy="100" r="85" fill="none" stroke="#ffffff" stroke-width="0.5" stroke-opacity="0.15" />
+  
+  <!-- Central Chip -->
+  <rect x="75" y="75" width="50" height="50" rx="4" fill="none" stroke="#00ffff" stroke-width="2" filter="url(#glow-sensors)" />
+  <rect x="85" y="85" width="30" height="30" fill="#00ffff" fill-opacity="0.1" class="chip-core" />
+  
+  <!-- Circuit Traces -->
+  <g stroke="#00ffff" stroke-width="1.5" stroke-opacity="0.7">
+      <!-- Top -->
+      <path d="M90 75 V60 M90 60 H80" fill="none"/>
+      <path d="M100 75 V55" fill="none"/>
+      <path d="M110 75 V60 M110 60 H120" fill="none"/>
+      
+      <!-- Bottom -->
+      <path d="M90 125 V140 M90 140 H80" fill="none"/>
+      <path d="M100 125 V145" fill="none"/>
+      <path d="M110 125 V140 M110 140 H120" fill="none"/>
+      
+      <!-- Left -->
+      <path d="M75 90 H60 M60 90 V80" fill="none"/>
+      <path d="M75 100 H55" fill="none"/>
+      <path d="M75 110 H60 M60 110 V120" fill="none"/>
+      
+      <!-- Right -->
+      <path d="M125 90 H140 M140 90 V80" fill="none"/>
+      <path d="M125 100 H145" fill="none"/>
+      <path d="M125 110 H140 M140 110 V120" fill="none"/>
+  </g>
+  
+  <!-- Sensor Nodes -->
+  <circle cx="100" cy="100" r="8" fill="#00ffff" fill-opacity="0.3" />
+  <circle cx="100" cy="100" r="3" fill="#ffffff" />
+  
+  <!-- Radiating Waves (Sensing) -->
+  <circle cx="100" cy="100" r="20" stroke="#00ffff" stroke-width="1" fill="none" class="wave" />
+  <circle cx="100" cy="100" r="20" stroke="#00ffff" stroke-width="1" fill="none" class="wave-delayed" />
+  
+</svg>

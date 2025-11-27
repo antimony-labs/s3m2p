@@ -7,46 +7,28 @@
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
-    <linearGradient id="envelopeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.1" />
-      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0" />
-    </linearGradient>
   </defs>
   
-  <!-- Outer rings -->
-  <circle cx="100" cy="100" r="85" fill="none" stroke="#ffaa00" stroke-width="0.5" stroke-opacity="0.15" />
-  <circle cx="100" cy="100" r="75" fill="none" stroke="#ffaa00" stroke-width="0.5" stroke-opacity="0.1" stroke-dasharray="5,5" />
+  <style>
+    @keyframes signal-pulse {
+      0% { r: 0; opacity: 1; }
+      100% { r: 40; opacity: 0; }
+    }
+    .signal {
+      fill: none;
+      stroke: #FF5555;
+      stroke-width: 1;
+      animation: signal-pulse 2s infinite ease-out;
+    }
+  </style>
   
-  <!-- Envelope body -->
   <g filter="url(#glow-contact)">
-    <rect x="45" y="60" width="110" height="80" rx="4" 
-          fill="url(#envelopeGradient)" stroke="#ffaa00" stroke-width="2" />
+      <!-- Mail Envelope -->
+      <rect x="60" y="80" width="80" height="50" rx="4" stroke="#FF5555" stroke-width="2" fill="none" />
+      <path d="M60 80 L 100 105 L 140 80" stroke="#FF5555" stroke-width="2" fill="none" />
   </g>
   
-  <!-- Envelope flap (open) -->
-  <path d="M 45 60 L 100 105 L 155 60" 
-        fill="none" stroke="#ffaa00" stroke-width="2" stroke-linejoin="round" />
-  
-  <!-- Inner fold lines -->
-  <g stroke="#ffaa00" stroke-width="0.75" stroke-opacity="0.3">
-    <line x1="45" y1="140" x2="75" y2="110" />
-    <line x1="155" y1="140" x2="125" y2="110" />
-  </g>
-  
-  <!-- @ symbol stylized -->
-  <g transform="translate(100, 100)" filter="url(#glow-contact)">
-    <circle cx="0" cy="0" r="18" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.7" />
-    <circle cx="4" cy="0" r="8" fill="none" stroke="#ffffff" stroke-width="1" stroke-opacity="0.5" />
-    <path d="M 12 0 Q 12 12 4 12 Q -4 12 -4 4" fill="none" stroke="#ffffff" stroke-width="1" stroke-opacity="0.5" />
-  </g>
-  
-  <!-- Signal waves (communication) -->
-  <g stroke="#ffaa00" stroke-width="1" stroke-opacity="0.4" fill="none">
-    <path d="M 160 55 Q 170 50 175 60" />
-    <path d="M 165 50 Q 180 42 188 55" />
-    <path d="M 170 45 Q 188 35 198 50" />
-  </g>
-  
-  <!-- Notification dot -->
-  <circle cx="160" cy="55" r="5" fill="#ff4444" fill-opacity="0.8" />
+  <!-- Signal Waves -->
+  <circle cx="100" cy="80" class="signal" />
+  <circle cx="100" cy="80" class="signal" style="animation-delay: 1s;" />
 </svg>

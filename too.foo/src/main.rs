@@ -41,7 +41,7 @@ struct SimulationStats {
 struct ChakravyuZone {
     center: Vec2,
     radius: f32,
-    energy_drain: f32,
+    _energy_drain: f32,
     inward_force: f32,
 }
 
@@ -86,7 +86,7 @@ fn scan_exclusion_zones(document: &Document) -> (Vec<ExclusionZone>, Option<Chak
         chakravyu = Some(ChakravyuZone {
             center: Vec2::new(center_x, center_y),
             radius: chakravyu_radius,
-            energy_drain: 0.5, // Energy loss per frame inside
+            _energy_drain: 0.5, // Energy loss per frame inside
             inward_force: 2.0, // Pull toward center
         });
     } else {
@@ -192,77 +192,103 @@ fn draw_organism(
     
     let size = base_size * size_mult as f64;
     
-    ctx.set_stroke_style(&JsValue::from_str(color));
-    ctx.set_line_width(1.5);
+    // Thruster Glow (Engine)
+    let glow_color = match role {
+        BoidRole::Herbivore => "rgba(0, 255, 255, 0.4)", // Cyan
+        BoidRole::Carnivore => "rgba(255, 50, 50, 0.6)", // Red
+        BoidRole::Scavenger => "rgba(255, 200, 0, 0.4)", // Orange
+    };
     
+    // Engine trail/glow behind
+    ctx.begin_path();
+    ctx.move_to(-size * 1.5, 0.0);
+    ctx.arc(-size * 1.2, 0.0, size * 0.5, 0.0, std::f64::consts::TAU).unwrap();
+    ctx.set_fill_style(&JsValue::from_str(glow_color));
+    ctx.fill();
+
+    // Main Body Styling
+    ctx.set_line_width(1.5);
+    ctx.set_stroke_style(&JsValue::from_str(color));
+    ctx.set_fill_style(&JsValue::from_str("#0a0a12")); // Dark metallic core
+
     match role {
         BoidRole::Herbivore => {
-            // Round/Smooth shape (Circle/Oval)
+            // Scout Drone (Arrowhead)
             ctx.begin_path();
-            ctx.ellipse(0.0, 0.0, size, size * 0.8, 0.0, 0.0, std::f64::consts::TAU).unwrap();
+            ctx.move_to(size, 0.0);          // Nose
+            ctx.line_to(-size, -size * 0.6); // Left Wing
+            ctx.line_to(-size * 0.5, 0.0);   // Engine recess
+            ctx.line_to(-size, size * 0.6);  // Right Wing
+            ctx.close_path();
+            
+            ctx.fill();
             ctx.stroke();
             
-            // Fill for herbivores
-            ctx.set_fill_style(&JsValue::from_str(&format!("{}80", color)));
+            // Detail: Cockpit/Sensor
+            ctx.set_fill_style(&JsValue::from_str(color));
             ctx.begin_path();
-            ctx.ellipse(0.0, 0.0, size, size * 0.8, 0.0, 0.0, std::f64::consts::TAU).unwrap();
+            ctx.arc(0.0, 0.0, size * 0.2, 0.0, std::f64::consts::TAU).unwrap();
             ctx.fill();
         }
         BoidRole::Carnivore => {
-            // Spiky/Angular shape (Triangle/Chevron)
+            // Interceptor (Sharp, Aggressive)
             ctx.begin_path();
-            ctx.move_to(-size, -size * 0.8);
-            ctx.line_to(size, 0.0);
-            ctx.line_to(-size, size * 0.8);
-            ctx.line_to(-size * 0.5, 0.0);
+            ctx.move_to(size * 1.2, 0.0);    // Long Nose
+            ctx.line_to(-size, -size);       // Wide Wing L
+            ctx.line_to(-size * 0.2, 0.0);   // Body
+            ctx.line_to(-size, size);        // Wide Wing R
             ctx.close_path();
+            
+            ctx.fill();
             ctx.stroke();
             
-            // Add spikes if hunting
             if state == BoidState::Hunt {
+                // Weapon bays open / Spikes
                 ctx.begin_path();
-                ctx.move_to(size * 0.3, -size * 0.4);
-                ctx.line_to(size * 0.6, -size * 0.6);
-                ctx.line_to(size * 0.3, -size * 0.2);
-                ctx.close_path();
+                ctx.move_to(0.0, -size);
+                ctx.line_to(size * 0.5, -size * 1.2);
                 ctx.stroke();
-                
                 ctx.begin_path();
-                ctx.move_to(size * 0.3, size * 0.4);
-                ctx.line_to(size * 0.6, size * 0.6);
-                ctx.line_to(size * 0.3, size * 0.2);
-                ctx.close_path();
+                ctx.move_to(0.0, size);
+                ctx.line_to(size * 0.5, size * 1.2);
                 ctx.stroke();
             }
         }
         BoidRole::Scavenger => {
-            // Smaller irregular shape
+            // Harvester (Boxy, Functional)
             ctx.begin_path();
-            ctx.move_to(-size * 0.6, -size * 0.5);
-            ctx.line_to(size * 0.4, -size * 0.3);
-            ctx.line_to(size * 0.6, size * 0.3);
-            ctx.line_to(-size * 0.4, size * 0.5);
-            ctx.line_to(-size * 0.6, 0.0);
+            ctx.move_to(size * 0.8, -size * 0.5);
+            ctx.line_to(size * 0.8, size * 0.5);
+            ctx.line_to(-size * 0.8, size * 0.5);
+            ctx.line_to(-size * 0.8, -size * 0.5);
             ctx.close_path();
+            
+            ctx.fill();
+            ctx.stroke();
+            
+            // Collector Arms
+            ctx.begin_path();
+            ctx.move_to(size * 0.8, -size * 0.3);
+            ctx.line_to(size * 1.2, -size * 0.5);
+            ctx.move_to(size * 0.8, size * 0.3);
+            ctx.line_to(size * 1.2, size * 0.5);
             ctx.stroke();
         }
     }
     
-    // State indicators
+    // Shield/Field effect if fleeing
     if state == BoidState::Flee {
-        // White ring for fleeing
-        ctx.set_stroke_style(&JsValue::from_str("rgba(255, 255, 255, 0.8)"));
-        ctx.set_line_width(2.0);
+        ctx.set_stroke_style(&JsValue::from_str("rgba(0, 255, 255, 0.5)"));
+        ctx.set_line_width(1.0);
         ctx.begin_path();
-        ctx.arc(0.0, 0.0, size * 1.5, 0.0, std::f64::consts::TAU).unwrap();
+        ctx.arc(0.0, 0.0, size * 1.8, 0.0, std::f64::consts::TAU).unwrap(); // Energy Shield
         ctx.stroke();
+        
+        // Dash lines
+        ctx.set_line_dash(&js_sys::Array::of2(&JsValue::from_f64(2.0), &JsValue::from_f64(4.0))).unwrap();
+        ctx.stroke();
+        ctx.set_line_dash(&js_sys::Array::new()).unwrap(); // Reset
     }
-    
-    // Energy glow
-    ctx.set_fill_style(&JsValue::from_str("rgba(255, 255, 255, 0.6)"));
-    ctx.begin_path();
-    ctx.arc(-size * 0.3, 0.0, size * 0.2, 0.0, std::f64::consts::TAU).unwrap();
-    ctx.fill();
 
     ctx.restore();
 }
@@ -541,14 +567,14 @@ fn main() {
         // Collect interaction results and push forces first to avoid borrow conflicts
         let mut interactions = Vec::new();
         let mut push_forces: Vec<(usize, Vec2)> = Vec::new();
-        let mut chakravyu_victims: Vec<usize> = Vec::new();
+        let chakravyu_victims: Vec<usize> = Vec::new();
         
         // Get chakravyu zone info
         let chakravyu_zone = *chakravyu;
         
         // Collect side effects to apply later
         let mut energy_adjustments: Vec<(usize, f32)> = Vec::new();
-        let mut moksh_candidates: Vec<usize> = Vec::new();
+        let moksh_candidates: Vec<usize> = Vec::new();
 
         for idx in arena.iter_alive() {
             let pos = arena.positions[idx];
@@ -902,7 +928,7 @@ fn main() {
             let individual_size = size_mult as f64 * (1.0 + wobble);
             
             // Individual color variation
-            let (hue, sat, light) = get_boid_color(&s.arena, idx);
+            let (hue, _sat, _light) = get_boid_color(&s.arena, idx);
             let hue_var = ((idx % 20) as i16 - 10) as i16;
             let final_hue = (hue as i16 + hue_var).rem_euclid(360);
             

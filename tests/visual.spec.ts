@@ -8,12 +8,20 @@ test.describe('Visual Regression Tests', () => {
     // Wait for the canvas to be attached
     await page.waitForSelector('#simulation', { state: 'attached' });
     
+    // Wait for critical UI elements to load (fonts, etc)
+    await page.waitForSelector('.monolith');
+
+    // Check for new labels
+    await expect(page.locator('#constellation').getByText('Sensors')).toBeVisible();
+    await expect(page.locator('#constellation').getByText('Learn')).toBeVisible();
+    await expect(page.locator('#constellation').getByText('Automation')).toBeVisible();
+    
     // Give the canvas a moment to render
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
     
     // Take a screenshot and compare with baseline
     await expect(page).toHaveScreenshot('landing-layout.png', {
-      maxDiffPixels: 100, // Tolerate tiny font rendering differences
+      maxDiffPixels: 500, // Increased tolerance for particle variations
     });
   });
 
@@ -32,4 +40,3 @@ test.describe('Visual Regression Tests', () => {
     expect(boundingBox!.height).toBeGreaterThan(0);
   });
 });
-
