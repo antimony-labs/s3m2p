@@ -74,6 +74,28 @@
             justify-content: space-between;
             box-sizing: border-box;
         }
+        
+        /* System Info Overlay */
+        #system-info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            color: #00ff00;
+            font-size: 0.7rem;
+            opacity: 0.7;
+            pointer-events: none;
+            text-shadow: 0 0 2px #00ff00;
+        }
+        #system-info div {
+            margin-bottom: 2px;
+        }
+        #system-info div::before {
+            content: '>';
+            margin-right: 5px;
+            opacity: 0.5;
+        }
+
         #telemetry span {
             margin-right: 0;
         }
@@ -161,6 +183,12 @@
 <body>
     <canvas id="simulation"></canvas>
     <div id="ui-layer">
+        <div id="system-info">
+            <div>STACK: RUST + WASM + CANVAS</div>
+            <div>ALGO: REYNOLDS BOIDS + SPATIAL GRID</div>
+            <div>ARCH: DATA-ORIENTED (SOA) + GLAM</div>
+        </div>
+
         <a href="#" class="monolith" style="top: 20%; left: 20%">HELIOS</a>
         <a href="#" class="monolith" style="top: 50%; left: 50%; transform: translate(-50%, -50%)">CAM</a>
         <a href="#" class="monolith" style="bottom: 20%; right: 20%">ML</a>
