@@ -193,6 +193,11 @@ impl BoidHandle {
     pub fn is_valid(&self) -> bool {
         self.index != u16::MAX
     }
+
+    #[inline]
+    pub fn index(&self) -> usize {
+        self.index as usize
+    }
 }
 
 /// Structure of Arrays layout for cache-friendly iteration
