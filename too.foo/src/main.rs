@@ -687,12 +687,14 @@ fn main() {
         // Apply Chakravyu energy drain - rapid death inside the circle
         if let Some(chakravyu) = chakravyu_zone {
             for idx in chakravyu_victims {
-                arena.energy[idx] -= chakravyu.energy_drain;
+                // Heavily increased drain for high churn
+                arena.energy[idx] -= chakravyu.energy_drain * 5.0; 
+                
                 // Accelerated death for those deep inside
                 let dist = arena.positions[idx].distance(chakravyu.center);
-                if dist < chakravyu.radius * 0.3 {
-                    // Very close to center - instant death
-                    arena.energy[idx] -= 5.0;
+                if dist < chakravyu.radius * 0.8 { // Widened "kill zone" inside the circle
+                    // Very fast death
+                    arena.energy[idx] -= 10.0;
                 }
             }
         }
