@@ -6,8 +6,28 @@ on:
       - main
 
 jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Run Core Tests
+        run: cargo test -p antimony-core
+
+      - name: Run Too.foo Tests
+        working-directory: ./too.foo
+        run: cargo test
+
   deploy-too-foo:
     name: Deploy too.foo
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -60,6 +80,7 @@ jobs:
 
   deploy-helios:
     name: Deploy Helios
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
