@@ -681,7 +681,7 @@ fn main() {
                 // Sustained low diversity triggers extinction
                 if stats.low_diversity_frames > 10 {
                     log_event(&document_clone, "☄ MASS EXTINCTION - Ecosystem collapsing!", "event-death");
-                    trigger_mass_extinction(arena, 0.8); // Kill 80%
+                    trigger_mass_extinction(arena, 0.8, *world_w, *world_h); // Kill 80%
                     
                     // Also trim the fungal network
                     for node in fungal_network.nodes.iter_mut() {

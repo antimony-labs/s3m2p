@@ -1258,7 +1258,12 @@ pub fn compute_diversity<const CAP: usize>(arena: &BoidArena<CAP>) -> f32 {
 }
 
 /// Trigger mass extinction - kills most boids, resets ecosystem
-pub fn trigger_mass_extinction<const CAP: usize>(arena: &mut BoidArena<CAP>, kill_fraction: f32) {
+pub fn trigger_mass_extinction<const CAP: usize>(
+    arena: &mut BoidArena<CAP>, 
+    kill_fraction: f32,
+    width: f32,
+    height: f32,
+) {
     let mut rng = rand::thread_rng();
     use rand::Rng;
     
@@ -1277,12 +1282,13 @@ pub fn trigger_mass_extinction<const CAP: usize>(arena: &mut BoidArena<CAP>, kil
         }
     }
     
-    // Spawn a few diverse founders to reseed
+    // Spawn a few diverse founders to reseed (use actual world dimensions)
     let founders = 10.min(CAP - arena.alive_count);
+    let margin = 50.0f32.min(width * 0.1).min(height * 0.1);
     for _ in 0..founders {
         let pos = Vec2::new(
-            rng.gen_range(100.0..900.0),
-            rng.gen_range(100.0..700.0),
+            rng.gen_range(margin..(width - margin).max(margin + 1.0)),
+            rng.gen_range(margin..(height - margin).max(margin + 1.0)),
         );
         let vel = Vec2::new(rng.gen_range(-1.0..1.0), rng.gen_range(-1.0..1.0));
         arena.spawn(pos, vel, Genome::random());
@@ -1484,15 +1490,25 @@ mod tests {
         let mut arena: BoidArena<100> = BoidArena::new();
         let grid: SpatialGrid<16> = SpatialGrid::new(200.0, 200.0, 60.0);
         
-        let genes = Genome::random();
+        // Use a Herbivore specifically (not random) since Carnivores have different logic
+        let genes = Genome {
+            role: BoidRole::Herbivore,
+            max_speed: 3.0,
+            agility: 1.0,
+            size: 1.0,
+            strength: 1.0,
+            sensor_radius: 60.0,
+            metabolism: 1.0,
+            color_hs: (120, 70),
+        };
         let idx = arena.spawn(Vec2::new(50.0, 50.0), Vec2::ZERO, genes).index as usize;
         
-        // Set energy low (20% of max)
+        // Set energy low (below 80 threshold)
         arena.energy[idx] = 40.0;
         
         update_states(&mut arena, &grid);
         
-        assert_eq!(arena.states[idx], BoidState::Forage, "Low energy boid should forage");
+        assert_eq!(arena.states[idx], BoidState::Forage, "Low energy Herbivore should forage");
     }
 
     // ============================================================================
