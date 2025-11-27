@@ -91,13 +91,13 @@
         /* Mobile Adjustments */
         @media (max-width: 768px) {
             #constellation {
-                width: 180px;
-                height: 180px;
+                width: 220px;
+                height: 220px;
             }
             .monolith {
-                width: 40px;
-                height: 40px;
-                margin: -20px 0 0 -20px;
+                width: 36px;
+                height: 36px;
+                margin: -18px 0 0 -18px;
             }
             .monolith img {
                 width: 50%;
@@ -105,14 +105,14 @@
             }
             
             /* Adjust positions for smaller circle */
-            .pos-1 { transform: rotate(270deg) translate(70px) rotate(-270deg); }
-            .pos-2 { transform: rotate(315deg) translate(70px) rotate(-315deg); }
-            .pos-3 { transform: rotate(0deg) translate(70px) rotate(0deg); }
-            .pos-4 { transform: rotate(45deg) translate(70px) rotate(-45deg); }
-            .pos-5 { transform: rotate(90deg) translate(70px) rotate(-90deg); }
-            .pos-6 { transform: rotate(135deg) translate(70px) rotate(-135deg); }
-            .pos-7 { transform: rotate(180deg) translate(70px) rotate(-180deg); }
-            .pos-8 { transform: rotate(225deg) translate(70px) rotate(-225deg); }
+            .pos-1 { transform: rotate(270deg) translate(90px) rotate(-270deg); }
+            .pos-2 { transform: rotate(315deg) translate(90px) rotate(-315deg); }
+            .pos-3 { transform: rotate(0deg) translate(90px) rotate(0deg); }
+            .pos-4 { transform: rotate(45deg) translate(90px) rotate(-45deg); }
+            .pos-5 { transform: rotate(90deg) translate(90px) rotate(-90deg); }
+            .pos-6 { transform: rotate(135deg) translate(90px) rotate(-135deg); }
+            .pos-7 { transform: rotate(180deg) translate(90px) rotate(-180deg); }
+            .pos-8 { transform: rotate(225deg) translate(90px) rotate(-225deg); }
             
             #center-text {
                 font-size: 1rem;
@@ -130,9 +130,9 @@
             align-items: center;
             justify-content: center;
             text-decoration: none;
-            width: 64px;
-            height: 64px;
-            border-radius: 12px; /* Squarer shape for tech feel */
+            width: 50px;
+            height: 50px;
+            border-radius: 50%; /* Circular again */
             border: 1px solid rgba(0, 255, 255, 0.2);
             background: rgba(10, 15, 20, 0.85);
             backdrop-filter: blur(6px);
@@ -141,14 +141,14 @@
             
             top: 50%;
             left: 50%;
-            margin: -32px 0 0 -32px;
+            margin: -25px 0 0 -25px;
         }
         
         .monolith::before {
             content: '';
             position: absolute;
             inset: -2px;
-            border-radius: 14px;
+            border-radius: 50%;
             border: 1px solid rgba(0, 255, 255, 0.1);
             pointer-events: none;
         }
@@ -205,19 +205,19 @@
                 height: 500px;
             }
             .monolith {
-                width: 80px;
-                height: 80px;
-                margin: -40px 0 0 -40px;
+                width: 64px;
+                height: 64px;
+                margin: -32px 0 0 -32px;
             }
             /* Position calculations for larger circle (radius 200px approx) */
-            .pos-1 { transform: rotate(270deg) translate(200px) rotate(-270deg); }
-            .pos-2 { transform: rotate(315deg) translate(200px) rotate(-315deg); }
-            .pos-3 { transform: rotate(0deg) translate(200px) rotate(0deg); }
-            .pos-4 { transform: rotate(45deg) translate(200px) rotate(-45deg); }
-            .pos-5 { transform: rotate(90deg) translate(200px) rotate(-90deg); }
-            .pos-6 { transform: rotate(135deg) translate(200px) rotate(-135deg); }
-            .pos-7 { transform: rotate(180deg) translate(200px) rotate(-180deg); }
-            .pos-8 { transform: rotate(225deg) translate(200px) rotate(-225deg); }
+            .pos-1 { transform: rotate(270deg) translate(220px) rotate(-270deg); }
+            .pos-2 { transform: rotate(315deg) translate(220px) rotate(-315deg); }
+            .pos-3 { transform: rotate(0deg) translate(220px) rotate(0deg); }
+            .pos-4 { transform: rotate(45deg) translate(220px) rotate(-45deg); }
+            .pos-5 { transform: rotate(90deg) translate(220px) rotate(-90deg); }
+            .pos-6 { transform: rotate(135deg) translate(220px) rotate(-135deg); }
+            .pos-7 { transform: rotate(180deg) translate(220px) rotate(-180deg); }
+            .pos-8 { transform: rotate(225deg) translate(220px) rotate(-225deg); }
             
             #center-text {
                 font-size: 2rem;
