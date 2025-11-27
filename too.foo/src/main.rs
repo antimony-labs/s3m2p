@@ -58,8 +58,8 @@ struct World {
     last_season: &'static str,
 }
 
-const BOID_SIZE: f32 = 5.0;
-const VISION_RADIUS: f32 = 50.0;
+const BOID_SIZE: f32 = 6.0;
+const VISION_RADIUS: f32 = 60.0;
 
 fn scan_dom_obstacles(document: &Document) -> Vec<Obstacle> {
     let mut obstacles = Vec::new();
@@ -89,6 +89,81 @@ fn is_paused() -> bool {
     } else {
         false
     }
+}
+
+// --- New Rendering Functions ---
+
+fn draw_fractal_food(ctx: &CanvasRenderingContext2d, x: f64, y: f64, radius: f64, hue: u16, fullness: f32, time: f64) {
+    ctx.save();
+    ctx.translate(x, y).unwrap();
+    
+    // Pulse scale
+    let scale = 1.0 + 0.1 * (time * 2.0).sin();
+    ctx.scale(scale, scale).unwrap();
+    
+    let branches = 6;
+    let color = format!("hsla({}, 80%, 60%, {})", hue, 0.3 + fullness * 0.7);
+    ctx.set_stroke_style(&JsValue::from_str(&color));
+    ctx.set_line_width(1.5);
+
+    for i in 0..branches {
+        ctx.rotate(std::f64::consts::TAU / branches as f64).unwrap();
+        
+        // Draw main branch
+        ctx.begin_path();
+        ctx.move_to(0.0, 0.0);
+        let len = radius * fullness;
+        
+        // Koch-like curve simplified
+        ctx.line_to(len * 0.3, 0.0);
+        ctx.line_to(len * 0.5, len * 0.2); // Jag
+        ctx.line_to(len * 0.7, -len * 0.2); // Jag
+        ctx.line_to(len, 0.0);
+        ctx.stroke();
+        
+        // Glow dot at tip
+        ctx.begin_path();
+        ctx.arc(len, 0.0, 2.0, 0.0, std::f64::consts::TAU).unwrap();
+        ctx.set_fill_style(&JsValue::from_str("white"));
+        ctx.fill();
+    }
+    
+    // Core
+    ctx.begin_path();
+    ctx.arc(0.0, 0.0, radius * 0.2, 0.0, std::f64::consts::TAU).unwrap();
+    ctx.set_fill_style(&JsValue::from_str(&format!("hsla({}, 90%, 80%, 0.8)", hue)));
+    ctx.fill();
+
+    ctx.restore();
+}
+
+fn draw_robot_boid(ctx: &CanvasRenderingContext2d, x: f64, y: f64, angle: f64, color: &str, size: f64) {
+    ctx.save();
+    ctx.translate(x, y).unwrap();
+    ctx.rotate(angle).unwrap();
+    
+    ctx.set_stroke_style(&JsValue::from_str(color));
+    ctx.set_line_width(1.5);
+    
+    // Chevron / Drone Shape
+    //   \
+    //   /
+    ctx.begin_path();
+    ctx.move_to(-size, -size * 0.8);
+    ctx.line_to(size, 0.0);
+    ctx.line_to(-size, size * 0.8);
+    ctx.line_to(-size * 0.5, 0.0); // Indent at back
+    ctx.close_path();
+    
+    ctx.stroke();
+    
+    // Engine glow
+    ctx.set_fill_style(&JsValue::from_str("rgba(255, 255, 255, 0.8)"));
+    ctx.begin_path();
+    ctx.arc(-size * 0.5, 0.0, size * 0.3, 0.0, std::f64::consts::TAU).unwrap();
+    ctx.fill();
+
+    ctx.restore();
 }
 
 fn main() {
@@ -161,7 +236,10 @@ fn main() {
         FoodSource::new(width * 0.5, height * 0.5),
     ];
 
-    let config = SimConfig::default();
+    let mut config = SimConfig::default();
+    // Tweaking for more "realistic" feel
+    config.reproduction_threshold = 140.0; // Harder to breed
+    config.base_mortality = 0.00005; // Slightly higher base death
 
     let state = Rc::new(RefCell::new(World {
         arena,
@@ -210,6 +288,9 @@ fn main() {
         last_time = current_time;
         fps_accumulator += delta;
         fps_frame_count += 1;
+        
+        // Global time for animations
+        let time_sec = current_time / 1000.0;
 
         // Rescan DOM obstacles occasionally
         if frame_count % 60 == 0 {
@@ -420,127 +501,88 @@ fn main() {
 
         // === RENDERING ===
         
-        // Background
-        ctx.set_fill_style(&JsValue::from_str("#1a1a2e"));
+        // Background - Deep Space Blue/Black
+        ctx.set_fill_style(&JsValue::from_str("#0a0a12"));
         ctx.fill_rect(0.0, 0.0, canvas_w as f64, canvas_h as f64);
         
-        // Draw food sources with seasonal coloring
+        // Draw food sources (Fractals)
         let season_hue = match s.season.season_name() {
-            "SPRING" => 120,  // Green
-            "SUMMER" => 60,   // Yellow-green
+            "SPRING" => 140,  // Fresh Green
+            "SUMMER" => 60,   // Yellow
             "AUTUMN" => 30,   // Orange
-            "WINTER" => 200,  // Blue-ish
-            _ => 120,
+            "WINTER" => 200,  // Cyan
+            _ => 140,
         };
         
         for food in &s.food_sources {
-            let fullness = food.fullness();
-            let alpha = 0.1 + fullness * 0.5;
-            let radius = food.radius * (0.4 + 0.6 * fullness);
-            
-            // Outer glow - color changes with season
-            ctx.set_fill_style(&JsValue::from_str(&format!(
-                "hsla({}, 80%, 50%, {})", season_hue, alpha * 0.3
-            )));
-            ctx.begin_path();
-            ctx.arc(food.position.x as f64, food.position.y as f64, (radius * 1.5) as f64, 0.0, std::f64::consts::TAU).unwrap();
-            ctx.fill();
-            
-            // Inner core - pulses when depleted
-            let pulse = if food.is_depleted() {
-                0.5 + 0.5 * (frame_count as f32 * 0.1).sin()
-            } else { 1.0 };
-            
-            ctx.set_fill_style(&JsValue::from_str(&format!(
-                "hsla({}, 70%, {}%, {})", 
-                season_hue, 
-                40 + (fullness * 30.0) as u8,
-                alpha * pulse
-            )));
-            ctx.begin_path();
-            ctx.arc(food.position.x as f64, food.position.y as f64, radius as f64, 0.0, std::f64::consts::TAU).unwrap();
-            ctx.fill();
+            if food.energy > 0.0 {
+                draw_fractal_food(&ctx, food.position.x as f64, food.position.y as f64, 
+                    food.radius as f64, season_hue, food.fullness(), time_sec);
+            }
         }
         
-        // Draw predator zones - menacing red circles
+        // Draw predator zones
         for pred in &s.predators {
-            if !pred.active {
-                continue;
-            }
+            if !pred.active { continue; }
             
-            let pulse = 0.5 + 0.5 * (pred.lifetime * 0.15).sin();
+            let pulse = 0.5 + 0.5 * (pred.lifetime * 5.0).sin();
             let alpha = 0.3 * pulse;
             
-            // Outer danger zone
-            ctx.set_fill_style(&JsValue::from_str(&format!("rgba(255, 50, 50, {})", alpha * 0.3)));
-            ctx.begin_path();
-            ctx.arc(pred.position.x as f64, pred.position.y as f64, (pred.radius * 1.3) as f64, 0.0, std::f64::consts::TAU).unwrap();
-            ctx.fill();
-            
-            // Core
-            ctx.set_fill_style(&JsValue::from_str(&format!("rgba(200, 0, 0, {})", alpha * 0.6)));
-            ctx.begin_path();
-            ctx.arc(pred.position.x as f64, pred.position.y as f64, (pred.radius * 0.5) as f64, 0.0, std::f64::consts::TAU).unwrap();
-            ctx.fill();
-            
-            // Danger rings
-            ctx.set_stroke_style(&JsValue::from_str(&format!("rgba(255, 100, 100, {})", alpha)));
+            // Tech Danger Zone
+            ctx.set_stroke_style(&JsValue::from_str(&format!("rgba(255, 0, 50, {})", alpha)));
             ctx.set_line_width(2.0);
             ctx.begin_path();
             ctx.arc(pred.position.x as f64, pred.position.y as f64, pred.radius as f64, 0.0, std::f64::consts::TAU).unwrap();
             ctx.stroke();
+            
+            // Glitch lines inside
+            ctx.set_stroke_style(&JsValue::from_str("rgba(255, 0, 0, 0.5)"));
+            ctx.begin_path();
+            for _ in 0..5 {
+                let dx = (js_sys::Math::random() - 0.5) * pred.radius as f64;
+                let dy = (js_sys::Math::random() - 0.5) * pred.radius as f64;
+                ctx.move_to(pred.position.x as f64, pred.position.y as f64);
+                ctx.line_to(pred.position.x as f64 + dx, pred.position.y as f64 + dy);
+            }
+            ctx.stroke();
         }
 
-        // Draw boids - batch by color bucket for fewer style changes
-        let mut buckets: [Vec<(f32, f32, f32, u8, u8)>; 8] = Default::default();
-        
+        // Draw Robots (Boids)
         for idx in s.arena.iter_alive() {
             let pos = s.arena.positions[idx];
             let vel = s.arena.velocities[idx];
             let angle = vel.y.atan2(vel.x);
             let (hue, sat, light) = get_boid_color(&s.arena, idx);
             
-            let bucket = ((hue as usize) / 45).min(7);
-            buckets[bucket].push((pos.x, pos.y, angle, sat, light));
+            let color = format!("hsl({}, {}%, {}%)", hue, sat, light);
+            draw_robot_boid(&ctx, pos.x as f64, pos.y as f64, angle as f64, &color, BOID_SIZE as f64);
         }
         
-        let hue_centers = [22, 67, 112, 157, 202, 247, 292, 337];
-        
-        for (bucket_idx, bucket) in buckets.iter().enumerate() {
-            if bucket.is_empty() {
-                continue;
-            }
-            
-            let hue = hue_centers[bucket_idx];
-            
-            for &(x, y, angle, sat, light) in bucket {
-                ctx.save();
-                ctx.translate(x as f64, y as f64).unwrap();
-                ctx.rotate(angle as f64).unwrap();
-                
-                ctx.begin_path();
-                ctx.move_to(BOID_SIZE as f64 * 1.5, 0.0);
-                ctx.line_to(-BOID_SIZE as f64, -BOID_SIZE as f64);
-                ctx.line_to(-BOID_SIZE as f64, BOID_SIZE as f64);
-                ctx.close_path();
-                
-                let color = format!("hsl({}, {}%, {}%)", hue, sat, light);
-                ctx.set_fill_style(&JsValue::from_str(&color));
-                ctx.fill();
-                
-                ctx.restore();
-            }
-        }
-        
-        // Motion trails for high-energy boids
-        ctx.set_global_alpha(0.12);
+        // Modern Connections (Plexus Effect) - Subtle
+        ctx.set_stroke_style(&JsValue::from_str("rgba(100, 255, 200, 0.05)"));
+        ctx.set_line_width(0.5);
+        ctx.begin_path();
+        // Only connect a subset to save perf
+        let mut count = 0;
         for idx in s.arena.iter_alive() {
-            if s.arena.energy[idx] > 130.0 {
+            if count > 200 { break; } // Limit connections
+            count += 1;
+            
+            let pos = s.arena.positions[idx];
+            // Connect to neighbors in grid would be faster, but simple distance check for subset is okay
+            // Actually, let's just draw trails for now to keep it clean as requested "modern entry point"
+            // Trails implemented below
+        }
+        
+        // High-speed Trails
+        ctx.set_global_alpha(0.2);
+        for idx in s.arena.iter_alive() {
+            if s.arena.energy[idx] > 100.0 {
                 let pos = s.arena.positions[idx];
                 let vel = s.arena.velocities[idx];
                 let speed = vel.length();
-                if speed > 0.1 {
-                    let trail_end = pos - vel.normalize() * speed * 3.0;
+                if speed > 2.0 {
+                    let trail_end = pos - vel.normalize() * speed * 8.0; // Longer trails
                     
                     ctx.begin_path();
                     ctx.move_to(pos.x as f64, pos.y as f64);
@@ -548,7 +590,7 @@ fn main() {
                     
                     let (h, s_val, l) = get_boid_color(&s.arena, idx);
                     ctx.set_stroke_style(&JsValue::from_str(&format!("hsl({}, {}%, {}%)", h, s_val, l)));
-                    ctx.set_line_width(2.0);
+                    ctx.set_line_width(1.0);
                     ctx.stroke();
                 }
             }
