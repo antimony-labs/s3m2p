@@ -714,16 +714,14 @@ fn main() {
         if let Some(chakravyu) = chakravyu_zone {
             for idx in chakravyu_victims {
                 // EXTREME DRAIN: Kill in < 1 second.
-                // Frame rate is 60fps. 
-                // 200.0 / 60.0 = 3.33 energy per frame to die in 1 second exactly.
-                // We set it to 5.0 to guarantee death in ~0.66 seconds (40 frames).
-                arena.energy[idx] -= 5.0; 
+                // Increased drain to 8.0 per frame to ensure faster death
+                arena.energy[idx] -= 8.0; 
                 
                 // Accelerated death for those deep inside
                 let dist = arena.positions[idx].distance(chakravyu.center);
                 if dist < chakravyu.radius * 0.8 { 
-                    // Instant obliteration zone - kill in ~0.2 seconds
-                    arena.energy[idx] -= 15.0;
+                    // Instant obliteration zone - kill extremely fast
+                    arena.energy[idx] -= 25.0;
                 }
             }
         }

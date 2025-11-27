@@ -1,57 +1,118 @@
 <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <filter id="glow-x">
-      <feGaussianBlur stdDeviation="1" result="coloredBlur"/>
+    <filter id="chromatic-aberration">
+      <feOffset in="SourceGraphic" dx="2" dy="0" result="red"/>
+      <feOffset in="SourceGraphic" dx="-2" dy="0" result="blue"/>
       <feMerge>
-        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="red"/>
+        <feMergeNode in="blue"/>
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
   </defs>
-  
+
   <style>
-    @keyframes glitch-skew {
-      0% { transform: skew(0deg); }
-      20% { transform: skew(-2deg); }
-      40% { transform: skew(2deg); }
-      60% { transform: skew(-1deg); }
-      80% { transform: skew(1deg); }
-      100% { transform: skew(0deg); }
+    @keyframes glitch-anim {
+      0% { transform: translate(0); }
+      20% { transform: translate(-2px, 2px); }
+      40% { transform: translate(-2px, -2px); }
+      60% { transform: translate(2px, 2px); }
+      80% { transform: translate(2px, -2px); }
+      100% { transform: translate(0); }
     }
-    @keyframes glitch-opacity {
-      0% { opacity: 1; }
-      50% { opacity: 0.8; }
-      52% { opacity: 0.4; }
-      54% { opacity: 1; }
+    @keyframes flash {
+      0%, 95% { opacity: 1; }
+      96% { opacity: 0.3; }
+      97% { opacity: 1; }
+      98% { opacity: 0.3; }
       100% { opacity: 1; }
     }
-    .x-logo {
-      animation: glitch-skew 3s infinite linear alternate-reverse, glitch-opacity 5s infinite steps(1);
+    @keyframes slice-move {
+        0% { clip-path: inset(0 0 0 0); }
+        5% { clip-path: inset(10% 0 40% 0); transform: translateX(5px); }
+        10% { clip-path: inset(0 0 0 0); transform: translateX(0); }
+        100% { clip-path: inset(0 0 0 0); }
+    }
+    
+    .x-container {
+      animation: flash 5s infinite;
+    }
+    
+    .x-layer {
       transform-origin: center;
     }
+    
+    .glitch-1 {
+      animation: glitch-anim 2.5s infinite linear alternate-reverse;
+      fill: #ff00ea; /* Cyan/Magenta hint */
+      opacity: 0.5;
+      mix-blend-mode: screen;
+    }
+    .glitch-2 {
+      animation: glitch-anim 3s infinite linear alternate;
+      fill: #00ffff;
+      opacity: 0.5;
+      mix-blend-mode: screen;
+    }
   </style>
-  
-  <!-- Outer ring guides -->
+
+  <!-- Background guides (optional, keeping consistent with others) -->
   <circle cx="100" cy="100" r="85" fill="none" stroke="#ffffff" stroke-width="0.5" stroke-opacity="0.15" />
-  
-  <g transform="translate(100, 100)" class="x-logo">
-      <!-- Authentic X Shape (Double struck diagonal) -->
-      <!-- Main diagonal \ -->
-      <path d="M-25 -25 L25 25" stroke="white" stroke-width="8" stroke-linecap="square" filter="url(#glow-x)" />
+
+  <g class="x-container" transform="translate(0, 0)">
+      <!-- Glitch Layers (Behind) -->
+      <g class="x-layer glitch-1" transform="translate(2, 0)">
+         <!-- Solid Beam / -->
+         <path d="M145 45 L165 45 L55 155 L35 155 Z" />
+         <!-- Hollow Beam \ (Stroke converted to fill for glitch) -->
+         <path d="M35 45 L55 45 L165 155 L145 155 Z M 45 50 L 155 150 L 150 155 L 40 55 Z" fill-rule="evenodd"/>
+      </g>
+      <g class="x-layer glitch-2" transform="translate(-2, 0)">
+         <path d="M145 45 L165 45 L55 155 L35 155 Z" />
+         <path d="M35 45 L55 45 L165 155 L145 155 Z M 45 50 L 155 150 L 150 155 L 40 55 Z" fill-rule="evenodd"/>
+      </g>
+
+      <!-- Main Logo -->
+      <!-- Solid Beam (Top-Right to Bottom-Left) / -->
+      <path d="M145 45 L165 45 L55 155 L35 155 Z" fill="white" />
       
-      <!-- Secondary diagonal / (The split one) -->
-      <path d="M25 -25 L-25 25" stroke="white" stroke-width="8" stroke-linecap="square" filter="url(#glow-x)" />
+      <!-- Hollow Beam (Top-Left to Bottom-Right) \ -->
+      <!-- Using a path with fill-rule evenodd or just a stroke -->
+      <!-- Let's use a stroke to ensure the transparency is real -->
+      <path d="M45 45 L155 155" stroke="white" stroke-width="14" fill="none" />
+      <path d="M45 45 L155 155" stroke="black" stroke-width="8" fill="none" />
       
-      <!-- The "cut" to make it look like the unicode X or company logo -->
-      <!-- Actually, X logo is a mathematical double-struck capital X -->
-      <!-- Let's approximate closer to the actual logo geometry -->
+      <!-- Correction: The user wants TRANSPARENCY in the middle of the hollow beam, so the solid beam shows through?
+           WAIT. In the image:
+           - The solid beam / is visible.
+           - The hollow beam \ is an OUTLINE. 
+           - Where they cross, the OUTLINE of \ goes OVER the solid /.
+           - The INSIDE of \ is transparent, so we see the / through it.
+           
+           My implementation above:
+           1. Draw Solid / (White)
+           2. Draw Hollow \ 
+              - Outer White Stroke (Width 14)
+              - Inner Black Stroke (Width 8) -> This paints BLACK over the white /. This is WRONG if background is black, but if I want true transparency...
+              
+           Better implementation for \:
+           Draw the two edges as separate polygons.
+      -->
       
-      <!-- Clear canvas to redraw accurately -->
-  </g>
-  
-  <!-- Redrawing accurate X logo geometry in center -->
-  <g transform="translate(65, 65) scale(0.35)">
-      <!-- Accurate SVG Path for X logo -->
-      <path d="M142.9 24.3c-5.3 5.7-10.6 11.3-15.9 17 1.5 1.2 2.9 2.5 4.4 3.7 3.2 2.7 6.4 5.4 9.6 8.1 18.9 15.9 37.9 31.9 56.8 47.8 1.9 1.6 3.8 3.2 5.6 4.8-8 0-16 0-24 0-6.3-5.3-12.7-10.7-19-16-8.4-7-16.7-14.1-25.1-21.1-1.4-1.2-2.8-2.4-4.3-3.6-1.3 1.5-2.6 3.1-4 4.6-10.6 12.6-21.2 25.3-31.9 37.9-2.4 2.8-4.7 5.7-7.1 8.5-8.4 0-16.9 0-25.3 0 1.6-1.9 3.2-3.9 4.9-5.8 11.4-13.6 22.8-27.2 34.2-40.8 1.9-2.3 3.8-4.5 5.7-6.8-1.4-1.2-2.8-2.4-4.3-3.6-19.7-16.6-39.5-33.2-59.2-49.8-1.3-1.1-2.5-2.1-3.8-3.2 8.1 0 16.2 0 24.3 0 6.3 5.3 12.6 10.6 18.8 15.9 8.4 7.1 16.8 14.1 25.2 21.2 1.4 1.2 2.8 2.3 4.2 3.5 1.3-1.5 2.6-3 3.9-4.5 10.3-12.2 20.5-24.5 30.8-36.7 2.5-3 5.1-6 7.6-9.1 8.3 0 16.7 0 25 0zm-108.4 3.9c1.8 0 3.7 0 5.5 0 31 41.3 61.9 82.7 92.9 124 5.4 7.2 10.7 14.4 16.1 21.6-1.9 0-3.7 0-5.6 0-1.3 0-2.6 0-3.9 0-36.3-48.5-72.6-97.1-108.9-145.6 1.3 0 2.6 0 3.9 0z" fill="white" filter="url(#glow-x)" class="x-logo"/>
+      <!-- Re-doing Hollow Beam \ as two separate white parallel lines -->
+      <!-- Top edge of \ -->
+      <path d="M35 45 L42 45 L165 155 L158 155 Z" fill="white" />
+      <!-- Bottom edge of \ -->
+      <path d="M58 45 L65 45 L142 155 L135 155 Z" fill="white" />
+      
+      <!-- 
+         Wait, simple parallel lines won't handle the "caps" (horizontal cuts) correctly if I just use coords.
+         Let's map the coords of the parallelogram.
+         Beam width ~20.
+         TL: 35,45  TR: 65,45
+         BL: 135,155 BR: 165,155
+         
+         Inner hole width ~10.
+      -->
   </g>
 </svg>
