@@ -34,13 +34,11 @@ jobs:
         run: trunk build --release
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: 'too-foo'
-          directory: 'too.foo/dist'
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          command: pages deploy too.foo/dist --project-name=too-foo
 
   deploy-helios:
     name: Deploy Helios
@@ -70,10 +68,8 @@ jobs:
         run: trunk build --release
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: 'helios-too-foo'
-          directory: 'helios/dist'
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          command: pages deploy helios/dist --project-name=helios-too-foo
