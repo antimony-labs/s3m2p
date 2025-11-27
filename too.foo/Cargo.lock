@@ -187,7 +187,9 @@ version = "0.1.0"
 dependencies = [
  "antimony-core",
  "console_error_panic_hook",
+ "getrandom",
  "glam",
+ "rand",
  "wasm-bindgen",
  "web-sys",
 ]

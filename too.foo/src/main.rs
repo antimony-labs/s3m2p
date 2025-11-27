@@ -3,7 +3,12 @@ use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsValue;
 use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement, Document, HtmlElement, Performance};
-use antimony_core::{Boid, Obstacle};
+use antimony_core::{
+    BoidArena, SpatialGrid, Obstacle, FoodSource, Genome, SimConfig,
+    SeasonCycle, PredatorZone,
+    compute_flocking_forces, simulation_step, feed_from_sources, get_boid_color,
+    apply_predator_zones, trigger_migration, trigger_earthquake,
+};
 use glam::Vec2;
 
 #[wasm_bindgen]
@@ -12,33 +17,26 @@ extern "C" {
     fn log(s: &str);
 }
 
+// Fixed capacity - no runtime allocations
+const ARENA_CAPACITY: usize = 1024;
+const CELL_CAPACITY: usize = 32;
+
 /// Simulation state tracking
 struct SimulationStats {
     max_speed_record: f32,
-    initial_population: usize,
-    extinction_triggered: bool,
-}
-
-impl SimulationStats {
-    fn new(initial_pop: usize) -> Self {
-        Self {
-            max_speed_record: 0.0,
-            initial_population: initial_pop,
-            extinction_triggered: false,
-        }
-    }
+    max_generation: u16,
+    total_births: u64,
+    total_deaths: u64,
 }
 
 /// Append a log event to the console-log div
 fn log_event(document: &Document, msg: &str, event_class: &str) {
     if let Some(console_log) = document.get_element_by_id("console-log") {
-        // Create a new paragraph element
         if let Ok(p) = document.create_element("p") {
             p.set_text_content(Some(msg));
             let _ = p.set_attribute("class", event_class);
             let _ = console_log.append_child(&p);
             
-            // Auto-scroll to bottom by setting scrollTop to scrollHeight
             if let Ok(html_el) = console_log.dyn_into::<HtmlElement>() {
                 html_el.set_scroll_top(html_el.scroll_height());
             }
@@ -47,13 +45,21 @@ fn log_event(document: &Document, msg: &str, event_class: &str) {
 }
 
 struct World {
-    boids: Vec<Boid>,
+    arena: BoidArena<ARENA_CAPACITY>,
+    grid: SpatialGrid<CELL_CAPACITY>,
     obstacles: Vec<Obstacle>,
+    food_sources: Vec<FoodSource>,
+    predators: Vec<PredatorZone>,
+    season: SeasonCycle,
+    config: SimConfig,
     width: f32,
     height: f32,
+    event_cooldown: f32,
+    last_season: &'static str,
 }
 
 const BOID_SIZE: f32 = 5.0;
+const VISION_RADIUS: f32 = 50.0;
 
 fn scan_dom_obstacles(document: &Document) -> Vec<Obstacle> {
     let mut obstacles = Vec::new();
@@ -62,12 +68,8 @@ fn scan_dom_obstacles(document: &Document) -> Vec<Obstacle> {
     for i in 0..elements.length() {
         if let Some(element) = elements.item(i) {
             let rect = element.get_bounding_client_rect();
-            
-            // Convert to canvas coordinates (already in pixels from bounding rect)
             let center_x = rect.left() as f32 + rect.width() as f32 / 2.0;
             let center_y = rect.top() as f32 + rect.height() as f32 / 2.0;
-            
-            // Calculate radius as max of half width/height
             let radius = (rect.width().max(rect.height()) as f32) / 2.0;
             
             obstacles.push(Obstacle {
@@ -79,7 +81,6 @@ fn scan_dom_obstacles(document: &Document) -> Vec<Obstacle> {
     obstacles
 }
 
-/// Check if the URL contains ?paused=true query parameter
 fn is_paused() -> bool {
     let window = window().unwrap();
     let location = window.location();
@@ -101,16 +102,14 @@ fn main() {
         .dyn_into::<HtmlCanvasElement>()
         .unwrap();
 
-    // Check if we should run in paused mode (for E2E testing)
     let paused = is_paused();
 
-    // Resize canvas to fill window
     let w = window.inner_width().unwrap().as_f64().unwrap();
     let h = window.inner_height().unwrap().as_f64().unwrap();
     canvas.set_width(w as u32);
     canvas.set_height(h as u32);
 
-    // Attach resize event listener
+    // Resize handler
     {
         let canvas = canvas.clone();
         let window_for_closure = window.clone();
@@ -131,36 +130,58 @@ fn main() {
         .dyn_into::<CanvasRenderingContext2d>()
         .unwrap();
 
-    // Initialize world with 100 boids
-    let mut boids = Vec::new();
     let width = w as f32;
     let height = h as f32;
-    
-    for _ in 0..100 {
-        let mut boid = Boid::new();
-        // Scale positions from 0.0-1.0 range to canvas coordinates
-        boid.position.x *= width;
-        boid.position.y *= height;
-        boids.push(boid);
-    }
-    
-    let obstacles = scan_dom_obstacles(&document);
 
-    let initial_pop = boids.len();
+    // Initialize arena with starting population
+    let mut arena: BoidArena<ARENA_CAPACITY> = BoidArena::new();
+    let mut rng = rand::thread_rng();
+    use rand::Rng;
     
+    for _ in 0..150 {
+        let pos = Vec2::new(
+            rng.gen_range(0.0..width),
+            rng.gen_range(0.0..height),
+        );
+        let vel = Vec2::new(
+            rng.gen_range(-1.0..1.0),
+            rng.gen_range(-1.0..1.0),
+        );
+        arena.spawn(pos, vel, Genome::random());
+    }
+
+    let grid = SpatialGrid::new(width, height, VISION_RADIUS);
+    let obstacles = scan_dom_obstacles(&document);
+    
+    let food_sources = vec![
+        FoodSource::new(width * 0.25, height * 0.25),
+        FoodSource::new(width * 0.75, height * 0.25),
+        FoodSource::new(width * 0.25, height * 0.75),
+        FoodSource::new(width * 0.75, height * 0.75),
+        FoodSource::new(width * 0.5, height * 0.5),
+    ];
+
+    let config = SimConfig::default();
+
     let state = Rc::new(RefCell::new(World {
-        boids,
+        arena,
+        grid,
         obstacles,
+        food_sources,
+        predators: Vec::new(),
+        season: SeasonCycle::new(),
+        config,
         width,
         height,
+        event_cooldown: 0.0,
+        last_season: "SPRING",
     }));
 
-    // Cache DOM element references for the dashboard
+    // Cache DOM element references
     let stat_pop = document.get_element_by_id("stat-pop");
     let stat_gen = document.get_element_by_id("stat-gen");
     let stat_fps = document.get_element_by_id("stat-fps");
 
-    // Get performance API for FPS calculation
     let performance: Performance = window.performance().unwrap();
 
     let f: Rc<RefCell<Option<Closure<dyn FnMut()>>>> = Rc::new(RefCell::new(None));
@@ -172,7 +193,12 @@ fn main() {
     let mut last_time = performance.now();
     let mut fps_accumulator = 0.0;
     let mut fps_frame_count = 0;
-    let mut stats = SimulationStats::new(initial_pop);
+    let mut stats = SimulationStats {
+        max_speed_record: 0.0,
+        max_generation: 0,
+        total_births: 0,
+        total_deaths: 0,
+    };
     
     *g.borrow_mut() = Some(Closure::new(move || {
         let mut s = state_clone.borrow_mut();
@@ -185,24 +211,31 @@ fn main() {
         fps_accumulator += delta;
         fps_frame_count += 1;
 
+        // Rescan DOM obstacles occasionally
         if frame_count % 60 == 0 {
             s.obstacles = scan_dom_obstacles(&document_clone);
         }
         
         // Update dashboard every 30 frames
         if frame_count % 30 == 0 {
-            // Update population
+            let alive_count = s.arena.alive_count;
+            
             if let Some(ref el) = stat_pop {
-                el.set_text_content(Some(&format!("POP: {}", s.boids.len())));
+                el.set_text_content(Some(&format!("POP: {}", alive_count)));
             }
             
-            // Calculate and update max generation
-            let max_gen = s.boids.iter().map(|b| b.generation).max().unwrap_or(0);
+            // Find max generation
+            let mut max_gen: u16 = 0;
+            let mut max_speed: f32 = 0.0;
+            for idx in s.arena.iter_alive() {
+                max_gen = max_gen.max(s.arena.generation[idx]);
+                max_speed = max_speed.max(s.arena.genes[idx].max_speed);
+            }
+            
             if let Some(ref el) = stat_gen {
                 el.set_text_content(Some(&format!("GEN: {}", max_gen)));
             }
             
-            // Update FPS (average over last period)
             if fps_frame_count > 0 && fps_accumulator > 0.0 {
                 let avg_fps = (fps_frame_count as f64 / fps_accumulator) * 1000.0;
                 if let Some(ref el) = stat_fps {
@@ -212,129 +245,316 @@ fn main() {
                 fps_frame_count = 0;
             }
             
-            // Check for new speed record
-            let current_max_speed = s.boids.iter()
-                .map(|b| b.genes.max_speed)
-                .max_by(|a, b| a.partial_cmp(b).unwrap())
-                .unwrap_or(0.0);
-            
-            if current_max_speed > stats.max_speed_record + 0.1 {
-                stats.max_speed_record = current_max_speed;
-                log_event(&document_clone, &format!("NEW SPEED RECORD: {:.2}", current_max_speed), "event-record");
+            // Log events
+            if max_speed > stats.max_speed_record + 0.1 {
+                stats.max_speed_record = max_speed;
+                log_event(&document_clone, &format!("⚡ SPEED RECORD: {:.2}", max_speed), "event-record");
             }
             
-            // Check for mass extinction event (population drops below 50%)
-            let current_pop = s.boids.len();
-            if current_pop < stats.initial_population / 2 && !stats.extinction_triggered {
-                stats.extinction_triggered = true;
-                log_event(&document_clone, &format!("⚠ MASS EXTINCTION! Pop: {}", current_pop), "event-death");
-            } else if current_pop >= stats.initial_population / 2 {
-                stats.extinction_triggered = false; // Reset for next potential extinction
+            if max_gen > stats.max_generation {
+                stats.max_generation = max_gen;
+                if max_gen % 5 == 0 {
+                    log_event(&document_clone, &format!("🧬 GEN {} reached", max_gen), "event-birth");
+                }
             }
         }
 
-        // Update dimensions from canvas (handled by resize listener)
+        // Update canvas dimensions
         let canvas_w = ctx.canvas().unwrap().width() as f32;
         let canvas_h = ctx.canvas().unwrap().height() as f32;
         
-        // Update world state
-        s.width = canvas_w;
-        s.height = canvas_h;
-
-        // Background: Dark Grey
-        ctx.set_fill_style(&JsValue::from_str("#222222"));
-        ctx.fill_rect(0.0, 0.0, canvas_w as f64, canvas_h as f64);
-
-        // 1. Snapshot state to calculate forces
-        let boids_snapshot = s.boids.clone();
-        let obstacles_snapshot = s.obstacles.clone();
-        let mut accelerations = Vec::with_capacity(s.boids.len());
-        let vision_radius = 50.0;
-
-        for boid in &s.boids {
-            let cohesion = boid.cohesion(&boids_snapshot, vision_radius) * 1.0;
-            let alignment = boid.alignment(&boids_snapshot, vision_radius) * 1.0;
-            let separation = boid.separation(&boids_snapshot, vision_radius) * 1.5;
-            
-            // Obstacle Avoidance using the avoid_obstacles method
-            let avoidance = boid.avoid_obstacles(&obstacles_snapshot) * 100.0;
-
-            accelerations.push(cohesion + alignment + separation + avoidance);
+        if s.width != canvas_w || s.height != canvas_h {
+            s.width = canvas_w;
+            s.height = canvas_h;
+            s.grid.resize(canvas_w, canvas_h);
         }
 
-        // 2. Apply forces and update
-        let mut new_babies: Vec<Boid> = Vec::new();
+        // === SIMULATION STEP ===
         
-        for (i, boid) in s.boids.iter_mut().enumerate() {
-            // Add flocking acceleration
-            boid.velocity += accelerations[i] * 0.05; // Small factor to prevent explosion
+        // Destructure to get separate borrows
+        let World { 
+            arena, 
+            grid, 
+            obstacles, 
+            food_sources,
+            predators,
+            season,
+            config, 
+            width: world_w, 
+            height: world_h,
+            event_cooldown,
+            last_season,
+        } = &mut *s;
+        
+        // Update season
+        season.update(1.0);
+        
+        // Check for season change
+        let current_season = season.season_name();
+        if current_season != *last_season {
+            *last_season = current_season;
+            log_event(&document_clone, &format!("🌍 {} has arrived!", current_season), "event-record");
             
-            // Limit speed using genome's max_speed
-            let max_speed = boid.genes.max_speed;
-            if boid.velocity.length() > max_speed {
-                boid.velocity = boid.velocity.normalize() * max_speed;
+            // Winter is harsh
+            if current_season == "WINTER" {
+                log_event(&document_clone, "❄ Resources are scarce...", "event-death");
+            } else if current_season == "SUMMER" {
+                log_event(&document_clone, "☀ Abundance! Food plentiful!", "event-birth");
             }
-
-            boid.update(1.0, canvas_w, canvas_h); // using 1.0 as relative time step
+        }
+        
+        // Random events
+        *event_cooldown -= 1.0;
+        if *event_cooldown <= 0.0 {
+            use rand::Rng;
+            let mut rng = rand::thread_rng();
             
-            // Feeding zone: check distance to obstacles (monoliths)
-            for obs in &obstacles_snapshot {
-                let distance = boid.position.distance(obs.center);
-                if distance < 150.0 {
-                    boid.feed(0.5);
+            // Events more likely in winter, less in summer
+            let event_chance = 0.002 + if current_season == "WINTER" { 0.003 } else { 0.0 };
+            
+            if rng.gen::<f32>() < event_chance {
+                let event_type = rng.gen_range(0..5);
+                
+                match event_type {
+                    0 => {
+                        // Predator spawns
+                        let x = rng.gen_range(100.0..*world_w - 100.0);
+                        let y = rng.gen_range(100.0..*world_h - 100.0);
+                        predators.push(PredatorZone::new(x, y));
+                        log_event(&document_clone, "🦈 PREDATOR appeared!", "event-death");
+                        *event_cooldown = 300.0;
+                    }
+                    1 => {
+                        // Migration
+                        let dir = Vec2::new(rng.gen_range(-1.0..1.0), rng.gen_range(-1.0..1.0)).normalize();
+                        trigger_migration(arena, dir, 3.0);
+                        log_event(&document_clone, "🦅 MIGRATION wave!", "event-record");
+                        *event_cooldown = 200.0;
+                    }
+                    2 => {
+                        // Earthquake
+                        trigger_earthquake(arena);
+                        log_event(&document_clone, "💥 EARTHQUAKE!", "event-death");
+                        *event_cooldown = 400.0;
+                    }
+                    3 => {
+                        // Food bloom at random location
+                        let food_count = food_sources.len();
+                        if food_count > 0 {
+                            let idx = rng.gen_range(0..food_count);
+                            food_sources[idx].energy = food_sources[idx].max_energy * 2.0;
+                            food_sources[idx].max_energy *= 1.5;
+                            log_event(&document_clone, "🌸 BLOOM! Food surge!", "event-birth");
+                        }
+                        *event_cooldown = 250.0;
+                    }
+                    _ => {
+                        // Population boom - instant reproduction
+                        let alive: Vec<usize> = (0..ARENA_CAPACITY).filter(|&i| arena.alive[i]).collect();
+                        let mut births = 0;
+                        for &idx in alive.iter().take(20) {
+                            if arena.energy[idx] > 80.0 {
+                                let _ = arena.spawn_child(idx);
+                                births += 1;
+                            }
+                        }
+                        if births > 0 {
+                            log_event(&document_clone, &format!("🎉 BABY BOOM! {} born!", births), "event-birth");
+                        }
+                        *event_cooldown = 300.0;
+                    }
                 }
             }
+        }
+        
+        // Update predators
+        for pred in predators.iter_mut() {
+            pred.update(1.0);
+        }
+        predators.retain(|p| p.active);
+        
+        // 1. Build spatial grid
+        grid.build(arena);
+        
+        // 2. Compute flocking forces (writes to arena.scratch_accel)
+        compute_flocking_forces(arena, grid, VISION_RADIUS, obstacles);
+        
+        // 3. Feed from food sources (season-affected)
+        feed_from_sources(arena, food_sources, season);
+        
+        // Also feed near obstacles (monoliths) - collect indices first
+        let obstacle_feeders: Vec<usize> = (0..ARENA_CAPACITY)
+            .filter(|&idx| arena.alive[idx])
+            .filter(|&idx| {
+                obstacles.iter().any(|obs| {
+                    arena.positions[idx].distance(obs.center) < 150.0
+                })
+            })
+            .collect();
+        
+        for idx in obstacle_feeders {
+            arena.energy[idx] = (arena.energy[idx] + 0.8 * season.food_multiplier()).min(200.0);
+        }
+        
+        // Apply predator damage
+        let predator_kills = apply_predator_zones(arena, predators);
+        if predator_kills > 0 {
+            log_event(&document_clone, &format!("🩸 Predator claimed {} victims!", predator_kills), "event-death");
+        }
+        
+        // 4. Run simulation step (movement, reproduction, death)
+        let (births, deaths) = simulation_step(
+            arena,
+            grid,
+            config,
+            *world_w,
+            *world_h,
+            1.0,
+        );
+        
+        if deaths > 15 {
+            log_event(&document_clone, &format!("☠ {} died", deaths), "event-death");
+        }
+        
+        let _ = births; // Suppress unused warnings
+
+        // === RENDERING ===
+        
+        // Background
+        ctx.set_fill_style(&JsValue::from_str("#1a1a2e"));
+        ctx.fill_rect(0.0, 0.0, canvas_w as f64, canvas_h as f64);
+        
+        // Draw food sources with seasonal coloring
+        let season_hue = match s.season.season_name() {
+            "SPRING" => 120,  // Green
+            "SUMMER" => 60,   // Yellow-green
+            "AUTUMN" => 30,   // Orange
+            "WINTER" => 200,  // Blue-ish
+            _ => 120,
+        };
+        
+        for food in &s.food_sources {
+            let fullness = food.fullness();
+            let alpha = 0.1 + fullness * 0.5;
+            let radius = food.radius * (0.4 + 0.6 * fullness);
             
-            // Reproduction: if boid has enough energy, spawn a child
-            if let Some(mut child) = boid.reproduce() {
-                // Scale child position to canvas coordinates (it inherits parent position)
-                child.position.x = child.position.x.clamp(0.0, canvas_w);
-                child.position.y = child.position.y.clamp(0.0, canvas_h);
-                new_babies.push(child);
+            // Outer glow - color changes with season
+            ctx.set_fill_style(&JsValue::from_str(&format!(
+                "hsla({}, 80%, 50%, {})", season_hue, alpha * 0.3
+            )));
+            ctx.begin_path();
+            ctx.arc(food.position.x as f64, food.position.y as f64, (radius * 1.5) as f64, 0.0, std::f64::consts::TAU).unwrap();
+            ctx.fill();
+            
+            // Inner core - pulses when depleted
+            let pulse = if food.is_depleted() {
+                0.5 + 0.5 * (frame_count as f32 * 0.1).sin()
+            } else { 1.0 };
+            
+            ctx.set_fill_style(&JsValue::from_str(&format!(
+                "hsla({}, 70%, {}%, {})", 
+                season_hue, 
+                40 + (fullness * 30.0) as u8,
+                alpha * pulse
+            )));
+            ctx.begin_path();
+            ctx.arc(food.position.x as f64, food.position.y as f64, radius as f64, 0.0, std::f64::consts::TAU).unwrap();
+            ctx.fill();
+        }
+        
+        // Draw predator zones - menacing red circles
+        for pred in &s.predators {
+            if !pred.active {
+                continue;
+            }
+            
+            let pulse = 0.5 + 0.5 * (pred.lifetime * 0.15).sin();
+            let alpha = 0.3 * pulse;
+            
+            // Outer danger zone
+            ctx.set_fill_style(&JsValue::from_str(&format!("rgba(255, 50, 50, {})", alpha * 0.3)));
+            ctx.begin_path();
+            ctx.arc(pred.position.x as f64, pred.position.y as f64, (pred.radius * 1.3) as f64, 0.0, std::f64::consts::TAU).unwrap();
+            ctx.fill();
+            
+            // Core
+            ctx.set_fill_style(&JsValue::from_str(&format!("rgba(200, 0, 0, {})", alpha * 0.6)));
+            ctx.begin_path();
+            ctx.arc(pred.position.x as f64, pred.position.y as f64, (pred.radius * 0.5) as f64, 0.0, std::f64::consts::TAU).unwrap();
+            ctx.fill();
+            
+            // Danger rings
+            ctx.set_stroke_style(&JsValue::from_str(&format!("rgba(255, 100, 100, {})", alpha)));
+            ctx.set_line_width(2.0);
+            ctx.begin_path();
+            ctx.arc(pred.position.x as f64, pred.position.y as f64, pred.radius as f64, 0.0, std::f64::consts::TAU).unwrap();
+            ctx.stroke();
+        }
+
+        // Draw boids - batch by color bucket for fewer style changes
+        let mut buckets: [Vec<(f32, f32, f32, u8, u8)>; 8] = Default::default();
+        
+        for idx in s.arena.iter_alive() {
+            let pos = s.arena.positions[idx];
+            let vel = s.arena.velocities[idx];
+            let angle = vel.y.atan2(vel.x);
+            let (hue, sat, light) = get_boid_color(&s.arena, idx);
+            
+            let bucket = ((hue as usize) / 45).min(7);
+            buckets[bucket].push((pos.x, pos.y, angle, sat, light));
+        }
+        
+        let hue_centers = [22, 67, 112, 157, 202, 247, 292, 337];
+        
+        for (bucket_idx, bucket) in buckets.iter().enumerate() {
+            if bucket.is_empty() {
+                continue;
+            }
+            
+            let hue = hue_centers[bucket_idx];
+            
+            for &(x, y, angle, sat, light) in bucket {
+                ctx.save();
+                ctx.translate(x as f64, y as f64).unwrap();
+                ctx.rotate(angle as f64).unwrap();
+                
+                ctx.begin_path();
+                ctx.move_to(BOID_SIZE as f64 * 1.5, 0.0);
+                ctx.line_to(-BOID_SIZE as f64, -BOID_SIZE as f64);
+                ctx.line_to(-BOID_SIZE as f64, BOID_SIZE as f64);
+                ctx.close_path();
+                
+                let color = format!("hsl({}, {}%, {}%)", hue, sat, light);
+                ctx.set_fill_style(&JsValue::from_str(&color));
+                ctx.fill();
+                
+                ctx.restore();
             }
         }
         
-        // Add new babies to the population
-        s.boids.append(&mut new_babies);
-        
-        // Death: remove boids with no energy
-        s.boids.retain(|b| b.energy > 0.0);
-
-        // Draw all boids as triangles
-        for boid in s.boids.iter() {
-            // Positions are already in canvas coordinates
-            let x = boid.position.x;
-            let y = boid.position.y;
-            
-            // Calculate angle from velocity
-            let angle = boid.velocity.y.atan2(boid.velocity.x);
-            
-            // Save context state
-            ctx.save();
-            
-            // Translate to boid position
-            ctx.translate(x as f64, y as f64).unwrap();
-            
-            // Rotate to face velocity direction
-            ctx.rotate(angle as f64).unwrap();
-            
-            // Draw triangle pointing forward
-            ctx.begin_path();
-            ctx.move_to(BOID_SIZE as f64 * 1.5, 0.0); // Tip of triangle
-            ctx.line_to(-BOID_SIZE as f64, -BOID_SIZE as f64); // Bottom left
-            ctx.line_to(-BOID_SIZE as f64, BOID_SIZE as f64); // Bottom right
-            ctx.close_path();
-            
-            // Use the HSL color from the boid's genetic traits and health
-            let color = boid.get_color_string();
-            ctx.set_fill_style(&JsValue::from_str(&color));
-            ctx.fill();
-            
-            // Restore context state
-            ctx.restore();
+        // Motion trails for high-energy boids
+        ctx.set_global_alpha(0.12);
+        for idx in s.arena.iter_alive() {
+            if s.arena.energy[idx] > 130.0 {
+                let pos = s.arena.positions[idx];
+                let vel = s.arena.velocities[idx];
+                let speed = vel.length();
+                if speed > 0.1 {
+                    let trail_end = pos - vel.normalize() * speed * 3.0;
+                    
+                    ctx.begin_path();
+                    ctx.move_to(pos.x as f64, pos.y as f64);
+                    ctx.line_to(trail_end.x as f64, trail_end.y as f64);
+                    
+                    let (h, s_val, l) = get_boid_color(&s.arena, idx);
+                    ctx.set_stroke_style(&JsValue::from_str(&format!("hsl({}, {}%, {}%)", h, s_val, l)));
+                    ctx.set_line_width(2.0);
+                    ctx.stroke();
+                }
+            }
         }
+        ctx.set_global_alpha(1.0);
 
-        // Only request next frame if not paused (allows E2E tests to take stable screenshots)
         if !paused {
             web_sys::window()
                 .unwrap()
@@ -343,7 +563,6 @@ fn main() {
         }
     }));
 
-    // Start animation loop (render at least once)
     window
         .request_animation_frame(g.borrow().as_ref().unwrap().as_ref().unchecked_ref())
         .unwrap();
