@@ -433,11 +433,14 @@ mod tests {
 
     #[test]
     fn test_continuous_growth_recycling() {
-        let mut net = FungalNetwork::new(100.0, 100.0);
+        let mut net = FungalNetwork::new(1000.0, 1000.0);
         
-        // Fill 'er up artifically
-        for _ in 0..MAX_NODES {
-            net.seed_at(Vec2::new(50.0, 50.0));
+        // Fill 'er up artificially by directly adding nodes at different positions
+        // (bypassing is_space_occupied check which prevents seeding at same location)
+        for i in 0..MAX_NODES {
+            let x = (i % 100) as f32 * 10.0;
+            let y = (i / 100) as f32 * 10.0;
+            net.add_node(Vec2::new(x, y), None, 0.0, BranchType::EnergyMed);
         }
         assert_eq!(net.count, MAX_NODES);
         
@@ -445,10 +448,10 @@ mod tests {
         net.nodes[0].active = false;
         
         // Try to add again - should succeed by recycling
-        net.seed_at(Vec2::new(60.0, 60.0));
+        net.add_node(Vec2::new(500.0, 500.0), None, 0.0, BranchType::EnergyMed);
         
         assert!(net.nodes[0].active);
-        assert_eq!(net.nodes[0].pos, Vec2::new(60.0, 60.0));
+        assert_eq!(net.nodes[0].pos, Vec2::new(500.0, 500.0));
         // When recycling, count stays at MAX_NODES
         assert_eq!(net.count, MAX_NODES);
     }
