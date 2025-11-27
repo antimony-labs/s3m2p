@@ -1,5 +1,5 @@
 use std::sync::{Arc, Mutex};
-use antimony_core::spatial::{SpatialStore, DataLayer};
+use antimony_core::{SpatialStore, DataLayer};
 use glam::Vec3;
 
 // Placeholder for actual star data
