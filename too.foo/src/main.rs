@@ -687,13 +687,15 @@ fn main() {
         // Apply Chakravyu energy drain - rapid death inside the circle
         if let Some(chakravyu) = chakravyu_zone {
             for idx in chakravyu_victims {
-                // Heavily increased drain for high churn
-                arena.energy[idx] -= chakravyu.energy_drain * 5.0; 
+                // EXTREME DRAIN: Kill in ~0.5 to 1.5 seconds at 60fps
+                // Max energy is 200.0. 
+                // Drain of 4.0 per frame = 50 frames = ~0.8 seconds to death from full health
+                arena.energy[idx] -= 4.0; 
                 
                 // Accelerated death for those deep inside
                 let dist = arena.positions[idx].distance(chakravyu.center);
-                if dist < chakravyu.radius * 0.8 { // Widened "kill zone" inside the circle
-                    // Very fast death
+                if dist < chakravyu.radius * 0.8 { 
+                    // Instant obliteration zone
                     arena.energy[idx] -= 10.0;
                 }
             }
