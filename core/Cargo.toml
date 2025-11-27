@@ -1,7 +1,8 @@
 [package]
-name = "antimony-core"
+name = "core"
 version = "0.1.0"
 edition = "2021"
+description = "Core simulation engine with boid physics, genetics, and spatial indexing"
 
 [dependencies]
 glam = { version = "0.29", features = ["rand"] }

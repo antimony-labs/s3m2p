@@ -3,7 +3,7 @@ use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsValue;
 use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement, Document, Performance};
-use antimony_core::{
+use core::{
     BoidArena, SpatialGrid, Obstacle, FoodSource, Genome, SimConfig,
     SeasonCycle, PredatorZone, BoidRole, BoidState,
     compute_flocking_forces, simulation_step, feed_from_sources, get_boid_color,
@@ -16,6 +16,9 @@ use fungal::{FungalNetwork, InteractionResult};
 
 mod shader;
 use shader::BackgroundEffect;
+
+/// Type alias for the animation frame closure pattern
+type AnimationCallback = Rc<RefCell<Option<Closure<dyn FnMut()>>>>;
 
 #[wasm_bindgen]
 extern "C" {
@@ -45,11 +48,12 @@ struct SimulationStats {
 
 /// Chakravyu zone - the deadly center where boids can enter but not escape
 #[derive(Clone, Copy, Debug)]
+#[allow(dead_code)]
 struct ChakravyuZone {
     center: Vec2,
     radius: f32,
     _energy_drain: f32,
-    inward_force: f32,
+    inward_force: f32,  // Used for rush mechanics
 }
 
 /// Update the single-line console log (replaces content)
@@ -192,10 +196,11 @@ fn is_paused() -> bool {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn draw_organism(
-    ctx: &CanvasRenderingContext2d, 
-    x: f64, 
-    y: f64, 
+    ctx: &CanvasRenderingContext2d,
+    x: f64,
+    y: f64,
     angle: f64, 
     color: &str, 
     base_size: f64,
@@ -370,9 +375,7 @@ fn main() {
     let (exclusion_zones, chakravyu) = scan_exclusion_zones(&document);
 
     // Initialize arena with starting population (avoid exclusion zones)
-    let mut arena: BoidArena<ARENA_CAPACITY> = BoidArena::new();
-    let mut rng = rand::thread_rng();
-    use rand::Rng;
+    let arena: BoidArena<ARENA_CAPACITY> = BoidArena::new();
     
     // Removed initial population loop - The Circle is the Source
     // Start empty and let the fountain fill the world.
@@ -394,9 +397,11 @@ fn main() {
     // Initialize Background Effect
     let background = BackgroundEffect::new(width as f64, height as f64);
 
-    let mut config = SimConfig::default();
-    config.reproduction_threshold = 140.0;
-    config.base_mortality = 0.00001; // Reduced mortality to allow population growth
+    let config = SimConfig {
+        reproduction_threshold: 140.0,
+        base_mortality: 0.00001, // Reduced mortality to allow population growth
+        ..SimConfig::default()
+    };
 
     let state = Rc::new(RefCell::new(World {
         arena,
@@ -425,7 +430,7 @@ fn main() {
 
     let performance: Performance = window.performance().unwrap();
 
-    let f: Rc<RefCell<Option<Closure<dyn FnMut()>>>> = Rc::new(RefCell::new(None));
+    let f: AnimationCallback = Rc::new(RefCell::new(None));
     let g = f.clone();
 
     let state_clone = state.clone();
@@ -486,14 +491,11 @@ fn main() {
         // Let's just pass the base text and let the JS helper do the jitter/blur.
         // I added `useGlitch` param.
         
-        // Safe to call JS? Yes.
-        // Note: update_center_text is unsafe.
-        unsafe {
-            update_center_text(text, text_op, logo_op, glitch);
-        }
+        // Call JS updater to update center text animation
+        update_center_text(text, text_op, logo_op, glitch);
 
         // Rescan DOM obstacles and exclusion zones occasionally
-        if frame_count % 60 == 0 {
+        if frame_count.is_multiple_of(60) {
             s.obstacles = scan_dom_obstacles(&document_clone);
             let (zones, chakravyu) = scan_exclusion_zones(&document_clone);
             s.exclusion_zones = zones;
@@ -502,7 +504,7 @@ fn main() {
         
         // === FOUNTAIN OF LIFE ===
         // Spawn new boids from the circle edge periodically (10 per sec approx)
-        if frame_count % 6 == 0 {
+        if frame_count.is_multiple_of(6) {
             if let Some(chakravyu) = s.chakravyu {
                 use rand::Rng;
                 let mut rng = rand::thread_rng();
@@ -521,7 +523,7 @@ fn main() {
         }
         
         // Update dashboard every 30 frames
-        if frame_count % 30 == 0 {
+        if frame_count.is_multiple_of(30) {
             let alive_count = s.arena.alive_count;
             
             if let Some(ref el) = stat_pop {
@@ -562,7 +564,7 @@ fn main() {
             
             if max_gen > stats.max_generation {
                 stats.max_generation = max_gen;
-                if max_gen % 5 == 0 {
+                if max_gen.is_multiple_of(5) {
                     log_event(&document_clone, &format!("🧬 GEN {} reached", max_gen), "event-birth");
                 }
             }
@@ -583,9 +585,9 @@ fn main() {
         // === SIMULATION STEP ===
         
         // Destructure to get separate borrows
-        let World { 
-            arena, 
-            grid, 
+        let World {
+            arena,
+            grid,
             obstacles,
             exclusion_zones,
             chakravyu,
@@ -594,11 +596,11 @@ fn main() {
             background,
             predators,
             season,
-            config, 
-            width: world_w, 
+            config,
+            width: world_w,
             height: world_h,
             last_season,
-            popups,
+            popups: _,  // Popups managed via s.popups
             miasma,
             ..
         } = &mut *s;
@@ -636,15 +638,12 @@ fn main() {
         let chakravyu_zone = *chakravyu;
         
         // Collect side effects to apply later
-        let mut energy_adjustments: Vec<(usize, f32)> = Vec::new();
+        let energy_adjustments: Vec<(usize, f32)> = Vec::new();
         let moksh_candidates: Vec<usize> = Vec::new();
 
         // CHAKRAVYU MECHANICS - Deadly Trap
         // Boids are pulled inward and drained.
-        
-        if let Some(chakravyu) = chakravyu_zone {
-            // ... (Keep existing loop iteration logic, but collect side effects instead)
-        }
+        // Main logic handled in the per-boid loop below
         
         // Collect forces and side effects first
         let mut kill_list: Vec<usize> = Vec::new();
@@ -702,7 +701,7 @@ fn main() {
                     };
                     
                     new_miasma.push(Miasma {
-                        pos: pos,
+                        pos,
                         vel: Vec2::new(0.0, -0.5 + rng.gen::<f32>()),
                         life: 1.0,
                         radius: 2.0 + rng.gen::<f32>() * 3.0,
@@ -718,7 +717,7 @@ fn main() {
                 
                 let threshold_age = config.max_age * 0.8;
                 let mut current_age = arena.age[idx];
-                let mut current_energy = arena.energy[idx];
+                let current_energy = arena.energy[idx];
                 
                 // Convert starving to doomed ONLY if they are chosen
                 if is_chosen_one && current_energy < 40.0 && current_age < threshold_age {
@@ -762,7 +761,7 @@ fn main() {
             }
             
             // Fungal interaction
-            if (role == BoidRole::Herbivore || role == BoidRole::Scavenger) && frame_count % 2 == 0 {
+            if (role == BoidRole::Herbivore || role == BoidRole::Scavenger) && frame_count.is_multiple_of(2) {
                 let result = fungal_network.interact(pos, BOID_SIZE * 3.0);
                 if result != InteractionResult::None {
                     interactions.push((idx, result));
@@ -934,7 +933,7 @@ fn main() {
         
         // === MASS EXTINCTION CHECK ===
         // When diversity collapses, trigger a reset event
-        if frame_count % 60 == 0 && arena.alive_count > 50 {
+        if frame_count.is_multiple_of(60) && arena.alive_count > 50 {
             let diversity = compute_diversity(arena);
             
             if diversity < 0.25 {
@@ -1069,7 +1068,7 @@ fn main() {
             let pos = s.arena.positions[idx];
             let vel = s.arena.velocities[idx];
             let angle = vel.y.atan2(vel.x);
-            let (hue, sat, light) = get_boid_color(&s.arena, idx);
+            let (_hue, sat, light) = get_boid_color(&s.arena, idx);
             let role = s.arena.roles[idx];
             let state = s.arena.states[idx];
             let size_mult = s.arena.genes[idx].size;
@@ -1081,7 +1080,7 @@ fn main() {
             
             // Individual color variation
             let (hue, _sat, _light) = get_boid_color(&s.arena, idx);
-            let hue_var = ((idx % 20) as i16 - 10) as i16;
+            let hue_var = (idx % 20) as i16 - 10;
             let final_hue = (hue as i16 + hue_var).rem_euclid(360);
             
             let color = format!("hsl({}, {}%, {}%)", final_hue, sat, light);

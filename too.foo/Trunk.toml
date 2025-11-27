@@ -6,10 +6,10 @@ public_url = "/"
 filehash = true
 
 [watch]
-watch = ["src", "index.html", "../antimony-core/src"]
+watch = ["src", "index.html", "../core/src"]
 
 [serve]
-address = "127.0.0.1"
+addresses = ["127.0.0.1"]
 port = 8080
 
 [tools]

@@ -18,12 +18,8 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
 
-      - name: Run Core Tests
-        run: cargo test -p antimony-core
-
-      - name: Run Too.foo Tests
-        working-directory: ./too.foo
-        run: cargo test
+      - name: Run All Tests
+        run: cargo test --workspace
 
   deploy-too-foo:
     name: Deploy too.foo
@@ -44,6 +40,7 @@ jobs:
           filters: |
             src:
               - 'too.foo/**'
+              - 'core/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
 
@@ -97,7 +94,7 @@ jobs:
           filters: |
             src:
               - 'helios/**'
-              - 'antimony-core/**'
+              - 'core/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
 

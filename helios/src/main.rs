@@ -1,17 +1,30 @@
+// Helios is a WASM-only crate for WebGPU 3D visualization
+#![allow(unexpected_cfgs)]
+
 mod streaming;
+
+#[cfg(target_arch = "wasm32")]
 use streaming::StreamController;
+#[cfg(target_arch = "wasm32")]
 use glam::Vec3;
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
+#[cfg(target_arch = "wasm32")]
 use web_sys::{window, HtmlCanvasElement};
+#[cfg(target_arch = "wasm32")]
 use wgpu::{
     Backends, Color, CommandEncoderDescriptor, DeviceDescriptor, Features, Instance, InstanceDescriptor,
     Limits, LoadOp, Operations, PowerPreference, RenderPassColorAttachment, RenderPassDescriptor,
     RequestAdapterOptions, StoreOp, TextureViewDescriptor,
 };
+#[cfg(target_arch = "wasm32")]
 use std::rc::Rc;
+#[cfg(target_arch = "wasm32")]
 use std::cell::RefCell;
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]
@@ -21,33 +34,42 @@ extern "C" {
 }
 
 fn main() {
-    console_error_panic_hook::set_once();
-    
-    // Spawn async block
-    wasm_bindgen_futures::spawn_local(async {
-        if let Err(e) = run().await {
-            error(&format!("Application error: {:?}", e));
-        }
-    });
+    #[cfg(target_arch = "wasm32")]
+    {
+        console_error_panic_hook::set_once();
+
+        // Spawn async block
+        wasm_bindgen_futures::spawn_local(async {
+            if let Err(e) = run().await {
+                error(&format!("Application error: {:?}", e));
+            }
+        });
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        eprintln!("Helios is a WASM-only crate. Build with: trunk serve");
+    }
 }
 
+#[cfg(target_arch = "wasm32")]
 async fn run() -> Result<(), String> {
     let window = window().ok_or("No window found")?;
     let document = window.document().ok_or("No document found")?;
-    
+
     log("Helios initialized");
-    
+
     // Configuration
     // In production (Cloudflare Pages), this should be set to "https://data.too.foo" or similar
     // to avoid Mixed Content errors (HTTPS frontend -> HTTP backend).
     const BACKEND_URL: Option<&str> = option_env!("BACKEND_URL");
     let server_url = BACKEND_URL.unwrap_or("http://144.126.145.3:3000").to_string();
-    
+
     log(&format!("Connecting to storage backend: {}", server_url));
-    
+
     // Initialize Streaming Controller
     let streamer = Rc::new(RefCell::new(StreamController::new(server_url)));
-    
+
     let canvas = document
         .get_element_by_id("helios-canvas")
         .ok_or("Canvas not found")?
@@ -61,6 +83,7 @@ async fn run() -> Result<(), String> {
         ..Default::default()
     });
 
+    // WGPU 22+ with WASM requires SurfaceTarget::Canvas
     let surface = instance
         .create_surface(wgpu::SurfaceTarget::Canvas(canvas.clone()))
         .map_err(|e| format!("Failed to create surface: {:?}", e))?;
@@ -92,7 +115,7 @@ async fn run() -> Result<(), String> {
     let surface_config = surface
         .get_default_config(&adapter, canvas.width(), canvas.height())
         .ok_or("Failed to get surface config")?;
-    
+
     surface.configure(&device, &surface_config);
 
     log("WebGPU initialized successfully. Starting render loop.");
@@ -104,7 +127,7 @@ async fn run() -> Result<(), String> {
     let device = Rc::new(device);
     let queue = Rc::new(queue);
     let surface = Rc::new(surface);
-    
+
     // Simple camera state
     let mut camera_angle: f32 = 0.0;
 
@@ -114,12 +137,12 @@ async fn run() -> Result<(), String> {
         camera_angle += 0.005;
         let view_pos = Vec3::new(camera_angle.sin() * 10.0, 0.0, camera_angle.cos() * 10.0);
         let view_dir = -view_pos.normalize();
-        
+
         // Update Streamer
         streamer.borrow().update(
             view_pos,
             view_dir,
-            std::f32::consts::PI / 3.0 
+            std::f32::consts::PI / 3.0
         );
 
         // Render
@@ -127,9 +150,9 @@ async fn run() -> Result<(), String> {
             Ok(frame) => frame,
             Err(_) => return, // Skip frame on error
         };
-        
+
         let view = frame.texture.create_view(&TextureViewDescriptor::default());
-        
+
         let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor {
             label: Some("Render Encoder"),
         });
@@ -154,7 +177,7 @@ async fn run() -> Result<(), String> {
                 timestamp_writes: None,
                 occlusion_query_set: None,
             });
-            
+
             // In a real implementation, we would draw the boid/star buffers here
             // using data from streamer.borrow().store
         }

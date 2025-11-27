@@ -62,19 +62,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "antimony-core"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "getrandom 0.2.16",
- "glam",
- "rand",
- "serde",
- "tokio",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "anyhow"
 version = "1.0.100"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -357,6 +344,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a06aeb73f470f66dcdbf7223caeebb85984942f22f1adb2a088cf9668146bbbc"
 dependencies = [
  "cfg-if",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "core"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "getrandom 0.2.16",
+ "glam",
+ "rand",
+ "serde",
+ "tokio",
  "wasm-bindgen",
 ]
 
@@ -761,8 +761,8 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 name = "helios"
 version = "0.1.0"
 dependencies = [
- "antimony-core",
  "console_error_panic_hook",
+ "core",
  "glam",
  "pollster",
  "reqwest",
@@ -1467,6 +1467,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3eb8486b569e12e2c32ad3e204dbaba5e4b5b216e9367044f25f1dba42341773"
 
 [[package]]
+name = "project_n"
+version = "0.1.0"
+
+[[package]]
 name = "quote"
 version = "1.0.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1750,10 +1754,10 @@ dependencies = [
 name = "simulation-cli"
 version = "0.1.0"
 dependencies = [
- "antimony-core",
  "anyhow",
  "bincode",
  "clap",
+ "core",
  "csv",
  "glam",
  "indicatif",
@@ -1835,11 +1839,11 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 name = "storage-server"
 version = "0.1.0"
 dependencies = [
- "antimony-core",
  "anyhow",
  "axum",
  "bytes",
  "clap",
+ "core",
  "serde",
  "serde_json",
  "tokio",
@@ -2036,8 +2040,8 @@ dependencies = [
 name = "too-foo"
 version = "0.1.0"
 dependencies = [
- "antimony-core",
  "console_error_panic_hook",
+ "core",
  "getrandom 0.2.16",
  "glam",
  "js-sys",

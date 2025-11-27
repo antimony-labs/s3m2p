@@ -1,17 +1,18 @@
 use axum::{
-    extract::{Path, Query, State},
-    http::{StatusCode, HeaderValue, Method},
+    extract::{Path, State},
+    http::{StatusCode, Method},
     response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
-    body::Body,
 };
-use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, sync::Arc};
+use serde::Deserialize;
+use std::path::PathBuf;
 use tower_http::cors::CorsLayer;
 use tracing::info;
 use tokio::fs;
-use antimony_core::spatial::{SpatialKey, DataLayer};
+// Reserved for future batch endpoint implementation
+#[allow(unused_imports)]
+use core::spatial::{SpatialKey, DataLayer};
 
 #[derive(Clone)]
 struct AppState {
@@ -89,18 +90,19 @@ async fn get_chunk(
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 struct BatchRequest {
     layer: String,
     keys: Vec<u64>, // Raw SpatialKey values
 }
 
 // Simple multipart-like response for batching could be implemented here
-// For now, just returning a JSON array of base64 or similar? 
+// For now, just returning a JSON array of base64 or similar?
 // Binary streaming is better for "fastest".
 // Let's keep it simple for the prototype: A stream of length-prefixed chunks.
 async fn batch_get_chunks(
-    State(state): State<AppState>,
-    Json(req): Json<BatchRequest>,
+    State(_state): State<AppState>,
+    Json(_req): Json<BatchRequest>,
 ) -> impl IntoResponse {
     // TODO: Implement efficient batch retrieval
     StatusCode::NOT_IMPLEMENTED

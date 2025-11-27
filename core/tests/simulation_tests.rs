@@ -1,5 +1,5 @@
-use antimony_core::{
-    BoidArena, SpatialGrid, SimConfig, Genome, BoidRole, 
+use core::{
+    BoidArena, SpatialGrid, SimConfig, Genome, BoidRole,
     trigger_mass_extinction, compute_diversity, simulation_step,
 };
 use glam::Vec2;
@@ -112,7 +112,7 @@ fn test_simulation_stability_long_run() {
         
         // We need to compute flocking forces manually as they are separated in the main loop
         // This mimics the main loop structure roughly for testing
-        antimony_core::compute_flocking_forces(&mut arena, &grid, 60.0, &[]);
+        core::compute_flocking_forces(&mut arena, &grid, 60.0, &[]);
         
         let (_births, _deaths) = simulation_step(
             &mut arena, 
@@ -168,7 +168,7 @@ fn test_predator_prey_dynamics() {
     let herb_idx = arena.spawn(Vec2::new(12.0, 10.0), Vec2::ZERO, herb_genes).index(); // Close by
     
     // Manually process predation logic
-    antimony_core::process_predation(&mut arena);
+    core::process_predation(&mut arena);
     
     // Carnivore should have damaged herbivore
     assert!(arena.energy[herb_idx] < 100.0, "Herbivore should take damage from adjacent carnivore");
@@ -184,7 +184,7 @@ fn test_predator_prey_dynamics() {
     // Reset Scavenger energy to baseline 100.0 in case it was damaged
     arena.energy[scav_idx] = 100.0;
     
-    antimony_core::process_scavenging(&mut arena);
+    core::process_scavenging(&mut arena);
     
     // Scavenger should eat the dead body (which is the herbivore we just killed)
     // Initial energy is 100.0, gain is 15.0

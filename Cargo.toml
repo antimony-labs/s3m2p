@@ -1,10 +1,11 @@
 [workspace]
 resolver = "2"
 members = [
-    "antimony-core",
+    "core",
     "storage-server",
     "simulation-cli",
     "helios",
-    "too.foo"
+    "too.foo",
+    "PROJECT_N"
 ]
 

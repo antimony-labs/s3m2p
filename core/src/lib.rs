@@ -1,5 +1,12 @@
+// Suppress wasm_bindgen cfg warnings from macro expansion
+#![allow(unexpected_cfgs)]
+
 use glam::Vec2;
 use rand::Rng;
+
+// ============================================================================
+// DOMAIN-SPECIFIC MODULES (Heliosphere/Astronomy)
+// ============================================================================
 
 pub mod heliosphere;
 pub use heliosphere::*;
@@ -15,6 +22,30 @@ pub use heliosphere_model::*;
 
 pub mod spatial;
 pub use spatial::*;
+
+// ============================================================================
+// SHARED UTILITY MODULES (Used by too.foo, helios, future projects)
+// ============================================================================
+
+/// Zone and exclusion area utilities
+pub mod zones;
+pub use zones::*;
+
+/// Entity interaction effects
+pub mod interaction;
+pub use interaction::*;
+
+/// Random number generation helpers
+pub mod random;
+// Note: don't re-export random to avoid collision with rand crate
+
+/// Population statistics and metrics
+pub mod statistics;
+pub use statistics::*;
+
+/// Color management and theme utilities
+pub mod color;
+pub use color::*;
 
 // ============================================================================
 // CORE TYPES
@@ -527,8 +558,8 @@ pub fn compute_flocking_forces<const CAP: usize, const CELL_CAP: usize>(
             BoidState::Flee => {
                 // Flee from predators
                 let mut flee_force = Vec2::ZERO;
-                for i in 0..neighbor_count {
-                    let other_idx = neighbors[i] as usize;
+                for &neighbor_idx in neighbors.iter().take(neighbor_count) {
+                    let other_idx = neighbor_idx as usize;
                     if arena.roles[other_idx] == BoidRole::Carnivore && arena.alive[other_idx] {
                         let diff = pos - arena.positions[other_idx];
                         let dist = diff.length().max(0.001);
@@ -543,8 +574,8 @@ pub fn compute_flocking_forces<const CAP: usize, const CELL_CAP: usize>(
                 let mut closest_dist = f32::MAX;
                 let mut closest_prey = None;
                 
-                for i in 0..neighbor_count {
-                    let other_idx = neighbors[i] as usize;
+                for &neighbor_idx in neighbors.iter().take(neighbor_count) {
+                    let other_idx = neighbor_idx as usize;
                     if arena.roles[other_idx] != BoidRole::Carnivore && arena.alive[other_idx] {
                         let diff = arena.positions[other_idx] - pos;
                         let dist = diff.length();
@@ -557,8 +588,11 @@ pub fn compute_flocking_forces<const CAP: usize, const CELL_CAP: usize>(
                 
                 if let Some(prey_idx) = closest_prey {
                     let diff = arena.positions[prey_idx] - pos;
-                    seek_force = diff.normalize() * 2.0;
-        }
+                    let dist = diff.length();
+                    if dist > 0.001 {
+                        seek_force = diff / dist * 2.0;
+                    }
+                }
                 force += seek_force;
             }
             BoidState::Forage => {
@@ -568,8 +602,8 @@ pub fn compute_flocking_forces<const CAP: usize, const CELL_CAP: usize>(
         let mut separation = Vec2::ZERO;
                     let mut same_species_count = 0;
         
-        for i in 0..neighbor_count {
-            let other_idx = neighbors[i] as usize;
+        for &neighbor_idx in neighbors.iter().take(neighbor_count) {
+            let other_idx = neighbor_idx as usize;
                         if arena.roles[other_idx] == role && arena.alive[other_idx] {
                             let diff = arena.positions[other_idx] - pos;
                             let dist = diff.length();
@@ -591,11 +625,14 @@ pub fn compute_flocking_forces<const CAP: usize, const CELL_CAP: usize>(
                 // Seek same-species mates
                 if neighbor_count > 0 {
                     let mut mate_force = Vec2::ZERO;
-                    for i in 0..neighbor_count {
-                        let other_idx = neighbors[i] as usize;
+                    for &neighbor_idx in neighbors.iter().take(neighbor_count) {
+                        let other_idx = neighbor_idx as usize;
                         if arena.roles[other_idx] == role && arena.alive[other_idx] && arena.states[other_idx] == BoidState::Reproduce {
                             let diff = arena.positions[other_idx] - pos;
-                            mate_force += diff.normalize() * 1.5;
+                            let dist = diff.length();
+                            if dist > 0.001 {
+                                mate_force += diff / dist * 1.5;
+                            }
                         }
                     }
                     force += mate_force;
@@ -608,19 +645,19 @@ pub fn compute_flocking_forces<const CAP: usize, const CELL_CAP: usize>(
                     let mut alignment = Vec2::ZERO;
                     let mut separation = Vec2::ZERO;
                     let mut same_species_count = 0;
-                    
-                    for i in 0..neighbor_count {
-                        let other_idx = neighbors[i] as usize;
+
+                    for &neighbor_idx in neighbors.iter().take(neighbor_count) {
+                        let other_idx = neighbor_idx as usize;
                         if arena.roles[other_idx] == role && arena.alive[other_idx] {
                             let diff = arena.positions[other_idx] - pos;
                             let dist = diff.length();
-            
+
                             cohesion += arena.positions[other_idx];
                             alignment += arena.velocities[other_idx];
                             if dist > 0.001 {
                                 // Inverse square law for strong close-range repulsion
                                 let repulsion_strength = (20.0 / dist).powi(2).min(50.0);
-                                separation -= diff.normalize() * repulsion_strength;
+                                separation -= (diff / dist) * repulsion_strength;
                             }
                             same_species_count += 1;
                         }
@@ -689,8 +726,8 @@ pub fn update_states<const CAP: usize, const CELL_CAP: usize>(
         let mut has_predator = false;
         let neighbor_count = grid.query_neighbors(pos, sensor_radius, arena, idx, &mut neighbors);
         
-        for i in 0..neighbor_count {
-            let other_idx = neighbors[i] as usize;
+        for &neighbor_idx in neighbors.iter().take(neighbor_count) {
+            let other_idx = neighbor_idx as usize;
             if arena.roles[other_idx] == BoidRole::Carnivore && role != BoidRole::Carnivore {
                 has_predator = true;
                 break;
@@ -703,8 +740,8 @@ pub fn update_states<const CAP: usize, const CELL_CAP: usize>(
         } else if role == BoidRole::Carnivore {
             // Check for prey
             let mut has_prey = false;
-            for i in 0..neighbor_count {
-                let other_idx = neighbors[i] as usize;
+            for &neighbor_idx in neighbors.iter().take(neighbor_count) {
+                let other_idx = neighbor_idx as usize;
                 if arena.roles[other_idx] != BoidRole::Carnivore && arena.alive[other_idx] {
                     has_prey = true;
                     break;
@@ -865,10 +902,10 @@ pub fn simulation_step<const CAP: usize, const CELL_CAP: usize>(
         let accel = arena.scratch_accel[idx] * 0.05;
         arena.velocities[idx] += accel;
         
-        // Limit speed
+        // Limit speed (guard against zero division)
         let max_speed = arena.genes[idx].max_speed;
         let speed = arena.velocities[idx].length();
-        if speed > max_speed {
+        if speed > max_speed && speed > 0.0001 {
             arena.velocities[idx] = arena.velocities[idx] / speed * max_speed;
         }
         
@@ -905,18 +942,18 @@ pub fn simulation_step<const CAP: usize, const CELL_CAP: usize>(
     process_scavenging(arena);
     
     // Phase 3: Reproduction (separate pass to avoid borrow conflicts)
-    for i in 0..reproduce_count {
-        let parent_idx = reproduce_indices[i] as usize;
+    for &parent_idx_u16 in reproduce_indices.iter().take(reproduce_count) {
+        let parent_idx = parent_idx_u16 as usize;
         if arena.alive[parent_idx] && arena.energy[parent_idx] > config.reproduction_threshold {
             // Check for mate nearby
             let mut has_mate = false;
             let pos = arena.positions[parent_idx];
             let mut neighbors = [0u16; 64];
             let neighbor_count = grid.query_neighbors(pos, 30.0, arena, parent_idx, &mut neighbors);
-            
-            for j in 0..neighbor_count {
-                let other_idx = neighbors[j] as usize;
-                if arena.alive[other_idx] 
+
+            for &neighbor_idx in neighbors.iter().take(neighbor_count) {
+                let other_idx = neighbor_idx as usize;
+                if arena.alive[other_idx]
                     && arena.roles[other_idx] == arena.roles[parent_idx]
                     && arena.states[other_idx] == BoidState::Reproduce
                     && other_idx != parent_idx
@@ -925,11 +962,11 @@ pub fn simulation_step<const CAP: usize, const CELL_CAP: usize>(
                     break;
                 }
             }
-            
+
             if has_mate {
-            let handle = arena.spawn_child(parent_idx);
-            if handle.is_valid() {
-                births += 1;
+                let handle = arena.spawn_child(parent_idx);
+                if handle.is_valid() {
+                    births += 1;
                 }
             }
         }
@@ -1070,6 +1107,12 @@ pub enum WorldEvent {
 pub struct SeasonCycle {
     pub time: f32,
     pub period: f32, // ~30 seconds per season
+}
+
+impl Default for SeasonCycle {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SeasonCycle {

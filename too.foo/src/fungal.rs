@@ -303,13 +303,12 @@ impl FungalNetwork {
                         let new_pos = self.nodes[i].pos + dir * GROWTH_DISTANCE;
                         
                         // Check bounds and exclusion zones
-                        if new_pos.x >= 0.0 && new_pos.x <= self.width && new_pos.y >= 0.0 && new_pos.y <= self.height {
-                            if !self.is_space_occupied(new_pos, GROWTH_DISTANCE * 0.6) 
+                        if new_pos.x >= 0.0 && new_pos.x <= self.width && new_pos.y >= 0.0 && new_pos.y <= self.height
+                            && !self.is_space_occupied(new_pos, GROWTH_DISTANCE * 0.6) 
                                && !self.is_in_exclusion(new_pos, exclusion_zones) {
                                 let new_type = self.determine_branch_type(parent_type);
                                 new_nodes.push((new_pos, i as u16, new_angle, new_type));
                             }
-                        }
                     }
                 }
             }

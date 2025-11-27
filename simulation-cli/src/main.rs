@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
-use antimony_core::spatial::{SpatialKey, DataLayer};
+use core::spatial::SpatialKey;
 use glam::Vec3;
 use rand::Rng;
 use std::collections::HashMap;
@@ -60,8 +60,9 @@ struct StarData {
 
 // Example CSV structure for a catalog like HYG
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct RawStarRecord {
-    id: u64,
+    id: u64,  // Required by CSV format but unused in processing
     x: f32,
     y: f32,
     z: f32,

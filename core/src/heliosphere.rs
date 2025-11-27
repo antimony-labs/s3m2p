@@ -42,6 +42,7 @@ pub struct HeliosphereParameters {
 #[wasm_bindgen]
 impl HeliosphereParameters {
     #[wasm_bindgen(constructor)]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         r_hp_nose: f32,
         r_ts_over_hp: f32,
@@ -88,7 +89,7 @@ impl HeliosphereSurface {
         // Cosine of angle from nose direction
         // Nose is along -nose_vec (ISM flows toward Sun)
         // nose_vec is assumed to be normalized
-        let nx = self.params.nose_vec.get(0).unwrap_or(&1.0);
+        let nx = self.params.nose_vec.first().unwrap_or(&1.0);
         let ny = self.params.nose_vec.get(1).unwrap_or(&0.0);
         let nz = self.params.nose_vec.get(2).unwrap_or(&0.0);
 
@@ -123,7 +124,7 @@ impl HeliosphereSurface {
     }
 
     fn cometary_shape(&self, alpha: f32, r_nose: f32) -> f32 {
-        let a0 = self.params.shape_params.get(0).unwrap_or(&1.0);
+        let a0 = self.params.shape_params.first().unwrap_or(&1.0);
         let a1 = self.params.shape_params.get(1).unwrap_or(&2.5);
         let a2 = self.params.shape_params.get(2).unwrap_or(&0.5);
 
@@ -134,7 +135,7 @@ impl HeliosphereSurface {
     }
 
     fn croissant_shape(&self, alpha: f32, r_nose: f32, theta: f32) -> f32 {
-        let asymmetry = self.params.shape_params.get(0).unwrap_or(&1.5);
+        let asymmetry = self.params.shape_params.first().unwrap_or(&1.5);
         let flattening = self.params.shape_params.get(1).unwrap_or(&0.7);
         let tail_spread = self.params.shape_params.get(2).unwrap_or(&0.3);
 
@@ -152,7 +153,7 @@ impl HeliosphereSurface {
     }
 
     fn bubble_shape(&self, alpha: f32, r_nose: f32) -> f32 {
-        let asphericity = self.params.shape_params.get(0).unwrap_or(&0.1);
+        let asphericity = self.params.shape_params.first().unwrap_or(&0.1);
         let factor = 1.0 + asphericity * alpha.cos();
         r_nose * factor
     }
@@ -243,7 +244,7 @@ pub fn interpolate_parameters(
     let n0 = &params0.nose_vec;
     let n1 = &params1.nose_vec;
     
-    let nx = n0.get(0).unwrap_or(&1.0) * (1.0 - t) + n1.get(0).unwrap_or(&1.0) * t;
+    let nx = n0.first().unwrap_or(&1.0) * (1.0 - t) + n1.first().unwrap_or(&1.0) * t;
     let ny = n0.get(1).unwrap_or(&0.0) * (1.0 - t) + n1.get(1).unwrap_or(&0.0) * t;
     let nz = n0.get(2).unwrap_or(&0.0) * (1.0 - t) + n1.get(2).unwrap_or(&0.0) * t;
     

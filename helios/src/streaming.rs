@@ -1,18 +1,27 @@
+// Streaming controller for spatial data - WASM only
+#![allow(dead_code)]
+
+#[cfg(target_arch = "wasm32")]
 use std::sync::{Arc, Mutex};
-use antimony_core::{SpatialStore, DataLayer};
+#[cfg(target_arch = "wasm32")]
+use core::{SpatialStore, DataLayer};
+#[cfg(target_arch = "wasm32")]
 use glam::Vec3;
 
 // Placeholder for actual star data
+#[cfg(target_arch = "wasm32")]
 #[derive(Clone, Debug)]
 pub struct StarChunk {
-    pub raw_data: Vec<u8>,
+    pub raw_data: Vec<u8>,  // Binary chunk data from server
 }
 
+#[cfg(target_arch = "wasm32")]
 pub struct StreamController {
     store: Arc<Mutex<SpatialStore<StarChunk>>>,
     server_url: String,
 }
 
+#[cfg(target_arch = "wasm32")]
 impl StreamController {
     pub fn new(server_url: String) -> Self {
         Self {
