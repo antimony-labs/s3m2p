@@ -713,6 +713,9 @@ fn main() {
         // Apply Chakravyu energy drain - rapid death inside the circle
         if let Some(chakravyu) = chakravyu_zone {
             for idx in chakravyu_victims {
+                // Force state to Dead if not already to ensure behavior override
+                // But simulation_step handles state transitions. We just drain energy.
+                
                 // EXTREME DRAIN: Kill in < 1 second.
                 // Increased drain to 25.0 per frame to ensure VERY faster death
                 arena.energy[idx] -= 25.0; 
@@ -722,6 +725,12 @@ fn main() {
                 if dist < chakravyu.radius * 0.8 { 
                     // Instant obliteration zone - kill extremely fast
                     arena.energy[idx] -= 50.0;
+                }
+                
+                // Force kill check immediately for predators if energy drops below zero
+                // This prevents them from lingering due to high health/strength genes
+                if arena.energy[idx] <= 0.0 {
+                    arena.kill(idx);
                 }
             }
         }
