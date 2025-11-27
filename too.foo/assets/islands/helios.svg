@@ -1,11 +1,8 @@
 <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <filter id="glow-helios">
-      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-      <feMerge>
-        <feMergeNode in="coloredBlur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
+    <filter id="glow-soft">
+        <feGaussianBlur stdDeviation="1" result="blur" />
+        <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>
   </defs>
 
@@ -14,42 +11,43 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-    @keyframes pulse-sun {
-      0%, 100% { r: 15; opacity: 0.8; }
+    @keyframes pulse-core {
+      0%, 100% { r: 15; opacity: 0.9; }
       50% { r: 17; opacity: 1; }
     }
     .orbit {
       transform-origin: 100px 100px;
-      animation: spin-slow 20s linear infinite;
+      animation: spin-slow 25s linear infinite;
     }
-    .sun-core {
-      animation: pulse-sun 3s infinite ease-in-out;
+    .core {
+      animation: pulse-core 4s infinite ease-in-out;
       transform-origin: center;
     }
   </style>
   
-  <!-- Orbits -->
-  <circle cx="100" cy="100" r="60" fill="none" stroke="#FFD700" stroke-width="0.5" stroke-opacity="0.3" stroke-dasharray="4,4" class="orbit" style="animation-duration: 15s;" />
-  <circle cx="100" cy="100" r="80" fill="none" stroke="#FFD700" stroke-width="0.5" stroke-opacity="0.2" stroke-dasharray="8,4" class="orbit" style="animation-direction: reverse; animation-duration: 25s;" />
+  <!-- Orbits - White/Gold/Subtle -->
+  <circle cx="100" cy="100" r="60" fill="none" stroke="#FFD700" stroke-width="0.5" stroke-opacity="0.3" stroke-dasharray="4,4" class="orbit" style="animation-duration: 20s;" />
+  <circle cx="100" cy="100" r="80" fill="none" stroke="#ffffff" stroke-width="0.5" stroke-opacity="0.2" stroke-dasharray="8,4" class="orbit" style="animation-direction: reverse; animation-duration: 30s;" />
   
-  <g filter="url(#glow-helios)">
-      <!-- Sun -->
-      <circle cx="100" cy="100" r="15" fill="#FFD700" class="sun-core" />
+  <g filter="url(#glow-soft)">
+      <!-- Sun Core - Gold -->
+      <circle cx="100" cy="100" r="15" fill="#FFD700" class="core" />
       
-      <!-- Rays -->
-      <path d="M100 70 L100 60" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
-      <path d="M100 130 L100 140" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
-      <path d="M70 100 L60 100" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
-      <path d="M130 100 L140 100" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
-      
-      <!-- Diagonals -->
-      <path d="M79 79 L72 72" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
-      <path d="M121 121 L128 128" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
-      <path d="M121 79 L128 72" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
-      <path d="M79 121 L72 128" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
+      <!-- Rays - White/Gold -->
+      <g stroke="#ffffff" stroke-width="2" stroke-linecap="round">
+          <path d="M100 70 L100 60" />
+          <path d="M100 130 L100 140" />
+          <path d="M70 100 L60 100" />
+          <path d="M130 100 L140 100" />
+          
+          <path d="M79 79 L72 72" />
+          <path d="M121 121 L128 128" />
+          <path d="M121 79 L128 72" />
+          <path d="M79 121 L72 128" />
+      </g>
   </g>
   
-  <!-- Planets -->
-  <circle cx="160" cy="100" r="4" fill="#ffffff" class="orbit" />
+  <!-- Planets - Emerald/White -->
+  <circle cx="160" cy="100" r="4" fill="#50C878" class="orbit" />
   <circle cx="40" cy="100" r="3" fill="#ffffff" class="orbit" style="animation-delay: -5s;" />
 </svg>

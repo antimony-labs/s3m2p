@@ -1,11 +1,8 @@
 <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <filter id="glow-contact">
-      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-      <feMerge>
-        <feMergeNode in="coloredBlur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
+    <filter id="glow-soft">
+        <feGaussianBlur stdDeviation="1" result="blur" />
+        <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>
   </defs>
   
@@ -16,16 +13,16 @@
     }
     .signal {
       fill: none;
-      stroke: #FF5555;
+      stroke: #F4C430; /* Saffron/Gold */
       stroke-width: 1;
       animation: signal-pulse 2s infinite ease-out;
     }
   </style>
   
-  <g filter="url(#glow-contact)">
-      <!-- Mail Envelope -->
-      <rect x="60" y="80" width="80" height="50" rx="4" stroke="#FF5555" stroke-width="2" fill="none" />
-      <path d="M60 80 L 100 105 L 140 80" stroke="#FF5555" stroke-width="2" fill="none" />
+  <g filter="url(#glow-soft)">
+      <!-- Mail Envelope - Gold/Orange -->
+      <rect x="60" y="80" width="80" height="50" rx="4" stroke="#F4C430" stroke-width="2" fill="none" />
+      <path d="M60 80 L 100 105 L 140 80" stroke="#F4C430" stroke-width="2" fill="none" />
   </g>
   
   <!-- Signal Waves -->

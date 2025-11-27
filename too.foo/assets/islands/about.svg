@@ -1,44 +1,40 @@
 <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <filter id="glow-about">
-      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-      <feMerge>
-        <feMergeNode in="coloredBlur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
+    <filter id="glow-soft">
+        <feGaussianBlur stdDeviation="1" result="blur" />
+        <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>
+    <linearGradient id="scan-gradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="transparent"/>
+      <stop offset="50%" stop-color="#87CEEB"/> <!-- Sky Blue -->
+      <stop offset="100%" stop-color="transparent"/>
+    </linearGradient>
   </defs>
   
   <style>
     @keyframes scan-face {
       0% { transform: translateY(-20px); opacity: 0; }
-      50% { opacity: 1; }
+      50% { opacity: 0.8; }
       100% { transform: translateY(20px); opacity: 0; }
     }
     .scanner {
       fill: url(#scan-gradient);
-      animation: scan-face 2s infinite linear;
+      animation: scan-face 3s infinite linear;
     }
   </style>
   
-  <linearGradient id="scan-gradient" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%" stop-color="transparent"/>
-    <stop offset="50%" stop-color="#00AAFF"/>
-    <stop offset="100%" stop-color="transparent"/>
-  </linearGradient>
-  
-  <g filter="url(#glow-about)">
-      <!-- Head -->
-      <circle cx="100" cy="80" r="25" stroke="#00AAFF" stroke-width="2" fill="none" />
+  <g filter="url(#glow-soft)">
+      <!-- Head - White -->
+      <circle cx="100" cy="80" r="25" stroke="#ffffff" stroke-width="2" fill="none" />
       
-      <!-- Body -->
-      <path d="M60 150 Q 100 170 140 150 L 140 140 Q 100 110 60 140 Z" stroke="#00AAFF" stroke-width="2" fill="none" />
+      <!-- Body - White -->
+      <path d="M60 150 Q 100 170 140 150 L 140 140 Q 100 110 60 140 Z" stroke="#ffffff" stroke-width="2" fill="none" />
       
-      <!-- Tech Elements -->
-      <circle cx="100" cy="80" r="10" fill="#00AAFF" fill-opacity="0.2" />
+      <!-- Tech Elements - Sky Blue -->
+      <circle cx="100" cy="80" r="10" fill="#87CEEB" fill-opacity="0.2" />
       <rect x="95" y="78" width="10" height="4" fill="#ffffff" />
   </g>
   
   <!-- Scanning effect -->
-  <rect x="60" y="60" width="80" height="80" class="scanner" opacity="0.5" mask="url(#face-mask)" />
+  <rect x="60" y="60" width="80" height="80" class="scanner" opacity="0.4" />
 </svg>
