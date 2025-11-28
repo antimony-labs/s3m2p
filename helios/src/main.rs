@@ -463,17 +463,20 @@ fn run() {
                 el.set_text_content(Some(&format!("{:.1}", year)));
             }
 
-            // Update speed display
+            // Update speed display with log2 scale
             if let Some(ref el) = *speed_display_loop {
                 let ts = s.time_scale;
                 let text = if s.paused {
                     "Paused".to_string()
-                } else if ts.abs() >= 365.25 {
-                    format!("{:.0}y/s", ts / 365.25)
-                } else if ts.abs() >= 30.0 {
-                    format!("{:.0}d/s", ts)
                 } else {
-                    format!("{:.1}x", ts)
+                    // Show as log2 scale: 2^n days/sec
+                    let sign = if ts < 0.0 { "-" } else { "" };
+                    let log2_val = ts.abs().log2();
+                    if log2_val.abs() < 0.1 {
+                        format!("{}1d/s", sign) // 2^0 = 1
+                    } else {
+                        format!("{}2^{:.0}d/s", sign, log2_val)
+                    }
                 };
                 el.set_text_content(Some(&text));
             }

@@ -244,9 +244,11 @@ pub struct SimulationState {
 
 impl SimulationState {
     pub fn new() -> Self {
+        // 1 solar cycle (~11 years = 4018 days) in 8 seconds
+        // 4018 / 8 = 502.25 days/sec, using log2 scale: 512 (2^9) days/sec
         let mut state = Self {
             julian_date: J2000_EPOCH + 8766.0, // ~2024
-            time_scale: 1.0,
+            time_scale: 512.0, // 2^9 days/sec = 1 solar cycle per ~8 seconds
             paused: false,
 
             planet_count: 0,
