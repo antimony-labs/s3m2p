@@ -11,6 +11,11 @@ pub const AU_KM: f64 = 149_597_870.7;
 pub const SOLAR_RADIUS_KM: f64 = 695_700.0;
 pub const J2000_EPOCH: f64 = 2_451_545.0;
 
+// Time constants
+pub const EARTH_YEAR_DAYS: f64 = 365.25;
+pub const SOLAR_CYCLE_DAYS: f64 = 4018.0;  // ~11 years
+pub const SOLAR_CYCLE_YEARS: f64 = 11.0;
+
 // Fixed capacities - no runtime allocation
 pub const MAX_PLANETS: usize = 16;
 pub const MAX_MOONS: usize = 64;
@@ -22,6 +27,13 @@ pub const ORBIT_SEGMENTS: usize = 128;
 // VIEW STATE
 // ============================================================================
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum DragMode {
+    None,
+    Pan,      // Left-click drag: pan view
+    Orbit,    // Right-click or Shift+drag: orbit camera around Sun
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct ViewState {
     // Camera position (AU from sun, ecliptic plane)
@@ -29,16 +41,22 @@ pub struct ViewState {
     pub center_y: f64,
     pub zoom: f64,  // AU per pixel (smaller = more zoomed in)
 
+    // 3D view angles (radians) - CAD-like orbital camera
+    pub tilt: f64,      // Camera elevation angle (0 = top-down, PI/2 = edge-on)
+    pub rotation: f64,  // Camera rotation around Z axis (azimuth)
+
     // Viewport dimensions
     pub width: f64,
     pub height: f64,
 
-    // Interaction state
-    pub dragging: bool,
+    // Interaction state - CAD-like controls
+    pub drag_mode: DragMode,
     pub drag_start_x: f64,
     pub drag_start_y: f64,
     pub last_center_x: f64,
     pub last_center_y: f64,
+    pub last_tilt: f64,
+    pub last_rotation: f64,
 
     // Pinch-to-zoom state
     pub pinching: bool,
@@ -58,13 +76,17 @@ impl Default for ViewState {
             center_x: 0.0,
             center_y: 0.0,
             zoom: 0.02,  // 1 pixel = 0.02 AU, shows inner solar system
+            tilt: 0.4,   // ~23 degrees from top-down for nice 3D effect
+            rotation: 0.0,
             width: 1920.0,
             height: 1080.0,
-            dragging: false,
+            drag_mode: DragMode::None,
             drag_start_x: 0.0,
             drag_start_y: 0.0,
             last_center_x: 0.0,
             last_center_y: 0.0,
+            last_tilt: 0.4,
+            last_rotation: 0.0,
             pinching: false,
             pinch_start_dist: 0.0,
             pinch_start_zoom: 0.0,
@@ -77,19 +99,77 @@ impl Default for ViewState {
 }
 
 impl ViewState {
-    /// Convert AU coordinates to screen pixels
+    /// Check if currently in any drag mode
     #[inline]
-    pub fn au_to_screen(&self, x_au: f64, y_au: f64) -> (f64, f64) {
-        let screen_x = (x_au - self.center_x) / self.zoom + self.width / 2.0;
-        let screen_y = (y_au - self.center_y) / self.zoom + self.height / 2.0;
-        (screen_x, screen_y)
+    pub fn is_dragging(&self) -> bool {
+        self.drag_mode != DragMode::None
     }
 
-    /// Convert screen pixels to AU coordinates
+    /// Check if panning
+    #[inline]
+    pub fn is_panning(&self) -> bool {
+        self.drag_mode == DragMode::Pan
+    }
+
+    /// Check if orbiting camera
+    #[inline]
+    pub fn is_orbiting(&self) -> bool {
+        self.drag_mode == DragMode::Orbit
+    }
+}
+
+impl ViewState {
+    /// Convert 3D AU coordinates to screen pixels using isometric-style projection
+    /// Returns (screen_x, screen_y, depth) where depth can be used for sorting
+    #[inline]
+    pub fn au_to_screen_3d(&self, x_au: f64, y_au: f64, z_au: f64) -> (f64, f64, f64) {
+        // Apply camera rotation around Z axis
+        let cos_rot = self.rotation.cos();
+        let sin_rot = self.rotation.sin();
+        let x_rot = x_au * cos_rot - y_au * sin_rot;
+        let y_rot = x_au * sin_rot + y_au * cos_rot;
+
+        // Apply tilt (elevation angle) - foreshortens Y based on tilt
+        let cos_tilt = self.tilt.cos();
+        let sin_tilt = self.tilt.sin();
+
+        // Project to screen coordinates
+        // X stays the same, Y is compressed by tilt and offset by Z
+        let proj_x = x_rot;
+        let proj_y = y_rot * cos_tilt - z_au * sin_tilt;
+        let depth = y_rot * sin_tilt + z_au * cos_tilt;
+
+        let screen_x = (proj_x - self.center_x) / self.zoom + self.width / 2.0;
+        let screen_y = (proj_y - self.center_y) / self.zoom + self.height / 2.0;
+
+        (screen_x, screen_y, depth)
+    }
+
+    /// Convert AU coordinates to screen pixels (2D, ignores Z)
+    #[inline]
+    pub fn au_to_screen(&self, x_au: f64, y_au: f64) -> (f64, f64) {
+        let (sx, sy, _) = self.au_to_screen_3d(x_au, y_au, 0.0);
+        (sx, sy)
+    }
+
+    /// Convert screen pixels to AU coordinates (assumes Z=0 plane)
     #[inline]
     pub fn screen_to_au(&self, screen_x: f64, screen_y: f64) -> (f64, f64) {
-        let x_au = (screen_x - self.width / 2.0) * self.zoom + self.center_x;
-        let y_au = (screen_y - self.height / 2.0) * self.zoom + self.center_y;
+        // Inverse projection (simplified, assumes z=0)
+        let proj_x = (screen_x - self.width / 2.0) * self.zoom + self.center_x;
+        let proj_y = (screen_y - self.height / 2.0) * self.zoom + self.center_y;
+
+        // Inverse tilt
+        let cos_tilt = self.tilt.cos();
+        let y_rot = proj_y / cos_tilt;
+        let x_rot = proj_x;
+
+        // Inverse rotation
+        let cos_rot = self.rotation.cos();
+        let sin_rot = self.rotation.sin();
+        let x_au = x_rot * cos_rot + y_rot * sin_rot;
+        let y_au = -x_rot * sin_rot + y_rot * cos_rot;
+
         (x_au, y_au)
     }
 
@@ -101,6 +181,14 @@ impl ViewState {
 
         (x_au - self.center_x).abs() < half_w &&
         (y_au - self.center_y).abs() < half_h
+    }
+
+    /// Check if 3D position is visible
+    #[inline]
+    pub fn is_visible_3d(&self, x_au: f64, y_au: f64, z_au: f64, margin_au: f64) -> bool {
+        let (sx, sy, _) = self.au_to_screen_3d(x_au, y_au, z_au);
+        sx > -margin_au / self.zoom && sx < self.width + margin_au / self.zoom &&
+        sy > -margin_au / self.zoom && sy < self.height + margin_au / self.zoom
     }
 
     /// Get visible AU range
@@ -122,6 +210,16 @@ impl ViewState {
         else if self.zoom < 0.1 { 2 }   // Inner system
         else if self.zoom < 1.0 { 1 }   // Outer system
         else { 0 }                       // Heliosphere scale
+    }
+
+    /// Set camera tilt angle (0 = top-down, PI/2 = edge-on)
+    pub fn set_tilt(&mut self, tilt: f64) {
+        self.tilt = tilt.clamp(0.0, PI * 0.45); // Max ~80 degrees
+    }
+
+    /// Set camera rotation around Z axis
+    pub fn set_rotation(&mut self, rotation: f64) {
+        self.rotation = rotation % (2.0 * PI);
     }
 }
 
@@ -150,9 +248,9 @@ impl OrbitalElements {
         Self { a, e, i, omega, w, m0, n }
     }
 
-    /// Calculate (x, y) position at Julian date (2D ecliptic projection)
+    /// Calculate true anomaly and distance at Julian date
     #[inline]
-    pub fn position_2d(&self, jd: f64) -> (f64, f64) {
+    fn solve_kepler(&self, jd: f64) -> (f64, f64) {
         let days = jd - J2000_EPOCH;
         let m = (self.m0 + self.n * days) % (2.0 * PI);
 
@@ -170,13 +268,64 @@ impl OrbitalElements {
         // Distance
         let r = self.a * (1.0 - self.e * e_anom.cos());
 
+        (true_anom, r)
+    }
+
+    /// Calculate full 3D (x, y, z) position at Julian date
+    /// Uses proper orbital mechanics with inclination and longitude of ascending node
+    #[inline]
+    pub fn position_3d(&self, jd: f64) -> (f64, f64, f64) {
+        let (true_anom, r) = self.solve_kepler(jd);
+
+        // Position in orbital plane (perifocal coordinates)
+        let angle = true_anom + self.w;
+        let x_orb = r * angle.cos();
+        let y_orb = r * angle.sin();
+
+        // Transform from orbital plane to ecliptic coordinates
+        // Using rotation matrices for Omega (longitude of ascending node) and i (inclination)
+        let cos_omega = self.omega.cos();
+        let sin_omega = self.omega.sin();
+        let cos_i = self.i.cos();
+        let sin_i = self.i.sin();
+
+        // Apply rotations: first around orbital plane, then inclination, then ascending node
+        let x = x_orb * cos_omega - y_orb * cos_i * sin_omega;
+        let y = x_orb * sin_omega + y_orb * cos_i * cos_omega;
+        let z = y_orb * sin_i;
+
+        (x, y, z)
+    }
+
+    /// Calculate 3D position for a given true anomaly (for orbit path drawing)
+    #[inline]
+    pub fn position_3d_at_anomaly(&self, true_anom: f64) -> (f64, f64, f64) {
+        // Distance at this true anomaly
+        let r = self.a * (1.0 - self.e * self.e) / (1.0 + self.e * true_anom.cos());
+
         // Position in orbital plane
         let angle = true_anom + self.w;
-        let x = r * angle.cos();
-        let y = r * angle.sin();
+        let x_orb = r * angle.cos();
+        let y_orb = r * angle.sin();
 
-        // Apply inclination (simplified 2D projection)
-        (x, y * self.i.cos())
+        // Transform to ecliptic coordinates
+        let cos_omega = self.omega.cos();
+        let sin_omega = self.omega.sin();
+        let cos_i = self.i.cos();
+        let sin_i = self.i.sin();
+
+        let x = x_orb * cos_omega - y_orb * cos_i * sin_omega;
+        let y = x_orb * sin_omega + y_orb * cos_i * cos_omega;
+        let z = y_orb * sin_i;
+
+        (x, y, z)
+    }
+
+    /// Calculate (x, y) position at Julian date (2D ecliptic projection - legacy)
+    #[inline]
+    pub fn position_2d(&self, jd: f64) -> (f64, f64) {
+        let (x, y, _z) = self.position_3d(jd);
+        (x, y)
     }
 }
 
@@ -198,12 +347,13 @@ pub struct SimulationState {
     pub planet_colors: [&'static str; MAX_PLANETS],
     pub planet_has_rings: [bool; MAX_PLANETS],
 
-    // Pre-computed positions (updated each frame)
+    // Pre-computed positions (updated each frame) - now with Z for 3D
     pub planet_x: [f64; MAX_PLANETS],
     pub planet_y: [f64; MAX_PLANETS],
+    pub planet_z: [f64; MAX_PLANETS],
 
-    // Pre-computed orbit paths (updated on zoom change)
-    pub orbit_paths: [[f64; ORBIT_SEGMENTS * 2]; MAX_PLANETS],
+    // Pre-computed orbit paths (updated on zoom change) - now with 3D (x, y, z per segment)
+    pub orbit_paths: [[f64; ORBIT_SEGMENTS * 3]; MAX_PLANETS],
     pub orbit_dirty: bool,
 
     // === MISSIONS (SoA) ===
@@ -244,11 +394,12 @@ pub struct SimulationState {
 
 impl SimulationState {
     pub fn new() -> Self {
-        // 1 solar cycle (~11 years = 4018 days) in 8 seconds
-        // 4018 / 8 = 502.25 days/sec, using log2 scale: 512 (2^9) days/sec
+        // Default: 25% solar cycle per second = ~2.75 years/sec = ~1004.5 days/sec
+        // This means one full solar cycle takes 4 seconds - nice pulsation speed
+        let quarter_solar_cycle_per_sec = SOLAR_CYCLE_DAYS / 4.0; // ~1004.5 days/sec
         let mut state = Self {
             julian_date: J2000_EPOCH + 8766.0, // ~2024
-            time_scale: 512.0, // 2^9 days/sec = 1 solar cycle per ~8 seconds
+            time_scale: quarter_solar_cycle_per_sec, // 25% solar cycle per second
             paused: false,
 
             planet_count: 0,
@@ -259,7 +410,8 @@ impl SimulationState {
             planet_has_rings: [false; MAX_PLANETS],
             planet_x: [0.0; MAX_PLANETS],
             planet_y: [0.0; MAX_PLANETS],
-            orbit_paths: [[0.0; ORBIT_SEGMENTS * 2]; MAX_PLANETS],
+            planet_z: [0.0; MAX_PLANETS],
+            orbit_paths: [[0.0; ORBIT_SEGMENTS * 3]; MAX_PLANETS],
             orbit_dirty: true,
 
             mission_count: 0,
@@ -404,17 +556,20 @@ impl SimulationState {
     /// Main update - call once per frame
     pub fn update(&mut self, dt: f64) {
         if !self.paused {
-            self.julian_date += self.time_scale * dt / 86400.0; // dt in seconds
+            // time_scale is in days/second, dt is in seconds
+            // So time_scale * dt gives us the change in julian_date (days)
+            self.julian_date += self.time_scale * dt;
         }
 
         // Update solar cycle phase (11 year cycle = ~4018 days)
         self.update_solar_cycle();
 
-        // Update planet positions
+        // Update planet positions (full 3D)
         for i in 0..self.planet_count {
-            let (x, y) = self.planet_orbits[i].position_2d(self.julian_date);
+            let (x, y, z) = self.planet_orbits[i].position_3d(self.julian_date);
             self.planet_x[i] = x;
             self.planet_y[i] = y;
+            self.planet_z[i] = z;
         }
 
         // Update mission positions
@@ -520,13 +675,13 @@ impl SimulationState {
         for p in 0..self.planet_count {
             let orbit = &self.planet_orbits[p];
             for i in 0..ORBIT_SEGMENTS {
-                let angle = 2.0 * PI * (i as f64) / (ORBIT_SEGMENTS as f64);
-                let r = orbit.a * (1.0 - orbit.e * orbit.e) / (1.0 + orbit.e * angle.cos());
-                let total_angle = angle + orbit.w;
-                let x = r * total_angle.cos();
-                let y = r * total_angle.sin() * orbit.i.cos();
-                self.orbit_paths[p][i * 2] = x;
-                self.orbit_paths[p][i * 2 + 1] = y;
+                // True anomaly around the orbit
+                let true_anom = 2.0 * PI * (i as f64) / (ORBIT_SEGMENTS as f64);
+                // Get full 3D position using proper orbital mechanics
+                let (x, y, z) = orbit.position_3d_at_anomaly(true_anom);
+                self.orbit_paths[p][i * 3] = x;
+                self.orbit_paths[p][i * 3 + 1] = y;
+                self.orbit_paths[p][i * 3 + 2] = z;
             }
         }
     }
@@ -544,7 +699,8 @@ impl SimulationState {
     }
 
     pub fn zoom_to(&mut self, level: f64) {
-        self.view.zoom = level.clamp(0.0001, 10.0);
+        // Allow very small zoom for planet close-ups (10^-8 allows planet-scale viewing)
+        self.view.zoom = level.clamp(0.00000001, 10.0);
         self.orbit_dirty = true;
     }
 
@@ -559,11 +715,30 @@ impl SimulationState {
 
     pub fn focus_on_planet(&mut self, idx: usize) {
         if idx < self.planet_count {
+            // Check if we're already focused on this planet (within tolerance)
+            let dx = (self.view.center_x - self.planet_x[idx]).abs();
+            let dy = (self.view.center_y - self.planet_y[idx]).abs();
+            let already_focused = dx < 0.01 && dy < 0.01;
+
             self.view.center_x = self.planet_x[idx];
             self.view.center_y = self.planet_y[idx];
-            // Auto-zoom based on planet size
-            let radius_au = self.planet_radii_km[idx] / AU_KM;
-            self.zoom_to((radius_au * 100.0).max(0.001));
+
+            // Only zoom if not already focused on this planet
+            if !already_focused {
+                // NASA Eyes style: planet fills ~60% of screen
+                // Calculate zoom so planet appears large and prominent
+                // We want the planet to be about 200-300 pixels in radius on screen
+                // zoom = AU per pixel, so smaller zoom = more zoomed in
+                let radius_au = self.planet_radii_km[idx] / AU_KM;
+
+                // Target: planet radius should be ~150 pixels on screen
+                // screen_radius = radius_au / zoom => zoom = radius_au / screen_radius
+                let target_screen_radius = 150.0; // pixels
+                let target_zoom = radius_au / target_screen_radius;
+
+                // Clamp to reasonable bounds
+                self.zoom_to(target_zoom.max(0.00000001).min(0.01));
+            }
         }
     }
 
@@ -612,6 +787,71 @@ impl SimulationState {
         self.time_scale = days_per_second.clamp(-365250.0, 365250.0);
     }
 
+    /// Set time scale in Earth years per second
+    pub fn set_time_scale_years(&mut self, years_per_second: f64) {
+        self.set_time_scale(years_per_second * EARTH_YEAR_DAYS);
+    }
+
+    /// Set time scale in solar cycles per second
+    pub fn set_time_scale_solar_cycles(&mut self, cycles_per_second: f64) {
+        self.set_time_scale(cycles_per_second * SOLAR_CYCLE_DAYS);
+    }
+
+    /// Get time scale in Earth years per second
+    pub fn time_scale_years(&self) -> f64 {
+        self.time_scale / EARTH_YEAR_DAYS
+    }
+
+    /// Get time scale in solar cycles per second
+    pub fn time_scale_solar_cycles(&self) -> f64 {
+        self.time_scale / SOLAR_CYCLE_DAYS
+    }
+
+    /// Format time scale as human-readable string
+    /// Shows percentage of solar cycle (11 years) per second
+    pub fn time_scale_str(&self) -> String {
+        if self.paused {
+            return "Paused".to_string();
+        }
+
+        let abs_ts = self.time_scale.abs();
+        let sign = if self.time_scale < 0.0 { "-" } else { "" };
+
+        // Show as percentage of solar cycle (11 years)
+        let solar_cycle_percent = (abs_ts / SOLAR_CYCLE_DAYS) * 100.0;
+
+        if solar_cycle_percent >= 100.0 {
+            // Multiple solar cycles per second
+            let cycles = solar_cycle_percent / 100.0;
+            format!("{}{}x ☉cycle/s", sign, cycles as i32)
+        } else if solar_cycle_percent >= 1.0 {
+            // Percentage of solar cycle - main display mode
+            format!("{}{:.0}% ☉cycle/s", sign, solar_cycle_percent)
+        } else {
+            // Very slow - show in years
+            let years = abs_ts / EARTH_YEAR_DAYS;
+            if years >= 0.1 {
+                format!("{}{:.1} yr/s", sign, years)
+            } else if abs_ts >= 1.0 {
+                format!("{}{:.0} d/s", sign, abs_ts)
+            } else {
+                format!("{}{:.1}x", sign, abs_ts)
+            }
+        }
+    }
+
+    /// Step time scale up by multiplier (for speed control buttons)
+    pub fn speed_up(&mut self, factor: f64) {
+        let new_scale = self.time_scale * factor;
+        self.set_time_scale(new_scale);
+    }
+
+    /// Step time scale down by divisor
+    pub fn slow_down(&mut self, factor: f64) {
+        let new_scale = self.time_scale / factor;
+        self.set_time_scale(new_scale);
+    }
+
     pub fn set_date(&mut self, year: i32, month: u32, day: u32) {
         self.julian_date = jd_from_date(year, month, day);
     }
@@ -622,6 +862,13 @@ impl SimulationState {
 
     pub fn toggle_pause(&mut self) {
         self.paused = !self.paused;
+    }
+
+    /// Reset 3D view to default
+    pub fn reset_3d_view(&mut self) {
+        self.view.tilt = 0.4;
+        self.view.rotation = 0.0;
+        self.mark_orbits_dirty();
     }
 }
 

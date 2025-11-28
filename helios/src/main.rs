@@ -7,7 +7,7 @@ mod simulation;
 mod render;
 
 #[cfg(target_arch = "wasm32")]
-use simulation::SimulationState;
+use simulation::{SimulationState, DragMode};
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
@@ -88,7 +88,7 @@ fn run() {
     // Initialize simulation state
     let state = Rc::new(RefCell::new(SimulationState::new()));
     state.borrow_mut().set_viewport(window_width as f64, window_height as f64);
-    state.borrow_mut().view_inner_system(); // Start with inner solar system view
+    state.borrow_mut().view_heliosphere(); // Start with heliosphere view - shows pulsating solar cycle
 
     // Time tracking
     let start_time = Rc::new(RefCell::new(
@@ -98,43 +98,116 @@ fn run() {
     let frame_times = Rc::new(RefCell::new([0.0f64; 60]));
     let frame_idx = Rc::new(RefCell::new(0usize));
 
-    // === INPUT HANDLERS ===
+    // === INPUT HANDLERS - CAD-like 3D controls ===
+    // Left-click drag: Pan
+    // Right-click drag OR Middle-click drag: Orbit camera around Sun
+    // Double-click: Reset to heliosphere view
+    // Scroll: Zoom
 
-    // Mouse down
+    // Double-click - reset view to heliosphere
     {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
+            event.prevent_default();
             let mut s = state.borrow_mut();
-            s.view.dragging = true;
+            s.view_heliosphere();
+            s.view.tilt = 0.4;      // Reset tilt
+            s.view.rotation = 0.0;  // Reset rotation
+            s.orbit_dirty = true;
+        }) as Box<dyn FnMut(_)>);
+        canvas.add_event_listener_with_callback("dblclick", closure.as_ref().unchecked_ref()).unwrap();
+        closure.forget();
+    }
+
+    // Mouse down - determine drag mode
+    {
+        let state = state.clone();
+        let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
+            event.prevent_default();
+            let mut s = state.borrow_mut();
+
+            // Determine drag mode based on button
+            // Button 0 = left (pan), 1 = middle (orbit), 2 = right (orbit)
+            let is_orbit = event.button() == 2 || event.button() == 1;
+
             s.view.drag_start_x = event.client_x() as f64;
             s.view.drag_start_y = event.client_y() as f64;
-            s.view.last_center_x = s.view.center_x;
-            s.view.last_center_y = s.view.center_y;
+
+            if is_orbit {
+                // Orbit mode - rotate camera around Sun
+                s.view.drag_mode = DragMode::Orbit;
+                s.view.last_tilt = s.view.tilt;
+                s.view.last_rotation = s.view.rotation;
+            } else {
+                // Pan mode - move camera position
+                s.view.drag_mode = DragMode::Pan;
+                s.view.last_center_x = s.view.center_x;
+                s.view.last_center_y = s.view.center_y;
+            }
         }) as Box<dyn FnMut(_)>);
         canvas.add_event_listener_with_callback("mousedown", closure.as_ref().unchecked_ref()).unwrap();
         closure.forget();
     }
 
-    // Mouse up
+    // Prevent context menu on right-click
+    {
+        let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
+            event.prevent_default();
+        }) as Box<dyn FnMut(_)>);
+        canvas.add_event_listener_with_callback("contextmenu", closure.as_ref().unchecked_ref()).unwrap();
+        closure.forget();
+    }
+
+    // Mouse up - end drag
     {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |_: MouseEvent| {
-            state.borrow_mut().view.dragging = false;
+            state.borrow_mut().view.drag_mode = DragMode::None;
         }) as Box<dyn FnMut(_)>);
         canvas.add_event_listener_with_callback("mouseup", closure.as_ref().unchecked_ref()).unwrap();
         closure.forget();
     }
 
-    // Mouse move
+    // Mouse leave - end drag
+    {
+        let state = state.clone();
+        let closure = Closure::wrap(Box::new(move |_: MouseEvent| {
+            state.borrow_mut().view.drag_mode = DragMode::None;
+        }) as Box<dyn FnMut(_)>);
+        canvas.add_event_listener_with_callback("mouseleave", closure.as_ref().unchecked_ref()).unwrap();
+        closure.forget();
+    }
+
+    // Mouse move - handle pan or orbit
     {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
             let mut s = state.borrow_mut();
-            if s.view.dragging {
-                let dx = event.client_x() as f64 - s.view.drag_start_x;
-                let dy = event.client_y() as f64 - s.view.drag_start_y;
-                s.view.center_x = s.view.last_center_x - dx * s.view.zoom;
-                s.view.center_y = s.view.last_center_y - dy * s.view.zoom;
+            let dx = event.client_x() as f64 - s.view.drag_start_x;
+            let dy = event.client_y() as f64 - s.view.drag_start_y;
+
+            match s.view.drag_mode {
+                DragMode::Pan => {
+                    // Pan: move the view center
+                    s.view.center_x = s.view.last_center_x - dx * s.view.zoom;
+                    s.view.center_y = s.view.last_center_y - dy * s.view.zoom;
+                }
+                DragMode::Orbit => {
+                    // Orbit: rotate camera around Sun (CAD-like)
+                    // Horizontal drag = azimuth rotation
+                    // Vertical drag = tilt (elevation)
+                    let rotation_sensitivity = 0.005;
+                    let tilt_sensitivity = 0.005;
+
+                    let new_rotation = s.view.last_rotation + dx * rotation_sensitivity;
+                    let new_tilt = (s.view.last_tilt + dy * tilt_sensitivity)
+                        .clamp(0.0, std::f64::consts::PI * 0.45); // 0 to ~80 degrees
+
+                    s.view.rotation = new_rotation;
+                    s.view.tilt = new_tilt;
+                    s.orbit_dirty = true;
+                }
+                DragMode::None => {}
             }
         }) as Box<dyn FnMut(_)>);
         canvas.add_event_listener_with_callback("mousemove", closure.as_ref().unchecked_ref()).unwrap();
@@ -165,7 +238,7 @@ fn run() {
         closure.forget();
     }
 
-    // Touch start (handles both single-finger drag and two-finger pinch)
+    // Touch start (1 finger = pan, 2 fingers = pinch zoom OR orbit)
     {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |event: TouchEvent| {
@@ -174,22 +247,24 @@ fn run() {
             let mut s = state.borrow_mut();
 
             if touches.length() == 2 {
-                // Two fingers: start pinch-to-zoom
+                // Two fingers: pinch-to-zoom
                 if let (Some(t0), Some(t1)) = (touches.get(0), touches.get(1)) {
                     let dx = t1.client_x() as f64 - t0.client_x() as f64;
                     let dy = t1.client_y() as f64 - t0.client_y() as f64;
                     s.view.pinching = true;
-                    s.view.dragging = false;
+                    s.view.drag_mode = DragMode::None;
                     s.view.pinch_start_dist = (dx * dx + dy * dy).sqrt();
                     s.view.pinch_start_zoom = s.view.zoom;
-                    // Center of pinch
                     s.view.pinch_center_x = (t0.client_x() + t1.client_x()) as f64 / 2.0;
                     s.view.pinch_center_y = (t0.client_y() + t1.client_y()) as f64 / 2.0;
+                    // Also save rotation state for two-finger rotate
+                    s.view.last_tilt = s.view.tilt;
+                    s.view.last_rotation = s.view.rotation;
                 }
             } else if touches.length() == 1 {
-                // One finger: drag
+                // One finger: pan
                 if let Some(touch) = touches.get(0) {
-                    s.view.dragging = true;
+                    s.view.drag_mode = DragMode::Pan;
                     s.view.pinching = false;
                     s.view.drag_start_x = touch.client_x() as f64;
                     s.view.drag_start_y = touch.client_y() as f64;
@@ -207,14 +282,14 @@ fn run() {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |_: TouchEvent| {
             let mut s = state.borrow_mut();
-            s.view.dragging = false;
+            s.view.drag_mode = DragMode::None;
             s.view.pinching = false;
         }) as Box<dyn FnMut(_)>);
         canvas.add_event_listener_with_callback("touchend", closure.as_ref().unchecked_ref()).unwrap();
         closure.forget();
     }
 
-    // Touch move (handles both drag and pinch-to-zoom)
+    // Touch move (pan, pinch-zoom, or two-finger rotate)
     {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |event: TouchEvent| {
@@ -223,29 +298,42 @@ fn run() {
             let mut s = state.borrow_mut();
 
             if s.view.pinching && touches.length() == 2 {
-                // Two-finger pinch zoom
+                // Two-finger gesture
                 if let (Some(t0), Some(t1)) = (touches.get(0), touches.get(1)) {
                     let dx = t1.client_x() as f64 - t0.client_x() as f64;
                     let dy = t1.client_y() as f64 - t0.client_y() as f64;
                     let dist = (dx * dx + dy * dy).sqrt();
 
                     if s.view.pinch_start_dist > 10.0 {
-                        // Scale zoom based on pinch distance change
+                        // Pinch zoom
                         let scale = s.view.pinch_start_dist / dist;
                         let new_zoom = (s.view.pinch_start_zoom * scale)
-                            .max(0.0001)  // Max zoom in
-                            .min(10.0);    // Max zoom out
+                            .max(0.0001)
+                            .min(10.0);
 
-                        // Zoom towards pinch center
                         let (au_x, au_y) = s.view.screen_to_au(s.view.pinch_center_x, s.view.pinch_center_y);
                         s.view.zoom = new_zoom;
                         let (new_au_x, new_au_y) = s.view.screen_to_au(s.view.pinch_center_x, s.view.pinch_center_y);
                         s.view.center_x += au_x - new_au_x;
                         s.view.center_y += au_y - new_au_y;
                     }
+
+                    // Also track center movement for orbit
+                    let new_center_x = (t0.client_x() + t1.client_x()) as f64 / 2.0;
+                    let new_center_y = (t0.client_y() + t1.client_y()) as f64 / 2.0;
+                    let center_dx = new_center_x - s.view.pinch_center_x;
+                    let center_dy = new_center_y - s.view.pinch_center_y;
+
+                    // Two-finger drag rotates view
+                    let rotation_sensitivity = 0.003;
+                    let tilt_sensitivity = 0.003;
+                    s.view.rotation = s.view.last_rotation + center_dx * rotation_sensitivity;
+                    s.view.tilt = (s.view.last_tilt + center_dy * tilt_sensitivity)
+                        .clamp(0.0, std::f64::consts::PI * 0.45);
+                    s.orbit_dirty = true;
                 }
-            } else if s.view.dragging && touches.length() == 1 {
-                // Single finger drag
+            } else if s.view.is_panning() && touches.length() == 1 {
+                // Single finger pan
                 if let Some(touch) = touches.get(0) {
                     let dx = touch.client_x() as f64 - s.view.drag_start_x;
                     let dy = touch.client_y() as f64 - s.view.drag_start_y;
@@ -287,6 +375,25 @@ fn run() {
                     s.view_inner_system();
                     s.julian_date = simulation::J2000_EPOCH + 8766.0; // 2024
                     s.time_scale = 1.0;
+                }
+                // 3D view controls
+                "t" | "T" => {
+                    // Tilt up
+                    let new_tilt = s.view.tilt + 0.15;
+                    s.view.set_tilt(new_tilt);
+                    s.mark_orbits_dirty();
+                }
+                "g" | "G" => {
+                    // Tilt down
+                    let new_tilt = s.view.tilt - 0.15;
+                    s.view.set_tilt(new_tilt);
+                    s.mark_orbits_dirty();
+                }
+                "r" | "R" => {
+                    // Reset 3D view
+                    s.view.tilt = 0.5;
+                    s.view.rotation = 0.0;
+                    s.mark_orbits_dirty();
                 }
                 _ => {}
             }
@@ -452,6 +559,53 @@ fn run() {
         closure.forget();
     }
 
+    // === 3D VIEW CONTROLS ===
+
+    // Tilt up (towards edge-on view)
+    {
+        let state = state.clone();
+        let closure = Closure::wrap(Box::new(move |_: MouseEvent| {
+            let mut s = state.borrow_mut();
+            let new_tilt = s.view.tilt + 0.15;
+            s.view.set_tilt(new_tilt);
+            s.mark_orbits_dirty();
+        }) as Box<dyn FnMut(_)>);
+        if let Some(el) = document.get_element_by_id("view-tilt-up") {
+            el.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref()).unwrap();
+        }
+        closure.forget();
+    }
+
+    // Tilt down (towards top-down view)
+    {
+        let state = state.clone();
+        let closure = Closure::wrap(Box::new(move |_: MouseEvent| {
+            let mut s = state.borrow_mut();
+            let new_tilt = s.view.tilt - 0.15;
+            s.view.set_tilt(new_tilt);
+            s.mark_orbits_dirty();
+        }) as Box<dyn FnMut(_)>);
+        if let Some(el) = document.get_element_by_id("view-tilt-down") {
+            el.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref()).unwrap();
+        }
+        closure.forget();
+    }
+
+    // Reset 3D view
+    {
+        let state = state.clone();
+        let closure = Closure::wrap(Box::new(move |_: MouseEvent| {
+            let mut s = state.borrow_mut();
+            s.view.tilt = 0.5; // Default ~30 degrees
+            s.view.rotation = 0.0;
+            s.mark_orbits_dirty();
+        }) as Box<dyn FnMut(_)>);
+        if let Some(el) = document.get_element_by_id("view-3d-reset") {
+            el.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref()).unwrap();
+        }
+        closure.forget();
+    }
+
     // Wrap UI elements for animation loop
     let time_slider = Rc::new(time_slider);
     let date_display = Rc::new(date_display);
@@ -531,22 +685,9 @@ fn run() {
                 el.set_text_content(Some(&format!("{:.1}", year)));
             }
 
-            // Update speed display with log2 scale
+            // Update speed display with human-readable units
             if let Some(ref el) = *speed_display_loop {
-                let ts = s.time_scale;
-                let text = if s.paused {
-                    "Paused".to_string()
-                } else {
-                    // Show as log2 scale: 2^n days/sec
-                    let sign = if ts < 0.0 { "-" } else { "" };
-                    let log2_val = ts.abs().log2();
-                    if log2_val.abs() < 0.1 {
-                        format!("{}1d/s", sign) // 2^0 = 1
-                    } else {
-                        format!("{}2^{:.0}d/s", sign, log2_val)
-                    }
-                };
-                el.set_text_content(Some(&text));
+                el.set_text_content(Some(&s.time_scale_str()));
             }
 
             // Update cycle display

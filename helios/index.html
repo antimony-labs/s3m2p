@@ -5,7 +5,49 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Helios - Explore the Heliosphere</title>
     <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" />
+    <link data-trunk rel="copy-dir" href="fonts/webfonts" />
     <style>
+        /* Custom Font - Just Sans */
+        @font-face {
+            font-family: 'Just Sans';
+            src: url('webfonts/JUST Sans Regular.woff2') format('woff2'),
+                 url('webfonts/JUST Sans Regular.woff') format('woff');
+            font-weight: 400;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Just Sans';
+            src: url('webfonts/JUST Sans Medium.woff2') format('woff2'),
+                 url('webfonts/JUST Sans Medium.woff') format('woff');
+            font-weight: 500;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Just Sans';
+            src: url('webfonts/JUST Sans SemiBold.woff2') format('woff2'),
+                 url('webfonts/JUST Sans SemiBold.woff') format('woff');
+            font-weight: 600;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Just Sans';
+            src: url('webfonts/JUST Sans Bold.woff2') format('woff2'),
+                 url('webfonts/JUST Sans Bold.woff') format('woff');
+            font-weight: 700;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Just Sans';
+            src: url('webfonts/JUST Sans Light.woff2') format('woff2'),
+                 url('webfonts/JUST Sans Light.woff') format('woff');
+            font-weight: 300;
+            font-style: normal;
+            font-display: swap;
+        }
         * {
             margin: 0;
             padding: 0;
@@ -16,7 +58,10 @@
             height: 100%;
             overflow: hidden;
             background: #000;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Just Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
         }
         canvas {
             display: block;
@@ -40,6 +85,21 @@
             z-index: 100;
         }
 
+        .planet-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .planet-name {
+            font-size: 8px;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
         .planet-icon {
             width: 32px;
             height: 32px;
@@ -53,6 +113,11 @@
         .planet-icon:hover {
             transform: scale(1.3);
             box-shadow: 0 0 15px currentColor;
+        }
+
+        .planet-icon:hover + .planet-name,
+        .planet-item:hover .planet-name {
+            color: rgba(255, 255, 255, 0.9);
         }
 
         .planet-icon:active {
@@ -125,21 +190,6 @@
             width: 36px; height: 36px;
         }
 
-        /* Tooltip for planet names */
-        .planet-icon[title]:hover::before {
-            content: attr(title);
-            position: absolute;
-            bottom: -28px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            white-space: nowrap;
-            pointer-events: none;
-        }
 
         /* View Presets - Left side */
         #view-presets {
@@ -177,6 +227,13 @@
 
         .view-btn:active {
             transform: scale(0.95);
+        }
+
+        .view-separator {
+            width: 30px;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.2);
+            margin: 5px 0;
         }
 
         /* Timeline Control - Bottom */
@@ -253,9 +310,9 @@
 
         #speed-display {
             color: rgba(100, 200, 255, 1);
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
-            min-width: 70px;
+            min-width: 120px;
             text-align: center;
         }
 
@@ -429,16 +486,46 @@
 
     <!-- Planet Navigation -->
     <nav id="planet-nav">
-        <div class="planet-icon" data-planet="sun" title="Sun" id="nav-sun"></div>
-        <div class="planet-icon" data-planet="mercury" title="Mercury" id="nav-mercury"></div>
-        <div class="planet-icon" data-planet="venus" title="Venus" id="nav-venus"></div>
-        <div class="planet-icon" data-planet="earth" title="Earth" id="nav-earth"></div>
-        <div class="planet-icon" data-planet="mars" title="Mars" id="nav-mars"></div>
-        <div class="planet-icon" data-planet="jupiter" title="Jupiter" id="nav-jupiter"></div>
-        <div class="planet-icon" data-planet="saturn" title="Saturn" id="nav-saturn"></div>
-        <div class="planet-icon" data-planet="uranus" title="Uranus" id="nav-uranus"></div>
-        <div class="planet-icon" data-planet="neptune" title="Neptune" id="nav-neptune"></div>
-        <div class="planet-icon" data-planet="heliosphere" title="Heliosphere" id="nav-heliosphere"></div>
+        <div class="planet-item">
+            <div class="planet-icon" data-planet="sun" id="nav-sun"></div>
+            <span class="planet-name">Sun</span>
+        </div>
+        <div class="planet-item">
+            <div class="planet-icon" data-planet="mercury" id="nav-mercury"></div>
+            <span class="planet-name">Mercury</span>
+        </div>
+        <div class="planet-item">
+            <div class="planet-icon" data-planet="venus" id="nav-venus"></div>
+            <span class="planet-name">Venus</span>
+        </div>
+        <div class="planet-item">
+            <div class="planet-icon" data-planet="earth" id="nav-earth"></div>
+            <span class="planet-name">Earth</span>
+        </div>
+        <div class="planet-item">
+            <div class="planet-icon" data-planet="mars" id="nav-mars"></div>
+            <span class="planet-name">Mars</span>
+        </div>
+        <div class="planet-item">
+            <div class="planet-icon" data-planet="jupiter" id="nav-jupiter"></div>
+            <span class="planet-name">Jupiter</span>
+        </div>
+        <div class="planet-item">
+            <div class="planet-icon" data-planet="saturn" id="nav-saturn"></div>
+            <span class="planet-name">Saturn</span>
+        </div>
+        <div class="planet-item">
+            <div class="planet-icon" data-planet="uranus" id="nav-uranus"></div>
+            <span class="planet-name">Uranus</span>
+        </div>
+        <div class="planet-item">
+            <div class="planet-icon" data-planet="neptune" id="nav-neptune"></div>
+            <span class="planet-name">Neptune</span>
+        </div>
+        <div class="planet-item">
+            <div class="planet-icon" data-planet="heliosphere" id="nav-heliosphere"></div>
+            <span class="planet-name">Helio</span>
+        </div>
     </nav>
 
     <!-- View Presets -->
@@ -447,6 +534,10 @@
         <button class="view-btn" id="view-outer" title="Outer Solar System">&#x2643;</button>
         <button class="view-btn" id="view-zoom-in" title="Zoom In">+</button>
         <button class="view-btn" id="view-zoom-out" title="Zoom Out">&minus;</button>
+        <div class="view-separator"></div>
+        <button class="view-btn" id="view-tilt-up" title="Tilt Up (Edge-on)">&#x2191;</button>
+        <button class="view-btn" id="view-tilt-down" title="Tilt Down (Top-down)">&#x2193;</button>
+        <button class="view-btn" id="view-3d-reset" title="Reset 3D View">&#x25CE;</button>
     </div>
 
     <!-- Timeline Control -->
@@ -472,13 +563,13 @@
 
     <!-- Info Panel -->
     <div id="info-panel">
-        <div>Scroll to zoom &bull; Drag to pan</div>
-        <div class="tip">Click a planet to focus</div>
+        <div>Left drag: pan &bull; Right drag: orbit</div>
+        <div class="tip">Double-click: reset view &bull; Scroll: zoom</div>
     </div>
 
     <!-- Keyboard Hint -->
     <div id="keyboard-hint">
-        Space: pause &bull; 1-8: planets &bull; Arrow keys: navigate time
+        Space: pause &bull; 1-8: planets &bull; R: reset view
     </div>
 
     <script>
