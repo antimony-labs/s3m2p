@@ -562,8 +562,10 @@ pub fn compute_flocking_forces<const CAP: usize, const CELL_CAP: usize>(
                     let other_idx = neighbor_idx as usize;
                     if arena.roles[other_idx] == BoidRole::Carnivore && arena.alive[other_idx] {
                         let diff = pos - arena.positions[other_idx];
-                        let dist = diff.length().max(0.001);
-                        flee_force += diff.normalize() * (100.0 / dist);
+                        let dist = diff.length();
+                        if dist > 0.001 {
+                            flee_force += (diff / dist) * (100.0 / dist);
+                        }
                     }
                 }
                 force += flee_force * 3.0; // Strong flee response
@@ -690,11 +692,12 @@ pub fn compute_flocking_forces<const CAP: usize, const CELL_CAP: usize>(
 fn compute_obstacle_avoidance(pos: Vec2, obstacles: &[Obstacle]) -> Vec2 {
     let mut force = Vec2::ZERO;
     const BUFFER: f32 = 50.0;
-    
+
     for obs in obstacles {
-        let d = pos.distance(obs.center);
+        let diff = pos - obs.center;
+        let d = diff.length();
         if d < obs.radius + BUFFER && d > 0.001 {
-            let repulsion = (pos - obs.center).normalize();
+            let repulsion = diff / d; // Safe normalization
             force += repulsion * (100.0 / d);
         }
     }
