@@ -1,17 +1,50 @@
 [workspace]
 resolver = "2"
 members = [
-    "core",
-    "storage-server",
-    "simulation-cli",
-    "helios",
-    "too.foo",
-    "PROJECT_N",
-    "portfolio",
-    "autocrate",
-    "chladni",
-    "blog",
-    "learn",
-]
-# ML is excluded - runs as standalone native Rust server with different deps
+    # DNA - the shared foundation
+    "DNA",
 
+    # Simulations
+    "SIM/HELIOS",
+    "SIM/TOOFOO",
+
+    # Software projects
+    "SW/AUTOCRATE",
+    "SW/CHLADNI",
+    "SW/CRM",
+    "SW/PORTFOLIO",
+
+    # Learning platforms
+    "LEARN",
+
+    # Blog platform
+    "BLOG",
+
+    # Tools (internal, not deployed)
+    "TOOLS/SIMULATION_CLI",
+    "TOOLS/STORAGE_SERVER",
+
+    # In development
+    "PROJECT_N",
+]
+# ML and HW are excluded - different build targets/dependencies
+exclude = ["LEARN/ML", "HW/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+
+[workspace.dependencies]
+glam = { version = "0.29", features = ["rand"] }
+rand = "0.8"
+getrandom = { version = "0.2", features = ["js"] }
+wasm-bindgen = "=0.2.93"
+web-sys = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+dna = { path = "DNA" }
+
+[workspace.lints.rust]
+unsafe_code = "warn"
+
+[workspace.lints.clippy]
+all = "warn"

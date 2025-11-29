@@ -39,8 +39,8 @@ jobs:
         with:
           filters: |
             src:
-              - 'too.foo/**'
-              - 'core/**'
+              - 'SIM/TOOFOO/**'
+              - 'DNA/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
 
@@ -60,7 +60,7 @@ jobs:
 
       - name: Build with Trunk
         if: steps.filter.outputs.src == 'true'
-        working-directory: ./too.foo
+        working-directory: ./SIM/TOOFOO
         run: trunk build --release
 
       - name: Deploy to Cloudflare Pages
@@ -73,7 +73,7 @@ jobs:
           # Create project if not exists, but don't fail if it does
           npx wrangler pages project create too-foo --production-branch=main 2>/dev/null || true
           # Deploy to the 'main' branch alias (Production)
-          npx wrangler pages deploy too.foo/dist --project-name=too-foo --branch=main --commit-dirty=true
+          npx wrangler pages deploy SIM/TOOFOO/dist --project-name=too-foo --branch=main --commit-dirty=true
 
   deploy-helios:
     name: Deploy Helios
@@ -93,8 +93,8 @@ jobs:
         with:
           filters: |
             src:
-              - 'helios/**'
-              - 'core/**'
+              - 'SIM/HELIOS/**'
+              - 'DNA/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
 
@@ -114,7 +114,7 @@ jobs:
 
       - name: Build with Trunk
         if: steps.filter.outputs.src == 'true'
-        working-directory: ./helios
+        working-directory: ./SIM/HELIOS
         run: trunk build --release
 
       - name: Deploy to Cloudflare Pages
@@ -127,4 +127,4 @@ jobs:
           # Create project if not exists, but don't fail if it does
           npx wrangler pages project create helios-too-foo --production-branch=main 2>/dev/null || true
           # Deploy to the 'main' branch alias (Production)
-          npx wrangler pages deploy helios/dist --project-name=helios-too-foo --branch=main --commit-dirty=true
+          npx wrangler pages deploy SIM/HELIOS/dist --project-name=helios-too-foo --branch=main --commit-dirty=true

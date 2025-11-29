@@ -1,0 +1,50 @@
+[package]
+name = "crm"
+version = "0.1.0"
+edition = "2021"
+description = "Customer Relationship Management for antimony-labs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+dna = { path = "../../DNA" }
+glam = { version = "0.29", features = ["rand"] }
+rand = "0.8"
+getrandom = { version = "0.2", features = ["js"] }
+wasm-bindgen = "=0.2.93"
+wasm-bindgen-futures = "0.4"
+console_error_panic_hook = "0.1"
+js-sys = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dependencies.web-sys]
+version = "0.3"
+features = [
+    # Canvas
+    "CanvasRenderingContext2d",
+    "HtmlCanvasElement",
+    # DOM
+    "Document",
+    "Element",
+    "Window",
+    "HtmlElement",
+    "DomRect",
+    # Events
+    "MouseEvent",
+    "KeyboardEvent",
+    "EventTarget",
+    # Form elements
+    "HtmlInputElement",
+    "HtmlButtonElement",
+    "HtmlTextAreaElement",
+    "HtmlSelectElement",
+    "InputEvent",
+    "Event",
+    # Storage
+    "Storage",
+    # Utility
+    "Performance",
+    "console",
+]
