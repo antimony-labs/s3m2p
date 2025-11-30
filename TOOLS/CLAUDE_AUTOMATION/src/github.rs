@@ -219,4 +219,21 @@ impl GitHubClient {
 
         Ok(result)
     }
+
+    /// Fetch a single issue by number
+    pub async fn fetch_issue(&self, issue_number: u64) -> Result<Issue> {
+        let issue = self.client
+            .issues(&self.owner, &self.repo)
+            .get(issue_number)
+            .await?;
+
+        Ok(Issue {
+            number: issue.number,
+            title: issue.title.clone(),
+            body: issue.body.clone(),
+            labels: issue.labels.iter().map(|l| l.name.clone()).collect(),
+            state: format!("{:?}", issue.state),
+            created_at: issue.created_at.to_string(),
+        })
+    }
 }

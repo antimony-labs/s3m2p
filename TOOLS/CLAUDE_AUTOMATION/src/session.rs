@@ -117,6 +117,12 @@ pub async fn spawn_executor(issue_number: u64, config: &Config, db: &Database) -
         |row| row.get(0),
     )?;
 
+    // Extract project from labels
+    let github = crate::github::GitHubClient::new(config)?;
+    let issue = github.fetch_issue(issue_number).await?;
+    let project = worktree::extract_project_from_labels(&issue.labels)
+        .context("No project label found")?;
+
     tracing::info!("Spawning Executor (Sonnet) for issue #{}", issue_number);
 
     // Read executor agent prompt
@@ -124,19 +130,31 @@ pub async fn spawn_executor(issue_number: u64, config: &Config, db: &Database) -
     let agent_content = std::fs::read_to_string(agent_path)?;
     let prompt = agent_content.split("---").nth(2).unwrap_or(&agent_content).trim();
 
-    // Spawn claude with executor agent
-    Command::new("claude")
+    // Create prompt file for interactive mode
+    let prompt_file = std::path::PathBuf::from(&worktree_path).join(".claude_executor_prompt");
+    std::fs::write(&prompt_file, format!(
+        "Execute the plan for issue #{}. Use github_issue_read({}) to get details.",
+        issue_number, issue_number
+    ))?;
+
+    // Spawn claude interactively (can use MCP tools for GitHub posting)
+    let output = Command::new("claude")
         .args([
             "--model", &config.agents.executor_model,
-            "--system-prompt", prompt,
+            "--append-system-prompt", prompt,
             "--permission-mode", "bypassPermissions",
-            "--print",
-            &format!("Execute the plan for issue #{}. Use github_issue_read({}) to get details.", issue_number, issue_number),
         ])
+        .stdin(std::fs::File::open(&prompt_file)?)
         .env("ISSUE_NUMBER", issue_number.to_string())
+        .env("PROJECT", project)
         .current_dir(&worktree_path)
         .spawn()
         .context("Failed to spawn claude process")?;
+
+    // Mark as running
+    db.update_status(issue_number, "running")?;
+
+    tracing::info!("Executor spawned with PID: {:?}", output.id());
 
     Ok(())
 }
