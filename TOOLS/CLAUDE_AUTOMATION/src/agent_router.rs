@@ -28,6 +28,8 @@ pub fn decide(comments: &[Comment], db: &Database) -> Result<Agent> {
         "make it",
         "build it",
         "proceed",
+        "fix",
+        "address",
     ];
 
     // Check for explicit implementation request
@@ -60,4 +62,90 @@ pub fn decide(comments: &[Comment], db: &Database) -> Result<Agent> {
 
     // Otherwise, use Executor for fast iteration
     Ok(Agent::Executor)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::NamedTempFile;
+
+    fn create_test_db() -> (Database, NamedTempFile) {
+        let temp_file = NamedTempFile::new().unwrap();
+        let db = Database::open(temp_file.path().to_str().unwrap()).unwrap();
+        (db, temp_file)
+    }
+
+    fn make_comment(issue_number: u64, body: &str) -> Comment {
+        Comment {
+            id: 1,
+            issue_number,
+            user: "testuser".to_string(),
+            body: body.to_string(),
+            created_at: "2025-11-30T00:00:00Z".to_string(),
+            updated_at: "2025-11-30T00:00:00Z".to_string(),
+        }
+    }
+
+    #[test]
+    fn test_executor_keywords() {
+        let (db, _temp) = create_test_db();
+        db.create_automation(1, "/tmp/test").unwrap();
+        db.set_has_plan(1).unwrap();
+
+        let test_cases = vec![
+            "implement this",
+            "go ahead and do it",
+            "execute the plan",
+            "looks good!",
+            "LGTM ship it",
+            "fix the bug",
+            "please address this",
+        ];
+
+        for body in test_cases {
+            let comments = vec![make_comment(1, body)];
+            let agent = decide(&comments, &db).unwrap();
+            assert!(matches!(agent, Agent::Executor), "Failed for: {}", body);
+        }
+    }
+
+    #[test]
+    fn test_planner_keywords() {
+        let (db, _temp) = create_test_db();
+        db.create_automation(1, "/tmp/test").unwrap();
+
+        let test_cases = vec![
+            "let's try a different approach",
+            "we should rethink this",
+            "redesign the whole thing",
+            "this needs major refactor",
+        ];
+
+        for body in test_cases {
+            let comments = vec![make_comment(1, body)];
+            let agent = decide(&comments, &db).unwrap();
+            assert!(matches!(agent, Agent::Planner), "Failed for: {}", body);
+        }
+    }
+
+    #[test]
+    fn test_no_plan_triggers_planner() {
+        let (db, _temp) = create_test_db();
+        // Don't set has_plan
+
+        let comments = vec![make_comment(1, "just a regular comment")];
+        let agent = decide(&comments, &db).unwrap();
+        assert!(matches!(agent, Agent::Planner));
+    }
+
+    #[test]
+    fn test_with_plan_defaults_executor() {
+        let (db, _temp) = create_test_db();
+        db.create_automation(1, "/tmp/test").unwrap();
+        db.set_has_plan(1).unwrap();
+
+        let comments = vec![make_comment(1, "some regular feedback")];
+        let agent = decide(&comments, &db).unwrap();
+        assert!(matches!(agent, Agent::Executor));
+    }
 }

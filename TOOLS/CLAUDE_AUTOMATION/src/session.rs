@@ -31,15 +31,21 @@ pub async fn spawn_planner(issue: &Issue, config: &Config, db: &Database) -> Res
         .unwrap_or(&agent_content)
         .trim();
 
-    // Spawn claude with planner system prompt
+    // Create initial prompt file for Claude to process
+    let prompt_file = worktree_path.join(".claude_prompt");
+    std::fs::write(&prompt_file, format!(
+        "You are working on GitHub issue #{}. Use github_issue_read({}) to analyze and create an implementation plan. Post the plan to the issue using github_issue_comment().",
+        issue.number, issue.number
+    ))?;
+
+    // Spawn claude interactively (can use MCP tools)
     let output = Command::new("claude")
         .args([
             "--model", &config.agents.planner_model,
-            "--system-prompt", prompt,
+            "--append-system-prompt", prompt,
             "--permission-mode", "bypassPermissions",
-            "--print",
-            &format!("You are working on GitHub issue #{}. Use github_issue_read({}) to start.", issue.number, issue.number),
         ])
+        .stdin(std::fs::File::open(&prompt_file)?)
         .env("ISSUE_NUMBER", issue.number.to_string())
         .env("PROJECT", project)
         .current_dir(&worktree_path)

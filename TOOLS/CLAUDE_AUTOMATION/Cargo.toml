@@ -34,3 +34,6 @@ chrono = "0.4"
 
 # Regex for parsing PR bodies
 regex = "1.10"
+
+[dev-dependencies]
+tempfile = "3.8"
