@@ -1,9 +1,6 @@
 [daemon]
-# Adaptive polling - increases rate when user is active
-poll_interval_idle_secs = 60      # When no recent activity
-poll_interval_active_secs = 15    # When user commented in last 10 min
-poll_interval_very_active_secs = 5  # When rapid back-and-forth (< 2 min)
-activity_timeout_minutes = 10     # Time before dropping to idle
+# Fixed 5s polling for fast, reliable responses
+poll_interval_secs = 5
 max_concurrent_automations = 3
 session_timeout_hours = 2
 

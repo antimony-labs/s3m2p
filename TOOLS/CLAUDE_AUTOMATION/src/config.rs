@@ -15,10 +15,7 @@ pub struct Config {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct DaemonConfig {
-    pub poll_interval_idle_secs: u64,
-    pub poll_interval_active_secs: u64,
-    pub poll_interval_very_active_secs: u64,
-    pub activity_timeout_minutes: u64,
+    pub poll_interval_secs: u64,
     pub max_concurrent_automations: usize,
     pub session_timeout_hours: u64,
 }
