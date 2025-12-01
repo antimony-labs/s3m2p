@@ -5,6 +5,10 @@ on:
     branches:
       - 'preview/issue-*'
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -24,34 +28,62 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Get all project labels, filter to deployable ones, take the first
+          DEPLOYABLE="helios|welcome|mcad|ecad|chladni|autocrate|portfolio|blog"
           PROJECT=$(gh issue view ${{ steps.issue.outputs.number }} \
             --json labels \
-            --jq '.labels[] | select(.name | startswith("project:")) | .name | sub("project:"; "")')
-          echo "name=$PROJECT" >> $GITHUB_OUTPUT
+            --jq "[.labels[] | select(.name | startswith(\"project:\")) | .name | sub(\"project:\"; \"\")] | map(select(. | test(\"^($DEPLOYABLE)$\"))) | first // empty")
+
+          if [ -z "$PROJECT" ]; then
+            echo "No deployable project label found. Skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "name=$PROJECT" >> $GITHUB_OUTPUT
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Setup Rust
+        if: steps.project.outputs.skip != 'true'
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
 
       - name: Install Trunk
+        if: steps.project.outputs.skip != 'true'
         run: |
           wget -qO- https://github.com/trunk-rs/trunk/releases/download/v0.21.14/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
           sudo mv trunk /usr/local/bin/
 
       - name: Determine build path
+        if: steps.project.outputs.skip != 'true'
         id: build
         run: |
           PROJECT=${{ steps.project.outputs.name }}
           case $PROJECT in
-            helios) echo "path=SIM/HELIOS/index.html" >> $GITHUB_OUTPUT ;;
-            welcome) echo "path=WELCOME/index.html" >> $GITHUB_OUTPUT ;;
-            mcad) echo "path=MCAD/WEB/index.html" >> $GITHUB_OUTPUT ;;
-            ecad) echo "path=ECAD/WEB/index.html" >> $GITHUB_OUTPUT ;;
-            chladni) echo "path=SW/CHLADNI/index.html" >> $GITHUB_OUTPUT ;;
-            autocrate) echo "path=MCAD/AUTOCRATE/index.html" >> $GITHUB_OUTPUT ;;
-            portfolio) echo "path=SW/PORTFOLIO/index.html" >> $GITHUB_OUTPUT ;;
-            blog) echo "path=BLOG/index.html" >> $GITHUB_OUTPUT ;;
+            helios)
+              echo "dir=SIM/HELIOS" >> $GITHUB_OUTPUT
+              ;;
+            welcome)
+              echo "dir=WELCOME" >> $GITHUB_OUTPUT
+              ;;
+            mcad)
+              echo "dir=MCAD/WEB" >> $GITHUB_OUTPUT
+              ;;
+            ecad)
+              echo "dir=ECAD/WEB" >> $GITHUB_OUTPUT
+              ;;
+            chladni)
+              echo "dir=SW/CHLADNI" >> $GITHUB_OUTPUT
+              ;;
+            autocrate)
+              echo "dir=MCAD/AUTOCRATE" >> $GITHUB_OUTPUT
+              ;;
+            portfolio)
+              echo "dir=SW/PORTFOLIO" >> $GITHUB_OUTPUT
+              ;;
+            blog)
+              echo "dir=BLOG" >> $GITHUB_OUTPUT
+              ;;
             *)
               echo "❌ Unknown project: $PROJECT"
               echo "Valid: helios, welcome, mcad, ecad, chladni, autocrate, portfolio, blog"
@@ -60,37 +92,40 @@ jobs:
           esac
 
       - name: Build WASM
-        run: trunk build ${{ steps.build.outputs.path }} --release
+        if: steps.project.outputs.skip != 'true'
+        working-directory: ${{ steps.build.outputs.dir }}
+        run: trunk build --release
 
       - name: Deploy to Cloudflare Pages
+        if: steps.project.outputs.skip != 'true'
         id: deploy
         uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: s3m2p-previews
-          directory: dist
-          deploymentName: issue-${{ steps.issue.outputs.number }}-${{ steps.project.outputs.name }}
+          projectName: preview-${{ steps.project.outputs.name }}
+          directory: ${{ steps.build.outputs.dir }}/dist
+          branch: issue-${{ steps.issue.outputs.number }}
 
       - name: Post preview URL to issue
+        if: steps.project.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PROJECT=${{ steps.project.outputs.name }}
-          PREVIEW_URL="https://issue-${{ steps.issue.outputs.number }}-${PROJECT}.too.foo"
+          PREVIEW_URL="${{ steps.deploy.outputs.url }}"
           COMMIT_SHORT=$(git rev-parse --short HEAD)
           COMMIT_MSG=$(git log -1 --pretty=%s)
+          TIME=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
 
-          gh issue comment ${{ steps.issue.outputs.number }} --body "$(cat <<EOF
-🌐 **Preview Deployed**
+          BODY="🌐 **Preview Deployed**
 
-**URL:** $PREVIEW_URL
-**Project:** ${PROJECT}
-**Commit:** \`$COMMIT_SHORT\` - $COMMIT_MSG
-**Time:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **URL:** $PREVIEW_URL
+          **Project:** ${PROJECT}
+          **Commit:** \`$COMMIT_SHORT\` - $COMMIT_MSG
+          **Time:** $TIME
 
----
-*Auto-deployed from \`preview/issue-${{ steps.issue.outputs.number }}\`*
-*Actual URL: ${{ steps.deploy.outputs.url }}*
-EOF
-)"
+          ---
+          *Auto-deployed from \`preview/issue-${{ steps.issue.outputs.number }}\`*"
+
+          gh issue comment ${{ steps.issue.outputs.number }} --body "$BODY"
