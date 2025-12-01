@@ -116,10 +116,12 @@ impl ChladniSimulation {
         use js_sys::Math;
         let mut particles = Vec::with_capacity(count);
         let size = grid_size as f32;
+        let margin = 20.0; // Keep away from edges
+        let inner_size = size - 2.0 * margin;
 
         for _ in 0..count {
-            let x = Math::random() as f32 * size;
-            let y = Math::random() as f32 * size;
+            let x = margin + Math::random() as f32 * inner_size;
+            let y = margin + Math::random() as f32 * inner_size;
             particles.push(Particle::new(x, y));
         }
 
@@ -145,9 +147,14 @@ impl ChladniSimulation {
     }
 
     fn update_particles(&mut self, dt: f32) {
+        use js_sys::Math;
+
         let grid_size = self.config.grid_size as f32;
-        let damping = 0.92; // Less damping for faster settling
-        let force_scale = 500.0; // Much stronger force for instant response
+        let damping = 0.85; // More damping for stability
+        let force_scale = 300.0; // Balanced force
+        let noise_strength = 20.0; // Random jitter to prevent getting stuck
+        let boundary_margin = 15.0; // Keep particles away from edges
+        let boundary_force = 100.0; // Force pushing away from edges
 
         for particle in &mut self.particles {
             if !particle.active {
@@ -159,29 +166,48 @@ impl ChladniSimulation {
 
             // Particles move toward nodal lines (low amplitude)
             // Force is proportional to negative gradient of amplitude squared
-            let force = -gradient * force_scale;
+            let mut force = -gradient * force_scale;
+
+            // Add random noise to prevent particles from getting stuck
+            let noise_x = (Math::random() as f32 - 0.5) * noise_strength;
+            let noise_y = (Math::random() as f32 - 0.5) * noise_strength;
+            force.x += noise_x;
+            force.y += noise_y;
+
+            // Boundary repulsion - soft force pushing away from edges
+            if particle.pos.x < boundary_margin {
+                force.x += boundary_force * (1.0 - particle.pos.x / boundary_margin);
+            }
+            if particle.pos.x > grid_size - boundary_margin {
+                force.x -= boundary_force * (1.0 - (grid_size - particle.pos.x) / boundary_margin);
+            }
+            if particle.pos.y < boundary_margin {
+                force.y += boundary_force * (1.0 - particle.pos.y / boundary_margin);
+            }
+            if particle.pos.y > grid_size - boundary_margin {
+                force.y -= boundary_force * (1.0 - (grid_size - particle.pos.y) / boundary_margin);
+            }
+
+            // Clamp force magnitude to prevent particles from shooting off
+            let force_mag = force.length();
+            if force_mag > 500.0 {
+                force = force.normalize() * 500.0;
+            }
 
             particle.vel += force * dt;
             particle.vel *= damping;
+
+            // Clamp velocity for stability
+            let vel_mag = particle.vel.length();
+            if vel_mag > 200.0 {
+                particle.vel = particle.vel.normalize() * 200.0;
+            }
+
             particle.pos += particle.vel * dt;
 
-            // Boundary reflection
-            if particle.pos.x < 0.0 {
-                particle.pos.x = 0.0;
-                particle.vel.x = -particle.vel.x * 0.5;
-            }
-            if particle.pos.x >= grid_size {
-                particle.pos.x = grid_size - 1.0;
-                particle.vel.x = -particle.vel.x * 0.5;
-            }
-            if particle.pos.y < 0.0 {
-                particle.pos.y = 0.0;
-                particle.vel.y = -particle.vel.y * 0.5;
-            }
-            if particle.pos.y >= grid_size {
-                particle.pos.y = grid_size - 1.0;
-                particle.vel.y = -particle.vel.y * 0.5;
-            }
+            // Hard boundary clamp (safety net)
+            particle.pos.x = particle.pos.x.clamp(1.0, grid_size - 2.0);
+            particle.pos.y = particle.pos.y.clamp(1.0, grid_size - 2.0);
         }
     }
 
