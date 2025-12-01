@@ -5,12 +5,13 @@ on:
     branches:
       - 'preview/issue-*'
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      issues: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,10 +28,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get the first non-infra project label
           PROJECT=$(gh issue view ${{ steps.issue.outputs.number }} \
             --json labels \
-            --jq '[.labels[] | select(.name | startswith("project:")) | .name | sub("project:"; "") | select(. != "infra")] | first')
+            --jq '.labels[] | select(.name | startswith("project:")) | .name | sub("project:"; "")')
           echo "name=$PROJECT" >> $GITHUB_OUTPUT
 
       - name: Setup Rust
@@ -48,14 +48,38 @@ jobs:
         run: |
           PROJECT=${{ steps.project.outputs.name }}
           case $PROJECT in
-            helios) echo "dir=SIM/HELIOS" >> $GITHUB_OUTPUT ;;
-            welcome) echo "dir=SIM/TOOFOO" >> $GITHUB_OUTPUT ;;
-            mcad) echo "dir=MCAD/WEB" >> $GITHUB_OUTPUT ;;
-            ecad) echo "dir=ECAD/WEB" >> $GITHUB_OUTPUT ;;
-            chladni) echo "dir=SW/CHLADNI" >> $GITHUB_OUTPUT ;;
-            autocrate) echo "dir=MCAD/AUTOCRATE" >> $GITHUB_OUTPUT ;;
-            portfolio) echo "dir=SW/PORTFOLIO" >> $GITHUB_OUTPUT ;;
-            blog) echo "dir=BLOG" >> $GITHUB_OUTPUT ;;
+            helios)
+              echo "path=SIM/HELIOS/index.html" >> $GITHUB_OUTPUT
+              echo "dist=SIM/HELIOS/dist" >> $GITHUB_OUTPUT
+              ;;
+            welcome)
+              echo "path=WELCOME/index.html" >> $GITHUB_OUTPUT
+              echo "dist=WELCOME/dist" >> $GITHUB_OUTPUT
+              ;;
+            mcad)
+              echo "path=MCAD/WEB/index.html" >> $GITHUB_OUTPUT
+              echo "dist=MCAD/WEB/dist" >> $GITHUB_OUTPUT
+              ;;
+            ecad)
+              echo "path=ECAD/WEB/index.html" >> $GITHUB_OUTPUT
+              echo "dist=ECAD/WEB/dist" >> $GITHUB_OUTPUT
+              ;;
+            chladni)
+              echo "path=SW/CHLADNI/index.html" >> $GITHUB_OUTPUT
+              echo "dist=SW/CHLADNI/dist" >> $GITHUB_OUTPUT
+              ;;
+            autocrate)
+              echo "path=MCAD/AUTOCRATE/index.html" >> $GITHUB_OUTPUT
+              echo "dist=MCAD/AUTOCRATE/dist" >> $GITHUB_OUTPUT
+              ;;
+            portfolio)
+              echo "path=SW/PORTFOLIO/index.html" >> $GITHUB_OUTPUT
+              echo "dist=SW/PORTFOLIO/dist" >> $GITHUB_OUTPUT
+              ;;
+            blog)
+              echo "path=BLOG/index.html" >> $GITHUB_OUTPUT
+              echo "dist=BLOG/dist" >> $GITHUB_OUTPUT
+              ;;
             *)
               echo "❌ Unknown project: $PROJECT"
               echo "Valid: helios, welcome, mcad, ecad, chladni, autocrate, portfolio, blog"
@@ -64,40 +88,36 @@ jobs:
           esac
 
       - name: Build WASM
-        working-directory: ./${{ steps.build.outputs.dir }}
-        run: trunk build --release
+        run: trunk build ${{ steps.build.outputs.path }} --release
 
       - name: Deploy to Cloudflare Pages
         id: deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          npm install -g wrangler
-          npx wrangler pages project create preview-${{ steps.project.outputs.name }} --production-branch=main 2>/dev/null || true
-          DEPLOY_OUTPUT=$(npx wrangler pages deploy ${{ steps.build.outputs.dir }}/dist --project-name=preview-${{ steps.project.outputs.name }} --branch=preview-${{ steps.issue.outputs.number }} --commit-dirty=true 2>&1)
-          echo "$DEPLOY_OUTPUT"
-          URL=$(echo "$DEPLOY_OUTPUT" | grep -oP 'https://[^\s]+\.pages\.dev' | head -1)
-          echo "url=$URL" >> $GITHUB_OUTPUT
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: s3m2p-previews
+          directory: ${{ steps.build.outputs.dist }}
+          deploymentName: issue-${{ steps.issue.outputs.number }}-${{ steps.project.outputs.name }}
 
       - name: Post preview URL to issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PROJECT=${{ steps.project.outputs.name }}
-          PREVIEW_URL="https://p.${PROJECT}.too.foo"
+          PREVIEW_URL="${{ steps.deploy.outputs.url }}"
           COMMIT_SHORT=$(git rev-parse --short HEAD)
           COMMIT_MSG=$(git log -1 --pretty=%s)
 
-          BODY="🌐 **Preview Deployed**
+          gh issue comment ${{ steps.issue.outputs.number }} --body "$(cat <<EOF
+🌐 **Preview Deployed**
 
-          **URL:** $PREVIEW_URL
-          **Project:** ${PROJECT}
-          **Commit:** \`$COMMIT_SHORT\` - $COMMIT_MSG
-          **Time:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+**URL:** $PREVIEW_URL
+**Project:** ${PROJECT}
+**Commit:** \`$COMMIT_SHORT\` - $COMMIT_MSG
+**Time:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 
-          ---
-          *Auto-deployed from \`preview/issue-${{ steps.issue.outputs.number }}\`*
-          *Actual URL: ${{ steps.deploy.outputs.url }}*"
-
-          gh issue comment ${{ steps.issue.outputs.number }} --body "$BODY"
+---
+*Auto-deployed from \`preview/issue-${{ steps.issue.outputs.number }}\`*
+EOF
+)"
