@@ -1188,7 +1188,9 @@ fn draw_interstellar_wind_indicator(ctx: &CanvasRenderingContext2d, state: &Simu
     .unwrap_or(());
 }
 
-/// Draw a comet-shaped heliosphere boundary
+/// Draw a 3D comet-shaped heliosphere boundary as a wireframe sphere
+/// This creates true 3D depth perception by drawing latitude/longitude lines
+/// that respond properly to camera rotation and tilt
 /// nose_factor: how close to Sun the nose is (0.5 = 50% of radius)
 /// tail_factor: how far the tail extends (2.0 = 2x radius)
 fn draw_comet_boundary(
@@ -1202,7 +1204,6 @@ fn draw_comet_boundary(
     line_width: f64,
 ) {
     let view = &state.view;
-    let (cx, cy) = view.au_to_screen(0.0, 0.0);
     let r_pixels = radius_au / view.zoom;
 
     // Don't draw if too small or too large
@@ -1210,73 +1211,241 @@ fn draw_comet_boundary(
         return;
     }
 
-    // Calculate nose and tail positions
-    // Nose is compressed, tail is extended
-    let nose_dist = r_pixels * nose_factor;
-    let side_dist = r_pixels;
-    let tail_dist = r_pixels * tail_factor;
+    // Parse colors for alpha manipulation
+    let (base_r, base_g, base_b, base_a) = parse_rgba(stroke_color);
+    let (fill_r, fill_g, fill_b, fill_a) = parse_rgba(fill_color);
 
-    // Apply camera rotation to the shape
-    let rot = view.rotation + HELIO_NOSE_DIRECTION;
-    let cos_rot = rot.cos();
-    let sin_rot = rot.sin();
+    // Number of segments for smooth curves
+    let lat_segments = 8; // Latitude lines (horizontal rings)
+    let lon_segments = 12; // Longitude lines (vertical arcs)
+    let points_per_line = 48; // Points per line for smooth curves
 
-    // Build the comet shape using bezier curves
+    // Draw filled background (subtle 3D shell effect)
+    // Draw multiple latitude bands with depth-based opacity
+    for lat_idx in 0..lat_segments {
+        let lat1 = PI * (lat_idx as f64 / lat_segments as f64) - PI / 2.0;
+        let lat2 = PI * ((lat_idx + 1) as f64 / lat_segments as f64) - PI / 2.0;
+
+        ctx.begin_path();
+
+        // First half of the band (going around)
+        for i in 0..=points_per_line {
+            let lon = 2.0 * PI * (i as f64 / points_per_line as f64);
+            let (x, y, z) = heliosphere_point(radius_au, lat1, lon, nose_factor, tail_factor);
+            let (sx, sy, _) = view.au_to_screen_3d(x, y, z);
+
+            if i == 0 {
+                ctx.move_to(sx, sy);
+            } else {
+                ctx.line_to(sx, sy);
+            }
+        }
+
+        // Second half (coming back at lat2)
+        for i in (0..=points_per_line).rev() {
+            let lon = 2.0 * PI * (i as f64 / points_per_line as f64);
+            let (x, y, z) = heliosphere_point(radius_au, lat2, lon, nose_factor, tail_factor);
+            let (sx, sy, _) = view.au_to_screen_3d(x, y, z);
+            ctx.line_to(sx, sy);
+        }
+
+        ctx.close_path();
+
+        // Calculate average depth for this band
+        let mid_lat = (lat1 + lat2) / 2.0;
+        let (_, _, depth) = view.au_to_screen_3d(
+            0.0,
+            radius_au * mid_lat.cos(),
+            radius_au * mid_lat.sin(),
+        );
+
+        // Depth-based alpha (back faces are dimmer)
+        let depth_factor = (depth / (radius_au * 2.0) + 0.5).clamp(0.2, 1.0);
+        let band_alpha = fill_a * depth_factor * 0.5;
+
+        ctx.set_fill_style(&JsValue::from_str(&format!(
+            "rgba({}, {}, {}, {})",
+            fill_r, fill_g, fill_b, band_alpha
+        )));
+        ctx.fill();
+    }
+
+    // Draw latitude lines (horizontal rings at different elevations)
+    for lat_idx in 0..=lat_segments {
+        let lat = PI * (lat_idx as f64 / lat_segments as f64) - PI / 2.0;
+
+        // Skip poles (they collapse to points)
+        if lat.abs() > PI / 2.0 - 0.1 {
+            continue;
+        }
+
+        ctx.begin_path();
+        let mut first = true;
+        let mut prev_depth = 0.0;
+
+        for i in 0..=points_per_line {
+            let lon = 2.0 * PI * (i as f64 / points_per_line as f64);
+            let (x, y, z) = heliosphere_point(radius_au, lat, lon, nose_factor, tail_factor);
+            let (sx, sy, depth) = view.au_to_screen_3d(x, y, z);
+
+            if first {
+                ctx.move_to(sx, sy);
+                first = false;
+                prev_depth = depth;
+            } else {
+                // Depth-based opacity for this segment
+                let avg_depth = (depth + prev_depth) / 2.0;
+                let depth_factor = (avg_depth / (radius_au * 2.0) + 0.5).clamp(0.3, 1.0);
+
+                // Finish previous segment
+                ctx.line_to(sx, sy);
+
+                // Set line style based on depth
+                let segment_alpha = base_a * depth_factor;
+                ctx.set_stroke_style(&JsValue::from_str(&format!(
+                    "rgba({}, {}, {}, {})",
+                    base_r, base_g, base_b, segment_alpha
+                )));
+                ctx.set_line_width(line_width * depth_factor);
+                ctx.stroke();
+
+                // Start new segment
+                ctx.begin_path();
+                ctx.move_to(sx, sy);
+                prev_depth = depth;
+            }
+        }
+    }
+
+    // Draw longitude lines (vertical arcs from pole to pole)
+    for lon_idx in 0..lon_segments {
+        let lon = 2.0 * PI * (lon_idx as f64 / lon_segments as f64);
+
+        ctx.begin_path();
+        let mut first = true;
+        let mut prev_depth = 0.0;
+
+        for i in 0..=points_per_line {
+            let lat = PI * (i as f64 / points_per_line as f64) - PI / 2.0;
+            let (x, y, z) = heliosphere_point(radius_au, lat, lon, nose_factor, tail_factor);
+            let (sx, sy, depth) = view.au_to_screen_3d(x, y, z);
+
+            if first {
+                ctx.move_to(sx, sy);
+                first = false;
+                prev_depth = depth;
+            } else {
+                let avg_depth = (depth + prev_depth) / 2.0;
+                let depth_factor = (avg_depth / (radius_au * 2.0) + 0.5).clamp(0.3, 1.0);
+
+                ctx.line_to(sx, sy);
+
+                let segment_alpha = base_a * depth_factor;
+                ctx.set_stroke_style(&JsValue::from_str(&format!(
+                    "rgba({}, {}, {}, {})",
+                    base_r, base_g, base_b, segment_alpha
+                )));
+                ctx.set_line_width(line_width * depth_factor);
+                ctx.stroke();
+
+                ctx.begin_path();
+                ctx.move_to(sx, sy);
+                prev_depth = depth;
+            }
+        }
+    }
+
+    // Draw equatorial ring (more prominent)
     ctx.begin_path();
+    for i in 0..=points_per_line {
+        let lon = 2.0 * PI * (i as f64 / points_per_line as f64);
+        let (x, y, z) = heliosphere_point(radius_au, 0.0, lon, nose_factor, tail_factor);
+        let (sx, sy, _) = view.au_to_screen_3d(x, y, z);
 
-    // Start at nose (front of heliosphere, facing interstellar wind)
-    let nose_x = cx + nose_dist * cos_rot;
-    let nose_y = cy + nose_dist * sin_rot * view.tilt.cos();
-    ctx.move_to(nose_x, nose_y);
-
-    // Curve to upper side
-    let upper_side_x = cx + side_dist * (rot + PI * 0.5).cos() * 0.8;
-    let upper_side_y = cy + side_dist * (rot + PI * 0.5).sin() * view.tilt.cos();
-    let ctrl1_x = nose_x + side_dist * 0.5 * (rot + PI * 0.3).cos();
-    let ctrl1_y = nose_y + side_dist * 0.5 * (rot + PI * 0.3).sin() * view.tilt.cos();
-    ctx.quadratic_curve_to(ctrl1_x, ctrl1_y, upper_side_x, upper_side_y);
-
-    // Curve to tail (upper)
-    let tail_upper_x = cx - tail_dist * cos_rot + side_dist * 0.3 * (rot + PI * 0.5).cos();
-    let tail_upper_y = cy - tail_dist * sin_rot * view.tilt.cos()
-        + side_dist * 0.3 * (rot + PI * 0.5).sin() * view.tilt.cos();
-    let ctrl2_x = upper_side_x - side_dist * 0.5 * cos_rot;
-    let ctrl2_y = upper_side_y - side_dist * 0.3 * sin_rot * view.tilt.cos();
-    ctx.quadratic_curve_to(ctrl2_x, ctrl2_y, tail_upper_x, tail_upper_y);
-
-    // Tail tip (can extend very far)
-    let tail_tip_x = cx - tail_dist * 1.5 * cos_rot;
-    let tail_tip_y = cy - tail_dist * 1.5 * sin_rot * view.tilt.cos();
-    ctx.line_to(tail_tip_x, tail_tip_y);
-
-    // Curve back to tail (lower)
-    let tail_lower_x = cx - tail_dist * cos_rot + side_dist * 0.3 * (rot - PI * 0.5).cos();
-    let tail_lower_y = cy - tail_dist * sin_rot * view.tilt.cos()
-        + side_dist * 0.3 * (rot - PI * 0.5).sin() * view.tilt.cos();
-    ctx.line_to(tail_lower_x, tail_lower_y);
-
-    // Curve to lower side
-    let lower_side_x = cx + side_dist * (rot - PI * 0.5).cos() * 0.8;
-    let lower_side_y = cy + side_dist * (rot - PI * 0.5).sin() * view.tilt.cos();
-    let ctrl3_x = tail_lower_x + side_dist * 0.5 * cos_rot;
-    let ctrl3_y = tail_lower_y + side_dist * 0.3 * sin_rot * view.tilt.cos();
-    ctx.quadratic_curve_to(ctrl3_x, ctrl3_y, lower_side_x, lower_side_y);
-
-    // Curve back to nose
-    let ctrl4_x = lower_side_x + side_dist * 0.3 * cos_rot;
-    let ctrl4_y = lower_side_y + side_dist * 0.3 * sin_rot * view.tilt.cos();
-    ctx.quadratic_curve_to(ctrl4_x, ctrl4_y, nose_x, nose_y);
-
+        if i == 0 {
+            ctx.move_to(sx, sy);
+        } else {
+            ctx.line_to(sx, sy);
+        }
+    }
     ctx.close_path();
-
-    // Fill
-    ctx.set_fill_style(&JsValue::from_str(fill_color));
-    ctx.fill();
-
-    // Stroke
-    ctx.set_stroke_style(&JsValue::from_str(stroke_color));
-    ctx.set_line_width(line_width);
+    ctx.set_stroke_style(&JsValue::from_str(&format!(
+        "rgba({}, {}, {}, {})",
+        base_r, base_g, base_b, base_a * 1.5
+    )));
+    ctx.set_line_width(line_width * 1.5);
     ctx.stroke();
+}
+
+/// Calculate a point on the heliosphere surface
+/// Uses spherical coordinates with asymmetric scaling for comet shape
+/// lat: latitude (-PI/2 to PI/2, 0 = equator)
+/// lon: longitude (0 to 2*PI)
+#[inline]
+fn heliosphere_point(
+    radius: f64,
+    lat: f64,
+    lon: f64,
+    nose_factor: f64,
+    tail_factor: f64,
+) -> (f64, f64, f64) {
+    // Basic spherical to Cartesian
+    let cos_lat = lat.cos();
+    let sin_lat = lat.sin();
+    let cos_lon = lon.cos();
+    let sin_lon = lon.sin();
+
+    // Base sphere coordinates (before asymmetric scaling)
+    let x_sphere = cos_lat * cos_lon;
+    let y_sphere = cos_lat * sin_lon;
+    let z_sphere = sin_lat;
+
+    // Apply comet-like asymmetric scaling
+    // The heliosphere is compressed on the nose (positive X) and extended on the tail (negative X)
+    // nose_factor < 1 compresses the nose, tail_factor > 1 extends the tail
+    let x_scale = if x_sphere > 0.0 {
+        // Nose side - compress
+        nose_factor + (1.0 - nose_factor) * (1.0 - x_sphere)
+    } else {
+        // Tail side - extend
+        1.0 + (tail_factor - 1.0) * (-x_sphere)
+    };
+
+    // Apply the nose direction rotation (heliosphere points in specific direction)
+    let nose_dir = HELIO_NOSE_DIRECTION;
+    let cos_nose = nose_dir.cos();
+    let sin_nose = nose_dir.sin();
+
+    // Unrotated position with asymmetric scaling
+    let x_scaled = x_sphere * x_scale * radius;
+    let y_scaled = y_sphere * radius;
+    let z_scaled = z_sphere * radius;
+
+    // Rotate to align with heliosphere nose direction
+    let x = x_scaled * cos_nose - y_scaled * sin_nose;
+    let y = x_scaled * sin_nose + y_scaled * cos_nose;
+    let z = z_scaled;
+
+    (x, y, z)
+}
+
+/// Parse rgba color string to components
+#[inline]
+fn parse_rgba(color: &str) -> (u8, u8, u8, f64) {
+    // Handle "rgba(r, g, b, a)" format
+    if color.starts_with("rgba(") {
+        let inner = color.trim_start_matches("rgba(").trim_end_matches(')');
+        let parts: Vec<&str> = inner.split(',').collect();
+        if parts.len() == 4 {
+            let r = parts[0].trim().parse().unwrap_or(255);
+            let g = parts[1].trim().parse().unwrap_or(255);
+            let b = parts[2].trim().parse().unwrap_or(255);
+            let a = parts[3].trim().parse().unwrap_or(1.0);
+            return (r, g, b, a);
+        }
+    }
+    // Default fallback
+    (255, 255, 255, 0.5)
 }
 
 /// Draw label for heliosphere boundaries
