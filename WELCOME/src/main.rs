@@ -512,12 +512,12 @@ fn main() {
 
         let (text, text_op, logo_op, glitch) = match center_state {
             0 => {
-                // LOGO (3s)
+                // Sb (3s)
                 if center_anim_timer > 3.0 {
                     center_state = 1;
                     center_anim_timer = 0.0;
                 }
-                ("", 0.0, 1.0, false)
+                ("Sb", 1.0, 0.0, false)
             }
             1 => {
                 // ANTIMONY (2s)
@@ -534,14 +534,6 @@ fn main() {
                 )
             }
             2 => {
-                // Sb (2s)
-                if center_anim_timer > 2.0 {
-                    center_state = 3;
-                    center_anim_timer = 0.0;
-                }
-                ("Sb", 1.0, 0.0, false)
-            }
-            3 => {
                 // Hindi (3s)
                 if center_anim_timer > 3.0 {
                     center_state = 0;
@@ -549,7 +541,7 @@ fn main() {
                 }
                 ("शिवम् भारद्वाज", 1.0, 0.0, false)
             }
-            _ => ("", 0.0, 1.0, false),
+            _ => ("Sb", 1.0, 0.0, false),
         };
 
         // Call JS updater

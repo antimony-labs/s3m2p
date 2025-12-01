@@ -49,6 +49,10 @@ pub struct ViewState {
     pub tilt: f64,     // Camera elevation angle (0 = top-down, PI/2 = edge-on)
     pub rotation: f64, // Camera rotation around Z axis (azimuth)
 
+    // Perspective projection parameters
+    pub camera_distance: f64, // Virtual camera distance from focus point (AU)
+    pub fov: f64,             // Field of view (radians, ~PI/4 for 45 degrees)
+
     // Viewport dimensions
     pub width: f64,
     pub height: f64,
@@ -82,6 +86,8 @@ impl Default for ViewState {
             zoom: 0.02, // 1 pixel = 0.02 AU, shows inner solar system
             tilt: 0.4,  // ~23 degrees from top-down for nice 3D effect
             rotation: 0.0,
+            camera_distance: 500.0, // Virtual camera distance for perspective (AU)
+            fov: PI / 4.0,          // 45 degree field of view
             width: 1920.0,
             height: 1080.0,
             drag_mode: DragMode::None,
@@ -123,28 +129,58 @@ impl ViewState {
 }
 
 impl ViewState {
-    /// Convert 3D AU coordinates to screen pixels using isometric-style projection
+    /// Convert 3D AU coordinates to screen pixels using perspective projection
     /// Returns (screen_x, screen_y, depth) where depth can be used for sorting
+    ///
+    /// This creates a true 3D effect where objects further from the camera
+    /// appear smaller, giving the solar system a spherical, volumetric feel.
     #[inline]
     pub fn au_to_screen_3d(&self, x_au: f64, y_au: f64, z_au: f64) -> (f64, f64, f64) {
-        // Apply camera rotation around Z axis
+        // Translate relative to view center
+        let x_centered = x_au - self.center_x;
+        let y_centered = y_au - self.center_y;
+
+        // Apply camera rotation around Z axis (azimuth)
         let cos_rot = self.rotation.cos();
         let sin_rot = self.rotation.sin();
-        let x_rot = x_au * cos_rot - y_au * sin_rot;
-        let y_rot = x_au * sin_rot + y_au * cos_rot;
+        let x_rot = x_centered * cos_rot - y_centered * sin_rot;
+        let y_rot = x_centered * sin_rot + y_centered * cos_rot;
 
-        // Apply tilt (elevation angle) - foreshortens Y based on tilt
+        // Apply tilt (elevation angle)
+        // This rotates around the X axis to look down at the solar system
         let cos_tilt = self.tilt.cos();
         let sin_tilt = self.tilt.sin();
 
-        // Project to screen coordinates
-        // X stays the same, Y is compressed by tilt and offset by Z
-        let proj_x = x_rot;
-        let proj_y = y_rot * cos_tilt - z_au * sin_tilt;
-        let depth = y_rot * sin_tilt + z_au * cos_tilt;
+        // After tilt rotation:
+        // - x stays the same
+        // - y becomes the new "into screen" depth
+        // - z becomes the new vertical
+        let cam_x = x_rot;
+        let cam_y = y_rot * cos_tilt - z_au * sin_tilt; // depth into screen
+        let cam_z = y_rot * sin_tilt + z_au * cos_tilt; // vertical on screen
 
-        let screen_x = (proj_x - self.center_x) / self.zoom + self.width / 2.0;
-        let screen_y = (proj_y - self.center_y) / self.zoom + self.height / 2.0;
+        // Perspective projection
+        // Camera is positioned at distance 'camera_distance' along the view axis
+        // Objects further away (larger cam_y) appear smaller
+        let depth = cam_y; // Store original depth for sorting
+
+        // Calculate perspective scale factor
+        // The focal length determines how strong the perspective effect is
+        // Larger focal length = weaker perspective (more orthographic)
+        let focal_length = self.camera_distance;
+
+        // Clamp perspective to avoid extreme distortion or division by zero
+        // Objects very far behind camera get clamped
+        let perspective_depth = (focal_length + cam_y).max(focal_length * 0.1);
+        let perspective_scale = focal_length / perspective_depth;
+
+        // Apply perspective to get projected coordinates
+        let proj_x = cam_x * perspective_scale;
+        let proj_z = cam_z * perspective_scale;
+
+        // Convert from AU to screen pixels
+        let screen_x = proj_x / self.zoom + self.width / 2.0;
+        let screen_y = -proj_z / self.zoom + self.height / 2.0; // Flip Y for screen coords
 
         (screen_x, screen_y, depth)
     }
@@ -156,23 +192,45 @@ impl ViewState {
         (sx, sy)
     }
 
-    /// Convert screen pixels to AU coordinates (assumes Z=0 plane)
+    /// Convert screen pixels to AU coordinates (assumes Z=0 ecliptic plane)
+    /// This is the inverse of au_to_screen_3d for points on the z=0 plane
     #[inline]
     pub fn screen_to_au(&self, screen_x: f64, screen_y: f64) -> (f64, f64) {
-        // Inverse projection (simplified, assumes z=0)
-        let proj_x = (screen_x - self.width / 2.0) * self.zoom + self.center_x;
-        let proj_y = (screen_y - self.height / 2.0) * self.zoom + self.center_y;
+        // Convert from screen to projected coordinates
+        let proj_x = (screen_x - self.width / 2.0) * self.zoom;
+        let proj_z = -(screen_y - self.height / 2.0) * self.zoom; // Flip Y back
 
-        // Inverse tilt
-        let cos_tilt = self.tilt.cos();
-        let y_rot = proj_y / cos_tilt;
-        let x_rot = proj_x;
+        // For z=0 plane intersection, we need to solve the perspective equation
+        // With perspective: proj_x = cam_x * (focal / (focal + cam_y))
+        // For z=0: cam_z = y_rot * sin_tilt, cam_y = y_rot * cos_tilt
+        // So proj_z = y_rot * sin_tilt * (focal / (focal + y_rot * cos_tilt))
+
+        // Simplified inverse (approximate for z=0 plane)
+        let sin_tilt = self.tilt.sin();
+
+        // For near-orthographic projection (large camera_distance), approximate
+        let cam_x = proj_x;
+        let cam_z = proj_z;
+
+        // Inverse tilt: solve for y_rot assuming z_au = 0
+        // cam_z = y_rot * sin_tilt => y_rot = cam_z / sin_tilt (if tilt != 0)
+        // cam_y = y_rot * cos_tilt
+        let y_rot = if sin_tilt.abs() > 0.01 {
+            cam_z / sin_tilt
+        } else {
+            0.0 // Top-down view, y_rot doesn't affect z position
+        };
+        let x_rot = cam_x;
 
         // Inverse rotation
         let cos_rot = self.rotation.cos();
         let sin_rot = self.rotation.sin();
-        let x_au = x_rot * cos_rot + y_rot * sin_rot;
-        let y_au = -x_rot * sin_rot + y_rot * cos_rot;
+        let x_centered = x_rot * cos_rot + y_rot * sin_rot;
+        let y_centered = -x_rot * sin_rot + y_rot * cos_rot;
+
+        // Add back center offset
+        let x_au = x_centered + self.center_x;
+        let y_au = y_centered + self.center_y;
 
         (x_au, y_au)
     }
@@ -803,6 +861,14 @@ impl SimulationState {
     pub fn zoom_to(&mut self, level: f64) {
         // Allow very small zoom for planet close-ups (10^-8 allows planet-scale viewing)
         self.view.zoom = level.clamp(0.00000001, 10.0);
+
+        // Adjust camera distance for appropriate perspective at this zoom level
+        // Smaller zoom = closer view = need smaller camera distance for perspective
+        // Larger zoom = wider view = need larger camera distance (more orthographic)
+        // This gives a nice 3D effect at all scales
+        let visible_range = self.view.zoom * self.view.width.max(self.view.height);
+        self.view.camera_distance = visible_range * 2.0; // Camera 2x the visible range away
+
         self.orbit_dirty = true;
     }
 
