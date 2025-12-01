@@ -84,7 +84,7 @@ impl Default for ViewState {
             center_x: 0.0,
             center_y: 0.0,
             zoom: 0.02, // 1 pixel = 0.02 AU, shows inner solar system
-            tilt: 0.4,  // ~23 degrees from top-down for nice 3D effect
+            tilt: 0.6,  // ~34 degrees from top-down for stronger 3D effect
             rotation: 0.0,
             camera_distance: 500.0, // Virtual camera distance for perspective (AU)
             fov: PI / 4.0,          // 45 degree field of view
@@ -95,7 +95,7 @@ impl Default for ViewState {
             drag_start_y: 0.0,
             last_center_x: 0.0,
             last_center_y: 0.0,
-            last_tilt: 0.4,
+            last_tilt: 0.6,
             last_rotation: 0.0,
             pinching: false,
             pinch_start_dist: 0.0,
@@ -165,8 +165,11 @@ impl ViewState {
         let depth = cam_y; // Store original depth for sorting
 
         // Calculate perspective scale factor
-        // The focal length determines how strong the perspective effect is
-        // Larger focal length = weaker perspective (more orthographic)
+        // The focal_length controls how "wide angle" the view is:
+        //   - Small focal = strong perspective (wide angle lens)
+        //   - Large focal = weak perspective (telephoto lens, more orthographic)
+        //
+        // camera_distance is set by zoom_to() to give appropriate 3D effect at each scale
         let focal_length = self.camera_distance;
 
         // Clamp perspective to avoid extreme distortion or division by zero
@@ -863,11 +866,14 @@ impl SimulationState {
         self.view.zoom = level.clamp(0.00000001, 10.0);
 
         // Adjust camera distance for appropriate perspective at this zoom level
-        // Smaller zoom = closer view = need smaller camera distance for perspective
-        // Larger zoom = wider view = need larger camera distance (more orthographic)
-        // This gives a nice 3D effect at all scales
+        // We want a noticeable 3D perspective effect, especially at heliosphere scale
+        // The camera distance determines the "focal length" - smaller = more perspective
         let visible_range = self.view.zoom * self.view.width.max(self.view.height);
-        self.view.camera_distance = visible_range * 2.0; // Camera 2x the visible range away
+
+        // Use a smaller multiplier for stronger perspective effect
+        // At heliosphere scale (zoom ~1.2), this gives camera_distance ~300 AU
+        // which creates visible foreshortening of the 3D heliosphere
+        self.view.camera_distance = visible_range * 0.15;
 
         self.orbit_dirty = true;
     }
