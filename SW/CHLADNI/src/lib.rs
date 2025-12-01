@@ -2,8 +2,13 @@
 // Rust/WASM port of realistic Chladni plate simulation
 #![allow(unexpected_cfgs)]
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use glam::Vec2;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
+use web_sys::{window, HtmlCanvasElement, WebGl2RenderingContext};
 
 pub mod renderer;
 pub mod wave;
@@ -172,10 +177,151 @@ impl ChladniSimulation {
     }
 }
 
+// Thread-local storage for global simulation state
+thread_local! {
+    static APP: RefCell<Option<App>> = RefCell::new(None);
+}
+
+/// Application state holding simulation and renderer
+struct App {
+    simulation: ChladniSimulation,
+    renderer: WaveRenderer,
+    canvas: HtmlCanvasElement,
+    last_time: f64,
+}
+
 /// WASM entry point
 #[wasm_bindgen(start)]
 pub fn start() -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
+    web_sys::console::log_1(&"Chladni simulation starting...".into());
+
+    let window = window().ok_or("No window found")?;
+    let document = window.document().ok_or("No document found")?;
+
+    // Get canvas element
+    let canvas = document
+        .get_element_by_id("simulation")
+        .ok_or("Canvas #simulation not found")?
+        .dyn_into::<HtmlCanvasElement>()
+        .map_err(|_| "Element is not a canvas")?;
+
+    // Set canvas size to match container
+    let container = document
+        .get_element_by_id("canvas-container")
+        .ok_or("Canvas container not found")?;
+    let width = container.client_width() as u32;
+    let height = container.client_height() as u32;
+    canvas.set_width(width);
+    canvas.set_height(height);
+
+    web_sys::console::log_1(&format!("Canvas size: {}x{}", width, height).into());
+
+    // Get WebGL2 context
+    let gl = canvas
+        .get_context("webgl2")
+        .map_err(|e| format!("get_context failed: {:?}", e))?
+        .ok_or("WebGL2 context is null")?
+        .dyn_into::<WebGl2RenderingContext>()
+        .map_err(|_| "Failed to cast to WebGL2 context")?;
+
+    // Initialize renderer
+    let mut renderer = WaveRenderer::new(gl);
+    renderer.init()?;
+
+    // Initialize simulation
+    let simulation = ChladniSimulation::new(SimConfig::default());
+
+    // Store in thread-local
+    let app = App {
+        simulation,
+        renderer,
+        canvas,
+        last_time: 0.0,
+    };
+
+    APP.with(|cell| {
+        *cell.borrow_mut() = Some(app);
+    });
+
+    // Export setChladniMode to JavaScript
+    let set_mode_fn = Closure::wrap(Box::new(|m: u32, n: u32| {
+        set_chladni_mode(m, n);
+    }) as Box<dyn Fn(u32, u32)>);
+
+    js_sys::Reflect::set(
+        &window,
+        &JsValue::from_str("setChladniMode"),
+        set_mode_fn.as_ref(),
+    )?;
+    set_mode_fn.forget(); // Prevent closure from being dropped
+
+    // Start animation loop
+    start_animation_loop()?;
+
     web_sys::console::log_1(&"Chladni simulation initialized".into());
+    Ok(())
+}
+
+/// Set vibration mode (called from JavaScript)
+#[wasm_bindgen]
+pub fn set_chladni_mode(m: u32, n: u32) {
+    APP.with(|cell| {
+        if let Some(ref mut app) = *cell.borrow_mut() {
+            app.simulation.set_mode(m, n);
+            web_sys::console::log_1(&format!("Mode set to ({}, {})", m, n).into());
+        }
+    });
+}
+
+/// Start the requestAnimationFrame loop
+fn start_animation_loop() -> Result<(), JsValue> {
+    let window = window().ok_or("No window found")?;
+
+    // Create self-referential closure for animation loop
+    let f: Rc<RefCell<Option<Closure<dyn FnMut(f64)>>>> = Rc::new(RefCell::new(None));
+    let g = f.clone();
+
+    let window_clone = window.clone();
+    *g.borrow_mut() = Some(Closure::new(move |timestamp: f64| {
+        APP.with(|cell| {
+            if let Some(ref mut app) = *cell.borrow_mut() {
+                // Calculate delta time (convert ms to seconds)
+                let dt = if app.last_time > 0.0 {
+                    ((timestamp - app.last_time) / 1000.0).min(0.1) as f32
+                } else {
+                    1.0 / 60.0 // First frame default
+                };
+                app.last_time = timestamp;
+
+                // Handle canvas resize
+                let container_width = app.canvas.client_width() as u32;
+                let container_height = app.canvas.client_height() as u32;
+                if container_width != app.canvas.width() || container_height != app.canvas.height() {
+                    if container_width > 0 && container_height > 0 {
+                        app.canvas.set_width(container_width);
+                        app.canvas.set_height(container_height);
+                    }
+                }
+
+                // Update simulation
+                app.simulation.step(dt);
+
+                // Render
+                let width = app.canvas.width() as f32;
+                let height = app.canvas.height() as f32;
+                app.renderer.render(&app.simulation, width, height);
+            }
+        });
+
+        // Request next frame
+        window_clone
+            .request_animation_frame(f.borrow().as_ref().unwrap().as_ref().unchecked_ref())
+            .expect("requestAnimationFrame failed");
+    }));
+
+    // Start animation
+    window.request_animation_frame(g.borrow().as_ref().unwrap().as_ref().unchecked_ref())?;
+
     Ok(())
 }
