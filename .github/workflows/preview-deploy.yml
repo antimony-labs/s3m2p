@@ -103,9 +103,9 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: s3m2p-previews
+          projectName: preview-${{ steps.project.outputs.name }}
           directory: ${{ steps.build.outputs.dir }}/dist
-          deploymentName: issue-${{ steps.issue.outputs.number }}-${{ steps.project.outputs.name }}
+          branch: issue-${{ steps.issue.outputs.number }}
 
       - name: Post preview URL to issue
         if: steps.project.outputs.skip != 'true'
