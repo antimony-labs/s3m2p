@@ -70,20 +70,28 @@
             pointer-events: none;
         }
 
-        /* Central Fluctuating Text */
-        #center-text {
+        /* Central Core Container */
+        #center-core {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            pointer-events: auto;
+        }
+
+        /* Central Fluctuating Text */
+        #center-text-container {
             font-family: 'Rajdhani', sans-serif;
             color: rgba(0, 255, 255, 0.9);
             font-size: 1.4rem;
             font-weight: 600;
             letter-spacing: 2px;
             text-align: center;
-            z-index: 50;
-            pointer-events: auto;
             text-shadow: 0 0 15px rgba(0, 255, 255, 0.6);
             text-transform: uppercase;
         }
@@ -114,7 +122,7 @@
             .pos-7 { transform: rotate(218.4deg) translate(90px) rotate(-218.4deg); }
             /* Removed pos-8 */
             
-            #center-text {
+            #center-text-container {
                 font-size: 1rem;
             }
         }
@@ -219,7 +227,7 @@
             .pos-7 { transform: rotate(218.4deg) translate(220px) rotate(-218.4deg); }
             /* Removed pos-8 (Contact) */
             
-            #center-text {
+            #center-text-container {
                 font-size: 2rem;
             }
         }
@@ -361,7 +369,6 @@
                 <div id="constellation">
                     <!-- Central Glitch Core -->
                     <div id="center-core">
-                        <img id="center-logo" src="assets/islands/x.svg?v=7" alt="X" style="opacity: 1;">
                         <div id="center-text-container" style="opacity: 0;">Antimony</div>
                     </div>
 
@@ -496,8 +503,7 @@ S3M2P/
     <!-- JS Helper for Rust -->
     <script>
         const textEl = document.getElementById('center-text-container');
-        const logoEl = document.getElementById('center-logo');
-        
+
         window.updateCenterText = function(text, opacity, logoOpacity, useGlitch) {
             if (textEl) {
                 textEl.innerText = text;
@@ -505,15 +511,12 @@ S3M2P/
                 if (useGlitch) {
                     // Apply random transform jitter
                     const jitter = 2.0;
-                    textEl.style.transform = `translate(-50%, -50%) translate(${(Math.random()-0.5)*jitter}px, ${(Math.random()-0.5)*jitter}px)`;
+                    textEl.style.transform = `translate(${(Math.random()-0.5)*jitter}px, ${(Math.random()-0.5)*jitter}px)`;
                     textEl.style.filter = 'blur(0.5px)';
                 } else {
-                    textEl.style.transform = 'translate(-50%, -50%)';
+                    textEl.style.transform = 'none';
                     textEl.style.filter = 'none';
                 }
-            }
-            if (logoEl) {
-                logoEl.style.opacity = logoOpacity;
             }
         };
     </script>
