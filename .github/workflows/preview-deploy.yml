@@ -28,22 +28,34 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Get all project labels, filter to deployable ones, take the first
+          DEPLOYABLE="helios|welcome|mcad|ecad|chladni|autocrate|portfolio|blog"
           PROJECT=$(gh issue view ${{ steps.issue.outputs.number }} \
             --json labels \
-            --jq '.labels[] | select(.name | startswith("project:")) | .name | sub("project:"; "")')
-          echo "name=$PROJECT" >> $GITHUB_OUTPUT
+            --jq "[.labels[] | select(.name | startswith(\"project:\")) | .name | sub(\"project:\"; \"\")] | map(select(. | test(\"^($DEPLOYABLE)$\"))) | first // empty")
+
+          if [ -z "$PROJECT" ]; then
+            echo "No deployable project label found. Skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "name=$PROJECT" >> $GITHUB_OUTPUT
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Setup Rust
+        if: steps.project.outputs.skip != 'true'
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
 
       - name: Install Trunk
+        if: steps.project.outputs.skip != 'true'
         run: |
           wget -qO- https://github.com/trunk-rs/trunk/releases/download/v0.21.14/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
           sudo mv trunk /usr/local/bin/
 
       - name: Determine build path
+        if: steps.project.outputs.skip != 'true'
         id: build
         run: |
           PROJECT=${{ steps.project.outputs.name }}
@@ -88,9 +100,11 @@ jobs:
           esac
 
       - name: Build WASM
+        if: steps.project.outputs.skip != 'true'
         run: trunk build ${{ steps.build.outputs.path }} --release
 
       - name: Deploy to Cloudflare Pages
+        if: steps.project.outputs.skip != 'true'
         id: deploy
         uses: cloudflare/pages-action@v1
         with:
@@ -101,6 +115,7 @@ jobs:
           deploymentName: issue-${{ steps.issue.outputs.number }}-${{ steps.project.outputs.name }}
 
       - name: Post preview URL to issue
+        if: steps.project.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
