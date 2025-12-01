@@ -1,0 +1,112 @@
+name: "New Issue"
+description: Create an issue for any project with optional Claude automation
+title: ""
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Create an Issue
+        Select your project below and optionally enable Claude AI automation.
+
+  - type: dropdown
+    id: project
+    attributes:
+      label: Project
+      description: Which project is this issue for?
+      options:
+        - helios
+        - welcome (too.foo)
+        - autocrate
+        - chladni
+        - portfolio
+        - blog
+        - mcad
+        - ecad
+        - infra
+        - core
+        - storage-server
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: automation
+    attributes:
+      label: Enable Claude Automation
+      description: Let Claude agents automatically implement this issue
+      options:
+        - label: "Enable automation (adds `claude-auto` label)"
+          required: false
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Issue Type
+      options:
+        - Bug fix
+        - New feature
+        - UI/UX improvement
+        - Performance optimization
+        - Refactor
+        - Documentation
+        - CI/CD
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Clear description of the issue or feature
+      placeholder: What needs to be done?
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: What defines "done" for this issue?
+      placeholder: |
+        - [ ] Criterion 1
+        - [ ] Criterion 2
+        - [ ] Tests pass
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: affected
+    attributes:
+      label: Affected Projects
+      description: Check all that apply (for cross-project issues)
+      options:
+        - label: core
+        - label: helios
+        - label: too.foo
+        - label: storage-server
+        - label: simulation-cli
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - P0 - Critical
+        - P1 - High
+        - P2 - Medium
+        - P3 - Low
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### How Automation Works
+
+        **With automation enabled:**
+        1. Claude reads your issue (within 60 seconds)
+        2. Investigates code and proposes solutions
+        3. Deploys previews to `p.{project}.too.foo`
+        4. Comment naturally to iterate: "make it bigger", "ship it!"
