@@ -29,15 +29,17 @@ jobs:
           echo "Preview will be deleted after 24 hours: issue-${ISSUE_NUM}-${PROJECT}.too.foo"
 
           # Post notification
-          gh issue comment $ISSUE_NUM --body "🧹 **Preview Cleanup Scheduled**
+          BODY="🧹 **Preview Cleanup Scheduled**
 
-Preview deployment will be removed in 24 hours:
-\`issue-${ISSUE_NUM}-${PROJECT}.too.foo\`
+          Preview deployment will be removed in 24 hours:
+          \`issue-${ISSUE_NUM}-${PROJECT}.too.foo\`
 
-If you need it longer, reopen the issue within 24h.
+          If you need it longer, reopen the issue within 24h.
 
----
-*Automated cleanup*"
+          ---
+          *Automated cleanup*"
+
+          gh issue comment $ISSUE_NUM --body "$BODY"
 
       - name: Cleanup old closed previews (batch)
         if: github.event_name != 'issues'
