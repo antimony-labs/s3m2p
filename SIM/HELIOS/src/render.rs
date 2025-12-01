@@ -1335,47 +1335,76 @@ fn draw_voyager_boundary_context(ctx: &CanvasRenderingContext2d, state: &Simulat
 // ============================================================================
 
 fn draw_orbits(ctx: &CanvasRenderingContext2d, state: &SimulationState, time: f64) {
+    let view = &state.view;
+
     for p in 0..state.planet_count {
         // Visibility check - is any part of orbit on screen?
         let orbit = &state.planet_orbits[p];
         let aphelion = orbit.a * (1.0 + orbit.e);
 
-        if !state.view.is_visible(0.0, 0.0, aphelion) {
+        if !view.is_visible(0.0, 0.0, aphelion) {
             continue;
         }
+
+        let path = &state.orbit_paths[p];
+        let hex_color = state.planet_colors[p].trim_start_matches('#');
+
+        // Calculate depth range for this orbit to enable depth-based opacity
+        let mut min_depth = f64::INFINITY;
+        let mut max_depth = f64::NEG_INFINITY;
+        for i in 0..ORBIT_SEGMENTS {
+            let (_, _, depth) = view.au_to_screen_3d(path[i * 3], path[i * 3 + 1], path[i * 3 + 2]);
+            min_depth = min_depth.min(depth);
+            max_depth = max_depth.max(depth);
+        }
+        let depth_range = (max_depth - min_depth).max(0.01);
 
         // Breathing glow - phase offset per orbit for cascading effect
         let orbit_breath = breath_factor(time, 0.2, 0.15, p as f64 * 0.5);
         let base_alpha = 0.25;
-        let alpha = base_alpha + orbit_breath * 0.15;
 
-        // Breathing line width for subtle emphasis
-        let line_width = 1.0 + orbit_breath * 0.3;
-        ctx.set_line_width(line_width);
+        // Draw orbit segments with depth-based opacity variation
+        // This creates the illusion of 3D by making far parts of orbit dimmer
+        let base_line_width = 1.0 + orbit_breath * 0.3;
 
-        // Orbit color with breathing opacity
-        let hex_color = state.planet_colors[p].trim_start_matches('#');
-        let alpha_hex = format!("{:02X}", (alpha * 255.0) as u8);
-        let color = format!("#{}{}", hex_color, alpha_hex);
-        ctx.set_stroke_style(&JsValue::from_str(&color));
+        // Draw segments individually with varying opacity based on depth
+        for i in 0..ORBIT_SEGMENTS {
+            let next_i = (i + 1) % ORBIT_SEGMENTS;
 
-        ctx.begin_path();
+            let x1 = path[i * 3];
+            let y1 = path[i * 3 + 1];
+            let z1 = path[i * 3 + 2];
+            let x2 = path[next_i * 3];
+            let y2 = path[next_i * 3 + 1];
+            let z2 = path[next_i * 3 + 2];
 
-        let path = &state.orbit_paths[p];
-        // Now using 3D coordinates (3 values per segment)
-        let (sx, sy, _) = state.view.au_to_screen_3d(path[0], path[1], path[2]);
-        ctx.move_to(sx, sy);
+            let (sx1, sy1, depth1) = view.au_to_screen_3d(x1, y1, z1);
+            let (sx2, sy2, depth2) = view.au_to_screen_3d(x2, y2, z2);
 
-        for i in 1..ORBIT_SEGMENTS {
-            let x = path[i * 3];
-            let y = path[i * 3 + 1];
-            let z = path[i * 3 + 2];
-            let (sx, sy, _) = state.view.au_to_screen_3d(x, y, z);
-            ctx.line_to(sx, sy);
+            // Calculate average depth for this segment
+            let avg_depth = (depth1 + depth2) / 2.0;
+
+            // Depth-based opacity: far segments are dimmer (0.5x to 1.0x)
+            let normalized_depth = (avg_depth - min_depth) / depth_range;
+            let depth_alpha_factor = 0.5 + normalized_depth * 0.5; // Far: 0.5x, Near: 1.0x
+
+            // Depth-based line width: far segments slightly thinner
+            let depth_width_factor = 0.7 + normalized_depth * 0.3; // Far: 0.7x, Near: 1.0x
+
+            let segment_alpha = (base_alpha + orbit_breath * 0.15) * depth_alpha_factor;
+            let segment_width = base_line_width * depth_width_factor;
+
+            let alpha_hex = format!("{:02X}", (segment_alpha * 255.0).min(255.0) as u8);
+            let color = format!("#{}{}", hex_color, alpha_hex);
+
+            ctx.set_stroke_style(&JsValue::from_str(&color));
+            ctx.set_line_width(segment_width);
+
+            ctx.begin_path();
+            ctx.move_to(sx1, sy1);
+            ctx.line_to(sx2, sy2);
+            ctx.stroke();
         }
-
-        ctx.close_path();
-        ctx.stroke();
     }
 }
 
@@ -1872,12 +1901,16 @@ fn draw_planets(ctx: &CanvasRenderingContext2d, state: &SimulationState, time: f
     let view = &state.view;
     let _lod = view.lod_level();
 
+    // Collect planet data with depth for sorting (back to front rendering)
+    // This provides proper depth ordering for 3D perception
+    let mut planets_with_depth: Vec<(usize, f64, f64, f64, f64)> = Vec::with_capacity(state.planet_count);
+
     for p in 0..state.planet_count {
         let x = state.planet_x[p];
         let y = state.planet_y[p];
         let z = state.planet_z[p];
 
-        let (sx, sy, _depth) = view.au_to_screen_3d(x, y, z);
+        let (sx, sy, depth) = view.au_to_screen_3d(x, y, z);
 
         // Planet radius in pixels (with minimum for visibility)
         // NASA Eyes style: allow very large planets when zoomed in close
@@ -1890,21 +1923,145 @@ fn draw_planets(ctx: &CanvasRenderingContext2d, state: &SimulationState, time: f
             continue;
         }
 
+        planets_with_depth.push((p, sx, sy, depth, base_radius));
+    }
+
+    // Sort by depth (furthest first = smallest depth first for back-to-front rendering)
+    planets_with_depth.sort_by(|a, b| a.3.partial_cmp(&b.3).unwrap_or(std::cmp::Ordering::Equal));
+
+    // Calculate depth range for perspective effects
+    let (min_depth, max_depth) = if !planets_with_depth.is_empty() {
+        let min = planets_with_depth.iter().map(|p| p.3).fold(f64::INFINITY, f64::min);
+        let max = planets_with_depth.iter().map(|p| p.3).fold(f64::NEG_INFINITY, f64::max);
+        (min, max)
+    } else {
+        (0.0, 1.0)
+    };
+    let depth_range = (max_depth - min_depth).max(0.1); // Avoid division by zero
+
+    // Draw planets back-to-front with depth-based effects
+    for (p, sx, sy, depth, base_radius) in planets_with_depth {
+        // Depth-based size scaling (perspective effect)
+        // Objects further away appear slightly smaller, closer ones larger
+        // Use subtle effect: 0.85x to 1.15x based on depth position
+        let depth_scale_factor = if depth_range > 0.01 {
+            let normalized_depth = (depth - min_depth) / depth_range; // 0 = far, 1 = near
+            0.85 + normalized_depth * 0.30 // Far: 0.85x, Near: 1.15x
+        } else {
+            1.0
+        };
+
+        // Atmospheric perspective: distant objects slightly faded
+        // Creates depth cues by making far objects appear hazier
+        let alpha_factor = if depth_range > 0.01 {
+            let normalized_depth = (depth - min_depth) / depth_range;
+            0.75 + normalized_depth * 0.25 // Far: 0.75 alpha, Near: 1.0 alpha
+        } else {
+            1.0
+        };
+
+        // Apply planet-specific breathing and depth scaling
+        let breathing_radius = apply_planet_breathing(base_radius, time, p);
+        let scaled_radius = breathing_radius * depth_scale_factor;
+
+        ctx.set_global_alpha(alpha_factor);
+
         let color = state.planet_colors[p];
 
         // Always draw detailed 3D planets (no simple circles)
-        // Apply planet-specific breathing
-        let breathing_radius = apply_planet_breathing(base_radius, time, p);
         draw_planet_detailed(
             ctx,
             sx,
             sy,
-            breathing_radius,
+            scaled_radius,
             color,
             state.planet_has_rings[p],
             time,
             p,
         );
+
+        // Draw depth indicator line (shows height above/below ecliptic plane)
+        // Only at intermediate zoom levels where orbital structure is visible
+        if state.planet_z[p].abs() > 0.01 && view.zoom > 0.005 && view.zoom < 0.5 {
+            draw_ecliptic_height_indicator(ctx, state, p, sx, sy, scaled_radius);
+        }
+    }
+
+    ctx.set_global_alpha(1.0);
+}
+
+/// Draw vertical line showing planet's height above/below the ecliptic plane
+/// This provides crucial depth perception by showing the Z-axis visually
+fn draw_ecliptic_height_indicator(
+    ctx: &CanvasRenderingContext2d,
+    state: &SimulationState,
+    planet_idx: usize,
+    _screen_x: f64,
+    screen_y: f64,
+    planet_radius: f64,
+) {
+    let z = state.planet_z[planet_idx];
+    let view = &state.view;
+
+    // Calculate where the planet would be if it were in the ecliptic plane (z=0)
+    let x = state.planet_x[planet_idx];
+    let y = state.planet_y[planet_idx];
+    let (ecliptic_x, ecliptic_y, _) = view.au_to_screen_3d(x, y, 0.0);
+
+    // Draw a vertical line from the ecliptic plane position to the planet
+    let color = state.planet_colors[planet_idx];
+
+    // Line from ecliptic plane to planet
+    ctx.set_stroke_style(&JsValue::from_str(&format!("{}60", color))); // 38% opacity
+    ctx.set_line_width(1.0);
+
+    // Dashed line style
+    ctx.begin_path();
+    let start_y = ecliptic_y;
+    let end_y = screen_y - planet_radius.signum() * (planet_radius + 2.0) * if z > 0.0 { 1.0 } else { -1.0 };
+
+    // Draw dashed line manually
+    let dash_len = 4.0;
+    let gap_len = 3.0;
+    let dy = end_y - start_y;
+    let dist = dy.abs();
+    let dir = if dy > 0.0 { 1.0 } else { -1.0 };
+
+    ctx.move_to(ecliptic_x, start_y);
+    let mut pos = 0.0;
+    let mut drawing = true;
+
+    while pos < dist {
+        let seg = if drawing { dash_len } else { gap_len };
+        pos += seg;
+        let curr_y = start_y + dir * pos.min(dist);
+
+        if drawing {
+            ctx.line_to(ecliptic_x, curr_y);
+        } else {
+            ctx.move_to(ecliptic_x, curr_y);
+        }
+        drawing = !drawing;
+    }
+    ctx.stroke();
+
+    // Small circle at ecliptic intersection point
+    ctx.set_fill_style(&JsValue::from_str(&format!("{}40", color)));
+    ctx.begin_path();
+    ctx.arc(ecliptic_x, ecliptic_y, 3.0, 0.0, 2.0 * PI).unwrap_or(());
+    ctx.fill();
+
+    // Optional: show Z value label for significant inclinations
+    if z.abs() > 0.1 {
+        ctx.set_font("400 9px 'Just Sans', sans-serif");
+        ctx.set_fill_style(&JsValue::from_str(&format!("{}80", color)));
+        let z_label = if z > 0.0 {
+            format!("+{:.2} AU", z)
+        } else {
+            format!("{:.2} AU", z)
+        };
+        let label_y = (start_y + screen_y) / 2.0;
+        ctx.fill_text(&z_label, ecliptic_x + 5.0, label_y).unwrap_or(());
     }
 }
 
