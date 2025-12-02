@@ -68,6 +68,7 @@
             width: 300px;
             height: 300px;
             pointer-events: none;
+            --orbit-radius: 90px; /* CSS variable for bubble orbit */
         }
 
         /* Central Core Container */
@@ -101,6 +102,7 @@
             #constellation {
                 width: 220px;
                 height: 220px;
+                --orbit-radius: 90px;
             }
             .monolith {
                 width: 48px; /* Increased from 36px */
@@ -111,17 +113,7 @@
                 width: 50%;
                 height: 50%;
             }
-            
-            /* Adjust positions for smaller circle - 7 items spacing (approx 51.4 deg) */
-            .pos-1 { transform: rotate(270deg) translate(90px) rotate(-270deg); }
-            .pos-2 { transform: rotate(321.4deg) translate(90px) rotate(-321.4deg); }
-            .pos-3 { transform: rotate(12.8deg) translate(90px) rotate(-12.8deg); }
-            .pos-4 { transform: rotate(64.2deg) translate(90px) rotate(-64.2deg); }
-            .pos-5 { transform: rotate(115.6deg) translate(90px) rotate(-115.6deg); }
-            .pos-6 { transform: rotate(167deg) translate(90px) rotate(-167deg); }
-            .pos-7 { transform: rotate(218.4deg) translate(90px) rotate(-218.4deg); }
-            /* Removed pos-8 */
-            
+
             #center-text-container {
                 font-size: 1rem;
             }
@@ -211,25 +203,48 @@
             #constellation {
                 width: 500px;
                 height: 500px;
+                --orbit-radius: 220px;
             }
             .monolith {
                 width: 80px; /* Increased from 64px */
                 height: 80px;
                 margin: -40px 0 0 -40px;
             }
-            /* Position calculations for larger circle (radius 200px approx) */
-            .pos-1 { transform: rotate(270deg) translate(220px) rotate(-270deg); }
-            .pos-2 { transform: rotate(321.4deg) translate(220px) rotate(-321.4deg); }
-            .pos-3 { transform: rotate(12.8deg) translate(220px) rotate(-12.8deg); }
-            .pos-4 { transform: rotate(64.2deg) translate(220px) rotate(-64.2deg); }
-            .pos-5 { transform: rotate(115.6deg) translate(220px) rotate(-115.6deg); }
-            .pos-6 { transform: rotate(167deg) translate(220px) rotate(-167deg); }
-            .pos-7 { transform: rotate(218.4deg) translate(220px) rotate(-218.4deg); }
-            /* Removed pos-8 (Contact) */
-            
+
             #center-text-container {
                 font-size: 2rem;
             }
+        }
+
+        /* Back Button */
+        #back-button {
+            display: none;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 500;
+            pointer-events: auto;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            background: rgba(10, 15, 20, 0.85);
+            backdrop-filter: blur(6px);
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.27);
+            text-decoration: none;
+            color: #00ffff;
+            font-size: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        #back-button:hover {
+            border-color: rgba(0, 255, 255, 0.6);
+            background: rgba(0, 20, 30, 0.9);
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.4);
+            transform: scale(1.1);
         }
 
         /* ============================================
@@ -365,55 +380,16 @@
         <div id="simulation-area">
             <canvas id="simulation"></canvas>
             <div id="ui-layer">
+                <!-- Back Button (hidden by default) -->
+                <a id="back-button" href="#">&larr;</a>
+
                 <!-- Constellation Layout -->
                 <div id="constellation">
                     <!-- Central Glitch Core -->
                     <div id="center-core">
                         <div id="center-text-container" style="opacity: 0;">Antimony</div>
                     </div>
-
-                    <!-- 8 Icons Circle -->
-                    <!-- 1. Helios (Top) -->
-                    <a href="https://helios.too.foo" class="monolith pos-1">
-                        <img src="assets/islands/helios.svg?v=7" alt="Helios" />
-                        <span>Helios</span>
-                    </a>
-
-                    <!-- 2. X (Top Right) -->
-                    <a href="https://x.com/LazyShivam" target="_blank" class="monolith pos-2">
-                        <img src="assets/islands/x.svg?v=7" alt="X" />
-                        <span>X</span>
-                    </a>
-
-                    <!-- 3. Blog (Right) -->
-                    <a href="https://blog.too.foo" class="monolith pos-3">
-                        <img src="assets/islands/sensors.svg?v=7" alt="Blog" />
-                        <span>Blog</span>
-                    </a>
-
-                    <!-- 4. Learn (Bottom Right) - ML Curriculum -->
-                    <a href="https://learn.too.foo" class="monolith pos-4">
-                        <img src="assets/islands/learn.svg?v=7" alt="Learn" />
-                        <span>Learn</span>
-                    </a>
-
-                    <!-- 5. Simulations (Bottom) - Chladni, etc -->
-                    <a href="https://chladni.too.foo" class="monolith pos-5">
-                        <img src="assets/islands/sims.svg?v=7" alt="Sims" />
-                        <span>Simulations</span>
-                    </a>
-
-                    <!-- 6. Software (Bottom Left) - AutoCrate, etc -->
-                    <a href="https://autocrate.too.foo" class="monolith pos-6">
-                        <img src="assets/islands/automation.svg?v=7" alt="Software" />
-                        <span>Software</span>
-                    </a>
-
-                    <!-- 7. About Me (Left) -->
-                    <a href="https://portfolio.too.foo" class="monolith pos-7">
-                        <img src="assets/islands/about.svg?v=7" alt="About Me" />
-                        <span>About Me</span>
-                    </a>
+                    <!-- Bubbles are dynamically rendered by Rust/WASM -->
                 </div>
             </div>
         </div>

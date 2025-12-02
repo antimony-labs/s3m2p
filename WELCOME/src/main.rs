@@ -18,6 +18,11 @@ use fungal::{FungalNetwork, InteractionResult};
 mod shader;
 use shader::BackgroundEffect;
 
+mod bubbles;
+mod routing;
+use bubbles::{get_category, Bubble, BubbleAction, CategoryId, HOME_BUBBLES};
+use routing::{get_current_route, navigate_home, Route};
+
 /// Type alias for the animation frame closure pattern
 type AnimationCallback = Rc<RefCell<Option<Closure<dyn FnMut()>>>>;
 
@@ -227,6 +232,141 @@ fn is_paused() -> bool {
     }
 }
 
+// ============================================
+// BUBBLE RENDERING
+// ============================================
+
+/// Clear existing bubbles and render new ones
+fn render_bubbles(document: &Document, bubbles: &[Bubble], show_back: bool) {
+    let constellation = match document.get_element_by_id("constellation") {
+        Some(el) => el,
+        None => return,
+    };
+
+    // Remove existing bubbles (but keep center-core)
+    let monoliths = document.get_elements_by_class_name("monolith");
+    while monoliths.length() > 0 {
+        if let Some(el) = monoliths.item(0) {
+            el.remove();
+        }
+    }
+
+    // Show/hide back button
+    if let Some(back_btn) = document.get_element_by_id("back-button") {
+        if show_back {
+            back_btn
+                .set_attribute("style", "display: flex;")
+                .ok();
+        } else {
+            back_btn
+                .set_attribute("style", "display: none;")
+                .ok();
+        }
+    }
+
+    // Calculate positions for circular layout
+    let bubble_count = bubbles.len();
+    let angle_step = std::f64::consts::TAU / bubble_count as f64;
+    let start_angle = -std::f64::consts::FRAC_PI_2; // Start from top (270 degrees)
+
+    for (i, bubble) in bubbles.iter().enumerate() {
+        let angle = start_angle + (i as f64 * angle_step);
+        let angle_deg = angle.to_degrees();
+
+        // Create the bubble element
+        let link = document.create_element("a").unwrap();
+        link.set_class_name("monolith");
+
+        // Set position class with inline transform
+        let pos_style = format!(
+            "transform: rotate({:.1}deg) translate(var(--orbit-radius)) rotate({:.1}deg);",
+            angle_deg, -angle_deg
+        );
+        link.set_attribute("style", &pos_style).ok();
+
+        // Set href/click based on action
+        match bubble.action {
+            BubbleAction::External(url) => {
+                link.set_attribute("href", url).ok();
+                link.set_attribute("target", "_blank").ok();
+            }
+            BubbleAction::DirectProject(url) => {
+                link.set_attribute("href", url).ok();
+            }
+            BubbleAction::Category(cat_id) => {
+                let hash = cat_id.hash_route();
+                link.set_attribute("href", hash).ok();
+            }
+        }
+
+        // Add icon
+        let img = document.create_element("img").unwrap();
+        let icon_src = format!("{}?v=8", bubble.icon);
+        img.set_attribute("src", &icon_src).ok();
+        img.set_attribute("alt", bubble.label).ok();
+        link.append_child(&img).ok();
+
+        // Add label
+        let span = document.create_element("span").unwrap();
+        span.set_text_content(Some(bubble.label));
+        link.append_child(&span).ok();
+
+        // Add to constellation
+        constellation.append_child(&link).ok();
+    }
+}
+
+/// Render the home page bubbles
+fn render_home(document: &Document) {
+    render_bubbles(document, HOME_BUBBLES, false);
+}
+
+/// Render a category page
+fn render_category(document: &Document, category_id: CategoryId) {
+    let category = get_category(category_id);
+    render_bubbles(document, category.bubbles, true);
+}
+
+/// Handle route changes
+fn handle_route_change(document: &Document) {
+    let route = get_current_route();
+    match route {
+        Route::Home => render_home(document),
+        Route::Category(cat_id) => render_category(document, cat_id),
+    }
+}
+
+/// Set up hashchange event listener
+fn setup_routing(document: &Document) {
+    let window = window().unwrap();
+    let document_clone = document.clone();
+
+    let closure = Closure::wrap(Box::new(move || {
+        handle_route_change(&document_clone);
+    }) as Box<dyn FnMut()>);
+
+    window
+        .add_event_listener_with_callback("hashchange", closure.as_ref().unchecked_ref())
+        .unwrap();
+    closure.forget();
+
+    // Set up back button click handler
+    if let Some(back_btn) = document.get_element_by_id("back-button") {
+        let closure = Closure::wrap(Box::new(move |e: web_sys::Event| {
+            e.prevent_default();
+            navigate_home();
+        }) as Box<dyn FnMut(_)>);
+
+        back_btn
+            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+            .ok();
+        closure.forget();
+    }
+
+    // Render initial route
+    handle_route_change(document);
+}
+
 #[allow(clippy::too_many_arguments)]
 fn draw_organism(
     ctx: &CanvasRenderingContext2d,
@@ -358,6 +498,9 @@ fn main() {
 
     let window = window().unwrap();
     let document = window.document().unwrap();
+
+    // Set up routing and render initial bubbles
+    setup_routing(&document);
 
     // Update commit info display
     update_commit_info(&document);

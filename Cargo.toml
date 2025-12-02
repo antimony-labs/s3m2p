@@ -24,6 +24,7 @@ members = [
     "SW/CHLADNI",
     "SW/CRM",
     "SW/PORTFOLIO",
+    "SW/SENSORS",
     # Note: SW/AUTOCRATE moved to MCAD/AUTOCRATE
 
     # Learning platforms
