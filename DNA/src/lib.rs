@@ -72,6 +72,19 @@ pub mod pathfinding;
 pub use pathfinding::{astar, GridMap, Heuristic, PathResult};
 
 // ============================================================================
+// CIRCUIT SIMULATION MODULES
+// ============================================================================
+
+/// SPICE circuit simulator (MNA-based)
+pub mod spice;
+
+/// PLL (Phase-Locked Loop) design engine
+pub mod pll;
+
+/// Export module (PDF, Gerber X2)
+pub mod export;
+
+// ============================================================================
 // CORE TYPES
 // ============================================================================
 

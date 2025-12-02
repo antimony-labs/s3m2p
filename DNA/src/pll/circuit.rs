@@ -232,7 +232,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix VCVS stamping in SPICE engine
     fn test_simulate_pll_circuit() {
         let requirements = PLLRequirements {
             ref_freq_hz: 10e6,

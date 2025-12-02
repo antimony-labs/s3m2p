@@ -249,18 +249,40 @@ impl ComplexMNAMatrix {
         }
     }
 
-    /// Solve using complex LU decomposition
+    /// Solve using complex LU decomposition with partial pivoting
     pub fn solve(&self) -> Result<Vec<Complex>, String> {
         let mut a = self.matrix.clone();
-        let b = self.rhs.clone();
+        let mut b = self.rhs.clone();
         let n = self.size;
 
-        // LU decomposition
+        // Track row permutations
+        let mut perm: Vec<usize> = (0..n).collect();
+
+        // LU decomposition with partial pivoting
         for k in 0..n {
-            if a[k][k].magnitude() < 1e-12 {
-                return Err(format!("Matrix is singular at row {}", k));
+            // Find pivot (row with largest element in column k)
+            let mut max_val = a[k][k].magnitude();
+            let mut max_row = k;
+            for i in (k + 1)..n {
+                let val = a[i][k].magnitude();
+                if val > max_val {
+                    max_val = val;
+                    max_row = i;
+                }
             }
 
+            if max_val < 1e-14 {
+                return Err(format!("Matrix is singular at column {}", k));
+            }
+
+            // Swap rows if needed
+            if max_row != k {
+                a.swap(k, max_row);
+                b.swap(k, max_row);
+                perm.swap(k, max_row);
+            }
+
+            // Eliminate column k below diagonal
             for i in (k + 1)..n {
                 let factor = a[i][k] / a[k][k];
                 a[i][k] = factor;
@@ -271,7 +293,7 @@ impl ComplexMNAMatrix {
             }
         }
 
-        // Forward substitution
+        // Forward substitution (Ly = Pb)
         let mut y = vec![Complex::zero(); n];
         for i in 0..n {
             let mut sum = b[i];
@@ -281,12 +303,15 @@ impl ComplexMNAMatrix {
             y[i] = sum;
         }
 
-        // Back substitution
+        // Back substitution (Ux = y)
         let mut x = vec![Complex::zero(); n];
         for i in (0..n).rev() {
             let mut sum = y[i];
             for j in (i + 1)..n {
                 sum = sum - a[i][j] * x[j];
+            }
+            if a[i][i].magnitude() < 1e-14 {
+                return Err(format!("Matrix is singular at row {} during back substitution", i));
             }
             x[i] = sum / a[i][i];
         }

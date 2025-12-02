@@ -286,6 +286,9 @@ fn draw_schematic(document: &Document, design: &dna::pll::PLLDesign) -> Result<(
         .ok_or("No 2D context")?
         .dyn_into::<CanvasRenderingContext2d>()?;
 
+    // Reset transform to identity before scaling (prevents accumulation)
+    ctx.set_transform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0)?;
+
     // Scale context to account for DPR
     ctx.scale(dpr, dpr)?;
 
@@ -507,13 +510,33 @@ fn draw_bode_plot(
         .ok_or("Canvas not found")?;
     let canvas: HtmlCanvasElement = canvas.dyn_into()?;
 
-    let width = canvas.width() as f64;
-    let height = canvas.height() as f64;
+    // Get CSS dimensions and device pixel ratio
+    let window = web_sys::window().ok_or("No window")?;
+    let dpr = window.device_pixel_ratio();
+
+    let canvas_element: Element = canvas.clone().into();
+    let rect = canvas_element.get_bounding_client_rect();
+    let css_width = rect.width();
+    let css_height = rect.height();
+
+    // Set actual canvas size based on DPR
+    canvas.set_width((css_width * dpr) as u32);
+    canvas.set_height((css_height * dpr) as u32);
 
     let ctx = canvas
         .get_context("2d")?
         .ok_or("No 2D context")?
         .dyn_into::<CanvasRenderingContext2d>()?;
+
+    // Reset transform to identity before scaling (prevents accumulation)
+    ctx.set_transform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0)?;
+
+    // Scale context to match DPR
+    ctx.scale(dpr, dpr)?;
+
+    // Use CSS dimensions for drawing
+    let width = css_width;
+    let height = css_height;
 
     // Clear canvas
     ctx.set_fill_style(&JsValue::from_str("#0a0a12"));
