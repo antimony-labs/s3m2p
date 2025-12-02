@@ -286,6 +286,9 @@ fn draw_schematic(document: &Document, design: &dna::pll::PLLDesign) -> Result<(
         .ok_or("No 2D context")?
         .dyn_into::<CanvasRenderingContext2d>()?;
 
+    // Reset transform to identity before scaling (prevents accumulation)
+    ctx.set_transform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0)?;
+
     // Scale context to account for DPR
     ctx.scale(dpr, dpr)?;
 
@@ -524,6 +527,9 @@ fn draw_bode_plot(
         .get_context("2d")?
         .ok_or("No 2D context")?
         .dyn_into::<CanvasRenderingContext2d>()?;
+
+    // Reset transform to identity before scaling (prevents accumulation)
+    ctx.set_transform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0)?;
 
     // Scale context to match DPR
     ctx.scale(dpr, dpr)?;
