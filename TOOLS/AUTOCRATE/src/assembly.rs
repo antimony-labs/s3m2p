@@ -2,34 +2,26 @@
 
 use crate::{geometry::*, constants::LumberSize};
 use serde::{Deserialize, Serialize};
+use glam::Quat;
 
 /// Unique identifier for assembly components
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ComponentId(pub u32);
 
-/// Rotation in Euler angles (radians)
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
-pub struct Rotation {
-    pub rx: f32,  // Roll (around X axis)
-    pub ry: f32,  // Pitch (around Y axis)
-    pub rz: f32,  // Yaw (around Z axis)
-}
-
-impl Rotation {
-    pub fn identity() -> Self {
-        Self::default()
-    }
-
-    pub fn from_z(rz: f32) -> Self {
-        Self { rx: 0.0, ry: 0.0, rz }
-    }
-}
-
 /// Transform relative to parent coordinate system
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct LocalTransform {
     pub translation: Point3,
-    pub rotation: Rotation,
+    pub rotation: Quat,
+}
+
+impl Default for LocalTransform {
+    fn default() -> Self {
+        Self {
+            translation: Point3::default(),
+            rotation: Quat::IDENTITY,
+        }
+    }
 }
 
 impl LocalTransform {
@@ -40,7 +32,7 @@ impl LocalTransform {
     pub fn from_translation(t: Point3) -> Self {
         Self {
             translation: t,
-            rotation: Rotation::identity()
+            rotation: Quat::IDENTITY,
         }
     }
 }
@@ -54,13 +46,13 @@ pub enum ComponentType {
     WallAssembly(PanelType),
 
     // Parts
-    Skid { lumber: LumberSize, length: f32 },
-    Floorboard { lumber: LumberSize, length: f32 },
-    Cleat { lumber: LumberSize, length: f32, is_vertical: bool },
+    Skid { dimensions: [f32; 3] },
+    Floorboard { dimensions: [f32; 3] },
+    Cleat { dimensions: [f32; 3], is_vertical: bool },
     Panel { thickness: f32, width: f32, height: f32, panel_type: PanelType },
 
     // Fasteners
-    Nail { x: f32, y: f32, z: f32 },
+    Nail { x: f32, y: f32, z: f32, diameter: f32, length: f32, direction: [f32; 3] },
 }
 
 /// Assembly node in the tree

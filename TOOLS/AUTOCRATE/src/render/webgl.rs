@@ -5,6 +5,13 @@ use std::f32::consts::PI;
 use wasm_bindgen::JsCast;
 use web_sys::{WebGl2RenderingContext, WebGlProgram, WebGlShader, HtmlCanvasElement};
 
+/// Projection type
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ProjectionType {
+    Perspective,
+    Orthographic,
+}
+
 /// Orbit camera for 3D view
 #[derive(Clone, Debug)]
 pub struct Camera {
@@ -24,6 +31,10 @@ pub struct Camera {
     pub near: f32,
     /// Far clipping plane
     pub far: f32,
+    /// Projection type
+    pub projection_type: ProjectionType,
+    /// Vertical size for orthographic projection
+    pub orthographic_size: f32,
 }
 
 impl Default for Camera {
@@ -37,6 +48,8 @@ impl Default for Camera {
             aspect: 1.0,
             near: 0.1,
             far: 1000.0,
+            projection_type: ProjectionType::Perspective,
+            orthographic_size: 100.0,
         }
     }
 }
@@ -55,9 +68,18 @@ impl Camera {
         Mat4::look_at_rh(self.position(), self.target, Vec3::Z)
     }
 
-    /// Compute projection matrix (perspective)
+    /// Compute projection matrix (perspective or orthographic)
     pub fn projection_matrix(&self) -> Mat4 {
-        Mat4::perspective_rh(self.fov.to_radians(), self.aspect, self.near, self.far)
+        match self.projection_type {
+            ProjectionType::Perspective => {
+                Mat4::perspective_rh(self.fov.to_radians(), self.aspect, self.near, self.far)
+            }
+            ProjectionType::Orthographic => {
+                let height = self.orthographic_size;
+                let width = height * self.aspect;
+                Mat4::orthographic_rh(-width / 2.0, width / 2.0, -height / 2.0, height / 2.0, self.near, self.far)
+            }
+        }
     }
 
     /// Compute combined view-projection matrix

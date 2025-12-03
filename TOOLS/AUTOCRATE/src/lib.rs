@@ -12,10 +12,11 @@ pub mod geometry;
 pub mod render;
 pub mod assembly;
 pub mod generator;
+pub mod step_converter;
 
 pub use constants::LumberSize;
 pub use geometry::*;
-pub use render::{WebGLRenderer, Canvas2DRenderer, ViewMode, Camera};
+pub use render::{WebGLRenderer, Canvas2DRenderer, ViewMode, Camera, ProjectionType};
 pub use assembly::{CrateAssembly, ComponentType};
 pub use generator::generate_crate;
 
@@ -113,10 +114,34 @@ pub struct CrateGeometry {
     pub cleats: Vec<CleatGeometry>,
 }
 
-use web_sys::{window, HtmlCanvasElement, MouseEvent, WheelEvent};
+use web_sys::{window, HtmlCanvasElement, MouseEvent, WheelEvent, Blob, Url, HtmlAnchorElement, HtmlInputElement, HtmlSelectElement};
 use wasm_bindgen::closure::Closure;
 use std::rc::Rc;
 use std::cell::RefCell;
+
+fn download_file(filename: &str, content: &str) -> Result<(), JsValue> {
+    let window = window().ok_or("no window")?;
+    let document = window.document().ok_or("no document")?;
+    let body = document.body().ok_or("no body")?;
+
+    let parts = js_sys::Array::of1(&JsValue::from_str(content));
+    let mut properties = web_sys::BlobPropertyBag::new();
+    properties.set_type("text/plain");
+    let blob = Blob::new_with_str_sequence_and_options(&parts, &properties)?;
+
+    let url = Url::create_object_url_with_blob(&blob)?;
+    let a = document.create_element("a")?.dyn_into::<HtmlAnchorElement>()?;
+    a.set_href(&url);
+    a.set_download(filename);
+    a.style().set_property("display", "none")?;
+    
+    body.append_child(&a)?;
+    a.click();
+    body.remove_child(&a)?;
+    Url::revoke_object_url(&url)?;
+
+    Ok(())
+}
 
 /// WASM entry point
 #[wasm_bindgen(start)]
@@ -159,233 +184,174 @@ pub fn start() -> Result<(), JsValue> {
         camera.target = glam::Vec3::new(0.0, 0.0, 20.0);
     }
 
-    // ASTM D6039 Style B Compliant Crate (Sheathed)
-    // Dimensions: 48" wide x 60" long x 40" tall
+    // UI Elements
+    let input_length = document.get_element_by_id("length").unwrap().dyn_into::<HtmlInputElement>()?;
+    let input_width = document.get_element_by_id("width").unwrap().dyn_into::<HtmlInputElement>()?;
+    let input_height = document.get_element_by_id("height").unwrap().dyn_into::<HtmlInputElement>()?;
+    let input_weight = document.get_element_by_id("weight").unwrap().dyn_into::<HtmlInputElement>()?;
+    let input_style = document.get_element_by_id("style").unwrap().dyn_into::<HtmlSelectElement>()?;
+    let btn_generate = document.get_element_by_id("generate").unwrap();
+    let btn_export = document.get_element_by_id("export-step").unwrap();
+    let btn_view3d = document.get_element_by_id("view-3d").unwrap();
+    let btn_view2d = document.get_element_by_id("view-2d").unwrap();
 
-    // BASE ASSEMBLY
-    // 3 Skids (4x4 lumber, 60" long, running along Y axis)
-    let skid1 = render::Mesh::create_box(
-        glam::Vec3::new(-18.0, -30.0, 0.0),
-        glam::Vec3::new(-14.5, 30.0, 3.5),
-    );
-    let skid2 = render::Mesh::create_box(
-        glam::Vec3::new(-1.75, -30.0, 0.0),
-        glam::Vec3::new(1.75, 30.0, 3.5),
-    );
-    let skid3 = render::Mesh::create_box(
-        glam::Vec3::new(14.5, -30.0, 0.0),
-        glam::Vec3::new(18.0, 30.0, 3.5),
-    );
-
-    // Floor boards (2x6 lumber, 48" wide, across skids along X axis)
-    let mut floor_boards = Vec::new();
-    for i in 0..11 {
-        let y_pos = -27.5 + i as f32 * 5.5;
-        floor_boards.push(render::Mesh::create_box(
-            glam::Vec3::new(-24.0, y_pos, 3.5),
-            glam::Vec3::new(24.0, y_pos + 1.5, 5.0),
-        ));
-    }
-
-    // FRAME STRUCTURE (1x4 cleats forming box frame)
-    // 4 vertical corner posts (full height 35")
-    let corner_fl = render::Mesh::create_box( // Front-left
-        glam::Vec3::new(-24.0, -30.0, 5.0),
-        glam::Vec3::new(-23.25, -26.5, 40.0),
-    );
-    let corner_fr = render::Mesh::create_box( // Front-right
-        glam::Vec3::new(23.25, -30.0, 5.0),
-        glam::Vec3::new(24.0, -26.5, 40.0),
-    );
-    let corner_bl = render::Mesh::create_box( // Back-left
-        glam::Vec3::new(-24.0, 26.5, 5.0),
-        glam::Vec3::new(-23.25, 30.0, 40.0),
-    );
-    let corner_br = render::Mesh::create_box( // Back-right
-        glam::Vec3::new(23.25, 26.5, 5.0),
-        glam::Vec3::new(24.0, 30.0, 40.0),
-    );
-
-    // Intermediate vertical posts (max 24" spacing rule)
-    // Front wall: 48" wide needs 1 intermediate post at center
-    let mid_front = render::Mesh::create_box(
-        glam::Vec3::new(-0.375, -30.0, 5.0),
-        glam::Vec3::new(0.375, -26.5, 40.0),
-    );
-    // Back wall
-    let mid_back = render::Mesh::create_box(
-        glam::Vec3::new(-0.375, 26.5, 5.0),
-        glam::Vec3::new(0.375, 30.0, 40.0),
-    );
-
-    // Bottom rail frame (1x4 horizontal around base perimeter)
-    let bot_front = render::Mesh::create_box(
-        glam::Vec3::new(-24.0, -30.0, 5.0),
-        glam::Vec3::new(24.0, -29.25, 5.75),
-    );
-    let bot_back = render::Mesh::create_box(
-        glam::Vec3::new(-24.0, 29.25, 5.0),
-        glam::Vec3::new(24.0, 30.0, 5.75),
-    );
-
-    // Top rail frame (1x4 horizontal around top perimeter)
-    let top_front = render::Mesh::create_box(
-        glam::Vec3::new(-24.0, -30.0, 39.25),
-        glam::Vec3::new(24.0, -29.25, 40.0),
-    );
-    let top_back = render::Mesh::create_box(
-        glam::Vec3::new(-24.0, 29.25, 39.25),
-        glam::Vec3::new(24.0, 30.0, 40.0),
-    );
-    let top_left = render::Mesh::create_box(
-        glam::Vec3::new(-24.0, -30.0, 39.25),
-        glam::Vec3::new(-23.25, 30.0, 40.0),
-    );
-    let top_right = render::Mesh::create_box(
-        glam::Vec3::new(23.25, -30.0, 39.25),
-        glam::Vec3::new(24.0, 30.0, 40.0),
-    );
-
-    // Nail heads (small cylinders approximated as tiny boxes)
-    let mut nail_heads = Vec::new();
-    // Nails on floor boards (spaced ~6" apart on each board)
-    for i in 0..11 {
-        let y = -27.5 + i as f32 * 5.5 + 0.75; // On top of floor board
-        for x_pos in [-18.0, -16.0, 0.0, 16.0, 18.0] {
-            nail_heads.push(render::Mesh::create_box(
-                glam::Vec3::new(x_pos - 0.075, y - 0.075, 5.0),
-                glam::Vec3::new(x_pos + 0.075, y + 0.075, 5.15),
-            ));
-        }
-    }
-
-    // SHEATHING (Plywood panels on all 4 sides + top)
-    let panel_front = render::Mesh::create_box(
-        glam::Vec3::new(-24.0, -30.5, 5.0),
-        glam::Vec3::new(24.0, -30.0, 40.0),
-    );
-    let panel_back = render::Mesh::create_box(
-        glam::Vec3::new(-24.0, 30.0, 5.0),
-        glam::Vec3::new(24.0, 30.5, 40.0),
-    );
-    let panel_left = render::Mesh::create_box(
-        glam::Vec3::new(-24.5, -30.0, 5.0),
-        glam::Vec3::new(-24.0, 30.0, 40.0),
-    );
-    let panel_right = render::Mesh::create_box(
-        glam::Vec3::new(24.0, -30.0, 5.0),
-        glam::Vec3::new(24.5, 30.0, 40.0),
-    );
-    let panel_top = render::Mesh::create_box(
-        glam::Vec3::new(-24.0, -30.0, 40.0),
-        glam::Vec3::new(24.0, 30.0, 40.5),
-    );
-
-    // Upload to GPU
-    let gl = renderer.gl.clone();
-
-    // Skids
-    let skid_bufs_vec = vec![
-        render::MeshBuffer::from_mesh(&gl, &skid1).map_err(|e| JsValue::from_str(&e))?,
-        render::MeshBuffer::from_mesh(&gl, &skid2).map_err(|e| JsValue::from_str(&e))?,
-        render::MeshBuffer::from_mesh(&gl, &skid3).map_err(|e| JsValue::from_str(&e))?,
-    ];
-
-    // Floor boards
-    let mut floor_bufs = Vec::new();
-    for floor in &floor_boards {
-        floor_bufs.push(render::MeshBuffer::from_mesh(&gl, floor)
-            .map_err(|e| JsValue::from_str(&e))?);
-    }
-
-    // Corner posts + intermediate posts
-    let corner_bufs = vec![
-        render::MeshBuffer::from_mesh(&gl, &corner_fl).map_err(|e| JsValue::from_str(&e))?,
-        render::MeshBuffer::from_mesh(&gl, &corner_fr).map_err(|e| JsValue::from_str(&e))?,
-        render::MeshBuffer::from_mesh(&gl, &corner_bl).map_err(|e| JsValue::from_str(&e))?,
-        render::MeshBuffer::from_mesh(&gl, &corner_br).map_err(|e| JsValue::from_str(&e))?,
-        render::MeshBuffer::from_mesh(&gl, &mid_front).map_err(|e| JsValue::from_str(&e))?,
-        render::MeshBuffer::from_mesh(&gl, &mid_back).map_err(|e| JsValue::from_str(&e))?,
-    ];
-
-    // Rails (top + bottom)
-    let rail_bufs = vec![
-        render::MeshBuffer::from_mesh(&gl, &top_front).map_err(|e| JsValue::from_str(&e))?,
-        render::MeshBuffer::from_mesh(&gl, &top_back).map_err(|e| JsValue::from_str(&e))?,
-        render::MeshBuffer::from_mesh(&gl, &top_left).map_err(|e| JsValue::from_str(&e))?,
-        render::MeshBuffer::from_mesh(&gl, &top_right).map_err(|e| JsValue::from_str(&e))?,
-        render::MeshBuffer::from_mesh(&gl, &bot_front).map_err(|e| JsValue::from_str(&e))?,
-        render::MeshBuffer::from_mesh(&gl, &bot_back).map_err(|e| JsValue::from_str(&e))?,
-    ];
-
-    // Nail heads
-    let mut nail_bufs = Vec::new();
-    for nail in &nail_heads {
-        nail_bufs.push(render::MeshBuffer::from_mesh(&gl, nail)
-            .map_err(|e| JsValue::from_str(&e))?);
-    }
-
-    // Panels
-    let panel_bufs_vec = vec![
-        render::MeshBuffer::from_mesh(&gl, &panel_front).map_err(|e| JsValue::from_str(&e))?,
-        render::MeshBuffer::from_mesh(&gl, &panel_back).map_err(|e| JsValue::from_str(&e))?,
-        render::MeshBuffer::from_mesh(&gl, &panel_left).map_err(|e| JsValue::from_str(&e))?,
-        render::MeshBuffer::from_mesh(&gl, &panel_right).map_err(|e| JsValue::from_str(&e))?,
-        render::MeshBuffer::from_mesh(&gl, &panel_top).map_err(|e| JsValue::from_str(&e))?,
-    ];
-
-    web_sys::console::log_1(&"Meshes created and uploaded to GPU!".into());
-
-    // Render frame with the complete crate
-    renderer.begin_frame();
-
-    // Draw skids (4x4 lumber - darker brown)
-    let skid_color = glam::Vec3::new(0.65, 0.45, 0.30);
-    for buf in &skid_bufs_vec {
-        renderer.draw_mesh(buf, skid_color);
-    }
-
-    // Draw floor boards (2x6 lumber - lighter tan)
-    let floor_color = glam::Vec3::new(0.85, 0.75, 0.60);
-    for floor_buf in &floor_bufs {
-        renderer.draw_mesh(floor_buf, floor_color);
-    }
-
-    // Draw corner posts and rails (1x4 lumber - medium brown)
-    let frame_color = glam::Vec3::new(0.75, 0.60, 0.45);
-    for buf in &corner_bufs {
-        renderer.draw_mesh(buf, frame_color);
-    }
-    for buf in &rail_bufs {
-        renderer.draw_mesh(buf, frame_color);
-    }
-
-    // Draw plywood panels (light wood tone)
-    let panel_color = glam::Vec3::new(0.80, 0.70, 0.55);
-    for buf in &panel_bufs_vec {
-        renderer.draw_mesh(buf, panel_color);
-    }
-
-    // Draw nail heads (galvanized steel)
-    let nail_color = glam::Vec3::new(0.60, 0.65, 0.70);
-    for buf in &nail_bufs {
-        renderer.draw_mesh(buf, nail_color);
-    }
-
-    renderer.end_frame();
-
-    web_sys::console::log_1(&"ASTM D6039 Style B compliant crate rendered!".into());
-    web_sys::console::log_1(&"Components: 3 skids, 11 boards, 6 posts, 6 rails, 5 panels, 55 nails".into());
-
-    // Wrap renderer and buffers in Rc<RefCell<>> for event handlers
+    // Shared State
+    let assembly = Rc::new(RefCell::new(CrateAssembly::default()));
+    let mesh_buffers_rc = Rc::new(RefCell::new(Vec::new()));
+    let colors_rc = Rc::new(RefCell::new(Vec::new()));
+    
+    // Renderer must be wrapped to be shared among event listeners
     let renderer = Rc::new(RefCell::new(renderer));
-    let skid_bufs = Rc::new(skid_bufs_vec);
-    let floor_bufs = Rc::new(floor_bufs);
-    let corner_bufs = Rc::new(corner_bufs);
-    let rail_bufs = Rc::new(rail_bufs);
-    let panel_bufs = Rc::new(panel_bufs_vec);
-    let nail_bufs = Rc::new(nail_bufs);
 
+    // Function to regenerate crate and update render buffers
+    let update_scene = {
+        let assembly = assembly.clone();
+        let mesh_buffers_rc = mesh_buffers_rc.clone();
+        let colors_rc = colors_rc.clone();
+        let renderer = renderer.clone();
+        let input_length = input_length.clone();
+        let input_width = input_width.clone();
+        let input_height = input_height.clone();
+        let input_weight = input_weight.clone();
+        let input_style = input_style.clone();
+
+        Closure::wrap(Box::new(move || {
+            web_sys::console::log_1(&"Generating crate...".into());
+            
+            // Parse inputs
+            let length = input_length.value_as_number() as f32;
+            let width = input_width.value_as_number() as f32;
+            let height = input_height.value_as_number() as f32;
+            let weight = input_weight.value_as_number() as f32;
+            let style = match input_style.value().as_str() {
+                "A" => CrateStyle::A,
+                _ => CrateStyle::B,
+            };
+
+            // Update spec
+            let mut spec = CrateSpec::default();
+            spec.product.length = length;
+            spec.product.width = width;
+            spec.product.height = height;
+            spec.product.weight = weight;
+            spec.style = style;
+
+            // Generate assembly
+            let new_assembly = generator::generate_crate(&spec, style);
+            *assembly.borrow_mut() = new_assembly;
+
+            // Update camera orthographic size based on dimensions
+            let max_dim = length.max(width).max(height);
+            renderer.borrow_mut().camera_mut().orthographic_size = max_dim * 1.5;
+
+            // Update WebGL buffers
+            let gl = renderer.borrow().gl.clone();
+            let result = process_assembly_for_rendering(&gl, &assembly.borrow());
+            
+            if let Ok((new_bufs, new_colors)) = result {
+                *mesh_buffers_rc.borrow_mut() = new_bufs;
+                *colors_rc.borrow_mut() = new_colors;
+                
+                // Render immediately
+                let r = renderer.borrow();
+                r.begin_frame();
+                for (i, buf) in mesh_buffers_rc.borrow().iter().enumerate() {
+                    r.draw_mesh(buf, colors_rc.borrow()[i]);
+                }
+                r.end_frame();
+                
+                web_sys::console::log_1(&"Crate generated and rendered.".into());
+            } else {
+                web_sys::console::error_1(&"Failed to process assembly for rendering".into());
+            }
+        }) as Box<dyn FnMut()>)
+    };
+
+    // Initial generation
+    update_scene.as_ref().unchecked_ref::<js_sys::Function>().call0(&JsValue::NULL).unwrap();
+
+    // Bind Generate Button
+    btn_generate.add_event_listener_with_callback("click", update_scene.as_ref().unchecked_ref())?;
+    update_scene.forget(); // Keep alive
+
+    // Bind Export Button
+    {
+        let assembly = assembly.clone();
+        let closure = Closure::wrap(Box::new(move || {
+            web_sys::console::log_1(&"Exporting STEP file...".into());
+            let step_writer = step_converter::convert_assembly_to_step(&assembly.borrow());
+            let step_content = step_writer.to_string();
+            let _ = download_file("crate.step", &step_content);
+        }) as Box<dyn FnMut()>);
+        btn_export.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+
+    // Bind View Toggle Buttons
+    {
+        let renderer = renderer.clone();
+        let mesh_buffers_rc = mesh_buffers_rc.clone();
+        let colors_rc = colors_rc.clone();
+        let btn_view3d_clone = btn_view3d.clone();
+        let btn_view2d_clone = btn_view2d.clone();
+
+        let closure = Closure::wrap(Box::new(move || {
+            let mut r = renderer.borrow_mut();
+            r.camera_mut().projection_type = ProjectionType::Perspective;
+            // Reset to perspective defaults
+            r.camera_mut().azimuth = std::f32::consts::PI / 4.0;
+            r.camera_mut().elevation = std::f32::consts::PI / 6.0;
+            
+            // Update UI classes
+            let _ = btn_view3d_clone.class_list().add_1("active");
+            let _ = btn_view2d_clone.class_list().remove_1("active");
+
+            // Re-render
+            r.begin_frame();
+            let bufs = mesh_buffers_rc.borrow();
+            let cols = colors_rc.borrow();
+            for (i, buf) in bufs.iter().enumerate() {
+                r.draw_mesh(buf, cols[i]);
+            }
+            r.end_frame();
+        }) as Box<dyn FnMut()>);
+        btn_view3d.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+
+    {
+        let renderer = renderer.clone();
+        let mesh_buffers_rc = mesh_buffers_rc.clone();
+        let colors_rc = colors_rc.clone();
+        let btn_view3d_clone = btn_view3d.clone();
+        let btn_view2d_clone = btn_view2d.clone();
+
+        let closure = Closure::wrap(Box::new(move || {
+            let mut r = renderer.borrow_mut();
+            r.camera_mut().projection_type = ProjectionType::Orthographic;
+            // Set to Top View
+            r.camera_mut().azimuth = 0.0;
+            r.camera_mut().elevation = std::f32::consts::PI / 2.0 - 0.01; // Almost 90 degrees (gimbal lock avoidance)
+            r.camera_mut().target = glam::Vec3::ZERO;
+
+            // Update UI classes
+            let _ = btn_view2d_clone.class_list().add_1("active");
+            let _ = btn_view3d_clone.class_list().remove_1("active");
+
+            // Re-render
+            r.begin_frame();
+            let bufs = mesh_buffers_rc.borrow();
+            let cols = colors_rc.borrow();
+            for (i, buf) in bufs.iter().enumerate() {
+                r.draw_mesh(buf, cols[i]);
+            }
+            r.end_frame();
+        }) as Box<dyn FnMut()>);
+        btn_view2d.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+
+    // Bind Mouse Events (Orbit Controls)
     // Mouse down handler
     {
         let renderer = renderer.clone();
@@ -402,12 +368,8 @@ pub fn start() -> Result<(), JsValue> {
     // Mouse move handler (orbit camera)
     {
         let renderer = renderer.clone();
-        let skid_bufs = skid_bufs.clone();
-        let floor_bufs = floor_bufs.clone();
-        let corner_bufs = corner_bufs.clone();
-        let rail_bufs = rail_bufs.clone();
-        let panel_bufs = panel_bufs.clone();
-        let nail_bufs = nail_bufs.clone();
+        let mesh_buffers_rc = mesh_buffers_rc.clone();
+        let colors_rc = colors_rc.clone();
 
         let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
             let mut r = renderer.borrow_mut();
@@ -415,44 +377,25 @@ pub fn start() -> Result<(), JsValue> {
                 let dx = event.client_x() as f32 - r.last_mouse_x;
                 let dy = event.client_y() as f32 - r.last_mouse_y;
 
-                // Orbit camera
-                let sensitivity = 0.005;
-                r.camera_mut().orbit(dx * sensitivity, -dy * sensitivity);
+                if r.camera().projection_type == ProjectionType::Perspective {
+                    // Orbit camera
+                    let sensitivity = 0.005;
+                    r.camera_mut().orbit(dx * sensitivity, -dy * sensitivity);
+                } else {
+                    // Pan camera in 2D
+                    r.camera_mut().pan(-dx, dy);
+                }
 
                 r.last_mouse_x = event.client_x() as f32;
                 r.last_mouse_y = event.client_y() as f32;
 
                 // Re-render
                 r.begin_frame();
-
-                let skid_color = glam::Vec3::new(0.65, 0.45, 0.30);
-                for buf in skid_bufs.iter() {
-                    r.draw_mesh(buf, skid_color);
+                let bufs = mesh_buffers_rc.borrow();
+                let cols = colors_rc.borrow();
+                for (i, buf) in bufs.iter().enumerate() {
+                    r.draw_mesh(buf, cols[i]);
                 }
-
-                let floor_color = glam::Vec3::new(0.85, 0.75, 0.60);
-                for buf in floor_bufs.iter() {
-                    r.draw_mesh(buf, floor_color);
-                }
-
-                let frame_color = glam::Vec3::new(0.75, 0.60, 0.45);
-                for buf in corner_bufs.iter() {
-                    r.draw_mesh(buf, frame_color);
-                }
-                for buf in rail_bufs.iter() {
-                    r.draw_mesh(buf, frame_color);
-                }
-
-                let panel_color = glam::Vec3::new(0.80, 0.70, 0.55);
-                for buf in panel_bufs.iter() {
-                    r.draw_mesh(buf, panel_color);
-                }
-
-                let nail_color = glam::Vec3::new(0.60, 0.65, 0.70);
-                for buf in nail_bufs.iter() {
-                    r.draw_mesh(buf, nail_color);
-                }
-
                 r.end_frame();
             }
         }) as Box<dyn FnMut(_)>);
@@ -473,12 +416,8 @@ pub fn start() -> Result<(), JsValue> {
     // Wheel handler (zoom)
     {
         let renderer = renderer.clone();
-        let skid_bufs = skid_bufs.clone();
-        let floor_bufs = floor_bufs.clone();
-        let corner_bufs = corner_bufs.clone();
-        let rail_bufs = rail_bufs.clone();
-        let panel_bufs = panel_bufs.clone();
-        let nail_bufs = nail_bufs.clone();
+        let mesh_buffers_rc = mesh_buffers_rc.clone();
+        let colors_rc = colors_rc.clone();
 
         let closure = Closure::wrap(Box::new(move |event: WheelEvent| {
             event.prevent_default();
@@ -486,39 +425,21 @@ pub fn start() -> Result<(), JsValue> {
 
             // Zoom camera
             let delta = event.delta_y() as f32 * 0.1;
-            r.camera_mut().zoom(delta);
+            
+            if r.camera().projection_type == ProjectionType::Perspective {
+                r.camera_mut().zoom(delta);
+            } else {
+                // Adjust orthographic size
+                r.camera_mut().orthographic_size = (r.camera().orthographic_size + delta).max(10.0).min(1000.0);
+            }
 
             // Re-render
             r.begin_frame();
-
-            let skid_color = glam::Vec3::new(0.65, 0.45, 0.30);
-            for buf in skid_bufs.iter() {
-                r.draw_mesh(buf, skid_color);
+            let bufs = mesh_buffers_rc.borrow();
+            let cols = colors_rc.borrow();
+            for (i, buf) in bufs.iter().enumerate() {
+                r.draw_mesh(buf, cols[i]);
             }
-
-            let floor_color = glam::Vec3::new(0.85, 0.75, 0.60);
-            for buf in floor_bufs.iter() {
-                r.draw_mesh(buf, floor_color);
-            }
-
-            let frame_color = glam::Vec3::new(0.75, 0.60, 0.45);
-            for buf in corner_bufs.iter() {
-                r.draw_mesh(buf, frame_color);
-            }
-            for buf in rail_bufs.iter() {
-                r.draw_mesh(buf, frame_color);
-            }
-
-            let panel_color = glam::Vec3::new(0.80, 0.70, 0.55);
-            for buf in panel_bufs.iter() {
-                r.draw_mesh(buf, panel_color);
-            }
-
-            let nail_color = glam::Vec3::new(0.60, 0.65, 0.70);
-            for buf in nail_bufs.iter() {
-                r.draw_mesh(buf, nail_color);
-            }
-
             r.end_frame();
         }) as Box<dyn FnMut(_)>);
         canvas.add_event_listener_with_callback("wheel", closure.as_ref().unchecked_ref())?;
@@ -528,4 +449,44 @@ pub fn start() -> Result<(), JsValue> {
     web_sys::console::log_1(&"Interactive controls enabled! Drag to orbit, scroll to zoom".into());
 
     Ok(())
+}
+
+fn process_assembly_for_rendering(gl: &web_sys::WebGl2RenderingContext, assembly: &CrateAssembly) -> Result<(Vec<render::MeshBuffer>, Vec<glam::Vec3>), JsValue> {
+    let mut mesh_buffers = Vec::new();
+    let mut colors = Vec::new();
+
+    for node in &assembly.nodes {
+        if node.id == assembly.root_id {
+            continue; // Skip root node, it's just a container
+        }
+
+        // Create mesh in local space
+        let mesh = render::Mesh::create_box(
+            node.bounds.min.to_vec3(),
+            node.bounds.max.to_vec3(),
+        );
+
+        // Create transform matrix
+        let transform = glam::Mat4::from_rotation_translation(
+            node.transform.rotation,
+            node.transform.translation.to_vec3(),
+        );
+
+        // Apply transform to mesh
+        let transformed_mesh = mesh.transformed(&transform);
+
+        let color = match &node.component_type {
+            ComponentType::Skid { .. } => glam::Vec3::new(0.65, 0.45, 0.30),    // Darker brown
+            ComponentType::Floorboard { .. } => glam::Vec3::new(0.85, 0.75, 0.60), // Lighter tan
+            ComponentType::Cleat { .. } => glam::Vec3::new(0.75, 0.60, 0.45),   // Medium brown
+            ComponentType::Panel { .. } => glam::Vec3::new(0.80, 0.70, 0.55),   // Light wood tone
+            ComponentType::Nail { .. } => glam::Vec3::new(0.60, 0.65, 0.70),    // Galvanized steel
+            _ => glam::Vec3::new(0.5, 0.5, 0.5), // Default for unknown
+        };
+
+        mesh_buffers.push(render::MeshBuffer::from_mesh(gl, &transformed_mesh)?);
+        colors.push(color);
+    }
+
+    Ok((mesh_buffers, colors))
 }

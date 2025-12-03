@@ -12,7 +12,7 @@ pub mod textures;
 pub mod materials;
 pub mod mesh;
 
-pub use webgl::{WebGLRenderer, Camera, RenderMode};
+pub use webgl::{WebGLRenderer, Camera, RenderMode, ProjectionType};
 pub use canvas2d::Canvas2DRenderer;
 pub use textures::{WoodTexture, generate_wood_grain};
 pub use materials::{Material, MaterialType};

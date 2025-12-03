@@ -1,6 +1,6 @@
 //! Mesh generation for box geometry
 
-use glam::{Vec3, Vec4};
+use glam::{Vec3, Vec4, Mat4};
 use web_sys::{WebGl2RenderingContext, WebGlBuffer};
 
 /// Simple mesh for rendering
@@ -10,6 +10,32 @@ pub struct Mesh {
 }
 
 impl Mesh {
+    /// Apply a transformation matrix to the mesh
+    pub fn transformed(&self, transform: &Mat4) -> Self {
+        let mut new_vertices = Vec::with_capacity(self.vertices.len());
+        
+        for i in (0..self.vertices.len()).step_by(6) {
+            let pos = Vec3::new(self.vertices[i], self.vertices[i+1], self.vertices[i+2]);
+            let normal = Vec3::new(self.vertices[i+3], self.vertices[i+4], self.vertices[i+5]);
+            
+            let new_pos = transform.transform_point3(pos);
+            // transform_vector3 ignores translation, good for normals
+            let new_normal = transform.transform_vector3(normal).normalize();
+            
+            new_vertices.push(new_pos.x);
+            new_vertices.push(new_pos.y);
+            new_vertices.push(new_pos.z);
+            new_vertices.push(new_normal.x);
+            new_vertices.push(new_normal.y);
+            new_vertices.push(new_normal.z);
+        }
+        
+        Self {
+            vertices: new_vertices,
+            indices: self.indices.clone(),
+        }
+    }
+
     /// Create a box mesh from min/max corners
     pub fn create_box(min: Vec3, max: Vec3) -> Self {
         let mut vertices = Vec::new();

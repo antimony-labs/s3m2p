@@ -10,7 +10,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 dna = { path = "../../DNA" }
-glam = { version = "0.29", features = ["rand"] }
+glam = { version = "0.29", features = ["rand", "serde"] }
 rand = "0.8"
 getrandom = { version = "0.2", features = ["js"] }
 wasm-bindgen = "=0.2.93"
@@ -41,6 +41,7 @@ features = [
     "Window",
     "HtmlElement",
     "DomRect",
+    "DomTokenList",
     # Events
     "MouseEvent",
     "KeyboardEvent",
@@ -54,8 +55,10 @@ features = [
     "Event",
     # Files
     "Blob",
+    "BlobPropertyBag",
     "Url",
     "HtmlAnchorElement",
+    "CssStyleDeclaration",
     # Image data
     "ImageData",
     # Utility

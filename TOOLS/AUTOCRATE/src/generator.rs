@@ -67,11 +67,14 @@ fn generate_base(
             max: Point3::new(x_pos + skid_dims.1 / 2.0, half_length, skid_dims.0),
         };
 
+        let skid_thickness = skid_dims.0;
+        let skid_width = skid_dims.1; // This is the face dimension, actual width
+        let skid_length = overall_length;
+
         let id = assembly.create_node(
             format!("Skid{}", i),
             ComponentType::Skid {
-                lumber: spec.skid_size,
-                length: overall_length,
+                dimensions: [skid_thickness, skid_width, skid_length],
             },
             LocalTransform::from_translation(Point3::new(x_pos, 0.0, 0.0)),
             bounds,
@@ -90,11 +93,14 @@ fn generate_base(
             max: Point3::new(half_width, y_pos + floor_dims.1, base_height),
         };
 
+        let board_thickness = floor_dims.0;
+        let board_width = floor_dims.1; // This is the face dimension, actual width
+        let board_length = overall_width;
+
         let id = assembly.create_node(
             format!("Floorboard{}", i),
             ComponentType::Floorboard {
-                lumber: spec.floorboard_size,
-                length: overall_width,
+                dimensions: [board_thickness, board_width, board_length],
             },
             LocalTransform::from_translation(Point3::new(0.0, y_pos, skid_dims.0)),
             bounds,
@@ -131,11 +137,14 @@ fn generate_sheathed_walls(
             max: Point3::new(x + cleat_dims.0 / 2.0, y + cleat_dims.1 / 2.0, base_height + wall_height),
         };
 
+        let cleat_thickness = cleat_dims.0;
+        let cleat_width = cleat_dims.1;
+        let cleat_length = wall_height;
+
         let id = assembly.create_node(
             name.to_string(),
             ComponentType::Cleat {
-                lumber: spec.cleat_size,
-                length: wall_height,
+                dimensions: [cleat_thickness, cleat_width, cleat_length],
                 is_vertical: true,
             },
             LocalTransform::from_translation(Point3::new(*x, *y, base_height)),
@@ -224,11 +233,14 @@ fn generate_open_walls(
             max: Point3::new(x + cleat_dims.0, y + cleat_dims.1, base_height + interior_height),
         };
 
+        let cleat_thickness = cleat_dims.0;
+        let cleat_width = cleat_dims.1;
+        let cleat_length = interior_height;
+
         let id = assembly.create_node(
             name.to_string(),
             ComponentType::Cleat {
-                lumber: spec.cleat_size,
-                length: interior_height,
+                dimensions: [cleat_thickness, cleat_width, cleat_length],
                 is_vertical: true,
             },
             LocalTransform::from_translation(Point3::new(*x, *y, base_height)),

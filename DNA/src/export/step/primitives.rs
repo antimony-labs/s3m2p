@@ -6,7 +6,7 @@ use std::io::{self, Write};
 /// CARTESIAN_POINT - 3D point
 pub struct CartesianPoint {
     pub id: EntityId,
-    pub name: String,
+    pub name: Option<String>,
     pub coordinates: [f64; 3],
 }
 
@@ -16,7 +16,11 @@ impl StepEntity for CartesianPoint {
     }
 
     fn write_attributes(&self, w: &mut dyn Write) -> io::Result<()> {
-        write_step_string(&self.name, w)?;
+        if let Some(name) = &self.name {
+            write_step_string(name, w)?;
+        } else {
+            write!(w, "$")?;
+        }
         write!(w, ",({:.6},{:.6},{:.6})",
             self.coordinates[0],
             self.coordinates[1],
@@ -28,7 +32,7 @@ impl StepEntity for CartesianPoint {
 /// DIRECTION - normalized direction vector
 pub struct Direction {
     pub id: EntityId,
-    pub name: String,
+    pub name: Option<String>,
     pub ratios: [f64; 3],
 }
 
@@ -38,7 +42,11 @@ impl StepEntity for Direction {
     }
 
     fn write_attributes(&self, w: &mut dyn Write) -> io::Result<()> {
-        write_step_string(&self.name, w)?;
+        if let Some(name) = &self.name {
+            write_step_string(name, w)?;
+        } else {
+            write!(w, "$")?;
+        }
         write!(w, ",({:.6},{:.6},{:.6})",
             self.ratios[0],
             self.ratios[1],
@@ -50,11 +58,12 @@ impl StepEntity for Direction {
 /// AXIS2_PLACEMENT_3D - local coordinate system
 pub struct Axis2Placement3D {
     pub id: EntityId,
-    pub name: String,
+    pub name: Option<String>,
     pub location: EntityId,      // CARTESIAN_POINT
     pub axis: Option<EntityId>,  // DIRECTION (Z axis)
     pub ref_direction: Option<EntityId>, // DIRECTION (X axis)
 }
+
 
 impl StepEntity for Axis2Placement3D {
     fn entity_name(&self) -> &'static str {
@@ -62,7 +71,11 @@ impl StepEntity for Axis2Placement3D {
     }
 
     fn write_attributes(&self, w: &mut dyn Write) -> io::Result<()> {
-        write_step_string(&self.name, w)?;
+        if let Some(name) = &self.name {
+            write_step_string(name, w)?;
+        } else {
+            write!(w, "$")?;
+        }
         write!(w, ",{},", self.location)?;
         write_step_optional(self.axis, w)?;
         write!(w, ",")?;
@@ -78,5 +91,85 @@ impl StepEntity for Axis2Placement3D {
             refs.push(ref_dir);
         }
         refs
+    }
+}
+
+/// VECTOR - Direction and magnitude
+pub struct Vector {
+    pub id: EntityId,
+    pub name: Option<String>,
+    pub orientation: EntityId, // DIRECTION
+    pub magnitude: f64,
+}
+
+impl StepEntity for Vector {
+    fn entity_name(&self) -> &'static str {
+        "VECTOR"
+    }
+
+    fn write_attributes(&self, w: &mut dyn Write) -> io::Result<()> {
+        if let Some(name) = &self.name {
+            write_step_string(name, w)?;
+        } else {
+            write!(w, "$")?;
+        }
+        write!(w, ",{},{:.6E}", self.orientation, self.magnitude)
+    }
+
+    fn references(&self) -> Vec<EntityId> {
+        vec![self.orientation]
+    }
+}
+
+/// LINE - defined by a point and a direction-vector
+pub struct Line {
+    pub id: EntityId,
+    pub name: Option<String>,
+    pub pnt: EntityId, // CARTESIAN_POINT
+    pub dir: EntityId, // VECTOR
+}
+
+impl StepEntity for Line {
+    fn entity_name(&self) -> &'static str {
+        "LINE"
+    }
+
+    fn write_attributes(&self, w: &mut dyn Write) -> io::Result<()> {
+        if let Some(name) = &self.name {
+            write_step_string(name, w)?;
+        } else {
+            write!(w, "$")?;
+        }
+        write!(w, ",{},{}", self.pnt, self.dir)
+    }
+
+    fn references(&self) -> Vec<EntityId> {
+        vec![self.pnt, self.dir]
+    }
+}
+
+/// PLANE - defined by an Axis2Placement3D
+pub struct Plane {
+    pub id: EntityId,
+    pub name: Option<String>,
+    pub position: EntityId, // AXIS2_PLACEMENT_3D
+}
+
+impl StepEntity for Plane {
+    fn entity_name(&self) -> &'static str {
+        "PLANE"
+    }
+
+    fn write_attributes(&self, w: &mut dyn Write) -> io::Result<()> {
+        if let Some(name) = &self.name {
+            write_step_string(name, w)?;
+        } else {
+            write!(w, "$")?;
+        }
+        write!(w, ",{}", self.position)
+    }
+
+    fn references(&self) -> Vec<EntityId> {
+        vec![self.position]
     }
 }
