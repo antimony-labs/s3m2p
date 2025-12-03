@@ -1,0 +1,104 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="scanGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00E676" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#00E676" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#00E676" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <style>
+    @keyframes scan-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes ping { 0% { r: 5; opacity: 0.8; } 100% { r: 30; opacity: 0; } }
+    @keyframes trace { 0% { stroke-dashoffset: 100; } 100% { stroke-dashoffset: 0; } }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    @keyframes point-appear { 0%, 100% { opacity: 0.3; r: 2; } 50% { opacity: 1; r: 3; } }
+
+    .scan { transform-origin: 100px 120px; animation: scan-rotate 3s linear infinite; }
+    .ping { animation: ping 2s ease-out infinite; }
+    .trace { stroke-dasharray: 100; animation: trace 3s linear infinite; }
+    .blink { animation: blink 1s ease-in-out infinite; }
+    .point { animation: point-appear 2s ease-in-out infinite; }
+  </style>
+
+  <!-- Map grid background -->
+  <g stroke="#00E676" stroke-width="0.3" opacity="0.1">
+    <line x1="20" y1="20" x2="20" y2="180"/>
+    <line x1="50" y1="20" x2="50" y2="180"/>
+    <line x1="80" y1="20" x2="80" y2="180"/>
+    <line x1="110" y1="20" x2="110" y2="180"/>
+    <line x1="140" y1="20" x2="140" y2="180"/>
+    <line x1="170" y1="20" x2="170" y2="180"/>
+    <line x1="20" y1="20" x2="180" y2="20"/>
+    <line x1="20" y1="50" x2="180" y2="50"/>
+    <line x1="20" y1="80" x2="180" y2="80"/>
+    <line x1="20" y1="110" x2="180" y2="110"/>
+    <line x1="20" y1="140" x2="180" y2="140"/>
+    <line x1="20" y1="170" x2="180" y2="170"/>
+  </g>
+
+  <!-- Mapped walls/obstacles -->
+  <g stroke="#00E676" stroke-width="2" fill="none" opacity="0.6">
+    <path d="M30,40 L80,40 L80,70"/>
+    <path d="M140,30 L170,30 L170,80"/>
+    <path d="M50,130 L50,170 L100,170"/>
+    <path d="M150,120 L150,160 L180,160"/>
+    <path d="M30,90 L60,90"/>
+  </g>
+
+  <!-- Mapped points (landmarks) -->
+  <g fill="#00E676">
+    <circle cx="30" cy="40" r="3" class="point"/>
+    <circle cx="80" cy="40" r="3" class="point" style="animation-delay: -0.2s"/>
+    <circle cx="80" cy="70" r="3" class="point" style="animation-delay: -0.4s"/>
+    <circle cx="140" cy="30" r="3" class="point" style="animation-delay: -0.6s"/>
+    <circle cx="170" cy="30" r="3" class="point" style="animation-delay: -0.8s"/>
+    <circle cx="170" cy="80" r="3" class="point" style="animation-delay: -1s"/>
+    <circle cx="50" cy="130" r="3" class="point" style="animation-delay: -1.2s"/>
+    <circle cx="50" cy="170" r="3" class="point" style="animation-delay: -1.4s"/>
+    <circle cx="100" cy="170" r="3" class="point" style="animation-delay: -1.6s"/>
+  </g>
+
+  <!-- Robot/sensor -->
+  <g filter="url(#glow)">
+    <circle cx="100" cy="120" r="12" fill="#1a1a2e" stroke="#00E676" stroke-width="2"/>
+    <circle cx="100" cy="120" r="6" fill="#00E676" opacity="0.3"/>
+    <circle cx="100" cy="120" r="3" fill="#ffffff" class="blink"/>
+
+    <!-- Direction indicator -->
+    <polygon points="100,105 95,112 105,112" fill="#00E676"/>
+  </g>
+
+  <!-- LiDAR scan sweep -->
+  <g class="scan">
+    <line x1="100" y1="120" x2="100" y2="40" stroke="url(#scanGrad)" stroke-width="3"/>
+  </g>
+
+  <!-- Ping rings -->
+  <circle cx="100" cy="120" r="5" fill="none" stroke="#00E676" stroke-width="1" class="ping"/>
+  <circle cx="100" cy="120" r="5" fill="none" stroke="#00E676" stroke-width="1" class="ping" style="animation-delay: -0.7s"/>
+  <circle cx="100" cy="120" r="5" fill="none" stroke="#00E676" stroke-width="1" class="ping" style="animation-delay: -1.4s"/>
+
+  <!-- Trajectory path -->
+  <path d="M180,180 Q150,150 130,140 Q110,130 100,120" fill="none" stroke="#00E676" stroke-width="1" opacity="0.4" stroke-dasharray="3,3"/>
+
+  <!-- Position uncertainty ellipse -->
+  <ellipse cx="100" cy="120" rx="20" ry="15" fill="none" stroke="#00E676" stroke-width="0.5" opacity="0.3"/>
+
+  <!-- Coordinate display -->
+  <g fill="#00E676" font-family="monospace" font-size="7" opacity="0.6">
+    <text x="25" y="185">X: 100</text>
+    <text x="70" y="185">Y: 120</text>
+    <text x="120" y="185">θ: 0°</text>
+  </g>
+
+  <!-- Map frame -->
+  <rect x="15" y="15" width="170" height="170" fill="none" stroke="#00E676" stroke-width="1" opacity="0.3"/>
+</svg>

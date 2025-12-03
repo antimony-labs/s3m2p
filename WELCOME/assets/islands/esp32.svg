@@ -1,0 +1,112 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="wifiGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#E91E63" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#E91E63" stop-opacity="0.8"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <style>
+    @keyframes wifi-pulse {
+      0% { opacity: 0; transform: scale(0.8); }
+      50% { opacity: 0.8; }
+      100% { opacity: 0; transform: scale(1.2); }
+    }
+    @keyframes data-flow {
+      0% { stroke-dashoffset: 20; }
+      100% { stroke-dashoffset: 0; }
+    }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    .wifi { animation: wifi-pulse 1.5s ease-out infinite; }
+    .data { stroke-dasharray: 5, 5; animation: data-flow 1s linear infinite; }
+    .blink { animation: blink 2s ease-in-out infinite; }
+    .rotate { transform-origin: 100px 100px; animation: rotate 10s linear infinite; }
+  </style>
+
+  <!-- WiFi signal rings -->
+  <g transform="translate(100, 50)">
+    <path d="M-40,0 Q-40,-30 0,-40 Q40,-30 40,0" fill="none" stroke="#E91E63" stroke-width="3" class="wifi"/>
+    <path d="M-28,0 Q-28,-20 0,-28 Q28,-20 28,0" fill="none" stroke="#E91E63" stroke-width="3" class="wifi" style="animation-delay: -0.3s"/>
+    <path d="M-16,0 Q-16,-12 0,-16 Q16,-12 16,0" fill="none" stroke="#E91E63" stroke-width="3" class="wifi" style="animation-delay: -0.6s"/>
+    <circle cx="0" cy="5" r="5" fill="#E91E63"/>
+  </g>
+
+  <!-- ESP32 chip -->
+  <g filter="url(#glow)">
+    <rect x="55" y="75" width="90" height="70" rx="4" fill="#1a1a1a" stroke="#E91E63" stroke-width="2"/>
+
+    <!-- Chip details -->
+    <rect x="65" y="85" width="70" height="50" rx="2" fill="#2a2a2a"/>
+
+    <!-- Antenna trace -->
+    <path d="M140,90 L155,90 L155,75 L165,75" fill="none" stroke="#C0C0C0" stroke-width="2"/>
+    <rect x="163" y="70" width="15" height="10" fill="none" stroke="#C0C0C0" stroke-width="1"/>
+
+    <!-- Chip label -->
+    <text x="100" y="105" fill="#E91E63" font-family="monospace" font-size="10" text-anchor="middle">ESP32</text>
+    <text x="100" y="120" fill="#888" font-family="monospace" font-size="6" text-anchor="middle">WROOM-32</text>
+  </g>
+
+  <!-- Pin rows -->
+  <g fill="#C0C0C0">
+    <!-- Left pins -->
+    <rect x="50" y="80" width="8" height="3"/>
+    <rect x="50" y="90" width="8" height="3"/>
+    <rect x="50" y="100" width="8" height="3"/>
+    <rect x="50" y="110" width="8" height="3"/>
+    <rect x="50" y="120" width="8" height="3"/>
+    <rect x="50" y="130" width="8" height="3"/>
+    <!-- Right pins -->
+    <rect x="142" y="80" width="8" height="3"/>
+    <rect x="142" y="90" width="8" height="3"/>
+    <rect x="142" y="100" width="8" height="3"/>
+    <rect x="142" y="110" width="8" height="3"/>
+    <rect x="142" y="120" width="8" height="3"/>
+    <rect x="142" y="130" width="8" height="3"/>
+  </g>
+
+  <!-- Data streams -->
+  <g stroke="#E91E63" stroke-width="1" fill="none" class="data">
+    <path d="M40,91 L50,91"/>
+    <path d="M40,111 L50,111"/>
+    <path d="M150,91 L160,91"/>
+    <path d="M150,111 L160,111"/>
+  </g>
+
+  <!-- Bluetooth symbol -->
+  <g transform="translate(30, 160)" fill="#2196F3" opacity="0.7">
+    <path d="M5,0 L5,20 L12,13 L5,6 L12,0 L5,6" stroke="#2196F3" stroke-width="2" fill="none"/>
+    <circle cx="5" cy="10" r="3" class="blink"/>
+  </g>
+
+  <!-- IoT devices orbiting -->
+  <g class="rotate" opacity="0.5">
+    <circle cx="100" cy="170" r="4" fill="#E91E63"/>
+    <circle cx="30" cy="100" r="3" fill="#2196F3"/>
+    <circle cx="170" cy="100" r="3" fill="#4CAF50"/>
+  </g>
+
+  <!-- Connection lines to devices -->
+  <g stroke="#E91E63" stroke-width="0.5" opacity="0.3" stroke-dasharray="3,3">
+    <line x1="100" y1="145" x2="100" y2="165"/>
+    <line x1="55" y1="110" x2="35" y2="100"/>
+    <line x1="145" y1="110" x2="165" y2="100"/>
+  </g>
+
+  <!-- Status LEDs -->
+  <g>
+    <circle cx="70" y="155" r="3" fill="#4CAF50" class="blink"/>
+    <circle cx="130" cy="155" r="3" fill="#2196F3" class="blink" style="animation-delay: -0.5s"/>
+  </g>
+
+  <text x="100" y="175" fill="#E91E63" font-family="monospace" font-size="7" text-anchor="middle" opacity="0.6">WiFi + BLE</text>
+</svg>

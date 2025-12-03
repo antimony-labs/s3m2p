@@ -1,0 +1,111 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <style>
+    @keyframes orbit1 { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes orbit2 { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+    @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    @keyframes comm { 0% { stroke-dashoffset: 10; } 100% { stroke-dashoffset: 0; } }
+
+    .orbit1 { transform-origin: 100px 100px; animation: orbit1 8s linear infinite; }
+    .orbit2 { transform-origin: 100px 100px; animation: orbit2 12s linear infinite; }
+    .orbit3 { transform-origin: 100px 100px; animation: orbit1 15s linear infinite; }
+    .pulse { animation: pulse 2s ease-in-out infinite; }
+    .blink { animation: blink 1s ease-in-out infinite; }
+    .comm { stroke-dasharray: 3, 3; animation: comm 0.5s linear infinite; }
+  </style>
+
+  <!-- Background formation guides -->
+  <g stroke="#FF6B35" stroke-width="0.5" fill="none" opacity="0.1">
+    <circle cx="100" cy="100" r="80"/>
+    <circle cx="100" cy="100" r="55"/>
+    <circle cx="100" cy="100" r="30"/>
+  </g>
+
+  <!-- Communication mesh lines -->
+  <g stroke="#FF6B35" stroke-width="0.5" class="comm" opacity="0.4">
+    <line x1="100" y1="100" x2="100" y2="45"/>
+    <line x1="100" y1="100" x2="145" y2="75"/>
+    <line x1="100" y1="100" x2="145" y2="125"/>
+    <line x1="100" y1="100" x2="100" y2="155"/>
+    <line x1="100" y1="100" x2="55" y2="125"/>
+    <line x1="100" y1="100" x2="55" y2="75"/>
+  </g>
+
+  <!-- Leader robot (center) -->
+  <g filter="url(#glow)">
+    <circle cx="100" cy="100" r="15" fill="#1a1a2e" stroke="#FF6B35" stroke-width="2"/>
+    <circle cx="100" cy="100" r="8" fill="#FF6B35" opacity="0.3"/>
+    <circle cx="100" cy="100" r="4" fill="#ffffff" class="blink"/>
+    <!-- Antenna -->
+    <line x1="100" y1="85" x2="100" y2="78" stroke="#FF6B35" stroke-width="2"/>
+    <circle cx="100" cy="76" r="3" fill="#FF6B35" class="pulse"/>
+  </g>
+
+  <!-- Swarm robots - Ring 1 -->
+  <g class="orbit1">
+    <g transform="translate(100, 45)">
+      <circle cx="0" cy="0" r="10" fill="#1a1a2e" stroke="#FF6B35" stroke-width="1.5"/>
+      <circle cx="0" cy="0" r="4" fill="#FF6B35" opacity="0.5"/>
+      <circle cx="0" cy="0" r="2" fill="#ffffff"/>
+    </g>
+    <g transform="translate(145, 75)">
+      <circle cx="0" cy="0" r="10" fill="#1a1a2e" stroke="#FF6B35" stroke-width="1.5"/>
+      <circle cx="0" cy="0" r="4" fill="#FF6B35" opacity="0.5"/>
+      <circle cx="0" cy="0" r="2" fill="#ffffff"/>
+    </g>
+    <g transform="translate(145, 125)">
+      <circle cx="0" cy="0" r="10" fill="#1a1a2e" stroke="#FF6B35" stroke-width="1.5"/>
+      <circle cx="0" cy="0" r="4" fill="#FF6B35" opacity="0.5"/>
+      <circle cx="0" cy="0" r="2" fill="#ffffff"/>
+    </g>
+    <g transform="translate(100, 155)">
+      <circle cx="0" cy="0" r="10" fill="#1a1a2e" stroke="#FF6B35" stroke-width="1.5"/>
+      <circle cx="0" cy="0" r="4" fill="#FF6B35" opacity="0.5"/>
+      <circle cx="0" cy="0" r="2" fill="#ffffff"/>
+    </g>
+    <g transform="translate(55, 125)">
+      <circle cx="0" cy="0" r="10" fill="#1a1a2e" stroke="#FF6B35" stroke-width="1.5"/>
+      <circle cx="0" cy="0" r="4" fill="#FF6B35" opacity="0.5"/>
+      <circle cx="0" cy="0" r="2" fill="#ffffff"/>
+    </g>
+    <g transform="translate(55, 75)">
+      <circle cx="0" cy="0" r="10" fill="#1a1a2e" stroke="#FF6B35" stroke-width="1.5"/>
+      <circle cx="0" cy="0" r="4" fill="#FF6B35" opacity="0.5"/>
+      <circle cx="0" cy="0" r="2" fill="#ffffff"/>
+    </g>
+  </g>
+
+  <!-- Outer ring robots -->
+  <g class="orbit2" opacity="0.7">
+    <circle cx="100" cy="20" r="6" fill="#1a1a2e" stroke="#FF6B35" stroke-width="1"/>
+    <circle cx="170" cy="60" r="6" fill="#1a1a2e" stroke="#FF6B35" stroke-width="1"/>
+    <circle cx="170" cy="140" r="6" fill="#1a1a2e" stroke="#FF6B35" stroke-width="1"/>
+    <circle cx="100" cy="180" r="6" fill="#1a1a2e" stroke="#FF6B35" stroke-width="1"/>
+    <circle cx="30" cy="140" r="6" fill="#1a1a2e" stroke="#FF6B35" stroke-width="1"/>
+    <circle cx="30" cy="60" r="6" fill="#1a1a2e" stroke="#FF6B35" stroke-width="1"/>
+  </g>
+
+  <!-- Formation indicators -->
+  <g fill="#FF6B35" opacity="0.3">
+    <polygon points="100,25 95,35 105,35"/>
+    <polygon points="175,100 165,95 165,105"/>
+    <polygon points="100,175 105,165 95,165"/>
+    <polygon points="25,100 35,105 35,95"/>
+  </g>
+
+  <!-- Signal broadcast waves -->
+  <g transform="translate(100, 100)" class="pulse">
+    <circle cx="0" cy="0" r="25" fill="none" stroke="#FF6B35" stroke-width="0.5" opacity="0.3"/>
+    <circle cx="0" cy="0" r="40" fill="none" stroke="#FF6B35" stroke-width="0.5" opacity="0.2"/>
+  </g>
+</svg>

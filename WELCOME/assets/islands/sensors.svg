@@ -1,67 +1,130 @@
 <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <filter id="glow-soft">
-        <feGaussianBlur stdDeviation="1" result="blur" />
-        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    <linearGradient id="chipGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E0FFFF" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#00CED1" stop-opacity="0.1"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
     </filter>
   </defs>
-  
+
   <style>
-    @keyframes scan-wave {
-      0% { opacity: 0; transform: scale(0.5); }
-      50% { opacity: 0.4; }
-      100% { opacity: 0; transform: scale(1.2); }
+    @keyframes wave-expand {
+      0% { r: 15; opacity: 0.8; }
+      100% { r: 60; opacity: 0; }
     }
-    .wave {
-      transform-origin: center;
-      animation: scan-wave 3s infinite ease-out;
+    @keyframes pulse-core {
+      0%, 100% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.2); opacity: 1; }
     }
-    @keyframes pulse-chip {
-      0%, 100% { fill-opacity: 0.1; }
-      50% { fill-opacity: 0.3; }
+    @keyframes data-flow {
+      0% { stroke-dashoffset: 20; opacity: 0.3; }
+      50% { opacity: 0.8; }
+      100% { stroke-dashoffset: 0; opacity: 0.3; }
     }
-    .chip-core {
-      animation: pulse-chip 4s infinite ease-in-out;
+    @keyframes blink {
+      0%, 45%, 55%, 100% { opacity: 0.8; }
+      50% { opacity: 0.2; }
     }
+    @keyframes signal {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+
+    .wave { animation: wave-expand 2s ease-out infinite; }
+    .core { transform-origin: 100px 100px; animation: pulse-core 2s ease-in-out infinite; }
+    .trace { stroke-dasharray: 5, 5; animation: data-flow 1.5s linear infinite; }
+    .led { animation: blink 3s ease-in-out infinite; }
+    .signal { animation: signal 1s ease-in-out infinite; }
   </style>
-  
-  <!-- Outer ring guides -->
-  <circle cx="100" cy="100" r="85" fill="none" stroke="#ffffff" stroke-width="0.5" stroke-opacity="0.15" />
-  
-  <g transform="translate(100, 100) scale(1.8) translate(-100, -100)">
-  <!-- Central Chip - Soft Cyan/Silver -->
-  <rect x="75" y="75" width="50" height="50" rx="4" fill="none" stroke="#E0FFFF" stroke-width="2" filter="url(#glow-soft)" />
-  <rect x="85" y="85" width="30" height="30" fill="#E0FFFF" fill-opacity="0.1" class="chip-core" />
-  
-  <!-- Circuit Traces - Silver/White -->
-  <g stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.8">
-      <!-- Top -->
-      <path d="M90 75 V60 M90 60 H80" fill="none"/>
-      <path d="M100 75 V55" fill="none"/>
-      <path d="M110 75 V60 M110 60 H120" fill="none"/>
-      
-      <!-- Bottom -->
-      <path d="M90 125 V140 M90 140 H80" fill="none"/>
-      <path d="M100 125 V145" fill="none"/>
-      <path d="M110 125 V140 M110 140 H120" fill="none"/>
-      
-      <!-- Left -->
-      <path d="M75 90 H60 M60 90 V80" fill="none"/>
-      <path d="M75 100 H55" fill="none"/>
-      <path d="M75 110 H60 M60 110 V120" fill="none"/>
-      
-      <!-- Right -->
-      <path d="M125 90 H140 M140 90 V80" fill="none"/>
-      <path d="M125 100 H145" fill="none"/>
-      <path d="M125 110 H140 M140 110 V120" fill="none"/>
+
+  <!-- Background circuit traces -->
+  <g stroke="#E0FFFF" stroke-width="0.5" fill="none" opacity="0.15">
+    <path d="M20,40 L50,40 L50,20"/>
+    <path d="M180,40 L150,40 L150,20"/>
+    <path d="M20,160 L50,160 L50,180"/>
+    <path d="M180,160 L150,160 L150,180"/>
   </g>
-  
-  <!-- Sensor Nodes - Emerald -->
-  <circle cx="100" cy="100" r="8" fill="#50C878" fill-opacity="0.2" />
-  <circle cx="100" cy="100" r="3" fill="#ffffff" />
-  
-  <!-- Radiating Waves - Soft Cyan -->
-  <circle cx="100" cy="100" r="20" stroke="#E0FFFF" stroke-width="1" fill="none" class="wave" />
-  <circle cx="100" cy="100" r="20" stroke="#E0FFFF" stroke-width="1" fill="none" class="wave" style="animation-delay: 1.5s" />
+
+  <!-- Signal waves from center -->
+  <circle cx="100" cy="100" r="15" fill="none" stroke="#50C878" stroke-width="2" class="wave"/>
+  <circle cx="100" cy="100" r="15" fill="none" stroke="#50C878" stroke-width="2" class="wave" style="animation-delay: -0.5s"/>
+  <circle cx="100" cy="100" r="15" fill="none" stroke="#50C878" stroke-width="2" class="wave" style="animation-delay: -1s"/>
+  <circle cx="100" cy="100" r="15" fill="none" stroke="#50C878" stroke-width="1" class="wave" style="animation-delay: -1.5s"/>
+
+  <!-- Main chip body -->
+  <g filter="url(#glow)">
+    <rect x="60" y="60" width="80" height="80" rx="6" fill="url(#chipGrad)" stroke="#E0FFFF" stroke-width="2"/>
+
+    <!-- Inner chip detail -->
+    <rect x="75" y="75" width="50" height="50" rx="4" fill="none" stroke="#E0FFFF" stroke-width="1" opacity="0.5"/>
+    <rect x="85" y="85" width="30" height="30" fill="#E0FFFF" opacity="0.1"/>
+  </g>
+
+  <!-- Chip pins with data flow -->
+  <g stroke="#ffffff" stroke-width="2" fill="none" class="trace">
+    <!-- Top pins -->
+    <path d="M80,60 L80,35 L60,35"/>
+    <path d="M100,60 L100,25"/>
+    <path d="M120,60 L120,35 L140,35"/>
+
+    <!-- Bottom pins -->
+    <path d="M80,140 L80,165 L60,165"/>
+    <path d="M100,140 L100,175"/>
+    <path d="M120,140 L120,165 L140,165"/>
+
+    <!-- Left pins -->
+    <path d="M60,80 L35,80 L35,60"/>
+    <path d="M60,100 L25,100"/>
+    <path d="M60,120 L35,120 L35,140"/>
+
+    <!-- Right pins -->
+    <path d="M140,80 L165,80 L165,60"/>
+    <path d="M140,100 L175,100"/>
+    <path d="M140,120 L165,120 L165,140"/>
+  </g>
+
+  <!-- Pin endpoints -->
+  <g fill="#50C878">
+    <circle cx="60" cy="35" r="3" class="led"/>
+    <circle cx="100" cy="25" r="3" class="led" style="animation-delay: -0.5s"/>
+    <circle cx="140" cy="35" r="3" class="led" style="animation-delay: -1s"/>
+    <circle cx="60" cy="165" r="3" class="led" style="animation-delay: -1.5s"/>
+    <circle cx="100" cy="175" r="3" class="led" style="animation-delay: -0.3s"/>
+    <circle cx="140" cy="165" r="3" class="led" style="animation-delay: -0.8s"/>
+    <circle cx="35" cy="60" r="3" class="led" style="animation-delay: -1.2s"/>
+    <circle cx="25" cy="100" r="3" class="led" style="animation-delay: -0.7s"/>
+    <circle cx="35" cy="140" r="3" class="led" style="animation-delay: -1.8s"/>
+    <circle cx="165" cy="60" r="3" class="led" style="animation-delay: -0.2s"/>
+    <circle cx="175" cy="100" r="3" class="led" style="animation-delay: -1.1s"/>
+    <circle cx="165" cy="140" r="3" class="led" style="animation-delay: -0.6s"/>
+  </g>
+
+  <!-- Central sensor core -->
+  <g class="core">
+    <circle cx="100" cy="100" r="15" fill="#50C878" opacity="0.3"/>
+    <circle cx="100" cy="100" r="10" fill="#50C878" opacity="0.5"/>
+    <circle cx="100" cy="100" r="5" fill="#ffffff"/>
+  </g>
+
+  <!-- Signal indicators -->
+  <g class="signal" fill="#E0FFFF" opacity="0.6">
+    <polygon points="100,15 95,25 105,25"/>
+    <polygon points="100,185 95,175 105,175"/>
+    <polygon points="15,100 25,95 25,105"/>
+    <polygon points="185,100 175,95 175,105"/>
+  </g>
+
+  <!-- Corner decorations -->
+  <g stroke="#E0FFFF" stroke-width="1" fill="none" opacity="0.3">
+    <path d="M10,10 L10,30 M10,10 L30,10"/>
+    <path d="M190,10 L190,30 M190,10 L170,10"/>
+    <path d="M10,190 L10,170 M10,190 L30,190"/>
+    <path d="M190,190 L190,170 M190,190 L170,190"/>
   </g>
 </svg>

@@ -1,66 +1,166 @@
 <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <filter id="glow-soft">
-        <feGaussianBlur stdDeviation="1.5" result="blur" />
-        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    <linearGradient id="bookGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#50C878" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#228B22" stop-opacity="0.2"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
     </filter>
   </defs>
-  
+
   <style>
-    @keyframes flow-line {
-      0% { stroke-dashoffset: 100; }
-      100% { stroke-dashoffset: 0; }
-    }
     @keyframes pulse-node {
-      0%, 100% { r: 5; fill-opacity: 1; }
-      50% { r: 7; fill-opacity: 0.6; }
+      0%, 100% { r: 5; opacity: 0.8; }
+      50% { r: 7; opacity: 1; }
     }
-    .connection {
-      stroke-dasharray: 5, 5;
-      animation: flow-line 20s linear infinite;
+    @keyframes data-flow {
+      0% { stroke-dashoffset: 30; opacity: 0.2; }
+      50% { opacity: 0.8; }
+      100% { stroke-dashoffset: 0; opacity: 0.2; }
     }
-    .active-node {
-      animation: pulse-node 3s infinite ease-in-out;
-      transform-origin: center;
-      transform-box: fill-box;
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
     }
+    @keyframes spark {
+      0%, 100% { opacity: 0; transform: scale(0); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+    @keyframes orbit {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes page-turn {
+      0%, 100% { transform: rotateY(0deg); }
+      50% { transform: rotateY(-30deg); }
+    }
+
+    .node { animation: pulse-node 2s ease-in-out infinite; }
+    .connection { stroke-dasharray: 10, 10; animation: data-flow 2s linear infinite; }
+    .float { animation: float 3s ease-in-out infinite; }
+    .spark { animation: spark 2s ease-in-out infinite; }
+    .orbit { transform-origin: 100px 100px; animation: orbit 20s linear infinite; }
+    .page { transform-origin: center; animation: page-turn 4s ease-in-out infinite; }
   </style>
-  
-  <!-- Outer ring - Emerald -->
-  <circle cx="100" cy="100" r="88" fill="none" stroke="#50C878" stroke-width="0.5" stroke-opacity="0.2" stroke-dasharray="10,10"/>
-  
-  <!-- Neural Network Structure -->
-  <g transform="translate(100, 100) scale(1.4) translate(-100, -100)">
-  <g filter="url(#glow-soft)">
-      <!-- Connections - White/Silver -->
-      <g stroke="#ffffff" stroke-width="1" stroke-opacity="0.5">
-          <line x1="100" y1="100" x2="100" y2="60" class="connection" />
-          <line x1="100" y1="100" x2="140" y2="100" class="connection" style="animation-delay: 0.5s" />
-          <line x1="100" y1="100" x2="100" y2="140" class="connection" style="animation-delay: 1s" />
-          <line x1="100" y1="100" x2="60" y2="100" class="connection" style="animation-delay: 1.5s" />
-          
-          <line x1="100" y1="60" x2="140" y2="100" />
-          <line x1="140" y1="100" x2="100" y2="140" />
-          <line x1="100" y1="140" x2="60" y2="100" />
-          <line x1="60" y1="100" x2="100" y2="60" />
-      </g>
-      
-      <!-- Nodes -->
-      <!-- Center - Emerald -->
-      <circle cx="100" cy="100" r="12" fill="#50C878" fill-opacity="0.2" stroke="#50C878" stroke-width="1.5" />
-      <circle cx="100" cy="100" r="5" fill="#ffffff" class="active-node" />
-      
-      <!-- Satellites - Dark with Emerald/White accents -->
-      <circle cx="100" cy="60" r="6" fill="#0a0a12" stroke="#ffffff" stroke-width="1.5" />
-      <circle cx="140" cy="100" r="6" fill="#0a0a12" stroke="#ffffff" stroke-width="1.5" />
-      <circle cx="100" cy="140" r="6" fill="#0a0a12" stroke="#ffffff" stroke-width="1.5" />
-      <circle cx="60" cy="100" r="6" fill="#0a0a12" stroke="#ffffff" stroke-width="1.5" />
-      
-      <!-- Data points - Emerald -->
-      <circle cx="100" cy="60" r="2" fill="#50C878" />
-      <circle cx="140" cy="100" r="2" fill="#50C878" />
-      <circle cx="100" cy="140" r="2" fill="#50C878" />
-      <circle cx="60" cy="100" r="2" fill="#50C878" />
+
+  <!-- Orbiting knowledge particles -->
+  <g class="orbit" opacity="0.4">
+    <circle cx="100" cy="15" r="3" fill="#50C878"/>
+    <circle cx="185" cy="100" r="2" fill="#ffffff"/>
+    <circle cx="100" cy="185" r="2.5" fill="#50C878"/>
+    <circle cx="15" cy="100" r="2" fill="#ffffff"/>
   </g>
+
+  <!-- Background knowledge network -->
+  <g stroke="#50C878" stroke-width="0.5" fill="none" opacity="0.2">
+    <circle cx="100" cy="100" r="90"/>
+    <circle cx="100" cy="100" r="70"/>
+    <circle cx="100" cy="100" r="50"/>
+  </g>
+
+  <!-- Neural network connections -->
+  <g stroke="#50C878" stroke-width="1" fill="none" class="connection">
+    <!-- Input to hidden -->
+    <line x1="45" y1="55" x2="85" y2="75"/>
+    <line x1="45" y1="100" x2="85" y2="100"/>
+    <line x1="45" y1="145" x2="85" y2="125"/>
+
+    <!-- Hidden to hidden -->
+    <line x1="100" y1="75" x2="100" y2="100"/>
+    <line x1="100" y1="100" x2="100" y2="125"/>
+
+    <!-- Hidden to output -->
+    <line x1="115" y1="75" x2="155" y2="85"/>
+    <line x1="115" y1="100" x2="155" y2="100"/>
+    <line x1="115" y1="125" x2="155" y2="115"/>
+  </g>
+
+  <!-- Book/knowledge base -->
+  <g filter="url(#glow)" class="float">
+    <!-- Book back -->
+    <path d="M70,140 L70,170 L130,170 L130,140" fill="url(#bookGrad)" stroke="#50C878" stroke-width="2"/>
+
+    <!-- Book pages -->
+    <g class="page">
+      <path d="M72,142 L72,168 L100,165 L100,145" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.5"/>
+      <path d="M75,145 L75,165 L100,162" fill="none" stroke="#ffffff" stroke-width="0.5" opacity="0.3"/>
+    </g>
+
+    <!-- Book spine -->
+    <line x1="100" y1="140" x2="100" y2="170" stroke="#50C878" stroke-width="2"/>
+
+    <!-- Right page -->
+    <path d="M128,142 L128,168 L100,165 L100,145" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.5"/>
+
+    <!-- Text lines on book -->
+    <g stroke="#ffffff" stroke-width="0.5" opacity="0.4">
+      <line x1="105" y1="150" x2="125" y2="148"/>
+      <line x1="105" y1="155" x2="122" y2="153"/>
+      <line x1="105" y1="160" x2="118" y2="158"/>
+    </g>
+  </g>
+
+  <!-- Neural network nodes -->
+  <!-- Input layer -->
+  <g fill="#50C878" filter="url(#glow)">
+    <circle cx="45" cy="55" r="5" class="node"/>
+    <circle cx="45" cy="100" r="5" class="node" style="animation-delay: -0.3s"/>
+    <circle cx="45" cy="145" r="5" class="node" style="animation-delay: -0.6s"/>
+  </g>
+
+  <!-- Hidden layer -->
+  <g fill="#ffffff" filter="url(#glow)">
+    <circle cx="100" cy="75" r="6" class="node" style="animation-delay: -0.2s"/>
+    <circle cx="100" cy="100" r="8" class="node" style="animation-delay: -0.5s"/>
+    <circle cx="100" cy="125" r="6" class="node" style="animation-delay: -0.8s"/>
+  </g>
+
+  <!-- Output layer -->
+  <g fill="#00CED1" filter="url(#glow)">
+    <circle cx="155" cy="85" r="5" class="node" style="animation-delay: -0.4s"/>
+    <circle cx="155" cy="115" r="5" class="node" style="animation-delay: -0.7s"/>
+  </g>
+
+  <!-- Knowledge sparks -->
+  <g fill="#FFD700" class="spark">
+    <circle cx="75" cy="65" r="2"/>
+  </g>
+  <g fill="#FFD700" class="spark" style="animation-delay: -0.5s">
+    <circle cx="125" cy="90" r="2"/>
+  </g>
+  <g fill="#FFD700" class="spark" style="animation-delay: -1s">
+    <circle cx="80" cy="115" r="1.5"/>
+  </g>
+  <g fill="#FFD700" class="spark" style="animation-delay: -1.5s">
+    <circle cx="140" cy="105" r="1.5"/>
+  </g>
+
+  <!-- Lightbulb idea -->
+  <g transform="translate(165, 35)" opacity="0.7">
+    <ellipse cx="0" cy="0" rx="10" ry="12" fill="none" stroke="#FFD700" stroke-width="1.5"/>
+    <path d="M-5,10 L5,10 M-4,13 L4,13 M-3,16 L3,16" stroke="#FFD700" stroke-width="1"/>
+    <circle cx="0" cy="0" r="4" fill="#FFD700" opacity="0.3">
+      <animate attributeName="opacity" values="0.3;0.7;0.3" dur="2s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <!-- Progress bar -->
+  <g opacity="0.6">
+    <rect x="25" y="185" width="150" height="4" rx="2" fill="none" stroke="#50C878" stroke-width="1"/>
+    <rect x="26" y="186" width="0" height="2" rx="1" fill="#50C878">
+      <animate attributeName="width" values="0;148;0" dur="4s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+
+  <!-- Layer labels -->
+  <g fill="#ffffff" font-family="monospace" font-size="6" opacity="0.4">
+    <text x="35" y="35">IN</text>
+    <text x="92" y="50">HIDDEN</text>
+    <text x="148" y="60">OUT</text>
   </g>
 </svg>

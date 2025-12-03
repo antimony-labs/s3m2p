@@ -1,0 +1,114 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="signalGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF5722" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#FF5722" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#FF5722" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <style>
+    @keyframes wave-ref {
+      0% { d: path('M20,50 Q35,30 50,50 T80,50 T110,50'); }
+      100% { d: path('M20,50 Q35,70 50,50 T80,50 T110,50'); }
+    }
+    @keyframes wave-out {
+      0% { d: path('M90,150 Q105,130 120,150 T150,150 T180,150'); }
+      100% { d: path('M90,150 Q105,170 120,150 T150,150 T180,150'); }
+    }
+    @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+    @keyframes flow { 0% { stroke-dashoffset: 20; } 100% { stroke-dashoffset: 0; } }
+    @keyframes lock { 0%, 100% { fill: #FF5722; } 50% { fill: #4CAF50; } }
+
+    .pulse { animation: pulse 2s ease-in-out infinite; }
+    .flow { stroke-dasharray: 5, 5; animation: flow 1s linear infinite; }
+    .lock { animation: lock 3s ease-in-out infinite; }
+  </style>
+
+  <!-- Reference signal (input) -->
+  <g filter="url(#glow)">
+    <text x="15" y="35" fill="#FF5722" font-family="monospace" font-size="8" opacity="0.7">REF</text>
+    <path d="M20,50 Q35,30 50,50 T80,50 T110,50" fill="none" stroke="#FF5722" stroke-width="2">
+      <animate attributeName="d"
+               values="M20,50 Q35,30 50,50 T80,50 T110,50;M20,50 Q35,70 50,50 T80,50 T110,50;M20,50 Q35,30 50,50 T80,50 T110,50"
+               dur="1s" repeatCount="indefinite"/>
+    </path>
+  </g>
+
+  <!-- Phase Detector -->
+  <g filter="url(#glow)">
+    <rect x="115" y="40" width="30" height="25" rx="3" fill="#1a1a2e" stroke="#FF5722" stroke-width="1.5"/>
+    <text x="130" y="56" fill="#FF5722" font-family="monospace" font-size="6" text-anchor="middle">PD</text>
+    <!-- Input arrows -->
+    <path d="M110,52 L115,52" stroke="#FF5722" stroke-width="1.5"/>
+    <polygon points="113,50 113,54 116,52" fill="#FF5722"/>
+  </g>
+
+  <!-- Loop Filter -->
+  <g filter="url(#glow)">
+    <rect x="115" y="80" width="30" height="25" rx="3" fill="#1a1a2e" stroke="#FF5722" stroke-width="1.5"/>
+    <text x="130" y="96" fill="#FF5722" font-family="monospace" font-size="6" text-anchor="middle">LPF</text>
+  </g>
+
+  <!-- Connection PD to LPF -->
+  <path d="M130,65 L130,80" stroke="#FF5722" stroke-width="1" class="flow"/>
+
+  <!-- VCO -->
+  <g filter="url(#glow)">
+    <rect x="115" y="120" width="30" height="25" rx="3" fill="#1a1a2e" stroke="#FF5722" stroke-width="1.5"/>
+    <text x="130" y="136" fill="#FF5722" font-family="monospace" font-size="6" text-anchor="middle">VCO</text>
+    <!-- Oscillator symbol -->
+    <path d="M120,128 Q125,123 130,128 T140,128" fill="none" stroke="#ffffff" stroke-width="0.5" opacity="0.5"/>
+  </g>
+
+  <!-- Connection LPF to VCO -->
+  <path d="M130,105 L130,120" stroke="#FF5722" stroke-width="1" class="flow"/>
+
+  <!-- Output signal -->
+  <g filter="url(#glow)">
+    <path d="M145,132 L160,132" stroke="#FF5722" stroke-width="1"/>
+    <polygon points="158,130 158,134 162,132" fill="#FF5722"/>
+    <path d="M90,150 Q105,130 120,150 T150,150 T180,150" fill="none" stroke="#4CAF50" stroke-width="2">
+      <animate attributeName="d"
+               values="M90,150 Q105,130 120,150 T150,150 T180,150;M90,150 Q105,170 120,150 T150,150 T180,150;M90,150 Q105,130 120,150 T150,150 T180,150"
+               dur="1s" repeatCount="indefinite"/>
+    </path>
+    <text x="165" y="168" fill="#4CAF50" font-family="monospace" font-size="8" opacity="0.7">OUT</text>
+  </g>
+
+  <!-- Feedback loop -->
+  <g stroke="#FF5722" stroke-width="1" fill="none">
+    <path d="M145,132 L160,132 L160,170 L50,170 L50,100 L80,100"/>
+    <!-- Divider -->
+    <rect x="70" y="90" width="25" height="20" rx="2" fill="#1a1a2e"/>
+    <text x="82" y="103" fill="#FF5722" font-family="monospace" font-size="6" text-anchor="middle">/N</text>
+    <path d="M95,100 L115,100 L115,52 L115,52"/>
+  </g>
+
+  <!-- Lock indicator -->
+  <g transform="translate(170, 30)">
+    <circle cx="0" cy="0" r="8" fill="#1a1a2e" stroke="#FF5722" stroke-width="1"/>
+    <circle cx="0" cy="0" r="4" class="lock"/>
+    <text x="0" y="18" fill="#FF5722" font-family="monospace" font-size="6" text-anchor="middle">LOCK</text>
+  </g>
+
+  <!-- Phase error indicator -->
+  <g transform="translate(30, 100)">
+    <rect x="0" y="0" width="40" height="20" rx="2" fill="#1a1a2e" stroke="#FF5722" stroke-width="1"/>
+    <text x="20" y="9" fill="#FF5722" font-family="monospace" font-size="5" text-anchor="middle">PHASE</text>
+    <text x="20" y="16" fill="#4CAF50" font-family="monospace" font-size="5" text-anchor="middle">0.0°</text>
+  </g>
+
+  <!-- Frequency display -->
+  <g fill="#FF5722" font-family="monospace" font-size="7" opacity="0.6">
+    <text x="20" y="185">Fref: 10MHz</text>
+    <text x="120" y="185">Fout: 100MHz</text>
+  </g>
+</svg>

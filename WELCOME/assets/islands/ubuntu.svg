@@ -1,0 +1,84 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <style>
+    @keyframes cursor-blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+    @keyframes type { 0% { width: 0; } 50% { width: 80px; } 100% { width: 0; } }
+    @keyframes scroll { 0% { transform: translateY(0); } 100% { transform: translateY(-20px); opacity: 0; } }
+    @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+
+    .cursor { animation: cursor-blink 0.8s step-end infinite; }
+    .pulse { animation: pulse 2s ease-in-out infinite; }
+  </style>
+
+  <!-- Terminal window -->
+  <g filter="url(#glow)">
+    <!-- Window frame -->
+    <rect x="25" y="25" width="150" height="150" rx="8" fill="#1a1a2e" stroke="#E95420" stroke-width="2"/>
+
+    <!-- Title bar -->
+    <rect x="25" y="25" width="150" height="20" rx="8" fill="#E95420"/>
+    <rect x="25" y="35" width="150" height="10" fill="#E95420"/>
+
+    <!-- Window buttons -->
+    <circle cx="40" cy="35" r="4" fill="#ff5f56"/>
+    <circle cx="55" cy="35" r="4" fill="#ffbd2e"/>
+    <circle cx="70" cy="35" r="4" fill="#27ca40"/>
+
+    <!-- Terminal title -->
+    <text x="100" y="39" fill="#ffffff" font-family="monospace" font-size="8" text-anchor="middle" opacity="0.8">terminal</text>
+  </g>
+
+  <!-- Terminal content -->
+  <g font-family="monospace" font-size="9">
+    <!-- Prompt lines -->
+    <text x="35" y="65" fill="#27ca40">user@ubuntu:~$</text>
+    <text x="105" y="65" fill="#ffffff" opacity="0.8">ls -la</text>
+
+    <text x="35" y="80" fill="#87CEEB" opacity="0.7">drwxr-xr-x</text>
+    <text x="100" y="80" fill="#ffffff" opacity="0.6">Documents/</text>
+
+    <text x="35" y="95" fill="#87CEEB" opacity="0.7">drwxr-xr-x</text>
+    <text x="100" y="95" fill="#ffffff" opacity="0.6">Projects/</text>
+
+    <text x="35" y="110" fill="#27ca40">user@ubuntu:~$</text>
+    <text x="105" y="110" fill="#ffffff" opacity="0.8">sudo apt</text>
+
+    <text x="35" y="125" fill="#E95420" opacity="0.8">[sudo]</text>
+    <text x="70" y="125" fill="#ffffff" opacity="0.6">password:</text>
+
+    <text x="35" y="140" fill="#27ca40">user@ubuntu:~$</text>
+
+    <!-- Blinking cursor -->
+    <rect x="105" y="132" width="8" height="12" fill="#27ca40" class="cursor"/>
+  </g>
+
+  <!-- Ubuntu logo hint -->
+  <g transform="translate(160, 165)" opacity="0.4">
+    <circle cx="0" cy="0" r="12" fill="none" stroke="#E95420" stroke-width="2"/>
+    <circle cx="0" cy="-8" r="3" fill="#E95420"/>
+    <circle cx="7" cy="4" r="3" fill="#E95420"/>
+    <circle cx="-7" cy="4" r="3" fill="#E95420"/>
+  </g>
+
+  <!-- Activity indicators -->
+  <g fill="#27ca40" class="pulse">
+    <circle cx="30" cy="180" r="3"/>
+    <circle cx="40" cy="180" r="3" style="animation-delay: -0.3s"/>
+    <circle cx="50" cy="180" r="3" style="animation-delay: -0.6s"/>
+  </g>
+
+  <!-- Decorative circuit lines -->
+  <g stroke="#E95420" stroke-width="0.5" opacity="0.2">
+    <path d="M10,50 L20,50 L20,100" fill="none"/>
+    <path d="M190,50 L180,50 L180,100" fill="none"/>
+  </g>
+</svg>
