@@ -79,13 +79,13 @@ pub const HOME_BUBBLES: &[Bubble] = &[
         icon: "assets/islands/x.svg",
         action: BubbleAction::External("https://x.com/LazyShivam"),
     },
-    // 3. Blog (Right) - Direct project (for now, could become category later)
+    // 3. Blog (Right) - Coming soon
     Bubble {
         id: "blog",
         label: "Blog",
         description: "Technical Writing",
         icon: "assets/islands/blog.svg",
-        action: BubbleAction::DirectProject("https://blog.too.foo"),
+        action: BubbleAction::DirectProject("https://404.too.foo"),
     },
     // 4. Learn (Bottom Right) - Category
     Bubble {
@@ -127,27 +127,6 @@ pub const HOME_BUBBLES: &[Bubble] = &[
 
 pub const TOOLS_BUBBLES: &[Bubble] = &[
     Bubble {
-        id: "sensors",
-        label: "Sensors",
-        description: "Mobile Sensor Testing",
-        icon: "assets/islands/sensors.svg",
-        action: BubbleAction::DirectProject("https://sensors.too.foo"),
-    },
-    Bubble {
-        id: "autocrate",
-        label: "AutoCrate",
-        description: "Shipping Crate Generator",
-        icon: "assets/islands/automation.svg",
-        action: BubbleAction::DirectProject("https://autocrate.too.foo"),
-    },
-    Bubble {
-        id: "crm",
-        label: "CRM",
-        description: "Customer Relations",
-        icon: "assets/islands/crm.svg",
-        action: BubbleAction::DirectProject("https://crm.too.foo"),
-    },
-    Bubble {
         id: "pll",
         label: "PLL",
         description: "Phase Lock Loop Designer",
@@ -155,11 +134,32 @@ pub const TOOLS_BUBBLES: &[Bubble] = &[
         action: BubbleAction::DirectProject("https://pll.too.foo"),
     },
     Bubble {
+        id: "sensors",
+        label: "Sensors",
+        description: "Mobile Sensor Testing",
+        icon: "assets/islands/sensors.svg",
+        action: BubbleAction::DirectProject("https://404.too.foo"),
+    },
+    Bubble {
+        id: "autocrate",
+        label: "AutoCrate",
+        description: "Shipping Crate Generator",
+        icon: "assets/islands/automation.svg",
+        action: BubbleAction::DirectProject("https://404.too.foo"),
+    },
+    Bubble {
+        id: "crm",
+        label: "CRM",
+        description: "Customer Relations",
+        icon: "assets/islands/crm.svg",
+        action: BubbleAction::DirectProject("https://404.too.foo"),
+    },
+    Bubble {
         id: "power",
         label: "Power",
         description: "Power Circuit Designer",
         icon: "assets/islands/power.svg",
-        action: BubbleAction::DirectProject("https://power.too.foo"),
+        action: BubbleAction::DirectProject("https://404.too.foo"),
     },
 ];
 
@@ -198,49 +198,49 @@ pub const LEARN_BUBBLES: &[Bubble] = &[
         label: "AI",
         description: "Machine Learning & Neural Networks",
         icon: "assets/islands/ai.svg",
-        action: BubbleAction::DirectProject("https://ai.too.foo"),
+        action: BubbleAction::DirectProject("https://404.too.foo"),
     },
     Bubble {
         id: "ubuntu",
         label: "Ubuntu",
         description: "Linux System Administration",
         icon: "assets/islands/ubuntu.svg",
-        action: BubbleAction::DirectProject("https://ubuntu.too.foo"),
+        action: BubbleAction::DirectProject("https://404.too.foo"),
     },
     Bubble {
         id: "opencv",
         label: "OpenCV",
         description: "Computer Vision",
         icon: "assets/islands/opencv.svg",
-        action: BubbleAction::DirectProject("https://opencv.too.foo"),
+        action: BubbleAction::DirectProject("https://404.too.foo"),
     },
     Bubble {
         id: "arduino",
         label: "Arduino",
         description: "Embedded Systems",
         icon: "assets/islands/arduino.svg",
-        action: BubbleAction::DirectProject("https://arduino.too.foo"),
+        action: BubbleAction::DirectProject("https://404.too.foo"),
     },
     Bubble {
         id: "esp32",
         label: "ESP32",
         description: "IoT Development",
         icon: "assets/islands/esp32.svg",
-        action: BubbleAction::DirectProject("https://esp32.too.foo"),
+        action: BubbleAction::DirectProject("https://404.too.foo"),
     },
     Bubble {
         id: "swarm",
         label: "Swarm",
         description: "Multi-Robot Coordination",
         icon: "assets/islands/swarm.svg",
-        action: BubbleAction::DirectProject("https://swarm.too.foo"),
+        action: BubbleAction::DirectProject("https://404.too.foo"),
     },
     Bubble {
         id: "slam",
         label: "SLAM",
         description: "Localization & Mapping",
         icon: "assets/islands/slam.svg",
-        action: BubbleAction::DirectProject("https://slam.too.foo"),
+        action: BubbleAction::DirectProject("https://404.too.foo"),
     },
 ];
 
