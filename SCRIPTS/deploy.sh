@@ -33,6 +33,14 @@ declare -A PROJECTS=(
     ["autocrate"]="TOOLS/AUTOCRATE:autocrate.too.foo:autocrate-too-foo"
     ["crm"]="TOOLS/CRM:crm.too.foo:crm-too-foo"
     ["pll"]="TOOLS/PLL:pll.too.foo:pll-too-foo"
+
+    # Catch-all (wildcard subdomain handler)
+    ["coming-soon"]="COMING_SOON:*.too.foo:coming-soon-too-foo"
+)
+
+# Static projects that don't need trunk build (just direct deploy)
+declare -A STATIC_PROJECTS=(
+    ["coming-soon"]=1
 )
 
 # Parse arguments
@@ -72,6 +80,14 @@ build_project() {
         error "No index.html found in $dir"
     fi
 
+    # Check if this is a static project (no trunk build needed)
+    if [[ -v "STATIC_PROJECTS[$name]" ]]; then
+        log "Static project - no build needed"
+        success "Ready $name -> $dir/"
+        cd "$ROOT_DIR"
+        return
+    fi
+
     # Build with trunk
     trunk build --release
 
@@ -94,19 +110,25 @@ publish_project() {
 
     cd "$ROOT_DIR/$dir"
 
-    if [[ ! -d "dist" ]]; then
+    # Determine deploy directory (static projects deploy from root, others from dist/)
+    local deploy_dir="dist"
+    if [[ -v "STATIC_PROJECTS[$name]" ]]; then
+        deploy_dir="."
+    fi
+
+    if [[ "$deploy_dir" == "dist" ]] && [[ ! -d "dist" ]]; then
         error "No dist folder. Run build first."
     fi
 
     # Cloudflare Pages deploy via wrangler
     # Requires: npm install -g wrangler && wrangler login
     if command -v wrangler &> /dev/null; then
-        wrangler pages deploy dist --project-name="${pages_project}" --branch=main
+        wrangler pages deploy "$deploy_dir" --project-name="${pages_project}" --branch=main --commit-dirty=true
         success "Published $name to https://$domain"
     else
         warn "wrangler not installed. Install with: npm install -g wrangler"
         warn "Then run: wrangler login"
-        warn "Manual deploy: upload $dir/dist to Cloudflare Pages dashboard"
+        warn "Manual deploy: upload $dir/$deploy_dir to Cloudflare Pages dashboard"
     fi
 
     cd "$ROOT_DIR"

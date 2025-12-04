@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coming Soon | too.foo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #050508;
+      font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+      overflow: hidden;
+      color: #e0e0e0;
+    }
+
+    .container {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    .message-panel {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 420px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 60px;
+      z-index: 10;
+      background: linear-gradient(90deg,
+        rgba(5,5,8,1) 0%,
+        rgba(5,5,8,0.98) 60%,
+        rgba(5,5,8,0.8) 85%,
+        transparent 100%);
+    }
+
+    .status-code {
+      font-size: 140px;
+      font-weight: 100;
+      color: #00ffff;
+      line-height: 1;
+      opacity: 0.08;
+      position: absolute;
+      top: 30px;
+      left: 50px;
+      letter-spacing: -12px;
+      font-family: 'Helvetica Neue', sans-serif;
+    }
+
+    .title {
+      font-size: 42px;
+      font-weight: 200;
+      color: #ffffff;
+      margin-bottom: 12px;
+      letter-spacing: -1px;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: #00ffff;
+      margin-bottom: 40px;
+      opacity: 0.7;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .description {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.9;
+      max-width: 340px;
+    }
+
+    .description a {
+      color: #00ffff;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+
+    .description a:hover { opacity: 0.7; }
+
+    .rule-display {
+      margin-top: 50px;
+      padding: 20px;
+      background: rgba(0,255,255,0.03);
+      border-left: 2px solid rgba(0,255,255,0.3);
+    }
+
+    .rule-label {
+      font-size: 10px;
+      color: #00ffff;
+      opacity: 0.5;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+
+    .rule-text {
+      font-size: 13px;
+      color: #888;
+      line-height: 1.6;
+      font-style: italic;
+    }
+
+    #canvas {
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .stats {
+      position: absolute;
+      bottom: 25px;
+      right: 25px;
+      font-size: 10px;
+      color: #00ffff;
+      opacity: 0.3;
+      text-align: right;
+      z-index: 10;
+      letter-spacing: 1px;
+    }
+
+    .stats div { margin-bottom: 3px; }
+    .stats span { color: #fff; opacity: 0.6; }
+
+    .nav-hint {
+      position: absolute;
+      bottom: 25px;
+      left: 60px;
+      z-index: 10;
+    }
+
+    .nav-hint a {
+      font-size: 11px;
+      color: #00ffff;
+      opacity: 0.4;
+      text-decoration: none;
+      letter-spacing: 1px;
+      transition: opacity 0.2s;
+    }
+
+    .nav-hint a:hover { opacity: 0.8; }
+
+    @media (max-width: 768px) {
+      .message-panel {
+        width: 100%;
+        background: rgba(5,5,8,0.92);
+        padding: 30px;
+        justify-content: flex-start;
+        padding-top: 100px;
+      }
+      .status-code { font-size: 80px; left: 30px; top: 20px; }
+      .title { font-size: 28px; }
+      .rule-display { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <canvas id="canvas"></canvas>
+
+    <div class="status-code">404</div>
+
+    <div class="message-panel">
+      <h1 class="title">Coming Soon</h1>
+      <p class="subtitle">Under Construction</p>
+      <p class="description">
+        This project is being built. The simulation you see demonstrates
+        how infinite complexity emerges from the simplest possible rules.
+      </p>
+
+      <div class="rule-display">
+        <div class="rule-label">THE RULE</div>
+        <div class="rule-text">
+          "Walk randomly. Stick when you touch."
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-hint">
+      <a href="https://too.foo">&larr; return to too.foo</a>
+    </div>
+
+    <div class="stats">
+      <div>particles: <span id="particles">0</span></div>
+      <div>attached: <span id="attached">0</span></div>
+      <div>fractal dimension: <span id="dimension">~1.71</span></div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    let width, height;
+    let grid; // 0 = empty, 1+ = attached (value = distance from seed)
+    let particles = [];
+    let attachedCount = 0;
+    let maxDist = 1;
+
+    const PARTICLE_COUNT = 800;
+    const SCALE = 2; // Pixel scale
+
+    // Color gradient based on attachment order (distance from center)
+    function getColor(dist) {
+      const t = Math.min(dist / maxDist, 1);
+      // Cyan to deep blue gradient
+      const r = Math.floor(0 + t * 20);
+      const g = Math.floor(255 - t * 180);
+      const b = Math.floor(255 - t * 50);
+      return `rgb(${r},${g},${b})`;
+    }
+
+    function resize() {
+      width = Math.floor(window.innerWidth / SCALE);
+      height = Math.floor(window.innerHeight / SCALE);
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      ctx.imageSmoothingEnabled = false;
+
+      init();
+    }
+
+    function init() {
+      grid = new Uint16Array(width * height);
+      particles = [];
+      attachedCount = 0;
+      maxDist = 1;
+
+      // Seed points - multiple seeds create more interesting structures
+      const seeds = [
+        { x: Math.floor(width * 0.7), y: Math.floor(height * 0.5) },
+        { x: Math.floor(width * 0.85), y: Math.floor(height * 0.25) },
+        { x: Math.floor(width * 0.85), y: Math.floor(height * 0.75) },
+        { x: Math.floor(width * 0.55), y: Math.floor(height * 0.15) },
+        { x: Math.floor(width * 0.55), y: Math.floor(height * 0.85) },
+      ];
+
+      seeds.forEach(seed => {
+        const idx = seed.y * width + seed.x;
+        grid[idx] = 1;
+        attachedCount++;
+      });
+
+      // Create initial particles around the right side
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        spawnParticle();
+      }
+
+      draw();
+    }
+
+    function spawnParticle() {
+      // Spawn from edges, biased toward right side
+      let x, y;
+      const edge = Math.random();
+
+      if (edge < 0.5) {
+        // Right edge
+        x = width - 2;
+        y = Math.floor(Math.random() * height);
+      } else if (edge < 0.7) {
+        // Top edge
+        x = Math.floor(width * 0.4 + Math.random() * width * 0.6);
+        y = 1;
+      } else if (edge < 0.9) {
+        // Bottom edge
+        x = Math.floor(width * 0.4 + Math.random() * width * 0.6);
+        y = height - 2;
+      } else {
+        // Random in right half
+        x = Math.floor(width * 0.5 + Math.random() * width * 0.45);
+        y = Math.floor(Math.random() * height);
+      }
+
+      particles.push({ x, y });
+    }
+
+    function isAdjacent(x, y) {
+      // Check 8 neighbors
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+            if (grid[ny * width + nx] > 0) {
+              return grid[ny * width + nx];
+            }
+          }
+        }
+      }
+      return 0;
+    }
+
+    function update() {
+      const toRemove = [];
+
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+
+        // Random walk with slight drift toward structure
+        const dx = Math.floor(Math.random() * 3) - 1;
+        const dy = Math.floor(Math.random() * 3) - 1;
+
+        p.x += dx;
+        p.y += dy;
+
+        // Boundary check
+        if (p.x < 1 || p.x >= width - 1 || p.y < 1 || p.y >= height - 1) {
+          toRemove.push(i);
+          continue;
+        }
+
+        // Check if adjacent to structure
+        const adjDist = isAdjacent(p.x, p.y);
+        if (adjDist > 0) {
+          // Attach with probability (stickiness)
+          if (Math.random() < 0.3) {
+            const newDist = adjDist + 1;
+            grid[p.y * width + p.x] = newDist;
+            maxDist = Math.max(maxDist, newDist);
+            attachedCount++;
+            toRemove.push(i);
+          }
+        }
+      }
+
+      // Remove attached/escaped particles and spawn new ones
+      for (let i = toRemove.length - 1; i >= 0; i--) {
+        particles.splice(toRemove[i], 1);
+        spawnParticle();
+      }
+    }
+
+    function draw() {
+      // Clear with subtle fade (creates trails)
+      ctx.fillStyle = 'rgba(5, 5, 8, 0.15)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw structure
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const dist = grid[y * width + x];
+          if (dist > 0) {
+            ctx.fillStyle = getColor(dist);
+            ctx.fillRect(x * SCALE, y * SCALE, SCALE, SCALE);
+
+            // Glow for recent attachments
+            if (dist > maxDist - 50) {
+              ctx.fillStyle = 'rgba(0, 255, 255, 0.03)';
+              ctx.beginPath();
+              ctx.arc(x * SCALE, y * SCALE, SCALE * 4, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        }
+      }
+
+      // Draw wandering particles (very subtle)
+      ctx.fillStyle = 'rgba(0, 255, 255, 0.15)';
+      for (const p of particles) {
+        ctx.fillRect(p.x * SCALE, p.y * SCALE, SCALE, SCALE);
+      }
+
+      // Update stats
+      document.getElementById('particles').textContent = particles.length;
+      document.getElementById('attached').textContent = attachedCount;
+    }
+
+    // Animation loop
+    function animate() {
+      // Multiple updates per frame for faster growth
+      for (let i = 0; i < 5; i++) {
+        update();
+      }
+      draw();
+      requestAnimationFrame(animate);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    animate();
+  </script>
+</body>
+</html>
