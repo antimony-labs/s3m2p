@@ -210,10 +210,10 @@
     let bornTotal = 0;
     let diedTotal = 0;
 
-    const PARTICLE_COUNT = 2000;
+    let PARTICLE_COUNT;
     const SCALE = 2;
-    const MAX_AGE = 400;
-    const DECAY_START = 200;
+    const MAX_AGE = 250;
+    const DECAY_START = 125;
 
     // Two colors only: bright orange and bright blue (high contrast)
     const ORANGE = '#ff6600';
@@ -221,13 +221,7 @@
 
     function getColor(age) {
       const t = age / MAX_AGE;
-
-      // Young cells: orange | Old cells: blue
-      if (t < 0.5) {
-        return ORANGE;
-      } else {
-        return BLUE;
-      }
+      return t < 0.5 ? ORANGE : BLUE;
     }
 
     function resize() {
@@ -236,6 +230,10 @@
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       ctx.imageSmoothingEnabled = false;
+
+      // Scale particle count to screen size for consistent density
+      PARTICLE_COUNT = Math.floor((width * height) / 150);
+
       init();
     }
 
@@ -246,19 +244,36 @@
       bornTotal = 0;
       diedTotal = 0;
 
-      // Multiple seed clusters
-      const numSeeds = 8;
-      for (let i = 0; i < numSeeds; i++) {
-        const sx = Math.floor(width * 0.4 + Math.random() * width * 0.5);
-        const sy = Math.floor(Math.random() * height);
-        const idx = sy * width + sx;
-        if (idx >= 0 && idx < grid.length) {
-          grid[idx] = 1;
-          aliveCount++;
-          bornTotal++;
+      // Pre-seed with substantial clusters for immediate visual impact
+      const numClusters = Math.floor(Math.sqrt(width * height) / 15);
+
+      for (let c = 0; c < numClusters; c++) {
+        const cx = Math.floor(width * 0.35 + Math.random() * width * 0.6);
+        const cy = Math.floor(Math.random() * height);
+
+        // Power law cluster sizes - mostly small, few large
+        const clusterSize = Math.floor(Math.pow(Math.random(), 2) * 80) + 5;
+
+        // Create organic cluster shape
+        for (let i = 0; i < clusterSize; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const dist = Math.sqrt(Math.random()) * Math.sqrt(clusterSize) * 2;
+          const x = Math.floor(cx + Math.cos(angle) * dist);
+          const y = Math.floor(cy + Math.sin(angle) * dist);
+
+          if (x >= 0 && x < width && y >= 0 && y < height) {
+            const idx = y * width + x;
+            if (grid[idx] === 0) {
+              // Vary initial ages for visual interest
+              grid[idx] = Math.floor(Math.random() * MAX_AGE * 0.3) + 1;
+              aliveCount++;
+              bornTotal++;
+            }
+          }
         }
       }
 
+      // Spawn many particles immediately
       for (let i = 0; i < PARTICLE_COUNT; i++) {
         spawnParticle();
       }
@@ -322,9 +337,9 @@
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
 
-        // Brownian motion with momentum
-        p.vx = p.vx * 0.5 + (Math.random() - 0.5) * 2;
-        p.vy = p.vy * 0.5 + (Math.random() - 0.5) * 2;
+        // Fast Brownian motion
+        p.vx = p.vx * 0.3 + (Math.random() - 0.5) * 4;
+        p.vy = p.vy * 0.3 + (Math.random() - 0.5) * 4;
 
         p.x += Math.round(p.vx);
         p.y += Math.round(p.vy);
@@ -335,10 +350,10 @@
           continue;
         }
 
-        // Check for attachment
+        // Check for attachment - high stickiness for fast growth
         const neighborAge = getNeighborAge(Math.floor(p.x), Math.floor(p.y));
         if (neighborAge > 0) {
-          const stickiness = neighborAge < DECAY_START ? 0.4 : 0.1;
+          const stickiness = neighborAge < DECAY_START ? 0.7 : 0.3;
           if (Math.random() < stickiness) {
             const idx = Math.floor(p.y) * width + Math.floor(p.x);
             if (grid[idx] === 0) {
@@ -361,15 +376,28 @@
         spawnParticle();
       }
 
-      // Spontaneous new seeds if population is low
-      if (aliveCount < 50 && Math.random() < 0.1) {
-        const sx = Math.floor(width * 0.5 + Math.random() * width * 0.4);
-        const sy = Math.floor(Math.random() * height);
-        const idx = sy * width + sx;
-        if (grid[idx] === 0) {
-          grid[idx] = 1;
-          aliveCount++;
-          bornTotal++;
+      // Spontaneous new seeds - keeps things eventful
+      const threshold = Math.floor(width * height / 500);
+      if (aliveCount < threshold) {
+        // Spawn a cluster, not just one cell
+        const clusterSize = Math.floor(Math.random() * 20) + 5;
+        const cx = Math.floor(width * 0.4 + Math.random() * width * 0.5);
+        const cy = Math.floor(Math.random() * height);
+
+        for (let i = 0; i < clusterSize; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const dist = Math.random() * 8;
+          const sx = Math.floor(cx + Math.cos(angle) * dist);
+          const sy = Math.floor(cy + Math.sin(angle) * dist);
+
+          if (sx >= 0 && sx < width && sy >= 0 && sy < height) {
+            const idx = sy * width + sx;
+            if (grid[idx] === 0) {
+              grid[idx] = 1;
+              aliveCount++;
+              bornTotal++;
+            }
+          }
         }
       }
     }
@@ -411,7 +439,8 @@
     }
 
     function animate() {
-      for (let i = 0; i < 3; i++) {
+      // Many updates per frame for fast, dynamic simulation
+      for (let i = 0; i < 8; i++) {
         update();
       }
       draw();
