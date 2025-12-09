@@ -78,7 +78,6 @@ function getPackageName(content) {
 
 function getDependencies(content) {
     const deps = [];
-    let inData = false;
     let inDeps = false;
 
     const lines = content.split('\n');
@@ -88,27 +87,27 @@ function getDependencies(content) {
             inDeps = true;
             continue;
         }
-        if (line.startsWith('[')) {
-            inDeps = false; // Exited dependencies section, unless it's like [dependencies.web-sys]
-            if (line.startsWith('[dependencies.')) {
-                // Handle table-based dependency format? 
-                // Currently we only care about internal path dependencies which are usually in the main block
-                // or specified as `name = { path = "..." }`
-                // We'll ignore table entries for now as they are rarer for internal deps in this repo.
-            }
+        if (line.startsWith('[') && !line.startsWith('[dependencies.')) {
+            inDeps = false; // Exited dependencies section
         }
 
         if (inDeps) {
-            // Check for `name = { ... }` or `name = "..."`
-            // Internal deps usually look like: `dna = { path = "DNA" }`
-            const match = line.match(/^([a-zA-Z0-9_\-]+)\s*=/);
-            if (match) {
-                deps.push(match[1]);
+            // Handle multiple formats:
+            // 1. name = { ... }
+            // 2. name = "..."
+            // 3. name.workspace = true (workspace dependency)
+            // 4. name = { path = "...", ... }
+            const matchStandard = line.match(/^([a-zA-Z0-9_\-]+)\s*=/);
+            const matchWorkspace = line.match(/^([a-zA-Z0-9_\-]+)\.workspace\s*=/);
+
+            if (matchWorkspace) {
+                deps.push(matchWorkspace[1]);
+            } else if (matchStandard) {
+                deps.push(matchStandard[1]);
             }
         }
     }
 
-    // Also scan for `[workspace.dependencies]` in root if needed, but we want crate-level deps.
     return deps;
 }
 

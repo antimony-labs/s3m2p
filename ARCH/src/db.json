@@ -989,14 +989,14 @@
   "HELIOS/src/heliosphere.rs": {
     "path": "HELIOS/src/heliosphere.rs",
     "name": "heliosphere.rs",
-    "purpose": "═══════════════════════════════════════════════════════════════════════════════ FILE: heliosphere.rs | DNA/src/heliosphere.rs",
+    "purpose": "═══════════════════════════════════════════════════════════════════════════════ FILE: heliosphere.rs | HELIOS/src/heliosphere.rs",
     "main_function": "new",
     "type": ".rs"
   },
   "HELIOS/src/heliosphere_model.rs": {
     "path": "HELIOS/src/heliosphere_model.rs",
     "name": "heliosphere_model.rs",
-    "purpose": "═══════════════════════════════════════════════════════════════════════════════ FILE: heliosphere_model.rs | DNA/src/heliosphere_model.rs",
+    "purpose": "═══════════════════════════════════════════════════════════════════════════════ FILE: heliosphere_model.rs | HELIOS/src/heliosphere_model.rs",
     "main_function": "new",
     "type": ".rs"
   },
@@ -1024,7 +1024,7 @@
   "HELIOS/src/solar_wind.rs": {
     "path": "HELIOS/src/solar_wind.rs",
     "name": "solar_wind.rs",
-    "purpose": "═══════════════════════════════════════════════════════════════════════════════ FILE: solar_wind.rs | DNA/src/solar_wind.rs",
+    "purpose": "═══════════════════════════════════════════════════════════════════════════════ FILE: solar_wind.rs | HELIOS/src/solar_wind.rs",
     "main_function": "new",
     "type": ".rs"
   },

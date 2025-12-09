@@ -126,131 +126,247 @@ impl AppState {
     }
 
     fn build_cards(&mut self, graph: &DependencyGraph) {
-        let card_width = 160.0;
-        let card_height = 50.0;
-        let padding = 20.0;
-        let section_gap = 60.0;
+        let card_width = 140.0;
+        let card_height = 40.0;
+        let padding = 15.0;
+        let section_gap = 50.0;
+        let layer_gap = 30.0;
 
         let center_x = self.width / 2.0;
-        let mut y = 70.0;
+        let mut y = 60.0;
 
-        // 1. DNA (Top)
-        let dna_width = 240.0;
+        // ========================================
+        // LAYER 1: DNA (Foundation)
+        // ========================================
+        let dna_width = 300.0;
         self.cards.push(Card {
             name: "DNA".to_string(),
-            description: "Foundation (Physics, CAD)".to_string(),
+            description: "Foundation Layer".to_string(),
             color: Colors::DNA,
             x: center_x - dna_width / 2.0,
             y,
             width: dna_width,
-            height: 60.0,
+            height: 50.0,
             children: vec![],
             expanded: true,
             audit: Some(CrateAudit::new("DNA".to_string())),
             source_path: "DNA".to_string(),
         });
-        y += 60.0 + section_gap;
+        y += 50.0 + section_gap;
 
-        // 2. The 5 Pillars: TOOLS | SIMULATION | HELIOS | BLOG | LEARN
-        let pillars = vec![
-            ("TOOLS", Colors::TOOL, "Engineering Utils"),
-            ("SIMULATION", Colors::CORE, "Physics Sims"),
-            ("HELIOS", Colors::PROJECT, "Solar Data"),
-            ("BLOG", Colors::PROJECT, "Bitinary Labs"),
-            ("LEARN", Colors::LEARN, "Tutorials"),
-        ];
+        // ========================================
+        // LAYER 2: CORE Engines (Domain Logic)
+        // ========================================
+        let core_engines: Vec<_> = graph
+            .crates
+            .iter()
+            .filter(|c| c.layer == CrateLayer::Core)
+            .collect();
 
-        let pillar_width = 160.0;
-        let total_pillars_width = 5.0 * pillar_width + 4.0 * padding;
-        let start_x = (self.width - total_pillars_width) / 2.0;
+        if !core_engines.is_empty() {
+            // Section header
+            let section_width = (core_engines.len() as f64) * (card_width + padding) - padding;
+            let start_x = center_x - section_width / 2.0;
 
-        let mut current_x = start_x;
-        let pillar_y = y;
-
-        for (name, color, desc) in pillars {
+            // Label for section
             self.cards.push(Card {
-                name: name.to_string(),
-                description: desc.to_string(),
-                color,
-                x: current_x,
-                y: pillar_y,
-                width: pillar_width,
-                height: 50.0,
-                children: vec![], // Populated via docs?
+                name: "CORE_LABEL".to_string(),
+                description: "CORE Engines".to_string(),
+                color: Colors::CORE,
+                x: center_x - 100.0,
+                y: y - 25.0,
+                width: 200.0,
+                height: 20.0,
+                children: vec![],
                 expanded: true,
                 audit: None,
-                source_path: name.to_string(), // Folder path match
+                source_path: "".to_string(),
             });
 
-            // 3. Children under each pillar
-            // We search for crates where path starts with "{Pillar}/"
-            // OR if it is a CORE item like "TOOLS/CORE/..." or "SIMULATION/CORE/..."
-
-            // Engines first (Core)
-            let mut sub_y = pillar_y + 50.0 + 20.0;
-
-            // Find Core/Engines for this pillar
-            // E.g. TOOLS -> TOOLS/CORE/*
-            // SIMULATIONS -> SIMULATION/CORE/*
-            let core_items: Vec<_> = graph
-                .crates
-                .iter()
-                .filter(|c| c.path.starts_with(&format!("{}/CORE", name)))
-                .collect();
-
-            for item in core_items {
+            let mut current_x = start_x;
+            for item in core_engines {
                 let display_name = item.name.replace("-engine", "").to_uppercase();
                 self.cards.push(Card {
                     name: item.name.clone(),
-                    description: display_name, // Engine name
-                    color: Colors::CORE,       // Highlight as core
-                    x: current_x + 10.0,       // Indent
-                    y: sub_y,
-                    width: pillar_width - 20.0,
-                    height: 40.0,
+                    description: display_name,
+                    color: Colors::CORE,
+                    x: current_x,
+                    y,
+                    width: card_width,
+                    height: card_height,
                     children: vec![],
                     expanded: false,
                     audit: Some(CrateAudit::new(item.name.clone())),
                     source_path: item.path.clone(),
                 });
-                sub_y += 45.0;
+                current_x += card_width + padding;
             }
+            y += card_height + section_gap;
+        }
 
-            // Regular items (Non-Core)
-            // e.g. TOOLS/AUTOCRATE (but not TOOLS/CORE/...)
-            let items: Vec<_> = graph
-                .crates
-                .iter()
-                .filter(|c| c.path.starts_with(name) && !c.path.contains("/CORE"))
-                // Exclude the pillar itself if it's in the list (HELIOS, BLOG)
-                .filter(|c| c.path != name.to_string())
-                .collect();
+        // ========================================
+        // LAYER 3: Projects (Applications)
+        // ========================================
+        let projects: Vec<_> = graph
+            .crates
+            .iter()
+            .filter(|c| c.layer == CrateLayer::Project)
+            .collect();
 
-            for item in items {
-                // Shorten name
+        if !projects.is_empty() {
+            let section_width = (projects.len() as f64) * (card_width + padding) - padding;
+            let start_x = center_x - section_width / 2.0;
+
+            // Label
+            self.cards.push(Card {
+                name: "PROJECT_LABEL".to_string(),
+                description: "Projects".to_string(),
+                color: Colors::PROJECT,
+                x: center_x - 80.0,
+                y: y - 25.0,
+                width: 160.0,
+                height: 20.0,
+                children: vec![],
+                expanded: true,
+                audit: None,
+                source_path: "".to_string(),
+            });
+
+            let mut current_x = start_x;
+            for item in projects {
+                self.cards.push(Card {
+                    name: item.name.clone(),
+                    description: item.name.to_uppercase(),
+                    color: Colors::PROJECT,
+                    x: current_x,
+                    y,
+                    width: card_width,
+                    height: card_height,
+                    children: vec![],
+                    expanded: false,
+                    audit: Some(CrateAudit::new(item.name.clone())),
+                    source_path: item.path.clone(),
+                });
+                current_x += card_width + padding;
+            }
+            y += card_height + section_gap;
+        }
+
+        // ========================================
+        // LAYER 4: Tools (User-facing utilities)
+        // ========================================
+        let tools: Vec<_> = graph
+            .crates
+            .iter()
+            .filter(|c| c.layer == CrateLayer::Tool && !c.path.starts_with("LEARN/"))
+            .collect();
+
+        if !tools.is_empty() {
+            let section_width = (tools.len().min(6) as f64) * (card_width + padding) - padding;
+            let start_x = center_x - section_width / 2.0;
+
+            // Label
+            self.cards.push(Card {
+                name: "TOOL_LABEL".to_string(),
+                description: "Tools".to_string(),
+                color: Colors::TOOL,
+                x: center_x - 60.0,
+                y: y - 25.0,
+                width: 120.0,
+                height: 20.0,
+                children: vec![],
+                expanded: true,
+                audit: None,
+                source_path: "".to_string(),
+            });
+
+            let mut current_x = start_x;
+            let mut row_y = y;
+            for (i, item) in tools.iter().enumerate() {
+                if i > 0 && i % 6 == 0 {
+                    // New row
+                    row_y += card_height + layer_gap;
+                    current_x = start_x;
+                }
                 let display_name = item
                     .name
-                    .replace("-learn", "")
-                    .replace("_", " ")
+                    .replace("-", " ")
                     .to_uppercase();
 
                 self.cards.push(Card {
                     name: item.name.clone(),
                     description: display_name,
-                    color: color, // Inherit pillar color
-                    x: current_x + 10.0,
-                    y: sub_y,
-                    width: pillar_width - 20.0,
-                    height: 40.0,
+                    color: Colors::TOOL,
+                    x: current_x,
+                    y: row_y,
+                    width: card_width,
+                    height: card_height,
                     children: vec![],
                     expanded: false,
                     audit: Some(CrateAudit::new(item.name.clone())),
                     source_path: item.path.clone(),
                 });
-                sub_y += 45.0;
+                current_x += card_width + padding;
             }
+            y = row_y + card_height + section_gap;
+        }
 
-            current_x += pillar_width + padding;
+        // ========================================
+        // LAYER 5: Learn (Tutorials)
+        // ========================================
+        let learn: Vec<_> = graph
+            .crates
+            .iter()
+            .filter(|c| c.path.starts_with("LEARN/"))
+            .collect();
+
+        if !learn.is_empty() {
+            let section_width = (learn.len().min(8) as f64) * (card_width + padding) - padding;
+            let start_x = center_x - section_width / 2.0;
+
+            // Label
+            self.cards.push(Card {
+                name: "LEARN_LABEL".to_string(),
+                description: "Learn".to_string(),
+                color: Colors::LEARN,
+                x: center_x - 60.0,
+                y: y - 25.0,
+                width: 120.0,
+                height: 20.0,
+                children: vec![],
+                expanded: true,
+                audit: None,
+                source_path: "".to_string(),
+            });
+
+            let mut current_x = start_x;
+            let mut row_y = y;
+            for (i, item) in learn.iter().enumerate() {
+                if i > 0 && i % 8 == 0 {
+                    row_y += card_height + layer_gap;
+                    current_x = start_x;
+                }
+                let display_name = item
+                    .name
+                    .replace("-learn", "")
+                    .replace("-", " ")
+                    .to_uppercase();
+
+                self.cards.push(Card {
+                    name: item.name.clone(),
+                    description: display_name,
+                    color: Colors::LEARN,
+                    x: current_x,
+                    y: row_y,
+                    width: card_width,
+                    height: card_height,
+                    children: vec![],
+                    expanded: false,
+                    audit: Some(CrateAudit::new(item.name.clone())),
+                    source_path: item.path.clone(),
+                });
+                current_x += card_width + padding;
+            }
         }
     }
 

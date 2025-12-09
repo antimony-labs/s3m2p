@@ -32,19 +32,24 @@
       "name": "simulation-engine",
       "path": "SIMULATION/CORE/SIMULATION_ENGINE",
       "layer": "Core",
-      "dependencies": []
+      "dependencies": [
+        "dna"
+      ]
     },
     {
       "name": "spice-engine",
       "path": "SIMULATION/CORE/SPICE_ENGINE",
       "layer": "Core",
-      "dependencies": []
+      "dependencies": [
+        "dna"
+      ]
     },
     {
       "name": "pll-engine",
       "path": "TOOLS/CORE/PLL_ENGINE",
       "layer": "Core",
       "dependencies": [
+        "dna",
         "spice-engine"
       ]
     },
@@ -52,25 +57,33 @@
       "name": "export-engine",
       "path": "TOOLS/CORE/EXPORT_ENGINE",
       "layer": "Core",
-      "dependencies": []
+      "dependencies": [
+        "dna"
+      ]
     },
     {
       "name": "wave-engine",
       "path": "SIMULATION/CORE/WAVE_ENGINE",
       "layer": "Core",
-      "dependencies": []
+      "dependencies": [
+        "dna"
+      ]
     },
     {
       "name": "autocrate-engine",
       "path": "TOOLS/CORE/AUTOCRATE_ENGINE",
       "layer": "Core",
-      "dependencies": []
+      "dependencies": [
+        "dna"
+      ]
     },
     {
       "name": "cad-engine",
       "path": "TOOLS/CORE/CAD_ENGINE",
       "layer": "Core",
-      "dependencies": []
+      "dependencies": [
+        "dna"
+      ]
     },
     {
       "name": "welcome",
