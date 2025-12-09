@@ -238,7 +238,7 @@
     let bornTotal = 0;
     let diedTotal = 0;
 
-    const PARTICLE_COUNT = Math.floor((width * height) / 150);
+    let PARTICLE_COUNT = 0; // Will be set in resize()
     const SCALE = 2;
     const MAX_AGE = 500;
     const DECAY_START = 125;
@@ -259,8 +259,10 @@
       canvas.height = window.innerHeight;
       ctx.imageSmoothingEnabled = false;
 
+      console.log("Resized to:", width, height);
+
       // Scale particle count to screen size for consistent density
-      PARTICLE_COUNT = Math.floor((width * height) / 150);
+      PARTICLE_COUNT = Math.floor((width * height) / 500);
 
       init();
     }
