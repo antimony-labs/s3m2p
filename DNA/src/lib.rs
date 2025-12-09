@@ -5,14 +5,34 @@ use glam::Vec2;
 use rand::Rng;
 
 // ============================================================================
+// NEW ARCHITECTURE MODULES (DNA/CORE/SRC Refactor)
+// See REFACTOR.md for full architecture documentation
+// ============================================================================
+
+/// WORLD - The Stage (coordinate systems, topology, grids)
+pub mod world;
+
+/// PHYSICS - The Rules (mechanics, fields, solvers)
+pub mod physics;
+
+/// MATH - The Language (vectors, matrices, complex numbers)
+pub mod math;
+
+/// DATA - Data Structures (arena, spatial grid, mesh, graph)
+pub mod data;
+
+// ============================================================================
 // DOMAIN-SPECIFIC MODULES (Heliosphere/Astronomy)
 // ============================================================================
 
 pub mod heliosphere;
 pub use heliosphere::*;
 
-pub mod coordinates;
-pub use coordinates::*;
+// Note: coordinates module moved to world::transforms::astronomical
+// Re-export for backward compatibility
+pub use world::transforms::astronomical as coordinates;
+
+pub mod sim;
 
 pub mod solar_wind;
 pub use solar_wind::*;
@@ -35,9 +55,13 @@ pub use zones::*;
 pub mod interaction;
 pub use interaction::*;
 
-/// Random number generation helpers
-pub mod random;
-// Note: don't re-export random to avoid collision with rand crate
+// Note: random module moved to math::random
+// Re-export for backward compatibility (don't glob re-export to avoid rand collision)
+pub use math::random::{
+    random_angle, random_direction, random_in_annulus, random_in_circle,
+    random_in_rect, random_in_rect_with_margin, random_index, random_velocity,
+    random_velocity_range, roll_chance,
+};
 
 /// Population statistics and metrics
 pub mod statistics;
@@ -47,6 +71,10 @@ pub use statistics::*;
 pub mod color;
 pub use color::*;
 
+/// Wave field simulation with FFT
+pub mod wave_field;
+pub use wave_field::*;
+
 /// PLL (Phase-Locked Loop) circuit design
 pub mod pll;
 pub use pll::*;
@@ -55,13 +83,16 @@ pub use pll::*;
 pub mod spice;
 pub use spice::*;
 
+/// Autocrate crate generation algorithms
+pub mod autocrate;
+
 // ============================================================================
 // MATH AND FILTERING MODULES
 // ============================================================================
 
-/// 2x2 Matrix operations for 2D transforms and filters
-pub mod mat2;
-pub use mat2::Mat2;
+// Note: Mat2 moved to math::mat
+// Re-export for backward compatibility
+pub use math::mat::Mat2;
 
 /// Extended Kalman Filter for state estimation
 pub mod ekf;

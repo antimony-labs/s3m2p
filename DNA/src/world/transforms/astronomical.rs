@@ -1,3 +1,39 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: astronomical.rs
+//! PATH: DNA/src/world/transforms/astronomical.rs
+//! ═══════════════════════════════════════════════════════════════════════════════
+//!
+//! PURPOSE: Astronomical coordinate system transformations
+//!
+//! LAYER: DNA → WORLD → TRANSFORMS
+//!
+//! ┌─────────────────────────────────────────────────────────────────────────────┐
+//! │ DATA DEFINED                                                                │
+//! ├─────────────────────────────────────────────────────────────────────────────┤
+//! │ CoordinateTransforms    J2000, ecliptic, galactic, HEE, HGI, RTN           │
+//! │ AngleUtils              Angle normalization, angular separation             │
+//! └─────────────────────────────────────────────────────────────────────────────┘
+//!
+//! ┌─────────────────────────────────────────────────────────────────────────────┐
+//! │ DATA FLOW                                                                   │
+//! ├─────────────────────────────────────────────────────────────────────────────┤
+//! │ CONSUMES:  Vec3 (position), f32 (RA, Dec, Julian date)                      │
+//! │ PRODUCES:  Vec3 (transformed position), Mat4 (transform matrices)           │
+//! └─────────────────────────────────────────────────────────────────────────────┘
+//!
+//! DEPENDS ON:
+//!   • glam::Mat4, Vec3, Vec4 → Matrix and vector types
+//!
+//! USED BY:
+//!   • HELIOS                  → Solar system visualization
+//!   • DNA/src/heliosphere.rs  → Heliospheric coordinates
+//!
+//! ═══════════════════════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────────────────────────
+// CODE BELOW - Migrated from DNA/src/coordinates.rs
+// ─────────────────────────────────────────────────────────────────────────────────
+
 use glam::{Mat4, Vec3, Vec4};
 use std::f32::consts::PI;
 
@@ -48,7 +84,6 @@ impl CoordinateTransforms {
         let sin_l_cp = l_cp.sin();
 
         // Construct matrix from row vectors (basis vectors of Galactic frame in Equatorial coords)
-        // The JS code sets elements explicitly in row-major order.
         // Row 1
         let r1c1 = -sin_l_cp * cos_dec_gp * cos_ra_gp - cos_l_cp * sin_ra_gp;
         let r1c2 = -sin_l_cp * cos_dec_gp * sin_ra_gp + cos_l_cp * cos_ra_gp;
@@ -149,30 +184,6 @@ impl CoordinateTransforms {
         let cos_theta0 = theta0_rad.cos();
         let sin_theta0 = theta0_rad.sin();
 
-        // Transpose of HEE to HGI
-        // Row 1 (was Col 1 of previous, but wait... previous was constructed manually)
-        // Let's trust the JS inverse logic:
-        /*
-         const transform = new THREE.Matrix4().set(
-          cosOmega * cosTheta0 - sinOmega * sinTheta0 * cosI,
-          sinOmega * cosTheta0 + cosOmega * sinTheta0 * cosI,
-          sinTheta0 * sinI,
-          0,
-
-          -cosOmega * sinTheta0 - sinOmega * cosTheta0 * cosI,
-          -sinOmega * sinTheta0 + cosOmega * cosTheta0 * cosI,
-          cosTheta0 * sinI,
-          0,
-
-          sinOmega * sinI,
-          -cosOmega * sinI,
-          cosI,
-          0,
-
-          0, 0, 0, 1
-        );
-        */
-
         let r1c1 = cos_omega * cos_theta0 - sin_omega * sin_theta0 * cos_i;
         let r1c2 = sin_omega * cos_theta0 + cos_omega * sin_theta0 * cos_i;
         let r1c3 = sin_theta0 * sin_i;
@@ -237,14 +248,7 @@ impl CoordinateTransforms {
         let t = (v - r * v.dot(r)).normalize();
         let n = r.cross(t).normalize();
 
-        // Recompute t to ensure orthogonality?
-        // JS: const tOrth = new THREE.Vector3().crossVectors(n, r).normalize();
         let t_orth = n.cross(r).normalize();
-
-        // Mat4::from_cols(x, y, z, w) -> Basis vectors
-        // RTN typically maps R to X, T to Y, N to Z?
-        // JS: new THREE.Matrix4().makeBasis(r, tOrth, n);
-        // makeBasis sets columns.
 
         Mat4::from_cols(
             Vec4::new(r.x, r.y, r.z, 0.0),

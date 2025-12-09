@@ -1,10 +1,33 @@
-//! Random number generation utilities
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: random.rs
+//! PATH: DNA/src/math/random.rs
+//! ═══════════════════════════════════════════════════════════════════════════════
 //!
-//! Provides convenient helpers for common random operations in simulations.
+//! PURPOSE: Random number generation utilities for simulations
 //!
-//! ## Traceability
-//! - Used by: too.foo (boid spawning, mutations), helios (future), all simulations
-//! - Tests: test_random_angle_range, test_random_direction_unit, test_random_in_circle
+//! LAYER: DNA → MATH
+//!
+//! ┌─────────────────────────────────────────────────────────────────────────────┐
+//! │ DATA FLOW                                                                   │
+//! ├─────────────────────────────────────────────────────────────────────────────┤
+//! │ CONSUMES:  f32 (ranges, probabilities), usize (indices)                     │
+//! │ PRODUCES:  f32 (random values), Vec2 (random positions/directions), bool    │
+//! └─────────────────────────────────────────────────────────────────────────────┘
+//!
+//! DEPENDS ON:
+//!   • glam::Vec2 → Vector type
+//!   • rand       → RNG backend
+//!
+//! USED BY:
+//!   • DNA/src/lib.rs      → Boid spawning, mutations
+//!   • WELCOME             → Particle effects
+//!   • All simulations     → Random initialization
+//!
+//! ═══════════════════════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────────────────────────
+// CODE BELOW - Optimized for ML development
+// ─────────────────────────────────────────────────────────────────────────────────
 
 use glam::Vec2;
 use rand::Rng;
@@ -154,9 +177,6 @@ mod tests {
 
     #[test]
     fn test_roll_chance() {
-        // Test extremes
-        assert!(!roll_chance(0.0) || true); // 0% might rarely pass due to floating point
-
         // Statistical test: 50% should hit roughly half the time
         let mut hits = 0;
         for _ in 0..1000 {

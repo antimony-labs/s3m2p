@@ -1,7 +1,7 @@
 // Extended Kalman Filter for 2D state estimation
 // Useful for smoothing noisy position data, sensor fusion
 
-use crate::mat2::Mat2;
+use crate::math::mat::Mat2;
 use glam::Vec2;
 
 /// Extended Kalman Filter for 2D position estimation
