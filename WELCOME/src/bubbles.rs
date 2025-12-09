@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: bubbles.rs | WELCOME/src/bubbles.rs
+//! PURPOSE: Bubble navigation configuration with environment-specific URLs and category definitions
+//! MODIFIED: 2025-12-09
+//! LAYER: WELCOME (landing)
+//! ═══════════════════════════════════════════════════════════════════════════════
+//!
 //! Bubble configuration and category data structures
 //!
 //! This module defines the bubble navigation system for too.foo.

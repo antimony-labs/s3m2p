@@ -1,3 +1,8 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Cargo.toml | Cargo.toml
+# PURPOSE: Rust package manifest with dependencies and build configuration
+# MODIFIED: 2025-11-29
+# ═══════════════════════════════════════════════════════════════════════════════
 [package]
 name = "learn"
 version = "0.1.0"

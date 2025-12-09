@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: arch_diagram.rs | WELCOME/src/arch_diagram.rs
+//! PURPOSE: Architecture diagram renderer with iframe integration for external micro-frontend
+//! MODIFIED: 2025-12-09
+//! LAYER: WELCOME (landing)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use wasm_bindgen::prelude::*;
 use web_sys::{Document, Window};
 

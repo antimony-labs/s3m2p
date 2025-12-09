@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: graph.rs | ARCH/src/graph.rs
+//! PURPOSE: Dependency graph data structures for crate hierarchy and relationships
+//! MODIFIED: 2025-12-09
+//! LAYER: ARCH (architecture explorer)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 //! Dependency graph data structures
 
 use serde::{Deserialize, Serialize};

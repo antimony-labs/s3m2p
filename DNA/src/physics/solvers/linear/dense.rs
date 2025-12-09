@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: dense.rs
-//! PATH: DNA/src/physics/solvers/linear/dense.rs
+//! FILE: dense.rs | DNA/src/physics/solvers/linear/dense.rs
+//! PURPOSE: Dense matrix linear algebra (LU, QR decomposition)
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: Dense matrix linear algebra (LU, QR decomposition)
 //!

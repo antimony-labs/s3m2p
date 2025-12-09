@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lib.rs | OPENCV/src/lib.rs
+//! PURPOSE: Library crate root module with public API exports
+//! MODIFIED: 2025-12-09
+//! LAYER: LEARN → OPENCV
+//! ═══════════════════════════════════════════════════════════════════════════════
 use wasm_bindgen::prelude::*;
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen(start))]

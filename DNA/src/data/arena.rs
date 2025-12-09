@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: arena.rs
-//! PATH: DNA/src/data/arena.rs
+//! FILE: arena.rs | DNA/src/data/arena.rs
+//! PURPOSE: Generic fixed-capacity arena allocator with generational indices
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: Generic fixed-capacity arena allocator with generational indices
 //!

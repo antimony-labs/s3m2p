@@ -1,8 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: mod.rs | DNA/src/physics/electromagnetics/lumped/mod.rs
-//! PURPOSE: Lumped circuit element simulation (SPICE-like)
-//! LAYER: DNA → PHYSICS → ELECTROMAGNETICS → LUMPED
+//! PURPOSE: Module exports: netlist, matrix, ac
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! Lumped circuit analysis using Modified Nodal Analysis (MNA):
 //! - netlist.rs  - Circuit element definitions and netlist representation

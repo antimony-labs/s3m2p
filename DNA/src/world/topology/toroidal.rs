@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: toroidal.rs
-//! PATH: DNA/src/world/topology/toroidal.rs
+//! FILE: toroidal.rs | DNA/src/world/topology/toroidal.rs
+//! PURPOSE: Toroidal topology (wrap-around boundaries)
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: Toroidal topology (wrap-around boundaries)
 //!

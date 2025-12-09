@@ -11,12 +11,18 @@ source "$SCRIPT_DIR/config.sh"
 # Commands
 # ------------------------------------------------------------------
 
+cmd_docs() {
+    echo "📜 Generating Architecture Documentation..."
+    node "$SCRIPT_DIR/scan_docs.js"
+}
+
 cmd_up() {
     local target="${1:-all}"
     
     mkdir -p "$LOG_DIR"
     
     if [[ "$target" == "all" ]]; then
+        cmd_docs
         echo "🚀 Starting ALL services..."
         echo "Logs: $LOG_DIR"
         echo ""

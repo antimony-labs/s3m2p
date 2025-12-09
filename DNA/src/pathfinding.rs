@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: pathfinding.rs | DNA/src/pathfinding.rs
+//! PURPOSE: Defines GridMap, Heuristic, PathResult types
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 // Pathfinding algorithms for grid-based navigation
 // A*, D* Lite foundations for dynamic replanning
 

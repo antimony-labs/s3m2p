@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: conduction.rs
-//! PATH: DNA/src/physics/thermal/conduction.rs
+//! FILE: conduction.rs | DNA/src/physics/thermal/conduction.rs
+//! PURPOSE: Heat equation solver (thermal conduction)
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: Heat equation solver (thermal conduction)
 //!

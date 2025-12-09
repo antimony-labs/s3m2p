@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: geometry.rs | DNA/src/autocrate/geometry.rs
+//! PURPOSE: Defines Point3, BoundingBox, SkidGeometry types
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 // Geometry types for crate components
 
 use super::constants::LumberSize;

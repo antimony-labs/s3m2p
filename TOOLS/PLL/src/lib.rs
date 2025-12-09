@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lib.rs | TOOLS/PLL/src/lib.rs
+//! PURPOSE: PLL designer WASM application with interactive circuit design and visualization
+//! MODIFIED: 2025-12-09
+//! LAYER: TOOLS → PLL
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 #![allow(unexpected_cfgs)]
 use wasm_bindgen::prelude::*;
 use web_sys::{

@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: mod.rs | DNA/src/spice/mod.rs
+//! PURPOSE: Spice module implementation
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 //! SPICE circuit simulation - DEPRECATED
 //!
 //! This module is deprecated. Please use `physics::electromagnetics::lumped` instead.

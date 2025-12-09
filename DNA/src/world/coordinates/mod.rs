@@ -1,7 +1,8 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: mod.rs | DNA/src/world/coordinates/mod.rs
-//! PURPOSE: Coordinate system representations (Cartesian, spherical, etc.)
-//! LAYER: DNA → WORLD → COORDINATES
+//! PURPOSE: Module exports: cartesian, spherical
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 /// Cartesian coordinates (x, y, z) - default representation

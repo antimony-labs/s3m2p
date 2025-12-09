@@ -1,7 +1,8 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: constants.rs | DNA/src/physics/core/constants.rs
-//! PURPOSE: Fundamental physical constants
-//! LAYER: DNA → PHYSICS → CORE
+//! PURPOSE: Physical and mathematical constants
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 // Speed of light in vacuum (m/s)

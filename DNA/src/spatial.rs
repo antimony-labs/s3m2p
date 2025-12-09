@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: spatial.rs | DNA/src/spatial.rs
+//! PURPOSE: Defines SphericalPos, SpatialKey, DataLayer types
+//! MODIFIED: 2025-11-29
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use glam::Vec3;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

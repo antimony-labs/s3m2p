@@ -1,7 +1,8 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: mod.rs | DNA/src/physics/solvers/pde/mod.rs
-//! PURPOSE: Partial Differential Equation solvers
-//! LAYER: DNA → PHYSICS → SOLVERS → PDE
+//! PURPOSE: Module exports: spectral
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 /// FFT-based spectral methods (Cooley-Tukey)

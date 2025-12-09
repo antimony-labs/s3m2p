@@ -1,4 +1,9 @@
 #!/bin/bash
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: work-on-issue.sh | SCRIPTS/work-on-issue.sh
+# PURPOSE: Creates worktree and opens development environment for GitHub issue work
+# MODIFIED: 2025-11-30
+# ═══════════════════════════════════════════════════════════════════════════════
 # Simple issue workflow
 # Usage: work-on-issue.sh <issue-number>
 

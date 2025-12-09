@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: webhook.rs | DNA/CLAUDE_AUTOMATION/src/webhook.rs
+//! PURPOSE: Defines AppState, WebhookPayload types
+//! MODIFIED: 2025-12-02
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use axum::{
     extract::State,
     http::StatusCode,

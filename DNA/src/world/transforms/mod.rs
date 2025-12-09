@@ -1,7 +1,8 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: mod.rs | DNA/src/world/transforms/mod.rs
-//! PURPOSE: Coordinate system transformations
-//! LAYER: DNA → WORLD → TRANSFORMS
+//! PURPOSE: Module exports: astronomical
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 /// Astronomical coordinate transforms (J2000, ecliptic, galactic)

@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: state.rs | DNA/CLAUDE_AUTOMATION/src/state.rs
+//! PURPOSE: Defines Database types
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use crate::github::Comment;
 use anyhow::Result;
 use rusqlite::{params, Connection};

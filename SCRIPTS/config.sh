@@ -1,4 +1,9 @@
 #!/bin/bash
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: config.sh | SCRIPTS/config.sh
+# PURPOSE: Configuration file defining repository paths, project ports, and directory mappings
+# MODIFIED: 2025-12-09
+# ═══════════════════════════════════════════════════════════════════════════════
 # S3M2P Configuration - Single Source of Truth
 # Sourced by other scripts
 
@@ -43,7 +48,7 @@ declare -A PROJECT_PORTS=(
 declare -A PROJECT_DIRS=(
     ["welcome"]="WELCOME"
     ["helios"]="HELIOS"
-    ["chladni"]="SIMULATIONS/CHLADNI"
+    ["chladni"]="SIMULATION/CHLADNI"
     ["sensors"]="COMING_SOON"
     ["autocrate"]="TOOLS/AUTOCRATE"
     ["blog"]="BLOG"

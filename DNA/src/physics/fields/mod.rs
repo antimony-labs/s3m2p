@@ -1,7 +1,8 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: mod.rs | DNA/src/physics/fields/mod.rs
-//! PURPOSE: Field representations - scalar, vector, tensor, wave
-//! LAYER: DNA → PHYSICS → FIELDS
+//! PURPOSE: Module exports: wave
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 /// Wave equation solver and Chladni patterns

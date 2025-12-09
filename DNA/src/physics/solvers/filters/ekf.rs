@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: ekf.rs
-//! PATH: DNA/src/physics/solvers/filters/ekf.rs
+//! FILE: ekf.rs | DNA/src/physics/solvers/filters/ekf.rs
+//! PURPOSE: Extended Kalman Filter for 2D state estimation
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: Extended Kalman Filter for 2D state estimation
 //!

@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: main.rs | ML/src/main.rs
+//! PURPOSE: Binary crate entry point for CLI or standalone application
+//! MODIFIED: 2025-11-26
+//! LAYER: LEARN → ML
+//! ═══════════════════════════════════════════════════════════════════════════════
 mod engine;
 mod lessons;
 mod utils;

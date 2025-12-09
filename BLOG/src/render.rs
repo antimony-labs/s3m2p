@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: render.rs | BLOG/src/render.rs
+//! PURPOSE: DOM rendering engine for blog posts, listings, and tag pages
+//! MODIFIED: 2025-11-29
+//! LAYER: BLOG
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 // DOM rendering for blog
 // Generates HTML elements from blog data
 

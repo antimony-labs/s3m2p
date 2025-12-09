@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lesson_04_cnn.rs | ML/src/lessons/lesson_04_cnn.rs
+//! PURPOSE: Convolutional neural networks for image processing
+//! MODIFIED: 2025-11-26
+//! LAYER: LEARN → ML
+//! ═══════════════════════════════════════════════════════════════════════════════
 //! Lesson 04: Convolutional Neural Networks (CNNs)
 //!
 //! CNNs are the backbone of computer vision. They learn to detect features

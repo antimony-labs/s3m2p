@@ -1,7 +1,8 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: mod.rs | DNA/src/physics/solvers/nonlinear/mod.rs
-//! PURPOSE: Nonlinear equation solvers and optimization
-//! LAYER: DNA → PHYSICS → SOLVERS → NONLINEAR
+//! PURPOSE: Nonlinear module implementation
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 // pub mod newton;       // TODO: Newton-Raphson iteration

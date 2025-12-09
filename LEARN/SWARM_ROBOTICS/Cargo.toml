@@ -1,3 +1,8 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Cargo.toml | SWARM_ROBOTICS/Cargo.toml
+# PURPOSE: Rust package manifest with dependencies and build configuration
+# MODIFIED: 2025-12-02
+# ═══════════════════════════════════════════════════════════════════════════════
 [package]
 name = "swarm-learn"
 version = "0.1.0"

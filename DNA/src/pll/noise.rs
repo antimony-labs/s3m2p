@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: noise.rs | DNA/src/pll/noise.rs
+//! PURPOSE: Provides 1 public functions for pll
+//! MODIFIED: 2025-12-02
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use super::types::{BodePlot, NoiseComponents, PhaseNoiseProfile};
 use std::f64::consts::PI;
 

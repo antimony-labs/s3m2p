@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: types.rs | DNA/src/autocrate/types.rs
+//! PURPOSE: Defines ProductDimensions, Clearances, CrateSpec types
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 // AutoCrate Types
 
 use super::constants::LumberSize;

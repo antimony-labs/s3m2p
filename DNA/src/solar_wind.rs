@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: solar_wind.rs | DNA/src/solar_wind.rs
+//! PURPOSE: Defines NumberTimeSeries, Vector3TimeSeries, ParkerSpiral types
+//! MODIFIED: 2025-11-29
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use glam::Vec3;
 use std::f32::consts::PI;
 

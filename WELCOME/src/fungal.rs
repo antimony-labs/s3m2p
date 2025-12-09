@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: fungal.rs | WELCOME/src/fungal.rs
+//! PURPOSE: Organic fungal network growth simulation with spatial partitioning and boid interaction
+//! MODIFIED: 2025-11-30
+//! LAYER: WELCOME (landing)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use glam::Vec2;
 use wasm_bindgen::JsValue;
 use web_sys::CanvasRenderingContext2d;

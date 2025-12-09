@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: agent_router.rs | DNA/CLAUDE_AUTOMATION/src/agent_router.rs
+//! PURPOSE: Defines Agent types
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use crate::github::Comment;
 use crate::state::Database;
 use anyhow::Result;

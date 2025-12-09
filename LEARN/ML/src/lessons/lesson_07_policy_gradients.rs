@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lesson_07_policy_gradients.rs | ML/src/lessons/lesson_07_policy_gradients.rs
+//! PURPOSE: Policy gradient methods for continuous action spaces
+//! MODIFIED: 2025-11-26
+//! LAYER: LEARN → ML
+//! ═══════════════════════════════════════════════════════════════════════════════
 //! Lesson 07: Policy Gradients (REINFORCE with Baseline)
 //!
 //! Policy Gradients optimize the policy directly by computing gradients

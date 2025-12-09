@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: zones.rs | DNA/src/zones.rs
+//! PURPOSE: Defines ExclusionZone types
+//! MODIFIED: 2025-11-29
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 //! Zone and exclusion area utilities
 //!
 //! Provides spatial zone primitives for:

@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: main.rs | WELCOME/src/main.rs
+//! PURPOSE: WASM entry point with constellation UI, boid simulation, and fungal network rendering
+//! MODIFIED: 2025-12-09
+//! LAYER: WELCOME (landing)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 #![allow(unexpected_cfgs)]
 
 use glam::Vec2;

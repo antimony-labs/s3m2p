@@ -1,3 +1,8 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Trunk.toml | AI/Trunk.toml
+# PURPOSE: Trunk build configuration for WASM deployment
+# MODIFIED: 2025-12-02
+# ═══════════════════════════════════════════════════════════════════════════════
 [build]
 target = "index.html"
 dist = "dist"

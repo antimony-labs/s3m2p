@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: spectral.rs
-//! PATH: DNA/src/physics/solvers/pde/spectral.rs
+//! FILE: spectral.rs | DNA/src/physics/solvers/pde/spectral.rs
+//! PURPOSE: FFT-based spectral methods for solving PDEs
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: FFT-based spectral methods for solving PDEs
 //!

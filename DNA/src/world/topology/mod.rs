@@ -1,7 +1,8 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: mod.rs | DNA/src/world/topology/mod.rs
-//! PURPOSE: World boundary behaviors (wrap-around, walls, infinite)
-//! LAYER: DNA → WORLD → TOPOLOGY
+//! PURPOSE: Module exports: toroidal
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 /// Toroidal (wrap-around) boundaries

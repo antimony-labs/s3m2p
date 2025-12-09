@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: random.rs
-//! PATH: DNA/src/math/random.rs
+//! FILE: random.rs | DNA/src/math/random.rs
+//! PURPOSE: Random number generation utilities for simulations
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: Random number generation utilities for simulations
 //!

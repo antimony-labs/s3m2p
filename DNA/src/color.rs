@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: color.rs | DNA/src/color.rs
+//! PURPOSE: Defines Rgb, Hsl, Gradient types
+//! MODIFIED: 2025-11-29
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 //! Color management and theme utilities
 //!
 //! Provides color primitives and conversion functions for:

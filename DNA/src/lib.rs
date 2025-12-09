@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lib.rs | DNA/src/lib.rs
+//! PURPOSE: Foundation library root - physics, math, world, data structures
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 // Suppress wasm_bindgen cfg warnings from macro expansion
 #![allow(unexpected_cfgs)]
 

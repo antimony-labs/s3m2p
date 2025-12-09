@@ -1,4 +1,9 @@
 #!/bin/bash
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: validate.sh | SCRIPTS/validate.sh
+# PURPOSE: Validates workspace by running checks, tests, clippy, and WASM builds
+# MODIFIED: 2025-12-09
+# ═══════════════════════════════════════════════════════════════════════════════
 set -e
 
 echo "1. Checking workspace..."

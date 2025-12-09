@@ -1,8 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: mod.rs | DNA/src/physics/mod.rs
-//! PURPOSE: The Rules - Physics simulation algorithms organized by domain
-//! LAYER: DNA → PHYSICS
+//! PURPOSE: Physics simulation root - mechanics, fields, solvers, orbital dynamics
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PHYSICS defines HOW things behave:
 //! - core/             - Units, constants, physical quantities

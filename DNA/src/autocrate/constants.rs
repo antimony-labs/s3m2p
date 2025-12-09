@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: constants.rs | DNA/src/autocrate/constants.rs
+//! PURPOSE: Defines LumberSize types
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 // AutoCrate constants - Rust port of crate-constants.ts
 // All ASTM standard dimensions and structural requirements
 

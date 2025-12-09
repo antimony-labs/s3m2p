@@ -1,7 +1,8 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: mod.rs | DNA/src/physics/solvers/mod.rs
-//! PURPOSE: Numerical solvers - ODE, PDE, linear, nonlinear, filters
-//! LAYER: DNA → PHYSICS → SOLVERS
+//! PURPOSE: Module exports for solvers
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod ode;

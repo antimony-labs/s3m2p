@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: transient.rs | DNA/src/pll/transient.rs
+//! PURPOSE: Provides 1 public functions for pll
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use super::types::TransientResult;
 use std::f64::consts::PI;
 

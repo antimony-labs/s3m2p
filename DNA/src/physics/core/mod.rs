@@ -1,7 +1,8 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: mod.rs | DNA/src/physics/core/mod.rs
-//! PURPOSE: Physical units, constants, and quantity types
-//! LAYER: DNA → PHYSICS → CORE
+//! PURPOSE: Module exports: constants
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 /// Physical constants (c, G, h, k_B, etc.)

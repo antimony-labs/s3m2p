@@ -1,8 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: mod.rs | DNA/src/data/mod.rs
-//! PURPOSE: Data structures for simulation and spatial queries
-//! LAYER: DNA → DATA
+//! PURPOSE: Module exports for data
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! DATA provides efficient data structures:
 //! - arena.rs        - Generic arena allocator with generational indices

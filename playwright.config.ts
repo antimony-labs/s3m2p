@@ -1,3 +1,11 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * FILE: playwright.config.ts | ./playwright.config.ts
+ * PURPOSE: Playwright configuration for end-to-end testing and visual regression tests
+ * MODIFIED: 2025-12-09
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({

@@ -1,7 +1,8 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: mod.rs | DNA/src/physics/thermal/mod.rs
-//! PURPOSE: Heat transfer - conduction, convection, radiation
-//! LAYER: DNA → PHYSICS → THERMAL
+//! PURPOSE: Module exports: conduction
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 /// Heat equation solver

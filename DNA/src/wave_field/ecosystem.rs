@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: ecosystem.rs | DNA/src/wave_field/ecosystem.rs
+//! PURPOSE: Defines CellType, Wave, PIDController types
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 //! Pure mathematical ecosystem model (no rendering)
 //!
 //! Wave-based particle spawning with PID control.

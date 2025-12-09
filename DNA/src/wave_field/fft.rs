@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: fft.rs | DNA/src/wave_field/fft.rs
+//! PURPOSE: Defines FFT2D types
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 //! 2D Fast Fourier Transform (Cooley-Tukey Algorithm)
 //!
 //! Radix-2 decimation-in-time FFT for square grids (power-of-2 sizes).

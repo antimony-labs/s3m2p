@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: main.rs | HELIOS/src/main.rs
+//! PURPOSE: WASM entry point with event handlers and animation loop for heliosphere visualization
+//! MODIFIED: 2025-12-02
+//! LAYER: HELIOS (simulation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 // Helios - Heliosphere Visualization
 // GPU-free Canvas 2D rendering following too.foo patterns
 

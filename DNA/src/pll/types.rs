@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: types.rs | DNA/src/pll/types.rs
+//! PURPOSE: Defines NoiseComponents, PhaseNoiseProfile, TransientResult types
+//! MODIFIED: 2025-12-02
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use serde::{Deserialize, Serialize};
 
 /// Phase noise components at a specific offset

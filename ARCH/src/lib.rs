@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lib.rs | ARCH/src/lib.rs
+//! PURPOSE: Interactive canvas-based architecture explorer showing crates, layers, and dependencies
+//! MODIFIED: 2025-12-09
+//! LAYER: ARCH (architecture explorer)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 //! ARCH - Architecture Visualization
 //!
 //! Hierarchical card-based view of the antimony-labs monorepo.
@@ -15,6 +22,18 @@ pub use audit::{CrateAudit, GitMetadata, ValidationStatus};
 pub use graph::{CrateInfo, CrateLayer, DependencyGraph};
 
 const WORKSPACE_DATA: &str = include_str!("workspace_data.json");
+const DOC_DB_JSON: &str = include_str!("db.json");
+
+use serde::Deserialize;
+use std::collections::HashMap;
+
+#[derive(Deserialize, Clone, Debug)]
+struct DocEntry {
+    path: String,
+    name: String,
+    purpose: String,
+    main_function: String,
+}
 
 // ============================================================================
 // COLORS
@@ -53,8 +72,9 @@ struct Card {
     width: f64,
     height: f64,
     children: Vec<String>,
-    expanded: bool, // Future: click to expand/collapse
+    expanded: bool,
     audit: Option<CrateAudit>,
+    source_path: String,
 }
 
 struct AppState {
@@ -65,6 +85,9 @@ struct AppState {
     scroll_y: f64,
     hovered_card: Option<String>,
     cards: Vec<Card>,
+    docs: HashMap<String, DocEntry>,
+    modal_open: bool,
+    selected_card_docs: Vec<DocEntry>,
 }
 
 impl AppState {
@@ -83,6 +106,7 @@ impl AppState {
         ctx.scale(dpr, dpr).ok();
 
         let graph: DependencyGraph = serde_json::from_str(WORKSPACE_DATA).unwrap_or_default();
+        let docs: HashMap<String, DocEntry> = serde_json::from_str(DOC_DB_JSON).unwrap_or_default();
 
         let mut state = Self {
             canvas,
@@ -92,6 +116,9 @@ impl AppState {
             scroll_y: 0.0,
             hovered_card: None,
             cards: Vec::new(),
+            docs,
+            modal_open: false,
+            selected_card_docs: Vec::new(),
         };
 
         state.build_cards(&graph);
@@ -99,246 +126,131 @@ impl AppState {
     }
 
     fn build_cards(&mut self, graph: &DependencyGraph) {
-        let card_width = 280.0;
-        let card_height = 80.0;
-        let small_card_height = 50.0;
+        let card_width = 160.0;
+        let card_height = 50.0;
         let padding = 20.0;
-        let section_gap = 40.0;
+        let section_gap = 60.0;
 
-        // Start below header
+        let center_x = self.width / 2.0;
         let mut y = 70.0;
-        let center_x = self.width / 2.0 - card_width / 2.0;
 
-        // DNA - Foundation (Top)
+        // 1. DNA (Top)
+        let dna_width = 240.0;
         self.cards.push(Card {
             name: "DNA".to_string(),
-            description: "Foundation layer: physics, CAD, simulation algorithms".to_string(),
+            description: "Foundation (Physics, CAD)".to_string(),
             color: Colors::DNA,
-            x: center_x,
+            x: center_x - dna_width / 2.0,
             y,
-            width: card_width,
-            height: card_height,
+            width: dna_width,
+            height: 60.0,
             children: vec![],
             expanded: true,
             audit: Some(CrateAudit::new("DNA".to_string())),
+            source_path: "DNA".to_string(),
         });
-        y += card_height + section_gap;
+        y += 60.0 + section_gap;
 
-        // CORE Engines - horizontal row
-        let core_engines: Vec<_> = graph
-            .crates
-            .iter()
-            .filter(|c| c.layer == CrateLayer::Core)
-            .collect();
+        // 2. The 5 Pillars: TOOLS | SIMULATION | HELIOS | BLOG | LEARN
+        let pillars = vec![
+            ("TOOLS", Colors::TOOL, "Engineering Utils"),
+            ("SIMULATION", Colors::CORE, "Physics Sims"),
+            ("HELIOS", Colors::PROJECT, "Solar Data"),
+            ("BLOG", Colors::PROJECT, "Bitinary Labs"),
+            ("LEARN", Colors::LEARN, "Tutorials"),
+        ];
 
-        let core_card_width = 160.0;
-        let core_total_width = core_engines.len() as f64 * (core_card_width + padding) - padding;
-        let mut core_x = (self.width - core_total_width) / 2.0;
+        let pillar_width = 160.0;
+        let total_pillars_width = 5.0 * pillar_width + 4.0 * padding;
+        let start_x = (self.width - total_pillars_width) / 2.0;
 
-        self.cards.push(Card {
-            name: "CORE".to_string(),
-            description: "Domain-specific engines".to_string(),
-            color: Colors::CORE,
-            x: center_x,
-            y,
-            width: card_width,
-            height: 50.0,
-            children: core_engines.iter().map(|c| c.name.clone()).collect(),
-            expanded: true,
-            audit: None,
-        });
-        y += 60.0;
+        let mut current_x = start_x;
+        let pillar_y = y;
 
-        for crate_info in &core_engines {
-            let short_name = crate_info.name.replace("-engine", "").to_uppercase();
+        for (name, color, desc) in pillars {
             self.cards.push(Card {
-                name: crate_info.name.clone(),
-                description: short_name,
-                color: Colors::CORE,
-                x: core_x,
-                y,
-                width: core_card_width,
-                height: small_card_height,
-                children: vec![],
-                expanded: false,
-                audit: Some(CrateAudit::new(crate_info.name.clone())),
-            });
-            core_x += core_card_width + padding;
-        }
-        y += small_card_height + section_gap;
-
-        // Projects row
-        let projects: Vec<_> = graph
-            .crates
-            .iter()
-            .filter(|c| c.layer == CrateLayer::Project)
-            .collect();
-
-        self.cards.push(Card {
-            name: "PROJECTS".to_string(),
-            description: "Web applications".to_string(),
-            color: Colors::PROJECT,
-            x: center_x,
-            y,
-            width: card_width,
-            height: 50.0,
-            children: projects.iter().map(|c| c.name.clone()).collect(),
-            expanded: true,
-            audit: None,
-        });
-        y += 60.0;
-
-        let proj_card_width = 140.0;
-        let proj_total_width = projects.len() as f64 * (proj_card_width + padding) - padding;
-        let mut proj_x = (self.width - proj_total_width) / 2.0;
-
-        for crate_info in &projects {
-            self.cards.push(Card {
-                name: crate_info.name.clone(),
-                description: crate_info.path.clone(),
-                color: Colors::PROJECT,
-                x: proj_x,
-                y,
-                width: proj_card_width,
-                height: small_card_height,
-                children: vec![],
-                expanded: false,
-                audit: Some(CrateAudit::new(crate_info.name.clone())),
-            });
-            proj_x += proj_card_width + padding;
-        }
-        y += small_card_height + section_gap;
-
-        // TOOLS section
-        let tools: Vec<_> = graph
-            .crates
-            .iter()
-            .filter(|c| c.layer == CrateLayer::Tool && c.path.starts_with("TOOLS/"))
-            .collect();
-
-        self.cards.push(Card {
-            name: "TOOLS".to_string(),
-            description: "Engineering utilities".to_string(),
-            color: Colors::TOOL,
-            x: padding,
-            y,
-            width: card_width,
-            height: 50.0,
-            children: tools.iter().map(|c| c.name.clone()).collect(),
-            expanded: true,
-            audit: None,
-        });
-
-        // LEARN section (same row)
-        let learns: Vec<_> = graph
-            .crates
-            .iter()
-            .filter(|c| c.layer == CrateLayer::Tool && c.path.starts_with("LEARN/"))
-            .collect();
-
-        self.cards.push(Card {
-            name: "LEARN".to_string(),
-            description: "Interactive tutorials".to_string(),
-            color: Colors::LEARN,
-            x: self.width - card_width - padding,
-            y,
-            width: card_width,
-            height: 50.0,
-            children: learns.iter().map(|c| c.name.clone()).collect(),
-            expanded: true,
-            audit: None,
-        });
-        y += 60.0;
-
-        // Tools items (left column)
-        let tool_x = padding + 20.0;
-        let mut tool_y = y;
-        let item_width = 200.0;
-
-        for crate_info in &tools {
-            let display_name = crate_info.name.replace("-", " ").to_uppercase();
-            self.cards.push(Card {
-                name: crate_info.name.clone(),
-                description: display_name,
-                color: Colors::TOOL,
-                x: tool_x,
-                y: tool_y,
-                width: item_width,
-                height: 40.0,
-                children: vec![],
-                expanded: false,
-                audit: Some(CrateAudit::new(crate_info.name.clone())),
-            });
-            tool_y += 50.0;
-        }
-
-        // Learn items (right column)
-        let learn_x = self.width - item_width - padding - 20.0;
-        let mut learn_y = y;
-
-        for crate_info in &learns {
-            let display_name = crate_info
-                .name
-                .replace("-learn", "")
-                .replace("-", " ")
-                .to_uppercase();
-            self.cards.push(Card {
-                name: crate_info.name.clone(),
-                description: display_name,
-                color: Colors::LEARN,
-                x: learn_x,
-                y: learn_y,
-                width: item_width,
-                height: 40.0,
-                children: vec![],
-                expanded: false,
-                audit: Some(CrateAudit::new(crate_info.name.clone())),
-            });
-            learn_y += 50.0;
-        }
-
-        // SIMULATIONS section (center bottom)
-        let sims: Vec<_> = graph
-            .crates
-            .iter()
-            .filter(|c| c.path.starts_with("SIMULATIONS/"))
-            .collect();
-
-        if !sims.is_empty() {
-            let sim_y = tool_y.max(learn_y) + section_gap;
-
-            self.cards.push(Card {
-                name: "SIMULATIONS".to_string(),
-                description: "Physics simulations".to_string(),
-                color: Colors::PROJECT,
-                x: center_x,
-                y: sim_y,
-                width: card_width,
+                name: name.to_string(),
+                description: desc.to_string(),
+                color,
+                x: current_x,
+                y: pillar_y,
+                width: pillar_width,
                 height: 50.0,
-                children: sims.iter().map(|c| c.name.clone()).collect(),
+                children: vec![], // Populated via docs?
                 expanded: true,
                 audit: None,
+                source_path: name.to_string(), // Folder path match
             });
 
-            let sim_item_y = sim_y + 60.0;
-            let sim_total_width = sims.len() as f64 * (item_width + padding) - padding;
-            let mut sim_x = (self.width - sim_total_width) / 2.0;
+            // 3. Children under each pillar
+            // We search for crates where path starts with "{Pillar}/"
+            // OR if it is a CORE item like "TOOLS/CORE/..." or "SIMULATION/CORE/..."
 
-            for crate_info in &sims {
+            // Engines first (Core)
+            let mut sub_y = pillar_y + 50.0 + 20.0;
+
+            // Find Core/Engines for this pillar
+            // E.g. TOOLS -> TOOLS/CORE/*
+            // SIMULATIONS -> SIMULATION/CORE/*
+            let core_items: Vec<_> = graph
+                .crates
+                .iter()
+                .filter(|c| c.path.starts_with(&format!("{}/CORE", name)))
+                .collect();
+
+            for item in core_items {
+                let display_name = item.name.replace("-engine", "").to_uppercase();
                 self.cards.push(Card {
-                    name: crate_info.name.clone(),
-                    description: crate_info.name.to_uppercase(),
-                    color: Colors::PROJECT,
-                    x: sim_x,
-                    y: sim_item_y,
-                    width: item_width,
+                    name: item.name.clone(),
+                    description: display_name, // Engine name
+                    color: Colors::CORE,       // Highlight as core
+                    x: current_x + 10.0,       // Indent
+                    y: sub_y,
+                    width: pillar_width - 20.0,
                     height: 40.0,
                     children: vec![],
                     expanded: false,
-                    audit: Some(CrateAudit::new(crate_info.name.clone())),
+                    audit: Some(CrateAudit::new(item.name.clone())),
+                    source_path: item.path.clone(),
                 });
-                sim_x += item_width + padding;
+                sub_y += 45.0;
             }
+
+            // Regular items (Non-Core)
+            // e.g. TOOLS/AUTOCRATE (but not TOOLS/CORE/...)
+            let items: Vec<_> = graph
+                .crates
+                .iter()
+                .filter(|c| c.path.starts_with(name) && !c.path.contains("/CORE"))
+                // Exclude the pillar itself if it's in the list (HELIOS, BLOG)
+                .filter(|c| c.path != name.to_string())
+                .collect();
+
+            for item in items {
+                // Shorten name
+                let display_name = item
+                    .name
+                    .replace("-learn", "")
+                    .replace("_", " ")
+                    .to_uppercase();
+
+                self.cards.push(Card {
+                    name: item.name.clone(),
+                    description: display_name,
+                    color: color, // Inherit pillar color
+                    x: current_x + 10.0,
+                    y: sub_y,
+                    width: pillar_width - 20.0,
+                    height: 40.0,
+                    children: vec![],
+                    expanded: false,
+                    audit: Some(CrateAudit::new(item.name.clone())),
+                    source_path: item.path.clone(),
+                });
+                sub_y += 45.0;
+            }
+
+            current_x += pillar_width + padding;
         }
     }
 
@@ -376,6 +288,77 @@ impl AppState {
 
         // Draw header
         self.draw_header();
+
+        // Draw Modal
+        self.draw_modal();
+    }
+
+    fn draw_modal(&self) {
+        if !self.modal_open {
+            return;
+        }
+        let ctx = &self.ctx;
+
+        // Overlay
+        ctx.set_fill_style(&JsValue::from_str("rgba(0, 0, 0, 0.85)"));
+        ctx.fill_rect(0.0, 0.0, self.width, self.height);
+
+        // Modal Window
+        let modal_w = 800.0;
+        let modal_h = 600.0;
+        let x = (self.width - modal_w) / 2.0;
+        let y = (self.height - modal_h) / 2.0;
+
+        ctx.set_fill_style(&JsValue::from_str("#0f0f12"));
+        self.rounded_rect(x, y, modal_w, modal_h, 8.0);
+        ctx.fill();
+
+        ctx.set_stroke_style(&JsValue::from_str("#3b82f6"));
+        ctx.set_line_width(2.0);
+        ctx.stroke();
+
+        // Header
+        ctx.set_fill_style(&JsValue::from_str("#1f1f2e"));
+        self.rounded_rect(x, y, modal_w, 50.0, 8.0); // Top rounded only? Simplification: just fill
+        ctx.fill_rect(x, y, modal_w, 50.0);
+
+        ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+        ctx.set_font("bold 16px 'JetBrains Mono', monospace");
+        ctx.set_text_align("left");
+        ctx.fill_text("DOCUMENTATION TERMINAL", x + 20.0, y + 30.0)
+            .ok();
+
+        // Content
+        let mut content_y = y + 80.0;
+        ctx.set_font("14px 'JetBrains Mono', monospace");
+
+        if self.selected_card_docs.is_empty() {
+            ctx.set_fill_style(&JsValue::from_str("#888899"));
+            ctx.fill_text(
+                "No documentation found for this module.",
+                x + 20.0,
+                content_y,
+            )
+            .ok();
+        } else {
+            for doc in self.selected_card_docs.iter().take(15) {
+                // Limit items
+                ctx.set_fill_style(&JsValue::from_str("#22c55e")); // Green
+                ctx.fill_text(&format!("FILE: {}", doc.name), x + 20.0, content_y)
+                    .ok();
+                content_y += 20.0;
+
+                ctx.set_fill_style(&JsValue::from_str("#aaaaaa"));
+                ctx.fill_text(&format!("PURPOSE: {}", doc.purpose), x + 40.0, content_y)
+                    .ok();
+                content_y += 20.0;
+
+                ctx.set_fill_style(&JsValue::from_str("#3b82f6"));
+                ctx.fill_text(&format!("MAIN: {}", doc.main_function), x + 40.0, content_y)
+                    .ok();
+                content_y += 30.0;
+            }
+        }
     }
 
     fn draw_card(&self, card: &Card) {
@@ -529,17 +512,67 @@ fn setup_events(_document: &web_sys::Document, canvas: &HtmlCanvasElement) -> Re
 
     // Click
     let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
-        APP.with(|app| {
+        let should_render = APP.with(|app| {
             if let Some(ref mut state) = *app.borrow_mut() {
                 let rect = state.canvas.get_bounding_client_rect();
                 let x = event.client_x() as f64 - rect.left();
                 let y = event.client_y() as f64 - rect.top();
-                if let Some(card_name) = state.card_at(x, y) {
-                    web_sys::console::log_1(&format!("Clicked: {}", card_name).into());
-                    // Future: Open info panel or navigate
+
+                if state.modal_open {
+                    state.modal_open = false;
+                    true
+                } else if let Some(card_name) = state.card_at(x, y) {
+                    if let Some(card) = state.cards.iter().find(|c| c.name == card_name).cloned() {
+                        state.modal_open = true;
+                        let search_path = &card.source_path;
+                        if !search_path.is_empty() {
+                            state.selected_card_docs = state
+                                .docs
+                                .values()
+                                .filter(|d| d.path.starts_with(search_path))
+                                .cloned()
+                                .collect();
+
+                            state.selected_card_docs.sort_by(|a, b| {
+                                let score_a = if a.name.starts_with("README") {
+                                    0
+                                } else if a.name == "lib.rs" || a.name == "main.rs" {
+                                    1
+                                } else if a.name == "mod.rs" {
+                                    2
+                                } else {
+                                    3
+                                };
+                                let score_b = if b.name.starts_with("README") {
+                                    0
+                                } else if b.name == "lib.rs" || b.name == "main.rs" {
+                                    1
+                                } else if b.name == "mod.rs" {
+                                    2
+                                } else {
+                                    3
+                                };
+                                if score_a != score_b {
+                                    score_a.cmp(&score_b)
+                                } else {
+                                    a.path.cmp(&b.path)
+                                }
+                            });
+                        } else {
+                            state.selected_card_docs.clear();
+                        }
+                    }
+                    true
+                } else {
+                    false
                 }
+            } else {
+                false
             }
         });
+        if should_render {
+            render();
+        }
     }) as Box<dyn FnMut(_)>);
     canvas.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
     closure.forget();

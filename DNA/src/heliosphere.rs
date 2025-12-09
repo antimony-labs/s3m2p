@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: heliosphere.rs | DNA/src/heliosphere.rs
+//! PURPOSE: Defines HeliosphereMorphology, HeliosphereParameters, HeliosphereSurface types
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use std::f32::consts::PI;
 use wasm_bindgen::prelude::*;
 

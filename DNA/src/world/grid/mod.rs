@@ -1,7 +1,8 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: mod.rs | DNA/src/world/grid/mod.rs
-//! PURPOSE: Spatial grid representations for discretization
-//! LAYER: DNA → WORLD → GRID
+//! PURPOSE: Grid module implementation
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 // pub mod uniform;       // TODO: Phase 4

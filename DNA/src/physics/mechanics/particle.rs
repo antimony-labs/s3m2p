@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: particle.rs
-//! PATH: DNA/src/physics/mechanics/particle.rs
+//! FILE: particle.rs | DNA/src/physics/mechanics/particle.rs
+//! PURPOSE: Point mass dynamics using Newton's laws
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: Point mass dynamics using Newton's laws
 //!

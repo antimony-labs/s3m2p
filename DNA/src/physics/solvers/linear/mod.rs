@@ -1,7 +1,8 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: mod.rs | DNA/src/physics/solvers/linear/mod.rs
-//! PURPOSE: Linear algebra solvers
-//! LAYER: DNA → PHYSICS → SOLVERS → LINEAR
+//! PURPOSE: Module exports: dense
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 /// Dense matrix operations (LU, QR)

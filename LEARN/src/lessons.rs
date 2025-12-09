@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lessons.rs | src/lessons.rs
+//! PURPOSE: Lesson definitions and curriculum structure
+//! MODIFIED: 2025-11-29
+//! LAYER: LEARN → src
+//! ═══════════════════════════════════════════════════════════════════════════════
 // Lesson definitions - Zero to AGI curriculum
 
 /// A single lesson

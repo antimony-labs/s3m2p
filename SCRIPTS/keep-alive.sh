@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: keep-alive.sh | SCRIPTS/keep-alive.sh
+# PURPOSE: Monitors and restarts dev servers to ensure continuous operation in background
+# MODIFIED: 2025-12-09
+# ═══════════════════════════════════════════════════════════════════════════════
 # S3M2P - Keep Alive Monitor
 # Ensures dev servers stay running. Run this in a background terminal or tmux session.
 

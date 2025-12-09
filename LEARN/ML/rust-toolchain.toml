@@ -1,3 +1,8 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: rust-toolchain.toml | ML/rust-toolchain.toml
+# PURPOSE: Rust toolchain version specification
+# MODIFIED: 2025-11-26
+# ═══════════════════════════════════════════════════════════════════════════════
 [toolchain]
 channel = "nightly"
 components = ["rustfmt", "clippy"]

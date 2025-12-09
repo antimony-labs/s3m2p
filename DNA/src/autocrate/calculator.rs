@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: calculator.rs | DNA/src/autocrate/calculator.rs
+//! PURPOSE: Shipping crate geometry calculator for dimensions and components
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 // Crate geometry calculator
 // Computes all dimensions and component positions
 #![allow(dead_code)]

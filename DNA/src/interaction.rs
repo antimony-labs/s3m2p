@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: interaction.rs | DNA/src/interaction.rs
+//! PURPOSE: Defines InteractionResult types
+//! MODIFIED: 2025-11-29
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 //! Interaction effects for entity-environment and entity-entity interactions
 //!
 //! Provides a unified system for handling interactions between:

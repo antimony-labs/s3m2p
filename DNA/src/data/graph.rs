@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: graph.rs
-//! PATH: DNA/src/data/graph.rs
+//! FILE: graph.rs | DNA/src/data/graph.rs
+//! PURPOSE: Graph data structures for circuits, pathfinding, dependencies
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: Graph data structures for circuits, pathfinding, dependencies
 //!

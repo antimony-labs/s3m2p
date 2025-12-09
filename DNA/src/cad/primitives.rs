@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: primitives.rs
-//! PATH: DNA/src/cad/primitives.rs
+//! FILE: primitives.rs | DNA/src/cad/primitives.rs
+//! PURPOSE: Solid primitive generators (box, cylinder, sphere, etc.)
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: Solid primitive generators (box, cylinder, sphere, etc.)
 //!

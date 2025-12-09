@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lesson_10_llm.rs | ML/src/lessons/lesson_10_llm.rs
+//! PURPOSE: Large language models and transformer architecture
+//! MODIFIED: 2025-11-26
+//! LAYER: LEARN → ML
+//! ═══════════════════════════════════════════════════════════════════════════════
 //! Lesson 10: Large Language Models (Transformers & Attention)
 //!
 //! The Transformer architecture revolutionized NLP. The key insight:

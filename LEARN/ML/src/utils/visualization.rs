@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: visualization.rs | ML/src/utils/visualization.rs
+//! PURPOSE: Data visualization utilities and plotting helpers
+//! MODIFIED: 2025-11-26
+//! LAYER: LEARN → ML
+//! ═══════════════════════════════════════════════════════════════════════════════
 use serde_json::json;
 use std::error::Error;
 use std::fs::File;

@@ -1,3 +1,11 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * FILE: test_wave_sim.js | COMING_SOON/test_wave_sim.js
+ * PURPOSE: Quantum wave-particle ecosystem with GOD controller and parameter regulation
+ * MODIFIED: 2025-12-09
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
 // Test quantum wave-particle ecosystem
 // Simulates wavefunction collapse without rendering
 

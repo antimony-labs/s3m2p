@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: audit.rs | ARCH/src/audit.rs
+//! PURPOSE: Crate audit tracking for git metadata and validation status
+//! MODIFIED: 2025-12-09
+//! LAYER: ARCH (architecture explorer)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 //! Audit module for tracking file validation and git metadata
 //!
 //! This module provides structures and functions to validate files against

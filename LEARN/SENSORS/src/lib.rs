@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lib.rs | SENSORS/src/lib.rs
+//! PURPOSE: Library crate root module with public API exports
+//! MODIFIED: 2025-12-09
+//! LAYER: LEARN → SENSORS
+//! ═══════════════════════════════════════════════════════════════════════════════
 #![allow(unexpected_cfgs)]
 use std::cell::RefCell;
 use std::rc::Rc;

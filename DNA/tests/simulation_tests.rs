@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: simulation_tests.rs | DNA/tests/simulation_tests.rs
+//! PURPOSE: Unit and integration tests
+//! MODIFIED: 2025-11-29
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use dna::{
     compute_diversity, compute_flocking_forces, process_predation, process_scavenging,
     simulation_step, trigger_mass_extinction, BoidArena, BoidRole, Genome, SimConfig, SpatialGrid,

@@ -1,3 +1,8 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Cargo.toml | ML/antimony-core/Cargo.toml
+# PURPOSE: Rust package manifest with dependencies and build configuration
+# MODIFIED: 2025-11-26
+# ═══════════════════════════════════════════════════════════════════════════════
 [package]
 name = "antimony-core"
 version = "0.1.0"

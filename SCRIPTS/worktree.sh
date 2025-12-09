@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: worktree.sh | SCRIPTS/worktree.sh
+# PURPOSE: Manages git worktrees for GitHub issues with project label detection
+# MODIFIED: 2025-12-03
+# ═══════════════════════════════════════════════════════════════════════════════
 # S3M2P Worktree Management Script
 # Usage: ./scripts/worktree.sh <command> [options]
 #

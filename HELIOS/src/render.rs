@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: render.rs | HELIOS/src/render.rs
+//! PURPOSE: Canvas 2D rendering engine for solar system visualization with starfield and UI
+//! MODIFIED: 2025-12-02
+//! LAYER: HELIOS (simulation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 // Canvas 2D Renderer - Following too.foo patterns
 // No GPU required, efficient CPU rendering
 #![allow(dead_code)]

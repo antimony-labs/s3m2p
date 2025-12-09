@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Cargo.toml | ./Cargo.toml
+# PURPOSE: Workspace manifest defining all crates and shared dependencies for S3M2P monorepo
+# MODIFIED: 2025-12-09
+# ═══════════════════════════════════════════════════════════════════════════════
+
 [workspace]
 resolver = "2"
 members = [
@@ -8,13 +14,13 @@ members = [
     "DNA/CLAUDE_AUTOMATION",
 
     # CORE - Domain-specific engines
-    "CORE/SIMULATION_ENGINE",
-    "CORE/SPICE_ENGINE",
-    "CORE/PLL_ENGINE",
-    "CORE/EXPORT_ENGINE",
-    "CORE/WAVE_ENGINE",
-    "CORE/AUTOCRATE_ENGINE",
-    "CORE/CAD_ENGINE",
+    "SIMULATION/CORE/SIMULATION_ENGINE",
+    "SIMULATION/CORE/SPICE_ENGINE",
+    "TOOLS/CORE/PLL_ENGINE",
+    "TOOLS/CORE/EXPORT_ENGINE",
+    "SIMULATION/CORE/WAVE_ENGINE",
+    "TOOLS/CORE/AUTOCRATE_ENGINE",
+    "TOOLS/CORE/CAD_ENGINE",
 
     # L1 Bubbles (deployed)
     "WELCOME",
@@ -23,7 +29,7 @@ members = [
     "ARCH",
 
     # Simulations (L2 under Simulations bubble)
-    "SIMULATIONS/CHLADNI",
+    "SIMULATION/CHLADNI",
 
     # Tools (L2 under Tools bubble)
     "TOOLS/AUTOCRATE",

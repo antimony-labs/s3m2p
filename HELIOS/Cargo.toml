@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Cargo.toml | HELIOS/Cargo.toml
+# PURPOSE: Cargo manifest for Helios WASM application with web-sys dependencies
+# MODIFIED: 2025-12-02
+# ═══════════════════════════════════════════════════════════════════════════════
+
 [package]
 name = "helios"
 version = "0.1.0"

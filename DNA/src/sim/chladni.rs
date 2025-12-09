@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: chladni.rs | DNA/src/sim/chladni.rs
+//! PURPOSE: Defines ChladniMode, PlateMode, WaveSimulation types
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 // Wave simulation for Chladni patterns
 // Implements 2D wave equation with modal excitation
 

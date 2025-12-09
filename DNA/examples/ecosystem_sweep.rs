@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: ecosystem_sweep.rs | DNA/examples/ecosystem_sweep.rs
+//! PURPOSE: Examples module implementation
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 //! Parameter sweep for ecosystem hyperparameter optimization
 //!
 //! Run with: cargo run --release --example ecosystem_sweep

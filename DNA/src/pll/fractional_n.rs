@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: fractional_n.rs | DNA/src/pll/fractional_n.rs
+//! PURPOSE: Provides 4 public functions for pll
+//! MODIFIED: 2025-12-02
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use crate::pll::types::*;
 
 /// Calculate fractional-N divider parameters

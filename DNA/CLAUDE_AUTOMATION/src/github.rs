@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: github.rs | DNA/CLAUDE_AUTOMATION/src/github.rs
+//! PURPOSE: Defines Issue, Comment, GitHubClient types
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use crate::config::Config;
 use anyhow::Result;
 use octocrab::Octocrab;

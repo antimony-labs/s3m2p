@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: streaming.rs | HELIOS/src/streaming.rs
+//! PURPOSE: Streaming controller for spatial star data with LOD-based chunk fetching
+//! MODIFIED: 2025-12-02
+//! LAYER: HELIOS (simulation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 // Streaming controller for spatial data - WASM only
 #![allow(dead_code)]
 
