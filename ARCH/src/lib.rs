@@ -126,53 +126,220 @@ impl AppState {
     }
 
     fn build_cards(&mut self, graph: &DependencyGraph) {
-        let card_width = 140.0;
-        let card_height = 40.0;
-        let padding = 15.0;
-        let section_gap = 50.0;
-        let layer_gap = 30.0;
+        let card_width = 120.0;
+        let card_height = 35.0;
+        let small_card_width = 100.0;
+        let small_card_height = 30.0;
+        let padding = 12.0;
+        let section_gap = 40.0;
+        let core_indent = 20.0;
+        let project_indent = 40.0;
 
         let center_x = self.width / 2.0;
-        let mut y = 60.0;
+        let mut y = 50.0;
 
         // ========================================
-        // LAYER 1: DNA (Foundation)
+        // DNA (Foundation) - Top Center
         // ========================================
-        let dna_width = 300.0;
+        let dna_width = 200.0;
         self.cards.push(Card {
             name: "DNA".to_string(),
-            description: "Foundation Layer".to_string(),
+            description: "Foundation".to_string(),
             color: Colors::DNA,
             x: center_x - dna_width / 2.0,
             y,
             width: dna_width,
-            height: 50.0,
+            height: 45.0,
             children: vec![],
             expanded: true,
             audit: Some(CrateAudit::new("DNA".to_string())),
             source_path: "DNA".to_string(),
         });
-        y += 50.0 + section_gap;
+        y += 45.0 + section_gap;
 
         // ========================================
-        // LAYER 2: CORE Engines (Domain Logic)
+        // Hub-and-Spoke Layout: 3 Main Sections
+        // TOOLS (left) | SIMULATION (center) | LEARN (right)
+        // Each with CORE engines + projects below
         // ========================================
-        let core_engines: Vec<_> = graph
+
+        let section_width = 200.0;
+        let total_width = section_width * 3.0 + padding * 2.0;
+        let start_x = center_x - total_width / 2.0;
+
+        // Helper to build a section with CORE + projects
+        struct SectionConfig<'a> {
+            name: &'a str,
+            label: &'a str,
+            color: &'static str,
+            core_prefix: &'a str,
+            project_prefix: &'a str,
+        }
+
+        let sections = vec![
+            SectionConfig {
+                name: "TOOLS",
+                label: "Tools",
+                color: Colors::TOOL,
+                core_prefix: "TOOLS/CORE/",
+                project_prefix: "TOOLS/",
+            },
+            SectionConfig {
+                name: "SIMULATION",
+                label: "Simulations",
+                color: Colors::CORE,
+                core_prefix: "SIMULATION/CORE/",
+                project_prefix: "SIMULATION/",
+            },
+            SectionConfig {
+                name: "LEARN",
+                label: "Learn",
+                color: Colors::LEARN,
+                core_prefix: "", // No CORE for learn yet
+                project_prefix: "LEARN/",
+            },
+        ];
+
+        let section_start_y = y;
+        let mut max_section_height = 0.0f64;
+
+        for (i, section) in sections.iter().enumerate() {
+            let section_x = start_x + i as f64 * (section_width + padding);
+            let mut section_y = section_start_y;
+
+            // Section header
+            self.cards.push(Card {
+                name: format!("{}_SECTION", section.name),
+                description: section.label.to_string(),
+                color: section.color,
+                x: section_x,
+                y: section_y,
+                width: section_width,
+                height: card_height,
+                children: vec![],
+                expanded: true,
+                audit: None,
+                source_path: section.name.to_string(),
+            });
+            section_y += card_height + padding;
+
+            // CORE engines for this section
+            if !section.core_prefix.is_empty() {
+                let core_engines: Vec<_> = graph
+                    .crates
+                    .iter()
+                    .filter(|c| c.path.starts_with(section.core_prefix))
+                    .collect();
+
+                if !core_engines.is_empty() {
+                    // CORE label
+                    self.cards.push(Card {
+                        name: format!("{}_CORE_LABEL", section.name),
+                        description: "CORE".to_string(),
+                        color: Colors::CORE,
+                        x: section_x + core_indent,
+                        y: section_y,
+                        width: 60.0,
+                        height: 20.0,
+                        children: vec![],
+                        expanded: true,
+                        audit: None,
+                        source_path: "".to_string(),
+                    });
+                    section_y += 20.0 + 5.0;
+
+                    for engine in core_engines {
+                        let display = engine.name.replace("-engine", "").to_uppercase();
+                        self.cards.push(Card {
+                            name: engine.name.clone(),
+                            description: display,
+                            color: Colors::CORE,
+                            x: section_x + core_indent,
+                            y: section_y,
+                            width: small_card_width,
+                            height: small_card_height,
+                            children: vec![],
+                            expanded: false,
+                            audit: Some(CrateAudit::new(engine.name.clone())),
+                            source_path: engine.path.clone(),
+                        });
+                        section_y += small_card_height + 5.0;
+                    }
+                    section_y += 10.0;
+                }
+            }
+
+            // Projects for this section (non-CORE)
+            let projects: Vec<_> = graph
+                .crates
+                .iter()
+                .filter(|c| {
+                    c.path.starts_with(section.project_prefix)
+                        && !c.path.contains("/CORE/")
+                        && c.path != section.name
+                })
+                .collect();
+
+            if !projects.is_empty() {
+                // Projects label
+                self.cards.push(Card {
+                    name: format!("{}_PROJECTS_LABEL", section.name),
+                    description: "Projects".to_string(),
+                    color: section.color,
+                    x: section_x + project_indent,
+                    y: section_y,
+                    width: 70.0,
+                    height: 20.0,
+                    children: vec![],
+                    expanded: true,
+                    audit: None,
+                    source_path: "".to_string(),
+                });
+                section_y += 20.0 + 5.0;
+
+                for proj in projects {
+                    let display = proj
+                        .name
+                        .replace("-learn", "")
+                        .replace("-", " ")
+                        .to_uppercase();
+                    self.cards.push(Card {
+                        name: proj.name.clone(),
+                        description: display,
+                        color: section.color,
+                        x: section_x + project_indent,
+                        y: section_y,
+                        width: small_card_width,
+                        height: small_card_height,
+                        children: vec![],
+                        expanded: false,
+                        audit: Some(CrateAudit::new(proj.name.clone())),
+                        source_path: proj.path.clone(),
+                    });
+                    section_y += small_card_height + 5.0;
+                }
+            }
+
+            max_section_height = max_section_height.max(section_y - section_start_y);
+        }
+
+        y = section_start_y + max_section_height + section_gap;
+
+        // ========================================
+        // Standalone Projects: HELIOS, BLOG, WELCOME, ARCH
+        // ========================================
+        let standalone: Vec<_> = graph
             .crates
             .iter()
-            .filter(|c| c.layer == CrateLayer::Core)
+            .filter(|c| c.layer == CrateLayer::Project)
             .collect();
 
-        if !core_engines.is_empty() {
-            // Section header
-            let section_width = (core_engines.len() as f64) * (card_width + padding) - padding;
-            let start_x = center_x - section_width / 2.0;
-
-            // Label for section
+        if !standalone.is_empty() {
+            // Label
             self.cards.push(Card {
-                name: "CORE_LABEL".to_string(),
-                description: "CORE Engines".to_string(),
-                color: Colors::CORE,
+                name: "STANDALONE_LABEL".to_string(),
+                description: "Standalone Projects".to_string(),
+                color: Colors::PROJECT,
                 x: center_x - 100.0,
                 y: y - 25.0,
                 width: 200.0,
@@ -183,60 +350,14 @@ impl AppState {
                 source_path: "".to_string(),
             });
 
-            let mut current_x = start_x;
-            for item in core_engines {
-                let display_name = item.name.replace("-engine", "").to_uppercase();
-                self.cards.push(Card {
-                    name: item.name.clone(),
-                    description: display_name,
-                    color: Colors::CORE,
-                    x: current_x,
-                    y,
-                    width: card_width,
-                    height: card_height,
-                    children: vec![],
-                    expanded: false,
-                    audit: Some(CrateAudit::new(item.name.clone())),
-                    source_path: item.path.clone(),
-                });
-                current_x += card_width + padding;
-            }
-            y += card_height + section_gap;
-        }
-
-        // ========================================
-        // LAYER 3: Projects (Applications)
-        // ========================================
-        let projects: Vec<_> = graph
-            .crates
-            .iter()
-            .filter(|c| c.layer == CrateLayer::Project)
-            .collect();
-
-        if !projects.is_empty() {
-            let section_width = (projects.len() as f64) * (card_width + padding) - padding;
+            let section_width = (standalone.len() as f64) * (card_width + padding) - padding;
             let start_x = center_x - section_width / 2.0;
-
-            // Label
-            self.cards.push(Card {
-                name: "PROJECT_LABEL".to_string(),
-                description: "Projects".to_string(),
-                color: Colors::PROJECT,
-                x: center_x - 80.0,
-                y: y - 25.0,
-                width: 160.0,
-                height: 20.0,
-                children: vec![],
-                expanded: true,
-                audit: None,
-                source_path: "".to_string(),
-            });
-
             let mut current_x = start_x;
-            for item in projects {
+
+            for proj in standalone {
                 self.cards.push(Card {
-                    name: item.name.clone(),
-                    description: item.name.to_uppercase(),
+                    name: proj.name.clone(),
+                    description: proj.name.to_uppercase(),
                     color: Colors::PROJECT,
                     x: current_x,
                     y,
@@ -244,126 +365,8 @@ impl AppState {
                     height: card_height,
                     children: vec![],
                     expanded: false,
-                    audit: Some(CrateAudit::new(item.name.clone())),
-                    source_path: item.path.clone(),
-                });
-                current_x += card_width + padding;
-            }
-            y += card_height + section_gap;
-        }
-
-        // ========================================
-        // LAYER 4: Tools (User-facing utilities)
-        // ========================================
-        let tools: Vec<_> = graph
-            .crates
-            .iter()
-            .filter(|c| c.layer == CrateLayer::Tool && !c.path.starts_with("LEARN/"))
-            .collect();
-
-        if !tools.is_empty() {
-            let section_width = (tools.len().min(6) as f64) * (card_width + padding) - padding;
-            let start_x = center_x - section_width / 2.0;
-
-            // Label
-            self.cards.push(Card {
-                name: "TOOL_LABEL".to_string(),
-                description: "Tools".to_string(),
-                color: Colors::TOOL,
-                x: center_x - 60.0,
-                y: y - 25.0,
-                width: 120.0,
-                height: 20.0,
-                children: vec![],
-                expanded: true,
-                audit: None,
-                source_path: "".to_string(),
-            });
-
-            let mut current_x = start_x;
-            let mut row_y = y;
-            for (i, item) in tools.iter().enumerate() {
-                if i > 0 && i % 6 == 0 {
-                    // New row
-                    row_y += card_height + layer_gap;
-                    current_x = start_x;
-                }
-                let display_name = item
-                    .name
-                    .replace("-", " ")
-                    .to_uppercase();
-
-                self.cards.push(Card {
-                    name: item.name.clone(),
-                    description: display_name,
-                    color: Colors::TOOL,
-                    x: current_x,
-                    y: row_y,
-                    width: card_width,
-                    height: card_height,
-                    children: vec![],
-                    expanded: false,
-                    audit: Some(CrateAudit::new(item.name.clone())),
-                    source_path: item.path.clone(),
-                });
-                current_x += card_width + padding;
-            }
-            y = row_y + card_height + section_gap;
-        }
-
-        // ========================================
-        // LAYER 5: Learn (Tutorials)
-        // ========================================
-        let learn: Vec<_> = graph
-            .crates
-            .iter()
-            .filter(|c| c.path.starts_with("LEARN/"))
-            .collect();
-
-        if !learn.is_empty() {
-            let section_width = (learn.len().min(8) as f64) * (card_width + padding) - padding;
-            let start_x = center_x - section_width / 2.0;
-
-            // Label
-            self.cards.push(Card {
-                name: "LEARN_LABEL".to_string(),
-                description: "Learn".to_string(),
-                color: Colors::LEARN,
-                x: center_x - 60.0,
-                y: y - 25.0,
-                width: 120.0,
-                height: 20.0,
-                children: vec![],
-                expanded: true,
-                audit: None,
-                source_path: "".to_string(),
-            });
-
-            let mut current_x = start_x;
-            let mut row_y = y;
-            for (i, item) in learn.iter().enumerate() {
-                if i > 0 && i % 8 == 0 {
-                    row_y += card_height + layer_gap;
-                    current_x = start_x;
-                }
-                let display_name = item
-                    .name
-                    .replace("-learn", "")
-                    .replace("-", " ")
-                    .to_uppercase();
-
-                self.cards.push(Card {
-                    name: item.name.clone(),
-                    description: display_name,
-                    color: Colors::LEARN,
-                    x: current_x,
-                    y: row_y,
-                    width: card_width,
-                    height: card_height,
-                    children: vec![],
-                    expanded: false,
-                    audit: Some(CrateAudit::new(item.name.clone())),
-                    source_path: item.path.clone(),
+                    audit: Some(CrateAudit::new(proj.name.clone())),
+                    source_path: proj.path.clone(),
                 });
                 current_x += card_width + padding;
             }
