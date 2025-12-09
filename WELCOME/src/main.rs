@@ -689,8 +689,16 @@ fn render_center_bubble(document: &Document) {
     img.set_attribute("alt", "Antimony Architecture").ok();
 
     // Click -> Navigate to Architecture
+    // Click -> Navigate to External Architecture Site
     let on_click = Closure::wrap(Box::new(move || {
-        routing::navigate_to(Route::Architecture);
+        let window = web_sys::window().unwrap();
+        let hostname = window.location().hostname().unwrap_or_default();
+        let url = if hostname == "localhost" || hostname == "127.0.0.1" {
+            "http://localhost:8087"
+        } else {
+            "https://arch.too.foo"
+        };
+        window.location().set_href(url).ok();
     }) as Box<dyn FnMut()>);
     img.add_event_listener_with_callback("click", on_click.as_ref().unchecked_ref())
         .ok();

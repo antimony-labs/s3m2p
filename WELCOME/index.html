@@ -587,7 +587,13 @@ S3M2P/
 
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            overlay.classList.add('visible');
+            // Redirect to ARCH project
+            const hostname = window.location.hostname;
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                window.location.href = 'http://localhost:8087';
+            } else {
+                window.location.href = 'https://arch.too.foo';
+            }
         });
 
         closeBtn.addEventListener('click', () => {

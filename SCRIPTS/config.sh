@@ -13,7 +13,7 @@ else
 fi
 
 # Log Directory
-LOG_DIR="$REPO_ROOT/logs"
+LOG_DIR="$REPO_ROOT/TESTS/logs"
 
 # Project Port Assignments
 declare -A PROJECT_PORTS=(
@@ -35,6 +35,8 @@ declare -A PROJECT_PORTS=(
     ["swarm"]="8105"
     ["slam"]="8106"
     ["coming_soon"]="8107"
+    ["crm"]="8108"
+
 )
 
 # Project Directory Mappings (Relative to REPO_ROOT)
@@ -42,21 +44,23 @@ declare -A PROJECT_DIRS=(
     ["welcome"]="WELCOME"
     ["helios"]="HELIOS"
     ["chladni"]="SIMULATIONS/CHLADNI"
-    ["sensors"]="LEARN/SENSORS"
+    ["sensors"]="COMING_SOON"
     ["autocrate"]="TOOLS/AUTOCRATE"
     ["blog"]="BLOG"
     ["learn"]="LEARN"
     ["arch"]="ARCH"
     ["pll"]="TOOLS/PLL"
-    ["power"]="TOOLS/POWER_CIRCUITS"
-    ["ai"]="LEARN/AI"
-    ["ubuntu"]="LEARN/UBUNTU"
-    ["opencv"]="LEARN/OPENCV"
-    ["arduino"]="LEARN/ARDUINO"
-    ["esp32"]="LEARN/ESP32"
-    ["swarm"]="LEARN/SWARM_ROBOTICS"
-    ["slam"]="LEARN/SLAM"
+    ["power"]="COMING_SOON"
+    ["ai"]="COMING_SOON"
+    ["ubuntu"]="COMING_SOON"
+    ["opencv"]="COMING_SOON"
+    ["arduino"]="COMING_SOON"
+    ["esp32"]="COMING_SOON"
+    ["swarm"]="COMING_SOON"
+    ["slam"]="COMING_SOON"
     ["coming_soon"]="COMING_SOON"
+    ["crm"]="CRM"
+
 )
 
 # Export for sub-shells

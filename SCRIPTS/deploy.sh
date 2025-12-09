@@ -41,7 +41,16 @@ declare -A PAGES_PROJECTS=(
 # Static projects that don't need trunk build
 declare -A STATIC_PROJECTS=(
     ["coming_soon"]=1
-    ["arch"]=1
+    ["ai"]=1
+    ["arduino"]=1
+    ["esp32"]=1
+    ["ubuntu"]=1
+    ["opencv"]=1
+    ["swarm"]=1
+    ["slam"]=1
+    ["sensors"]=1
+    ["power"]=1
+    ["crm"]=1
 )
 
 # Parse arguments
