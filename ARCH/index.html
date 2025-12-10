@@ -11,6 +11,22 @@ MODIFIED: 2025-12-09
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ARCH - Architecture Explorer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <!-- Load common language components -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-clike.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-toml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markdown.min.js"></script>
     <link data-trunk rel="rust" data-wasm-opt="z" />
     <style>
         :root {
@@ -210,19 +226,34 @@ MODIFIED: 2025-12-09
             display: block;
         }
 
-        .line-number {
-            display: inline-block;
-            width: 50px;
-            color: var(--arch-dim);
-            text-align: right;
-            padding-right: 12px;
-            user-select: none;
-            border-right: 1px solid rgba(255, 255, 255, 0.1);
-            margin-right: 12px;
+        /* Prism.js overrides for better dark theme integration */
+        pre[class*="language-"] {
+            margin: 0;
+            padding: 0;
+            background: var(--arch-bg) !important;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
         }
 
-        .line-content {
-            user-select: text;
+        code[class*="language-"] {
+            background: var(--arch-bg) !important;
+            font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            text-shadow: none;
+            /* Don't override color - let Prism handle token colors */
+        }
+
+        /* Line numbers styling for Prism plugin */
+        .line-numbers .line-numbers-rows {
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            background: transparent;
+        }
+
+        .line-numbers-rows > span:before {
+            color: var(--arch-dim);
+            padding-right: 12px;
         }
 
         /* ═══════════════════ SCROLLBARS ═══════════════════ */
@@ -279,15 +310,14 @@ MODIFIED: 2025-12-09
                 padding: 10px;
             }
 
-            .code-display {
+            .code-display,
+            code[class*="language-"] {
                 font-size: 10px;
                 line-height: 1.5;
             }
 
-            .line-number {
-                width: 40px;
+            .line-numbers-rows > span:before {
                 padding-right: 8px;
-                margin-right: 8px;
             }
         }
 
@@ -298,14 +328,13 @@ MODIFIED: 2025-12-09
                 padding: 4px 8px;
             }
 
-            .code-display {
+            .code-display,
+            code[class*="language-"] {
                 font-size: 9px;
             }
 
-            .line-number {
-                width: 35px;
+            .line-numbers-rows > span:before {
                 padding-right: 6px;
-                margin-right: 6px;
             }
         }
     </style>

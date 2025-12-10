@@ -7,15 +7,31 @@
 
 use crate::{AppState, LineAction, TreeLine, ViewMode};
 use wasm_bindgen::JsValue;
-use web_sys::{Document, Element};
+use web_sys::Element;
 
-const Colors_BG: &str = "#0a0a0f";
-const Colors_TEXT: &str = "#ffffff";
-const Colors_DIM: &str = "#555566";
-const Colors_FILE: &str = "#ccccdd";
+const COLORS_TEXT: &str = "#ffffff";
+
+fn get_language(file_type: &str) -> &'static str {
+    match file_type {
+        ".rs" => "rust",
+        ".json" => "json",
+        ".toml" => "toml",
+        ".js" | ".mjs" => "javascript",
+        ".html" => "markup",
+        ".css" => "css",
+        ".py" => "python",
+        ".md" => "markdown",
+        ".sh" | ".bash" => "bash",
+        ".yml" | ".yaml" => "yaml",
+        ".xml" => "markup",
+        ".ts" => "typescript",
+        ".tsx" => "tsx",
+        ".jsx" => "jsx",
+        _ => "plaintext",
+    }
+}
 
 pub struct ArchRenderer {
-    document: Document,
     root: Element,
 }
 
@@ -27,7 +43,7 @@ impl ArchRenderer {
             .get_element_by_id(root_id)
             .ok_or("Root element not found")?;
 
-        Ok(Self { document, root })
+        Ok(Self { root })
     }
 
     pub fn render(&self, state: &AppState) -> Result<(), JsValue> {
@@ -37,6 +53,16 @@ impl ArchRenderer {
         };
 
         self.root.set_inner_html(&html);
+
+        // Trigger syntax highlighting after DOM update
+        if let Some(window) = web_sys::window() {
+            // Use requestAnimationFrame to ensure DOM is ready
+            let raf_func = js_sys::Function::new_no_args(
+                "if (window.Prism) { window.Prism.highlightAll(); }"
+            );
+            let _ = window.request_animation_frame(&raf_func);
+        }
+
         Ok(())
     }
 
@@ -115,7 +141,7 @@ impl ArchRenderer {
         if file_info.is_none() || content.is_none() {
             return format!(
                 r#"<div class="file-viewer file-viewer--active"><div class="file-viewer__header"><button class="file-viewer__close" data-action="close-file">← Back to files</button></div><div class="file-viewer__content"><p style="color: {}; padding: 20px;">File not found or content not available</p></div></div>"#,
-                Colors_TEXT
+                COLORS_TEXT
             );
         }
 
@@ -143,21 +169,13 @@ impl ArchRenderer {
         ));
         html.push_str("</div></header>");
 
-        // Content with line numbers
+        // Content with syntax highlighting
         html.push_str(r#"<div class="file-viewer__content">"#);
-        html.push_str(r#"<pre class="code-display"><code>"#);
+        html.push_str(&format!(r#"<pre class="line-numbers"><code class="language-{}">"#, get_language(&file_info.file_type)));
 
-        for (i, line) in content.lines().enumerate() {
-            let line_num = i + 1;
-            html.push_str(&format!(
-                r#"<span class="line-number">{:4}</span>"#,
-                line_num
-            ));
-            html.push_str(&format!(
-                r#"<span class="line-content">{}</span>
-"#,
-                escape_html(line)
-            ));
+        for line in content.lines() {
+            html.push_str(&escape_html(line));
+            html.push_str("\n");
         }
 
         html.push_str("</code></pre></div>");
