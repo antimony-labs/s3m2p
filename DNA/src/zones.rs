@@ -1,7 +1,7 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: zones.rs | DNA/src/zones.rs
-//! PURPOSE: Defines ExclusionZone types
-//! MODIFIED: 2025-11-29
+//! PURPOSE: Defines ExclusionZone and ZoneEffect trait for spatial avoidance and effect areas in simulations
+//! MODIFIED: 2025-12-09
 //! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 

@@ -1,7 +1,7 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: interaction.rs | DNA/src/interaction.rs
-//! PURPOSE: Defines InteractionResult types
-//! MODIFIED: 2025-11-29
+//! PURPOSE: Defines InteractionResult enum and Interactable trait for entity-environment and entity-entity interaction effects
+//! MODIFIED: 2025-12-09
 //! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 

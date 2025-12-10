@@ -1,6 +1,6 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: pathfinding.rs | DNA/src/pathfinding.rs
-//! PURPOSE: Defines GridMap, Heuristic, PathResult types
+//! PURPOSE: Implements A* pathfinding algorithm with GridMap, Heuristic, and PathResult types for grid-based navigation
 //! MODIFIED: 2025-12-09
 //! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════

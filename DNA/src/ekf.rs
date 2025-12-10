@@ -1,6 +1,6 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: ekf.rs | DNA/src/ekf.rs
-//! PURPOSE: Extended Kalman Filter implementation
+//! PURPOSE: Deprecated re-export of EKF from physics::solvers::filters for backward compatibility
 //! MODIFIED: 2025-12-09
 //! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════

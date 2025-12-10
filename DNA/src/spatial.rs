@@ -1,7 +1,7 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: spatial.rs | DNA/src/spatial.rs
-//! PURPOSE: Defines SphericalPos, SpatialKey, DataLayer types
-//! MODIFIED: 2025-11-29
+//! PURPOSE: Defines SphericalPos for spherical coordinates and SpatialKey for cube-sphere spatial indexing with quadtree subdivision
+//! MODIFIED: 2025-12-09
 //! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 

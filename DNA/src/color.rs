@@ -1,7 +1,7 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: color.rs | DNA/src/color.rs
-//! PURPOSE: Defines Rgb, Hsl, Gradient types
-//! MODIFIED: 2025-11-29
+//! PURPOSE: Defines RGB and HSL color types with conversions (hex, rgba) and linear interpolation for visualizations
+//! MODIFIED: 2025-12-09
 //! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 

@@ -1,6 +1,6 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: constants.rs | DNA/src/autocrate/constants.rs
-//! PURPOSE: Defines LumberSize types
+//! PURPOSE: Defines LumberSize enum with ASTM standard lumber dimensions (nominal and actual)
 //! MODIFIED: 2025-12-09
 //! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
