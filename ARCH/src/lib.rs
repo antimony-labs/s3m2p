@@ -1,6 +1,6 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: lib.rs | ARCH/src/lib.rs
-//! PURPOSE: Terminal-style tree view architecture explorer with drill-down navigation
+//! PURPOSE: Terminal-style file-level architecture explorer with complete drill-down
 //! MODIFIED: 2025-12-09
 //! LAYER: ARCH (architecture explorer)
 //! ═══════════════════════════════════════════════════════════════════════════════
@@ -8,9 +8,11 @@
 #![allow(unexpected_cfgs)]
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement, MouseEvent, TouchEvent};
+use serde::{Deserialize, Serialize};
 
 mod audit;
 mod graph;
@@ -18,6 +20,20 @@ pub use audit::{CrateAudit, GitMetadata, ValidationStatus};
 pub use graph::{CrateInfo, CrateLayer, DependencyGraph};
 
 const WORKSPACE_DATA: &str = include_str!("workspace_data.json");
+const FILE_DB: &str = include_str!("db.json");
+
+// File metadata from db.json
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct FileInfo {
+    path: String,
+    name: String,
+    purpose: String,
+    main_function: String,
+    #[serde(rename = "type")]
+    file_type: String,
+}
+
+type FileDatabase = HashMap<String, FileInfo>;
 
 // Colors
 struct Colors;
@@ -31,14 +47,15 @@ impl Colors {
     const TOOL: &'static str = "#f59e0b";
     const LEARN: &'static str = "#22c55e";
     const BACK: &'static str = "#888899";
+    const FILE: &'static str = "#ccccdd";
 }
 
 #[derive(Clone)]
 enum LineAction {
     None,
     Back,
-    Enter(String),      // Enter a folder (category or subfolder)
-    Select(String),     // Select a crate (leaf node)
+    EnterFolder(String),     // Enter a folder/category
+    SelectFile(String),      // Select a file (leaf node)
 }
 
 #[derive(Clone)]
@@ -47,10 +64,8 @@ struct TreeLine {
     suffix: String,
     color: &'static str,
     action: LineAction,
-    // For info panel when selected
-    path: Option<String>,
-    deps: Vec<String>,
-    layer: Option<&'static str>,
+    // Metadata
+    file_info: Option<FileInfo>,
 }
 
 struct AppState {
@@ -60,13 +75,14 @@ struct AppState {
     height: f64,
     dpr: f64,
     lines: Vec<TreeLine>,
-    selected: Option<String>,   // Selected crate name
-    current_path: Vec<String>,  // Navigation path (e.g., ["TOOLS", "CORE"])
+    selected_file: Option<String>,  // Selected file path
+    current_path: Vec<String>,      // Navigation path (e.g., ["TOOLS", "CAD", "src"])
     scroll_y: f64,
     max_scroll: f64,
     line_height: f64,
     font_size: f64,
     graph: DependencyGraph,
+    file_db: FileDatabase,
 }
 
 impl AppState {
@@ -83,10 +99,11 @@ impl AppState {
         ctx.scale(dpr, dpr).ok();
 
         let graph: DependencyGraph = serde_json::from_str(WORKSPACE_DATA).unwrap_or_default();
+        let file_db: FileDatabase = serde_json::from_str(FILE_DB).unwrap_or_default();
 
         let is_mobile = width < 500.0;
-        let font_size = if is_mobile { 12.0 } else { 14.0 };
-        let line_height = font_size * 1.6;
+        let font_size = if is_mobile { 11.0 } else { 13.0 };
+        let line_height = font_size * 1.5;
 
         let mut state = Self {
             canvas,
@@ -95,13 +112,14 @@ impl AppState {
             height,
             dpr,
             lines: Vec::new(),
-            selected: None,
+            selected_file: None,
             current_path: Vec::new(),
             scroll_y: 0.0,
             max_scroll: 0.0,
             line_height,
             font_size,
             graph,
+            file_db,
         };
 
         state.build_tree();
@@ -112,7 +130,7 @@ impl AppState {
         self.lines.clear();
         self.scroll_y = 0.0;
 
-        // Title with current path
+        // Title with breadcrumb
         let title = if self.current_path.is_empty() {
             "ARCH".to_string()
         } else {
@@ -121,12 +139,10 @@ impl AppState {
 
         self.lines.push(TreeLine {
             name: title,
-            suffix: " Architecture Explorer".into(),
+            suffix: " File Explorer".into(),
             color: Colors::TEXT,
             action: LineAction::None,
-            path: None,
-            deps: vec![],
-            layer: None,
+            file_info: None,
         });
 
         // Separator
@@ -135,195 +151,152 @@ impl AppState {
             suffix: String::new(),
             color: Colors::DIM,
             action: LineAction::None,
-            path: None,
-            deps: vec![],
-            layer: None,
+            file_info: None,
         });
 
-        // Add back navigation if not at root
+        // Back navigation
         if !self.current_path.is_empty() {
             self.lines.push(TreeLine {
                 name: "../".into(),
                 suffix: "  [back]".into(),
                 color: Colors::BACK,
                 action: LineAction::Back,
-                path: None,
-                deps: vec![],
-                layer: None,
+                file_info: None,
             });
             self.lines.push(TreeLine {
                 name: String::new(),
                 suffix: String::new(),
                 color: Colors::DIM,
                 action: LineAction::None,
-                path: None,
-                deps: vec![],
-                layer: None,
+                file_info: None,
             });
         }
 
         // Build content based on current path
-        let path_strs: Vec<&str> = self.current_path.iter().map(|s| s.as_str()).collect();
-        match path_strs.as_slice() {
-            [] => self.build_root(),
-            ["DNA"] => self.build_dna(),
-            ["TOOLS"] => self.build_tools(),
-            ["TOOLS", "CORE"] => self.build_tools_core(),
-            ["SIMULATION"] => self.build_simulation(),
-            ["SIMULATION", "CORE"] => self.build_simulation_core(),
-            ["LEARN"] => self.build_learn(),
-            ["STANDALONE"] => self.build_standalone(),
-            _ => {}
+        if self.current_path.is_empty() {
+            // Root: Show top-level categories
+            self.build_root_categories();
+        } else {
+            // Navigate into directory
+            self.build_directory_contents();
         }
 
         // Calculate max scroll
         let content_height = self.lines.len() as f64 * self.line_height + 40.0;
-        let panel_height = if self.selected.is_some() { 100.0 } else { 0.0 };
+        let panel_height = if self.selected_file.is_some() { 110.0 } else { 0.0 };
         self.max_scroll = (content_height - self.height + panel_height + 20.0).max(0.0);
     }
 
-    fn build_root(&mut self) {
-        // Root level: show all top-level categories
-        self.add_folder("DNA/", "[Foundation]", Colors::DNA, "DNA");
-        self.add_folder("TOOLS/", "[Utilities & Engines]", Colors::TOOL, "TOOLS");
-        self.add_folder("SIMULATION/", "[Data & Phenomena]", Colors::CORE, "SIMULATION");
-        self.add_folder("LEARN/", "[Tutorials]", Colors::LEARN, "LEARN");
-        self.add_folder("STANDALONE/", "[Applications]", Colors::PROJECT, "STANDALONE");
-    }
+    fn build_root_categories(&mut self) {
+        // Show main directory categories
+        let categories = vec![
+            ("DNA/", "[Foundation]", Colors::DNA),
+            ("TOOLS/", "[Utilities]", Colors::TOOL),
+            ("SIMULATION/", "[Simulations]", Colors::CORE),
+            ("LEARN/", "[Tutorials]", Colors::LEARN),
+            ("HELIOS/", "[Solar System]", Colors::PROJECT),
+            ("WELCOME/", "[Landing Page]", Colors::PROJECT),
+            ("BLOG/", "[Blog Platform]", Colors::PROJECT),
+            ("ARCH/", "[Architecture Explorer]", Colors::PROJECT),
+            ("SCRIPTS/", "[Build Scripts]", Colors::TOOL),
+        ];
 
-    fn build_dna(&mut self) {
-        let crates: Vec<_> = self.graph.crates.iter()
-            .filter(|c| c.path.starts_with("DNA/") && c.path != "DNA")
-            .cloned()
-            .collect();
-
-        for c in crates {
-            self.add_crate(&c, Colors::DNA, "Foundation");
+        for (name, desc, color) in categories {
+            self.add_folder(name, desc, color);
         }
     }
 
-    fn build_tools(&mut self) {
-        // CORE subfolder
-        self.add_folder("CORE/", "[Engines]", Colors::CORE, "CORE");
-        self.lines.push(TreeLine {
-            name: String::new(),
-            suffix: String::new(),
-            color: Colors::DIM,
-            action: LineAction::None,
-            path: None,
-            deps: vec![],
-            layer: None,
-        });
+    fn build_directory_contents(&mut self) {
+        let prefix = self.current_path.join("/");
 
-        // Tool projects (not in CORE)
-        let crates: Vec<_> = self.graph.crates.iter()
-            .filter(|c| c.path.starts_with("TOOLS/") && !c.path.contains("/CORE/"))
-            .cloned()
-            .collect();
+        // Collect all items in current directory
+        let mut folders = std::collections::BTreeSet::new();
+        let mut files = Vec::new();
 
-        for c in crates {
-            self.add_crate(&c, Colors::TOOL, "Tool");
+        for (path, file_info) in &self.file_db {
+            if path.starts_with(&prefix) {
+                let relative = &path[prefix.len()..];
+                if relative.starts_with('/') {
+                    let relative = &relative[1..];
+
+                    if let Some(idx) = relative.find('/') {
+                        // It's a subfolder
+                        let folder = &relative[..idx];
+                        folders.insert(folder.to_string());
+                    } else {
+                        // It's a file in current directory
+                        files.push(file_info.clone());
+                    }
+                }
+            }
+        }
+
+        // Sort folders and files
+        let mut sorted_folders: Vec<_> = folders.into_iter().collect();
+        sorted_folders.sort();
+        files.sort_by(|a, b| a.name.cmp(&b.name));
+
+        let has_folders = !sorted_folders.is_empty();
+
+        // Add folders first
+        for folder in sorted_folders {
+            let color = self.get_folder_color(&folder);
+            self.add_folder(&format!("{}/", folder), "", color);
+        }
+
+        if !files.is_empty() && has_folders {
+            self.lines.push(TreeLine {
+                name: String::new(),
+                suffix: String::new(),
+                color: Colors::DIM,
+                action: LineAction::None,
+                file_info: None,
+            });
+        }
+
+        // Add files
+        for file in files {
+            self.add_file(file);
         }
     }
 
-    fn build_tools_core(&mut self) {
-        // All CORE engines under TOOLS + SPICE_ENGINE (visually grouped here)
-        let mut crates: Vec<_> = self.graph.crates.iter()
-            .filter(|c| c.path.starts_with("TOOLS/CORE/") || c.path == "SIMULATION/CORE/SPICE_ENGINE")
-            .cloned()
-            .collect();
-        crates.sort_by(|a, b| a.name.cmp(&b.name));
-
-        for c in crates {
-            self.add_crate(&c, Colors::CORE, "Engine");
+    fn get_folder_color(&self, folder: &str) -> &'static str {
+        match folder {
+            "src" | "tests" | "examples" => Colors::CORE,
+            "CORE" => Colors::CORE,
+            _ => Colors::TOOL,
         }
     }
 
-    fn build_simulation(&mut self) {
-        // CORE subfolder
-        self.add_folder("CORE/", "[Engines]", Colors::CORE, "CORE");
-        self.lines.push(TreeLine {
-            name: String::new(),
-            suffix: String::new(),
-            color: Colors::DIM,
-            action: LineAction::None,
-            path: None,
-            deps: vec![],
-            layer: None,
-        });
-
-        // Simulation projects (not in CORE)
-        let crates: Vec<_> = self.graph.crates.iter()
-            .filter(|c| c.path.starts_with("SIMULATION/") && !c.path.contains("/CORE/"))
-            .cloned()
-            .collect();
-
-        for c in crates {
-            self.add_crate(&c, Colors::CORE, "Simulation");
-        }
-    }
-
-    fn build_simulation_core(&mut self) {
-        // SIMULATION CORE engines (excludes SPICE which is visually under TOOLS)
-        let crates: Vec<_> = self.graph.crates.iter()
-            .filter(|c| c.path.starts_with("SIMULATION/CORE/") && c.path != "SIMULATION/CORE/SPICE_ENGINE")
-            .cloned()
-            .collect();
-
-        for c in crates {
-            self.add_crate(&c, Colors::CORE, "Engine");
-        }
-    }
-
-    fn build_learn(&mut self) {
-        let crates: Vec<_> = self.graph.crates.iter()
-            .filter(|c| c.path.starts_with("LEARN/"))
-            .cloned()
-            .collect();
-
-        for c in crates {
-            self.add_crate(&c, Colors::LEARN, "Tutorial");
-        }
-    }
-
-    fn build_standalone(&mut self) {
-        let crates: Vec<_> = self.graph.crates.iter()
-            .filter(|c| c.layer == CrateLayer::Project)
-            .cloned()
-            .collect();
-
-        for c in crates {
-            self.add_crate(&c, Colors::PROJECT, "Application");
-        }
-    }
-
-    fn add_folder(&mut self, name: &str, desc: &str, color: &'static str, target: &str) {
+    fn add_folder(&mut self, name: &str, desc: &str, color: &'static str) {
+        let folder_name = name.trim_end_matches('/');
         self.lines.push(TreeLine {
             name: name.into(),
-            suffix: format!("  {}", desc),
+            suffix: if desc.is_empty() { String::new() } else { format!("  {}", desc) },
             color,
-            action: LineAction::Enter(target.to_string()),
-            path: None,
-            deps: vec![],
-            layer: None,
+            action: LineAction::EnterFolder(folder_name.to_string()),
+            file_info: None,
         });
     }
 
-    fn add_crate(&mut self, c: &CrateInfo, color: &'static str, layer: &'static str) {
-        let suffix = if c.dependencies.is_empty() {
+    fn add_file(&mut self, file: FileInfo) {
+        let suffix = if file.purpose.is_empty() {
             String::new()
         } else {
-            format!("  -> {}", c.dependencies.join(", "))
+            let short_purpose = if file.purpose.len() > 50 {
+                format!("  {}", &file.purpose[..47])
+            } else {
+                format!("  {}", file.purpose)
+            };
+            short_purpose
         };
 
         self.lines.push(TreeLine {
-            name: format!("{}/", c.name.to_uppercase().replace("-", "_")),
+            name: file.name.clone(),
             suffix,
-            color,
-            action: LineAction::Select(c.name.clone()),
-            path: Some(c.path.clone()),
-            deps: c.dependencies.clone(),
-            layer: Some(layer),
+            color: Colors::FILE,
+            action: LineAction::SelectFile(file.path.clone()),
+            file_info: Some(file),
         });
     }
 
@@ -331,19 +304,19 @@ impl AppState {
         match action {
             LineAction::Back => {
                 self.current_path.pop();
-                self.selected = None;
+                self.selected_file = None;
                 self.build_tree();
             }
-            LineAction::Enter(target) => {
-                self.current_path.push(target.clone());
-                self.selected = None;
+            LineAction::EnterFolder(folder) => {
+                self.current_path.push(folder.clone());
+                self.selected_file = None;
                 self.build_tree();
             }
-            LineAction::Select(name) => {
-                if self.selected.as_ref() == Some(name) {
-                    self.selected = None;
+            LineAction::SelectFile(path) => {
+                if self.selected_file.as_ref() == Some(path) {
+                    self.selected_file = None;
                 } else {
-                    self.selected = Some(name.clone());
+                    self.selected_file = Some(path.clone());
                 }
             }
             LineAction::None => {}
@@ -364,9 +337,8 @@ impl AppState {
         ctx.set_fill_style(&JsValue::from_str(Colors::BG));
         ctx.fill_rect(0.0, 0.0, self.width, self.height);
 
-        // Calculate panel height for scroll area
-        let panel_h = if self.selected.is_some() {
-            if self.width < 400.0 { 90.0 } else { 80.0 }
+        let panel_h = if self.selected_file.is_some() {
+            if self.width < 400.0 { 110.0 } else { 100.0 }
         } else {
             0.0
         };
@@ -374,21 +346,21 @@ impl AppState {
         ctx.save();
         ctx.translate(0.0, -self.scroll_y).ok();
 
-        let x = 16.0;
-        let mut y = 20.0 + self.font_size;
+        let x = 14.0;
+        let mut y = 18.0 + self.font_size;
 
         ctx.set_font(&format!("{}px monospace", self.font_size));
         ctx.set_text_baseline("top");
 
         for line in &self.lines {
             let is_selected = match &line.action {
-                LineAction::Select(name) => self.selected.as_ref() == Some(name),
+                LineAction::SelectFile(path) => self.selected_file.as_ref() == Some(path),
                 _ => false,
             };
 
-            // Draw highlight background for selected
+            // Highlight selected
             if is_selected {
-                ctx.set_fill_style(&JsValue::from_str("rgba(255, 255, 255, 0.1)"));
+                ctx.set_fill_style(&JsValue::from_str("rgba(255, 255, 255, 0.08)"));
                 ctx.fill_rect(0.0, y - 2.0, self.width, self.line_height);
             }
 
@@ -396,7 +368,7 @@ impl AppState {
             ctx.set_fill_style(&JsValue::from_str(line.color));
             ctx.fill_text(&line.name, x, y).ok();
 
-            // Draw suffix in dim color
+            // Draw suffix (purpose/description)
             if !line.suffix.is_empty() {
                 let suffix_x = x + line.name.chars().count() as f64 * self.font_size * 0.6;
                 ctx.set_fill_style(&JsValue::from_str(Colors::DIM));
@@ -408,84 +380,77 @@ impl AppState {
 
         ctx.restore();
 
-        // Draw info panel if something selected
-        if let Some(ref name) = self.selected {
-            if let Some(line) = self.lines.iter().find(|l| {
-                matches!(&l.action, LineAction::Select(n) if n == name)
-            }) {
-                self.draw_info_panel(line, panel_h);
+        // Draw info panel for selected file
+        if let Some(ref path) = self.selected_file {
+            if let Some(file_info) = self.file_db.get(path) {
+                self.draw_file_info_panel(file_info, panel_h);
             }
         }
     }
 
-    fn draw_info_panel(&self, line: &TreeLine, panel_h: f64) {
+    fn draw_file_info_panel(&self, file: &FileInfo, panel_h: f64) {
         let ctx = &self.ctx;
         let y = self.height - panel_h;
         let is_mobile = self.width < 400.0;
-        let x = 16.0;
-        let small_font = self.font_size - 1.0;
+        let x = 14.0;
+        let small_font = (self.font_size - 1.0).max(10.0);
 
         // Background
         ctx.set_fill_style(&JsValue::from_str("rgba(10, 10, 15, 0.98)"));
         ctx.fill_rect(0.0, y, self.width, panel_h);
 
         // Top border
-        ctx.set_fill_style(&JsValue::from_str(line.color));
+        ctx.set_fill_style(&JsValue::from_str(Colors::FILE));
         ctx.fill_rect(0.0, y, self.width, 2.0);
 
         ctx.set_font(&format!("{}px monospace", small_font));
         ctx.set_text_baseline("top");
 
-        let mut ty = y + 10.0;
+        let mut ty = y + 8.0;
         let row_h = small_font * 1.4;
 
-        // Name (always first)
-        ctx.set_fill_style(&JsValue::from_str(line.color));
-        ctx.fill_text(&line.name, x, ty).ok();
+        // File name
+        ctx.set_fill_style(&JsValue::from_str(Colors::FILE));
+        ctx.fill_text(&file.name, x, ty).ok();
+        ty += row_h;
 
-        if is_mobile {
-            // Mobile: stack vertically
-            ty += row_h;
-
-            // Path
-            ctx.set_fill_style(&JsValue::from_str(Colors::DIM));
-            ctx.fill_text("Path: ", x, ty).ok();
-            ctx.set_fill_style(&JsValue::from_str(Colors::TEXT));
-            ctx.fill_text(line.path.as_deref().unwrap_or("-"), x + 45.0, ty).ok();
-            ty += row_h;
-
-            // Layer
-            ctx.set_fill_style(&JsValue::from_str(Colors::DIM));
-            ctx.fill_text("Layer: ", x, ty).ok();
-            ctx.set_fill_style(&JsValue::from_str(Colors::TEXT));
-            ctx.fill_text(line.layer.unwrap_or("-"), x + 50.0, ty).ok();
-            ty += row_h;
-
-            // Deps
-            ctx.set_fill_style(&JsValue::from_str(Colors::DIM));
-            ctx.fill_text("Deps: ", x, ty).ok();
-            ctx.set_fill_style(&JsValue::from_str(Colors::TEXT));
-            let deps = if line.deps.is_empty() { "(none)".into() } else { line.deps.join(", ") };
-            ctx.fill_text(&deps, x + 45.0, ty).ok();
+        // Path
+        ctx.set_fill_style(&JsValue::from_str(Colors::DIM));
+        ctx.fill_text("Path:", x, ty).ok();
+        ctx.set_fill_style(&JsValue::from_str(Colors::TEXT));
+        let path_text = if is_mobile && file.path.len() > 35 {
+            format!("...{}", &file.path[file.path.len()-32..])
         } else {
-            // Desktop: Layer on same line as name
-            ctx.set_fill_style(&JsValue::from_str(Colors::DIM));
-            ctx.fill_text(line.layer.unwrap_or("-"), x + 200.0, ty).ok();
-            ty += row_h;
+            file.path.clone()
+        };
+        ctx.fill_text(&path_text, x + 40.0, ty).ok();
+        ty += row_h;
 
-            // Path
-            ctx.set_fill_style(&JsValue::from_str(Colors::DIM));
-            ctx.fill_text("Path:", x, ty).ok();
-            ctx.set_fill_style(&JsValue::from_str(Colors::TEXT));
-            ctx.fill_text(line.path.as_deref().unwrap_or("-"), x + 50.0, ty).ok();
-            ty += row_h;
+        // Purpose
+        ctx.set_fill_style(&JsValue::from_str(Colors::DIM));
+        ctx.fill_text("Info:", x, ty).ok();
+        ctx.set_fill_style(&JsValue::from_str(Colors::TEXT));
+        let purpose_text = if is_mobile && file.purpose.len() > 30 {
+            format!("{}...", &file.purpose[..27])
+        } else if file.purpose.len() > 60 {
+            format!("{}...", &file.purpose[..57])
+        } else {
+            file.purpose.clone()
+        };
+        ctx.fill_text(&purpose_text, x + 40.0, ty).ok();
+        ty += row_h;
 
-            // Deps
+        // Type and main function
+        ctx.set_fill_style(&JsValue::from_str(Colors::DIM));
+        ctx.fill_text("Type:", x, ty).ok();
+        ctx.set_fill_style(&JsValue::from_str(Colors::TEXT));
+        ctx.fill_text(&file.file_type, x + 40.0, ty).ok();
+
+        if !file.main_function.is_empty() && file.main_function != "N/A" {
             ctx.set_fill_style(&JsValue::from_str(Colors::DIM));
-            ctx.fill_text("Deps:", x, ty).ok();
+            ctx.fill_text("Entry:", x + 140.0, ty).ok();
             ctx.set_fill_style(&JsValue::from_str(Colors::TEXT));
-            let deps = if line.deps.is_empty() { "(none)".into() } else { line.deps.join(", ") };
-            ctx.fill_text(&deps, x + 50.0, ty).ok();
+            ctx.fill_text(&file.main_function, x + 185.0, ty).ok();
         }
     }
 
@@ -505,8 +470,8 @@ impl AppState {
         self.ctx.scale(dpr, dpr).ok();
 
         let is_mobile = self.width < 500.0;
-        self.font_size = if is_mobile { 12.0 } else { 14.0 };
-        self.line_height = self.font_size * 1.6;
+        self.font_size = if is_mobile { 11.0 } else { 13.0 };
+        self.line_height = self.font_size * 1.5;
 
         self.build_tree();
     }
