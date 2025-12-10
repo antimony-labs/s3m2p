@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: mod.rs | DNA/src/wave_field/mod.rs
+//! PURPOSE: Wave Field module implementation
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 //! Wave field simulation using FFT
 //!
 //! DNA-level primitive for wave-based simulations. Supports:

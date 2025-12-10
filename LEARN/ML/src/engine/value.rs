@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: value.rs | ML/src/engine/value.rs
+//! PURPOSE: Core value type for automatic differentiation engine
+//! MODIFIED: 2025-11-26
+//! LAYER: LEARN → ML
+//! ═══════════════════════════════════════════════════════════════════════════════
 use std::cell::RefCell;
 use std::fmt;
 use std::ops::{Add, Mul, Neg, Sub};

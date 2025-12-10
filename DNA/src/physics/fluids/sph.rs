@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: sph.rs
-//! PATH: DNA/src/physics/fluids/sph.rs
+//! FILE: sph.rs | DNA/src/physics/fluids/sph.rs
+//! PURPOSE: Smoothed Particle Hydrodynamics (SPH) for fluid simulation
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: Smoothed Particle Hydrodynamics (SPH) for fluid simulation
 //!

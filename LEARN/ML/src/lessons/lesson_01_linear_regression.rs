@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lesson_01_linear_regression.rs | ML/src/lessons/lesson_01_linear_regression.rs
+//! PURPOSE: Linear regression from scratch with gradient descent
+//! MODIFIED: 2025-11-26
+//! LAYER: LEARN → ML
+//! ═══════════════════════════════════════════════════════════════════════════════
 use ndarray::Array1;
 use rand::prelude::*;
 use crate::utils::visualization;

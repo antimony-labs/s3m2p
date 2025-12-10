@@ -1,7 +1,8 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: mod.rs | DNA/src/physics/fluids/mod.rs
-//! PURPOSE: Fluid dynamics - Euler, Navier-Stokes, SPH, LBM
-//! LAYER: DNA → PHYSICS → FLUIDS
+//! PURPOSE: Module exports: sph
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 /// Smoothed Particle Hydrodynamics

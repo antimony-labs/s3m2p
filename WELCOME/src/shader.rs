@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: shader.rs | WELCOME/src/shader.rs
+//! PURPOSE: Background visual effect system with animated grid and digital rain
+//! MODIFIED: 2025-11-30
+//! LAYER: WELCOME (landing)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use wasm_bindgen::JsValue;
 use web_sys::CanvasRenderingContext2d;
 

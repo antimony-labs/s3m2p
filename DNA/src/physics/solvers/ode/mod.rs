@@ -1,7 +1,8 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: mod.rs | DNA/src/physics/solvers/ode/mod.rs
-//! PURPOSE: Ordinary Differential Equation solvers
-//! LAYER: DNA → PHYSICS → SOLVERS → ODE
+//! PURPOSE: Module exports: euler, rk4, verlet
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 /// Forward Euler (1st order)

@@ -1,7 +1,8 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: mod.rs | DNA/src/physics/mechanics/mod.rs
-//! PURPOSE: Classical mechanics - particles, rigid bodies, collisions
-//! LAYER: DNA → PHYSICS → MECHANICS
+//! PURPOSE: Module exports: particle
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 /// Point mass dynamics (F=ma)

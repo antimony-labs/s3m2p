@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: mod.rs | ML/src/lessons/mod.rs
+//! PURPOSE: Module organization and re-exports
+//! MODIFIED: 2025-11-26
+//! LAYER: LEARN → ML
+//! ═══════════════════════════════════════════════════════════════════════════════
 pub mod lesson_00_rust_refresher;
 pub mod lesson_01_linear_regression;
 pub mod lesson_02_logistic_regression;

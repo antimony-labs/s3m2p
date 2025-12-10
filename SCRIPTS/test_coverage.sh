@@ -1,4 +1,9 @@
 #!/bin/bash
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: test_coverage.sh | SCRIPTS/test_coverage.sh
+# PURPOSE: Runs tests, clippy, and generates code coverage reports for workspace
+# MODIFIED: 2025-12-09
+# ═══════════════════════════════════════════════════════════════════════════════
 set -e
 
 # Colors for output

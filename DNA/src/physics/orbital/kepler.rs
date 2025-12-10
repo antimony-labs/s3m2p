@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: kepler.rs
-//! PATH: DNA/src/physics/orbital/kepler.rs
+//! FILE: kepler.rs | DNA/src/physics/orbital/kepler.rs
+//! PURPOSE: Two-body orbital mechanics (Kepler problem)
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: Two-body orbital mechanics (Kepler problem)
 //!

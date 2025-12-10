@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: config.rs | DNA/CLAUDE_AUTOMATION/src/config.rs
+//! PURPOSE: Defines Config, DaemonConfig, GitHubConfig types
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use anyhow::Result;
 use serde::Deserialize;
 use std::fs;

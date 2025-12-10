@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: astronomical.rs
-//! PATH: DNA/src/world/transforms/astronomical.rs
+//! FILE: astronomical.rs | DNA/src/world/transforms/astronomical.rs
+//! PURPOSE: Astronomical coordinate system transformations
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: Astronomical coordinate system transformations
 //!

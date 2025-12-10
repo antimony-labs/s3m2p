@@ -1,4 +1,9 @@
 #!/bin/bash
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: deploy_storage.sh | SCRIPTS/deploy_storage.sh
+# PURPOSE: Deploys storage server and core code to remote server via SSH
+# MODIFIED: 2025-11-26
+# ═══════════════════════════════════════════════════════════════════════════════
 set -e
 
 SERVER_IP="144.126.145.3"

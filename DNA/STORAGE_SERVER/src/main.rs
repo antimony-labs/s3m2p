@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: main.rs | DNA/STORAGE_SERVER/src/main.rs
+//! PURPOSE: Application entry point and initialization
+//! MODIFIED: 2025-12-02
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use axum::{
     extract::{Path, State},
     http::{Method, StatusCode},

@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: build.rs | HELIOS/build.rs
+//! PURPOSE: Build script to inject git commit hash and timestamp into binary
+//! MODIFIED: 2025-12-02
+//! LAYER: HELIOS (simulation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use std::process::Command;
 
 fn main() {

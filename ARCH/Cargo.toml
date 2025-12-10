@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Cargo.toml | ARCH/Cargo.toml
+# PURPOSE: ARCH project dependencies for interactive architecture visualization WASM app
+# MODIFIED: 2025-12-09
+# ═══════════════════════════════════════════════════════════════════════════════
+
 [package]
 name = "arch"
 version = "0.1.0"
@@ -28,11 +34,10 @@ features = [
     "Window",
     "MouseEvent",
     "WheelEvent",
+    "TouchEvent",
+    "TouchList",
+    "Touch",
     "DomRect",
     "Performance",
     "CssStyleDeclaration",
 ]
-
-[profile.release]
-opt-level = "z"
-lto = true

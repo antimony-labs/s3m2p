@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: pdf.rs | DNA/src/export/pdf.rs
+//! PURPOSE: Defines PdfDocument, PdfPage, TextAlign types
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 //! PDF 1.4 Generator - From Scratch
 //!
 //! Generates PDF files without external dependencies.

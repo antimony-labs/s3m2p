@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lib.rs | BLOG/src/lib.rs
+//! PURPOSE: Core blog types and markdown parsing with frontmatter support
+//! MODIFIED: 2025-11-29
+//! LAYER: BLOG
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 // Blog - Markdown-based blog engine
 // AI-assisted content, rendered in Rust/WASM
 #![allow(unexpected_cfgs)]

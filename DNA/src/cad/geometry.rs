@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: geometry.rs
-//! PATH: DNA/src/cad/geometry.rs
+//! FILE: geometry.rs | DNA/src/cad/geometry.rs
+//! PURPOSE: Geometric primitives for CAD/B-Rep modeling
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: Geometric primitives for CAD/B-Rep modeling
 //!

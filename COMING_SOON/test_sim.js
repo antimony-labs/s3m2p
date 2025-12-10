@@ -1,3 +1,11 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * FILE: test_sim.js | COMING_SOON/test_sim.js
+ * PURPOSE: Headless prey-predator simulation with bloom and death events testing
+ * MODIFIED: 2025-12-09
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
 // Simulate the ecosystem without visuals
 // MATCHES index.html exactly
 

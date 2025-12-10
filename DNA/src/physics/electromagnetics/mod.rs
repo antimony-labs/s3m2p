@@ -1,7 +1,8 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: mod.rs | DNA/src/physics/electromagnetics/mod.rs
-//! PURPOSE: Electromagnetic simulation - Maxwell, FDTD, circuits
-//! LAYER: DNA → PHYSICS → ELECTROMAGNETICS
+//! PURPOSE: Module exports: lumped
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 /// Lumped circuit element simulation (SPICE-like)

@@ -1,8 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: units.rs | DNA/src/world/units.rs
-//! PURPOSE: Type-safe physical units and conversions
-//! LAYER: DNA → WORLD
+//! PURPOSE: Provides 2 public functions for world
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! Unit conversions:
 //!   Length: meter (m), kilometer (km), astronomical unit (AU)

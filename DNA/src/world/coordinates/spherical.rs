@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: spherical.rs
-//! PATH: DNA/src/world/coordinates/spherical.rs
+//! FILE: spherical.rs | DNA/src/world/coordinates/spherical.rs
+//! PURPOSE: Spherical coordinate system (r, θ, φ)
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: Spherical coordinate system (r, θ, φ)
 //!

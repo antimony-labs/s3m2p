@@ -1,3 +1,11 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * FILE: test_transient.js | COMING_SOON/test_transient.js
+ * PURPOSE: Transient analysis tracking population dynamics and PID-controlled parameter evolution
+ * MODIFIED: 2025-12-09
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
 // Transient analysis of quantum wave ecosystem
 // Tracks population dynamics and parameter evolution over time
 

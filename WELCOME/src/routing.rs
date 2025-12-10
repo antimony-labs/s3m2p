@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: routing.rs | WELCOME/src/routing.rs
+//! PURPOSE: Hash-based client-side routing for single-page application category navigation
+//! MODIFIED: 2025-12-09
+//! LAYER: WELCOME (landing)
+//! ═══════════════════════════════════════════════════════════════════════════════
+//!
 //! Hash-based routing for too.foo SPA navigation
 //!
 //! Routes are in the format `#/category` (e.g., `#/tools`, `#/sims`, `#/learn`)

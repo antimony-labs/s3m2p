@@ -1,8 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: mod.rs | DNA/src/world/mod.rs
-//! PURPOSE: The Stage - Coordinate systems, spatial representations, transforms
-//! LAYER: DNA → WORLD
+//! PURPOSE: Module exports for world
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! WORLD defines WHERE things exist in space:
 //! - coordinates/  - Cartesian, spherical (cylindrical, polar - future)

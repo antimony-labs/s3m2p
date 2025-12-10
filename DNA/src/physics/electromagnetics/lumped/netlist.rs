@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: netlist.rs
-//! PATH: DNA/src/physics/electromagnetics/lumped/netlist.rs
+//! FILE: netlist.rs | DNA/src/physics/electromagnetics/lumped/netlist.rs
+//! PURPOSE: SPICE netlist representation and circuit element definitions
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: SPICE netlist representation and circuit element definitions
 //!

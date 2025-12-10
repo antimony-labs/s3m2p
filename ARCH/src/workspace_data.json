@@ -30,7 +30,7 @@
     },
     {
       "name": "simulation-engine",
-      "path": "CORE/SIMULATION_ENGINE",
+      "path": "SIMULATION/CORE/SIMULATION_ENGINE",
       "layer": "Core",
       "dependencies": [
         "dna"
@@ -38,7 +38,7 @@
     },
     {
       "name": "spice-engine",
-      "path": "CORE/SPICE_ENGINE",
+      "path": "SIMULATION/CORE/SPICE_ENGINE",
       "layer": "Core",
       "dependencies": [
         "dna"
@@ -46,7 +46,7 @@
     },
     {
       "name": "pll-engine",
-      "path": "CORE/PLL_ENGINE",
+      "path": "TOOLS/CORE/PLL_ENGINE",
       "layer": "Core",
       "dependencies": [
         "dna",
@@ -55,7 +55,7 @@
     },
     {
       "name": "export-engine",
-      "path": "CORE/EXPORT_ENGINE",
+      "path": "TOOLS/CORE/EXPORT_ENGINE",
       "layer": "Core",
       "dependencies": [
         "dna"
@@ -63,7 +63,7 @@
     },
     {
       "name": "wave-engine",
-      "path": "CORE/WAVE_ENGINE",
+      "path": "SIMULATION/CORE/WAVE_ENGINE",
       "layer": "Core",
       "dependencies": [
         "dna"
@@ -71,7 +71,7 @@
     },
     {
       "name": "autocrate-engine",
-      "path": "CORE/AUTOCRATE_ENGINE",
+      "path": "TOOLS/CORE/AUTOCRATE_ENGINE",
       "layer": "Core",
       "dependencies": [
         "dna"
@@ -79,7 +79,7 @@
     },
     {
       "name": "cad-engine",
-      "path": "CORE/CAD_ENGINE",
+      "path": "TOOLS/CORE/CAD_ENGINE",
       "layer": "Core",
       "dependencies": [
         "dna"
@@ -106,18 +106,18 @@
       "dependencies": []
     },
     {
+      "name": "arch",
+      "path": "ARCH",
+      "layer": "Project",
+      "dependencies": []
+    },
+    {
       "name": "chladni",
-      "path": "SIMULATIONS/CHLADNI",
+      "path": "SIMULATION/CHLADNI",
       "layer": "Tool",
       "dependencies": [
         "wave-engine"
       ]
-    },
-    {
-      "name": "sensors",
-      "path": "LEARN/SENSORS",
-      "layer": "Tool",
-      "dependencies": []
     },
     {
       "name": "autocrate",
@@ -125,6 +125,14 @@
       "layer": "Tool",
       "dependencies": [
         "autocrate-engine"
+      ]
+    },
+    {
+      "name": "cad",
+      "path": "TOOLS/CAD",
+      "layer": "Tool",
+      "dependencies": [
+        "cad-engine"
       ]
     },
     {
@@ -144,6 +152,20 @@
     {
       "name": "power-circuits",
       "path": "TOOLS/POWER_CIRCUITS",
+      "layer": "Tool",
+      "dependencies": []
+    },
+    {
+      "name": "spice",
+      "path": "TOOLS/SPICE",
+      "layer": "Tool",
+      "dependencies": [
+        "spice-engine"
+      ]
+    },
+    {
+      "name": "sensors",
+      "path": "LEARN/SENSORS",
       "layer": "Tool",
       "dependencies": []
     },

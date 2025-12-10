@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: euler.rs
-//! PATH: DNA/src/physics/solvers/ode/euler.rs
+//! FILE: euler.rs | DNA/src/physics/solvers/ode/euler.rs
+//! PURPOSE: Forward Euler ODE integrator (1st order, explicit)
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: Forward Euler ODE integrator (1st order, explicit)
 //!

@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: wave_field.rs | DNA/src/wave_field/wave_field.rs
+//! PURPOSE: Defines WaveField types
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 //! Wave field with FFT-based superposition
 //!
 //! Maintains wave field in both spatial and frequency domains for efficient

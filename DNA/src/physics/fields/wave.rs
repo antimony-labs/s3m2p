@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: wave.rs
-//! PATH: DNA/src/physics/fields/wave.rs
+//! FILE: wave.rs | DNA/src/physics/fields/wave.rs
+//! PURPOSE: Wave equation solver and Chladni pattern generation
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: Wave equation solver and Chladni pattern generation
 //!

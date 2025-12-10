@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: loop_filter.rs | DNA/src/pll/loop_filter.rs
+//! PURPOSE: Provides 3 public functions for pll
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use super::components::{format_capacitance, format_resistance, nearest_e96};
 use super::types::{FilterComponent, LoopFilterDesign, LoopFilterTopology};
 use std::f64::consts::PI;

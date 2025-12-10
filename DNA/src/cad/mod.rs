@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! MODULE: cad
-//! PATH: DNA/src/cad/
+//! FILE: mod.rs | DNA/src/cad/mod.rs
+//! PURPOSE: B-Rep (Boundary Representation) CAD kernel for solid modeling
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: B-Rep (Boundary Representation) CAD kernel for solid modeling
 //!

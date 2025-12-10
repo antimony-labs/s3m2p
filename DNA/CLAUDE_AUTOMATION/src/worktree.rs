@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: worktree.rs | DNA/CLAUDE_AUTOMATION/src/worktree.rs
+//! PURPOSE: Provides 2 public functions for src
+//! MODIFIED: 2025-12-02
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 use std::process::Command;

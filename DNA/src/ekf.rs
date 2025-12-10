@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: ekf.rs | DNA/src/ekf.rs
+//! PURPOSE: Extended Kalman Filter implementation
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 //! Extended Kalman Filter - DEPRECATED
 //!
 //! This module is deprecated. Please use `physics::solvers::filters` instead.

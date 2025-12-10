@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: circuit.rs | DNA/src/pll/circuit.rs
+//! PURPOSE: Provides 2 public functions for pll
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use crate::physics::electromagnetics::lumped::*;
 use crate::pll::*;
 use std::f64::consts::PI;

@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: main.rs | DNA/CLAUDE_AUTOMATION/src/main.rs
+//! PURPOSE: Application entry point and initialization
+//! MODIFIED: 2025-12-02
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use anyhow::Result;
 use std::time::Duration;
 use tokio::time::sleep;

@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: deny.toml | ./deny.toml
+# PURPOSE: Cargo-deny security policy for dependency auditing and license compliance
+# MODIFIED: 2025-11-29
+# ═══════════════════════════════════════════════════════════════════════════════
+
 # cargo-deny configuration
 # https://embarkstudios.github.io/cargo-deny/
 

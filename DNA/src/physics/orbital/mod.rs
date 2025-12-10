@@ -1,7 +1,8 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: mod.rs | DNA/src/physics/orbital/mod.rs
-//! PURPOSE: Orbital mechanics - Kepler, N-body, perturbations
-//! LAYER: DNA → PHYSICS → ORBITAL
+//! PURPOSE: Module exports: kepler
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 /// Two-body Kepler problem

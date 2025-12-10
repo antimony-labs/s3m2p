@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: mesh.rs
-//! PATH: DNA/src/data/mesh.rs
+//! FILE: mesh.rs | DNA/src/data/mesh.rs
+//! PURPOSE: Triangle/quad mesh representation for CAD and rendering
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: Triangle/quad mesh representation for CAD and rendering
 //!

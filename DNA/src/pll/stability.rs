@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: stability.rs | DNA/src/pll/stability.rs
+//! PURPOSE: Provides 2 public functions for pll
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use super::types::{BodePlot, PLLPerformance};
 use std::f64::consts::PI;
 

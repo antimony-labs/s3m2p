@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: topology.rs
-//! PATH: DNA/src/cad/topology.rs
+//! FILE: topology.rs | DNA/src/cad/topology.rs
+//! PURPOSE: B-Rep topology primitives (Vertex, Edge, Face, Shell, Solid)
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: B-Rep topology primitives (Vertex, Edge, Face, Shell, Solid)
 //!

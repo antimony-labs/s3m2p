@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Cargo.toml | HELIOS/Cargo.toml
+# PURPOSE: Cargo manifest for Helios WASM application with web-sys dependencies
+# MODIFIED: 2025-12-02
+# ═══════════════════════════════════════════════════════════════════════════════
+
 [package]
 name = "helios"
 version = "0.1.0"
@@ -10,6 +16,10 @@ wasm-bindgen = "=0.2.93"
 wasm-bindgen-futures = "0.4"
 console_error_panic_hook = "0.1"
 js-sys = "0.3"
+
+# Math and serialization (for heliosphere modules)
+glam = { version = "0.24", features = ["serde"] }
+serde = { version = "1.0", features = ["derive"] }
 
 [dependencies.web-sys]
 version = "0.3"

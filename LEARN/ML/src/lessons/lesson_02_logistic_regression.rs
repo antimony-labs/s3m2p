@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lesson_02_logistic_regression.rs | ML/src/lessons/lesson_02_logistic_regression.rs
+//! PURPOSE: Logistic regression for binary classification tasks
+//! MODIFIED: 2025-11-26
+//! LAYER: LEARN → ML
+//! ═══════════════════════════════════════════════════════════════════════════════
 use ndarray::Array1;
 use rand::prelude::*;
 use crate::utils::visualization;

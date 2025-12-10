@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: simulation.rs | HELIOS/src/simulation.rs
+//! PURPOSE: Solar system simulation state with 3D orbital mechanics and heliosphere model using SoA layout
+//! MODIFIED: 2025-12-02
+//! LAYER: HELIOS (simulation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 // Heliosphere Simulation State - SoA Layout following too.foo patterns
 // All computation in Rust, minimal JS interop
 #![allow(dead_code)]

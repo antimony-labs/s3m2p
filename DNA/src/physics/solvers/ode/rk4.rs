@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: rk4.rs
-//! PATH: DNA/src/physics/solvers/ode/rk4.rs
+//! FILE: rk4.rs | DNA/src/physics/solvers/ode/rk4.rs
+//! PURPOSE: 4th-order Runge-Kutta ODE integrator
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: 4th-order Runge-Kutta ODE integrator
 //!

@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: render.rs | src/render.rs
+//! PURPOSE: DOM rendering and canvas visualization logic
+//! MODIFIED: 2025-11-29
+//! LAYER: LEARN → src
+//! ═══════════════════════════════════════════════════════════════════════════════
 // DOM rendering for lessons
 
 use crate::lessons::Lesson;

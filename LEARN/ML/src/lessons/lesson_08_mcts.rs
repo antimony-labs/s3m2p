@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lesson_08_mcts.rs | ML/src/lessons/lesson_08_mcts.rs
+//! PURPOSE: Monte Carlo tree search for game-playing agents
+//! MODIFIED: 2025-11-26
+//! LAYER: LEARN → ML
+//! ═══════════════════════════════════════════════════════════════════════════════
 //! Lesson 08: Monte Carlo Tree Search (MCTS)
 //!
 //! MCTS is a search algorithm that builds a game tree by simulating random

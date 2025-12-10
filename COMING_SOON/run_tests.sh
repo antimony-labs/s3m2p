@@ -1,5 +1,9 @@
 #!/bin/bash
-# Run quantum wave ecosystem tests at different durations
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: run_tests.sh | COMING_SOON/run_tests.sh
+# PURPOSE: Test suite runner for wave-particle ecosystem stability at multiple durations
+# MODIFIED: 2025-12-09
+# ═══════════════════════════════════════════════════════════════════════════════
 
 echo "╔═══════════════════════════════════════════════════════════════╗"
 echo "║  Quantum Wave-Particle Ecosystem - Stability Test Suite      ║"

@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Cargo.toml | HELIOS/simulation-cli/Cargo.toml
+# PURPOSE: Cargo manifest for simulation CLI tool placeholder project
+# MODIFIED: 2025-12-02
+# ═══════════════════════════════════════════════════════════════════════════════
+
 [package]
 name = "simulation-cli"
 version = "0.1.0"

@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Trunk.toml | WELCOME/Trunk.toml
+# PURPOSE: Trunk bundler configuration for WASM build and development server settings
+# MODIFIED: 2025-12-03
+# ═══════════════════════════════════════════════════════════════════════════════
+
 [build]
 target = "index.html"
 dist = "dist"

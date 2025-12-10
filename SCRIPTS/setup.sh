@@ -1,4 +1,9 @@
 #!/bin/bash
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: setup.sh | SCRIPTS/setup.sh
+# PURPOSE: Installs dependencies and configures development environment for S3M2P workspace
+# MODIFIED: 2025-12-09
+# ═══════════════════════════════════════════════════════════════════════════════
 # S3M2P Unified Setup Script
 # Installs dependencies and configures development environment
 

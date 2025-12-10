@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: gerber.rs | DNA/src/export/gerber.rs
+//! PURPOSE: Defines GerberDocument, GerberCommand, ApertureDef types
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 //! Gerber X2 Generator - From Scratch
 //!
 //! Generates Gerber RS-274X / X2 files without external dependencies.

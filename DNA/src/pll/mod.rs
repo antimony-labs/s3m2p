@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: mod.rs | DNA/src/pll/mod.rs
+//! PURPOSE: Module exports for pll
+//! MODIFIED: 2025-12-02
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 pub mod circuit;
 pub mod components;
 pub mod fractional_n;

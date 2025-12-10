@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: verlet.rs
-//! PATH: DNA/src/physics/solvers/ode/verlet.rs
+//! FILE: verlet.rs | DNA/src/physics/solvers/ode/verlet.rs
+//! PURPOSE: Velocity Verlet integrator (symplectic, energy-conserving)
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: Velocity Verlet integrator (symplectic, energy-conserving)
 //!

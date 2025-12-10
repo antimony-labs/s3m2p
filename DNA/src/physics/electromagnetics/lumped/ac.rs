@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: ac.rs
-//! PATH: DNA/src/physics/electromagnetics/lumped/ac.rs
+//! FILE: ac.rs | DNA/src/physics/electromagnetics/lumped/ac.rs
+//! PURPOSE: AC (frequency-domain) circuit analysis using complex MNA
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: AC (frequency-domain) circuit analysis using complex MNA
 //!

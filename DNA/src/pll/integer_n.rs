@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: integer_n.rs | DNA/src/pll/integer_n.rs
+//! PURPOSE: Provides 4 public functions for pll
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use super::types::DividerConfig;
 
 /// Calculate optimal integer-N dividers for PLL

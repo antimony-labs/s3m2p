@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: mat.rs
-//! PATH: DNA/src/math/mat.rs
+//! FILE: mat.rs | DNA/src/math/mat.rs
+//! PURPOSE: Matrix operations for 2D/3D transforms and filters
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: Matrix operations for 2D/3D transforms and filters
 //!

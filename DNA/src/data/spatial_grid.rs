@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: spatial_grid.rs
-//! PATH: DNA/src/data/spatial_grid.rs
+//! FILE: spatial_grid.rs | DNA/src/data/spatial_grid.rs
+//! PURPOSE: Generic uniform spatial grid for O(1) neighbor queries
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: Generic uniform spatial grid for O(1) neighbor queries
 //!

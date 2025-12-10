@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: components.rs | DNA/src/pll/components.rs
+//! PURPOSE: Defines VCOSpec, PFDSpec, PLLICSpec types
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use serde::{Deserialize, Serialize};
 
 // ============================================================================

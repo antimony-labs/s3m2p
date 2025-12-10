@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lib.rs | TOOLS/AUTOCRATE/src/lib.rs
+//! PURPOSE: ASTM standard shipping crate generator WASM application entry point
+//! MODIFIED: 2025-12-09
+//! LAYER: TOOLS → AUTOCRATE
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 // AutoCrate - ASTM Standard Shipping Crate Generator
 // Rust/WASM port of the original TypeScript application
 #![allow(unexpected_cfgs)]

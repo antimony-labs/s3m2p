@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Cargo.toml | TOOLS/CRM/Cargo.toml
+# PURPOSE: Package manifest for CRM WASM application with dependencies
+# MODIFIED: 2025-12-09
+# ═══════════════════════════════════════════════════════════════════════════════
+
 [package]
 name = "crm"
 version = "0.1.0"

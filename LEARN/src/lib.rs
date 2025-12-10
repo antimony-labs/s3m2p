@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lib.rs | src/lib.rs
+//! PURPOSE: Library crate root module with public API exports
+//! MODIFIED: 2025-11-29
+//! LAYER: LEARN → src
+//! ═══════════════════════════════════════════════════════════════════════════════
 // Learn - Zero to AGI Interactive Platform
 // Client-side ML learning with visualizations
 #![allow(unexpected_cfgs)]

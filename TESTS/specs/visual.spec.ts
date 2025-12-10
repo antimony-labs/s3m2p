@@ -1,3 +1,11 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * FILE: visual.spec.ts | TESTS/specs/visual.spec.ts
+ * PURPOSE: Visual regression tests for landing page layout and canvas rendering
+ * MODIFIED: 2025-11-27
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
 import { test, expect } from '@playwright/test';
 
 test.describe('Visual Regression Tests', () => {

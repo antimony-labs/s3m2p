@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: session.rs | DNA/CLAUDE_AUTOMATION/src/session.rs
+//! PURPOSE: Claude Automation module implementation
+//! MODIFIED: 2025-12-02
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use anyhow::{Context, Result};
 use std::process::Command;
 use crate::config::Config;

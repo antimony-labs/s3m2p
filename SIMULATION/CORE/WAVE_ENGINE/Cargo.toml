@@ -1,0 +1,17 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Cargo.toml | SIMULATION/CORE/WAVE_ENGINE/Cargo.toml
+# PURPOSE: Wave simulation engine crate manifest for Chladni and field patterns
+# MODIFIED: 2025-12-09
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[package]
+name = "wave-engine"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+dna.workspace = true
+glam.workspace = true
+
+[lints]
+workspace = true

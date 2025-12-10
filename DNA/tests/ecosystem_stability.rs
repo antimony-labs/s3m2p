@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: ecosystem_stability.rs | DNA/tests/ecosystem_stability.rs
+//! PURPOSE: Tests module implementation
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 //! Comprehensive stability tests for the wave-based ecosystem
 //!
 //! Tests cover:

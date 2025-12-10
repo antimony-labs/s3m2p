@@ -1,7 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: matrix.rs
-//! PATH: DNA/src/physics/electromagnetics/lumped/matrix.rs
+//! FILE: matrix.rs | DNA/src/physics/electromagnetics/lumped/matrix.rs
+//! PURPOSE: Modified Nodal Analysis (MNA) matrix for DC circuit analysis
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! PURPOSE: Modified Nodal Analysis (MNA) matrix for DC circuit analysis
 //!

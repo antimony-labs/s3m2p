@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: comprehensive_tests.rs | DNA/tests/comprehensive_tests.rs
+//! PURPOSE: Unit and integration tests
+//! MODIFIED: 2025-11-29
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 //! Comprehensive Test Suite for Antimony-Core
 //!
 //! This module provides extensive test coverage for:

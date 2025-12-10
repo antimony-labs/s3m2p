@@ -1,4 +1,9 @@
 #!/bin/bash
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: deploy.sh | SCRIPTS/deploy.sh
+# PURPOSE: Builds and publishes projects to Cloudflare Pages with trunk bundling
+# MODIFIED: 2025-12-09
+# ═══════════════════════════════════════════════════════════════════════════════
 # Deploy script for too.foo projects
 # Usage: ./SCRIPTS/deploy.sh [project] [--publish]
 

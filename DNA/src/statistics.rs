@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: statistics.rs | DNA/src/statistics.rs
+//! PURPOSE: Defines PopulationMetrics, MetricsHistory types
+//! MODIFIED: 2025-11-29
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 //! Population statistics and metrics
 //!
 //! Provides utilities for computing and tracking simulation metrics:

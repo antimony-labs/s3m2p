@@ -1,8 +1,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: mod.rs | DNA/src/math/mod.rs
-//! PURPOSE: The Language - Pure mathematics primitives
-//! LAYER: DNA → MATH
+//! PURPOSE: Module exports: mat, random
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
 //!
 //! MATH provides the language for describing physics and geometry:
 //! - mat.rs           - Mat2 (2x2 matrix operations)
