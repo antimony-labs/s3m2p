@@ -163,7 +163,7 @@
   "DNA/src/autocrate/constants.rs": {
     "path": "DNA/src/autocrate/constants.rs",
     "name": "constants.rs",
-    "purpose": "Defines LumberSize types",
+    "purpose": "Defines LumberSize enum with ASTM standard lumber dimensions (nominal and actual)",
     "main_function": "actual",
     "type": ".rs"
   },
@@ -219,7 +219,7 @@
   "DNA/src/color.rs": {
     "path": "DNA/src/color.rs",
     "name": "color.rs",
-    "purpose": "Defines Rgb, Hsl, Gradient types",
+    "purpose": "Defines RGB and HSL color types with conversions (hex, rgba) and linear interpolation for visualizations",
     "main_function": "from_hex",
     "type": ".rs"
   },
@@ -261,7 +261,7 @@
   "DNA/src/ekf.rs": {
     "path": "DNA/src/ekf.rs",
     "name": "ekf.rs",
-    "purpose": "Extended Kalman Filter implementation",
+    "purpose": "Deprecated re-export of EKF from physics::solvers::filters for backward compatibility",
     "main_function": "Module/Lib",
     "type": ".rs"
   },
@@ -289,7 +289,7 @@
   "DNA/src/interaction.rs": {
     "path": "DNA/src/interaction.rs",
     "name": "interaction.rs",
-    "purpose": "Defines InteractionResult types",
+    "purpose": "Defines InteractionResult enum and Interactable trait for entity-environment and entity-entity interaction effects",
     "main_function": "has_effect",
     "type": ".rs"
   },
@@ -324,7 +324,7 @@
   "DNA/src/pathfinding.rs": {
     "path": "DNA/src/pathfinding.rs",
     "name": "pathfinding.rs",
-    "purpose": "Defines GridMap, Heuristic, PathResult types",
+    "purpose": "Implements A* pathfinding algorithm with GridMap, Heuristic, and PathResult types for grid-based navigation",
     "main_function": "new",
     "type": ".rs"
   },
@@ -632,7 +632,7 @@
   "DNA/src/spatial.rs": {
     "path": "DNA/src/spatial.rs",
     "name": "spatial.rs",
-    "purpose": "Defines SphericalPos, SpatialKey, DataLayer types",
+    "purpose": "Defines SphericalPos for spherical coordinates and SpatialKey for cube-sphere spatial indexing with quadtree subdivision",
     "main_function": "new",
     "type": ".rs"
   },
@@ -646,7 +646,7 @@
   "DNA/src/statistics.rs": {
     "path": "DNA/src/statistics.rs",
     "name": "statistics.rs",
-    "purpose": "Defines PopulationMetrics, MetricsHistory types",
+    "purpose": "Defines PopulationMetrics and MetricsHistory for tracking simulation statistics (population, diversity, generations, energy)",
     "main_function": "compute",
     "type": ".rs"
   },
@@ -751,7 +751,7 @@
   "DNA/src/zones.rs": {
     "path": "DNA/src/zones.rs",
     "name": "zones.rs",
-    "purpose": "Defines ExclusionZone types",
+    "purpose": "Defines ExclusionZone and ZoneEffect trait for spatial avoidance and effect areas in simulations",
     "main_function": "new",
     "type": ".rs"
   },
@@ -1472,7 +1472,7 @@
   "ARCH/src/lib.rs": {
     "path": "ARCH/src/lib.rs",
     "name": "lib.rs",
-    "purpose": "Interactive canvas-based architecture explorer showing crates, layers, and dependencies",
+    "purpose": "Terminal-style file-level architecture explorer with complete drill-down",
     "main_function": "start",
     "type": ".rs"
   },
