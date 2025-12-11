@@ -13,7 +13,7 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "HELIOS/CLAUDE.md",
+                "file": "CLAUDE.md",
                 "mode": "source",
                 "source": false
               },
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "HELIOS/CLAUDE.md",
+                "file": "CLAUDE.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -113,7 +113,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "HELIOS/CLAUDE.md",
+                "file": "CLAUDE.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
@@ -156,7 +156,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "HELIOS/CLAUDE.md",
+                "file": "CLAUDE.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
@@ -183,19 +183,21 @@
       "bases:Create new base": false
     }
   },
-  "active": "8175e23c48409267",
+  "active": "f503d2d0570ad7d3",
   "lastOpenFiles": [
-    "ARCH/dist/arch-190c6892e3c396e5_bg.wasm",
-    "ARCH/dist/arch-190c6892e3c396e5.js",
-    "target/wasm32-unknown-unknown/debug/incremental/arch-1u7gj3e669yso/s-hdslwu2gfi-1rcuqzx-72a7xi0l7urh1l2gufw9rnydv/work-products.bin",
-    "target/wasm32-unknown-unknown/debug/incremental/arch-1u7gj3e669yso/s-hdslwu2gfi-1rcuqzx-72a7xi0l7urh1l2gufw9rnydv/query-cache.bin",
-    "target/wasm32-unknown-unknown/debug/incremental/arch-1u7gj3e669yso/s-hdslwu2gfi-1rcuqzx-72a7xi0l7urh1l2gufw9rnydv/metadata.rmeta",
-    "target/wasm32-unknown-unknown/debug/incremental/arch-1u7gj3e669yso/s-hdslwu2gfi-1rcuqzx-72a7xi0l7urh1l2gufw9rnydv/f2l11o6fsn261gz3edr5x7h6q.o",
-    "target/wasm32-unknown-unknown/debug/incremental/arch-1u7gj3e669yso/s-hdslwu2gfi-1rcuqzx-72a7xi0l7urh1l2gufw9rnydv/f1kysaz1s0ypm62iv7i5h2csm.o",
-    "target/wasm32-unknown-unknown/debug/incremental/arch-1u7gj3e669yso/s-hdslwu2gfi-1rcuqzx-72a7xi0l7urh1l2gufw9rnydv/exqxqx2shf345gyzumanbe3m4.o",
-    "target/wasm32-unknown-unknown/debug/incremental/arch-1u7gj3e669yso/s-hdslwu2gfi-1rcuqzx-72a7xi0l7urh1l2gufw9rnydv/esgfjc093cq9cboskvvd5vmnk.o",
-    "target/wasm32-unknown-unknown/debug/incremental/arch-1u7gj3e669yso/s-hdslwu2gfi-1rcuqzx-72a7xi0l7urh1l2gufw9rnydv/erj8ghy584l7tu08tj42yq8o9.o",
-    "target/wasm32-unknown-unknown/debug/incremental/arch-1u7gj3e669yso/s-hdslwu2gfi-1rcuqzx-72a7xi0l7urh1l2gufw9rnydv/er759gs4xsszp7l1nfmvw9w39.o",
+    "PLANNER.md",
+    "target/debug/incremental/welcome-192bvg7x8xbdk/s-hdt5js6gno-068tayz-18spqgfxqtgle187gbas3uahg/work-products.bin",
+    "target/debug/incremental/welcome-192bvg7x8xbdk/s-hdt5js6gno-068tayz-18spqgfxqtgle187gbas3uahg/query-cache.bin",
+    "target/debug/incremental/welcome-192bvg7x8xbdk/s-hdt5js6gno-068tayz-18spqgfxqtgle187gbas3uahg/dep-graph.bin",
+    "target/debug/incremental/welcome-192bvg7x8xbdk/s-hdt5js6gno-068tayz-18spqgfxqtgle187gbas3uahg",
+    "target/debug/incremental/welcome-1tp8j0qluh8rr/s-hdt5js6gno-1tx56gu-9ecmn2spr9211laxgphcxdhhp/work-products.bin",
+    "target/debug/incremental/welcome-1tp8j0qluh8rr/s-hdt5js6gno-1tx56gu-9ecmn2spr9211laxgphcxdhhp/query-cache.bin",
+    "target/debug/incremental/welcome-1tp8j0qluh8rr/s-hdt5js6gno-1tx56gu-9ecmn2spr9211laxgphcxdhhp/dep-graph.bin",
+    "target/debug/incremental/welcome-1tp8j0qluh8rr/s-hdt5js6gno-1tx56gu-9ecmn2spr9211laxgphcxdhhp",
+    "target/debug/incremental/welcome-192bvg7x8xbdk/s-hdt5js6gno-068tayz-working/work-products.bin",
+    "target/debug/incremental/welcome-192bvg7x8xbdk/s-hdt5js6gno-068tayz-working/query-cache.bin",
+    "FIELD_MANUAL.md",
+    "HELIOS/CLAUDE.md",
     "ARCH/CLAUDE.md"
   ]
 }
