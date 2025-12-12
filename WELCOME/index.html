@@ -383,34 +383,53 @@ MODIFIED: 2025-12-09
 
         @media (max-width: 600px) {
             #telemetry-bar {
-                flex-direction: row;
-                flex-wrap: wrap;
+                display: grid;
+                grid-template-columns: auto 1fr;
+                grid-template-areas:
+                    "mission stats"
+                    "log log"
+                    "tech tech";
                 height: auto;
                 padding: 8px 12px;
                 padding-bottom: calc(8px + env(safe-area-inset-bottom));
-                gap: 8px;
-                justify-content: space-between;
+                gap: 8px 10px;
                 align-items: center;
             }
 
             #stats-row {
-                display: none;
+                grid-area: stats;
+                display: flex;
+                justify-content: flex-end;
+                flex-wrap: wrap;
+                gap: 10px;
+                margin-right: 0;
+                font-size: 0.6rem;
             }
 
             #log-row {
+                grid-area: log;
                 position: static;
                 transform: none;
-                flex: 1;
                 font-size: 0.65rem;
+                width: 100%;
             }
 
             #tech-info {
-                display: none;
+                grid-area: tech;
+                display: block;
+                font-size: 0.55rem;
+                text-align: left;
+                line-height: 1.25;
             }
 
             #mission-btn {
                 display: block;
+                grid-area: mission;
                 margin-right: 0;
+            }
+
+            #commit-link {
+                word-break: break-word;
             }
         }
 
