@@ -372,41 +372,40 @@ MODIFIED: 2025-12-09
             color: rgba(255, 255, 255, 0.4);
             text-align: right;
             display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 2px;
-        }
-
-        #tech-info .tech-line {
-            display: flex;
             align-items: center;
             justify-content: flex-end;
-            gap: 10px;
+            gap: 14px;
         }
 
         #tech-info .tech-stack {
             opacity: 0.6;
         }
 
-        #commit-link {
-            font-size: 0.55rem;
+        #tech-info .tech-meta {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 6px;
+        }
+
+        #tech-info .tech-by {
             opacity: 0.6;
+        }
+
+        #tech-info .tech-by::before {
+            content: "• ";
+            opacity: 0.6;
+        }
+
+        #commit-link {
             color: #00ffff;
             text-decoration: none;
-            margin-top: 2px;
             display: inline-block;
+            white-space: nowrap;
         }
 
         #commit-link:hover {
             text-decoration: underline;
-        }
-
-        #whitepaper-link {
-            color: #00ffff;
-            text-decoration: none;
-            cursor: pointer;
-            border-bottom: 1px dotted #00ffff;
-            margin-left: 0;
         }
 
         @media (max-width: 600px) {
@@ -449,16 +448,13 @@ MODIFIED: 2025-12-09
             #tech-info {
                 grid-area: tech;
                 display: flex;
-                flex-direction: column;
-                align-items: stretch;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
                 font-size: 0.55rem;
                 text-align: left;
                 line-height: 1.25;
-                gap: 4px;
-            }
-
-            #tech-info .tech-line {
-                justify-content: space-between;
+                gap: 10px;
             }
 
             #mission-btn {
@@ -467,82 +463,6 @@ MODIFIED: 2025-12-09
                 margin-right: 0;
             }
 
-            #commit-link {
-                word-break: break-word;
-            }
-        }
-
-        /* ============================================
-           WHITEPAPER OVERLAY
-           ============================================ */
-        #whitepaper-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.9);
-            backdrop-filter: blur(10px);
-            z-index: 10000;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        #whitepaper-overlay.visible {
-            display: flex;
-            opacity: 1;
-        }
-
-        #whitepaper-panel {
-            background: #0a0a10;
-            border: 1px solid rgba(0, 255, 255, 0.3);
-            max-width: 800px;
-            width: 90%;
-            max-height: 85vh;
-            overflow-y: auto;
-            padding: 40px;
-            position: relative;
-            box-shadow: 0 0 50px rgba(0, 255, 255, 0.1);
-            color: #ccc;
-        }
-
-        #whitepaper-close {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: none;
-            border: none;
-            color: #00ffff;
-            font-size: 2rem;
-            cursor: pointer;
-        }
-
-        #whitepaper-content h1 {
-            color: #00ffff;
-            font-family: 'Rajdhani', sans-serif;
-            margin-bottom: 20px;
-        }
-
-        #whitepaper-content h2 {
-            color: #ffffff;
-            font-family: 'Rajdhani', sans-serif;
-            margin-top: 30px;
-            border-bottom: 1px solid #333;
-            padding-bottom: 5px;
-        }
-
-        #whitepaper-content p {
-            margin-bottom: 15px;
-            line-height: 1.6;
-        }
-
-        #whitepaper-content ul {
-            margin-left: 20px;
-            margin-bottom: 15px;
-        }
-
-        #whitepaper-content li {
-            margin-bottom: 5px;
         }
 
         /* ============================================
@@ -784,74 +704,11 @@ MODIFIED: 2025-12-09
                 <span id="console-log">System Online...</span>
             </div>
             <div id="tech-info">
-                <div class="tech-line">
-                    <span class="tech-stack">RUST • WASM • WGPU</span>
-                    <a id="whitepaper-link">FIELD MANUAL</a>
-                </div>
-                <a id="commit-link" href="#" target="_blank" rel="noopener noreferrer">Loading...</a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Whitepaper Overlay -->
-    <div id="whitepaper-overlay">
-        <div id="whitepaper-panel">
-            <button id="whitepaper-close">&times;</button>
-            <div id="whitepaper-content">
-                <h1>too.foo Field Manual</h1>
-                <p><strong>The only document you need to read.</strong></p>
-
-                <h2>Quick Start</h2>
-                <pre style="background: #0a0a0a; padding: 10px; border-radius: 4px; overflow-x: auto;">
-run toofoo      # Landing page (localhost:3000)
-run helios      # Solar system (localhost:3001)
-run mcad        # MCAD viewer (localhost:3002)
-run ecad        # ECAD editor (localhost:3003)
-run website     # Personal site (localhost:3030)
-run list        # Show all projects</pre>
-
-                <h2>Vision: "Let AI Design, Humans Build"</h2>
-                <p>Open-source manufacturing platform in Rust:</p>
-                <ul>
-                    <li><strong>MCAD:</strong> Mechanical CAD (open-source NX) → STEP + G-code</li>
-                    <li><strong>ECAD:</strong> Electronics CAD (open-source Altium) → Gerber</li>
-                    <li><strong>DNA Code:</strong> Everything defined in TOML configuration</li>
-                    <li><strong>LLM-Centric:</strong> AI writes code, you review previews</li>
-                </ul>
-
-                <h2>File Structure</h2>
-                <pre style="background: #0a0a0a; padding: 10px; border-radius: 4px; overflow-x: auto;">
-S3M2P/
-├── DNA/         # Core engine (algorithms, GPU)
-├── MCAD/        # Open-source NX in Rust
-├── ECAD/        # Open-source Altium in Rust
-├── HELIOS/      # Solar system
-├── SIMULATIONS/ # Boids, Chladni, etc.
-├── SHIVAM/      # About Me timeline
-├── BLOG/        # Blog platform
-└── LEARN/       # Interactive lessons</pre>
-
-                <h2>Development Workflow</h2>
-                <ol>
-                    <li>Create GitHub issue</li>
-                    <li>Tell LLM: "work on issue 42"</li>
-                    <li>LLM creates worktree, implements, tests</li>
-                    <li>LLM pushes to preview/issue-42</li>
-                    <li>Review at: preview-issue-42.too.foo</li>
-                    <li>LLM creates PR → merges → production</li>
-                </ol>
-
-                <h2>Toolchain</h2>
-                <ul>
-                    <li>Rust 1.91.1 (stable)</li>
-                    <li>trunk 0.21.14 (WASM bundler)</li>
-                    <li>zellij 0.43.1 (terminal multiplexer)</li>
-                    <li>wgpu 22.1 (GPU compute)</li>
-                </ul>
-
-                <h2>Full Documentation</h2>
-                <p>Complete manual at: <code>~/S3M2P/FIELD_MANUAL.md</code></p>
-                <p style="margin-top: 20px;"><em>Built with Rust. Designed by AI. Made for humans.</em></p>
+                <span class="tech-stack">RUST • WASM • WGPU</span>
+                <span class="tech-meta">
+                    <a id="commit-link" href="#" target="_blank" rel="noopener noreferrer">Loading...</a>
+                    <span class="tech-by">by Shivam</span>
+                </span>
             </div>
         </div>
     </div>
@@ -1121,36 +978,6 @@ S3M2P/
                 }
             }
         };
-    </script>
-
-    <script>
-        // Overlay Logic
-        const overlay = document.getElementById('whitepaper-overlay');
-        const link = document.getElementById('whitepaper-link');
-        const closeBtn = document.getElementById('whitepaper-close');
-
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            // Redirect to ARCH project
-            const hostname = window.location.hostname;
-            if (hostname === 'localhost' || hostname === '127.0.0.1') {
-                window.location.href = 'http://localhost:8087';
-            } else {
-                window.location.href = 'https://arch.too.foo';
-            }
-        });
-
-        closeBtn.addEventListener('click', () => {
-            overlay.classList.remove('visible');
-        });
-
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) overlay.classList.remove('visible');
-        });
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') overlay.classList.remove('visible');
-        });
     </script>
 
     <script>
