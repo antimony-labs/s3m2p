@@ -308,6 +308,10 @@ button.secondary:hover {
     padding: 1.25rem;
 }
 
+.modal[hidden] {
+    display: none !important;
+}
+
 .modal-backdrop {
     position: absolute;
     inset: 0;
