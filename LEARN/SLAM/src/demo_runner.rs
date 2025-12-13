@@ -12,11 +12,8 @@ use wasm_bindgen::JsCast;
 use web_sys::HtmlInputElement;
 
 use learn_core::demos::{
-    ComplementaryFilterDemo,
-    ParticleFilterDemo, PFPhase,
-    KalmanFilterDemo, KFPhase,
-    EkfSlamDemo,
-    GraphSlamDemo,
+    ComplementaryFilterDemo, EkfSlamDemo, GraphSlamDemo, KFPhase, KalmanFilterDemo, PFPhase,
+    ParticleFilterDemo,
 };
 use learn_core::Demo;
 use learn_web::{AnimationLoop, Canvas};
@@ -24,6 +21,7 @@ use learn_web::{AnimationLoop, Canvas};
 // Thread-local state for the currently running demos
 thread_local! {
     static COMPLEMENTARY_FILTER_DEMO: RefCell<Option<ComplementaryFilterDemoRunner>> = RefCell::new(None);
+    static DARK_HALLWAY_DEMO: RefCell<Option<DarkHallwayDemoRunner>> = RefCell::new(None);
     static PARTICLE_FILTER_DEMO: RefCell<Option<ParticleFilterDemoRunner>> = RefCell::new(None);
     static KALMAN_FILTER_DEMO: RefCell<Option<KalmanFilterDemoRunner>> = RefCell::new(None);
     static EKF_SLAM_DEMO: RefCell<Option<EkfSlamDemoRunner>> = RefCell::new(None);
@@ -31,14 +29,15 @@ thread_local! {
 }
 
 /// Dispatch to the appropriate demo based on lesson index
-/// Order: 0=Complementary, 1=Kalman, 2=Particle, 3=EKF, 4=Graph
+/// Order: 0=Dark Hallway, 1=Complementary, 2=Kalman, 3=Particle, 4=EKF, 5=Graph
 pub fn start_demo_for_lesson(lesson_idx: usize, canvas_id: &str, seed: u64) -> Result<(), JsValue> {
     match lesson_idx {
-        0 => ComplementaryFilterDemoRunner::start(canvas_id, seed),
-        1 => KalmanFilterDemoRunner::start(canvas_id, seed),
-        2 => ParticleFilterDemoRunner::start(canvas_id, seed),
-        3 => EkfSlamDemoRunner::start(canvas_id, seed),
-        4 => GraphSlamDemoRunner::start(canvas_id, seed),
+        0 => DarkHallwayDemoRunner::start(canvas_id),
+        1 => ComplementaryFilterDemoRunner::start(canvas_id, seed),
+        2 => KalmanFilterDemoRunner::start(canvas_id, seed),
+        3 => ParticleFilterDemoRunner::start(canvas_id, seed),
+        4 => EkfSlamDemoRunner::start(canvas_id, seed),
+        5 => GraphSlamDemoRunner::start(canvas_id, seed),
         _ => Ok(()),
     }
 }
@@ -199,7 +198,11 @@ impl ParticleFilterDemoRunner {
                             .and_then(|w| w.document())
                             .and_then(|d| d.get_element_by_id("pause-btn"))
                         {
-                            btn.set_text_content(Some(if runner.paused { "▶ Play" } else { "⏸ Pause" }));
+                            btn.set_text_content(Some(if runner.paused {
+                                "▶ Play"
+                            } else {
+                                "⏸ Pause"
+                            }));
                         }
                     }
                 });
@@ -217,19 +220,32 @@ impl ParticleFilterDemoRunner {
                 PARTICLE_FILTER_DEMO.with(|d| {
                     if let Some(runner) = d.borrow_mut().as_mut() {
                         runner.step_mode = !runner.step_mode;
-                        runner.demo.set_param("step_mode", if runner.step_mode { 1.0 } else { 0.0 });
+                        runner
+                            .demo
+                            .set_param("step_mode", if runner.step_mode { 1.0 } else { 0.0 });
                         if let Some(btn) = web_sys::window()
                             .and_then(|w| w.document())
                             .and_then(|d| d.get_element_by_id("step-mode-btn"))
                         {
-                            btn.set_text_content(Some(if runner.step_mode { "🔄 Continuous" } else { "👣 Step Mode" }));
+                            btn.set_text_content(Some(if runner.step_mode {
+                                "🔄 Continuous"
+                            } else {
+                                "👣 Step Mode"
+                            }));
                         }
                         // Show/hide step button
                         if let Some(step_btn) = web_sys::window()
                             .and_then(|w| w.document())
                             .and_then(|d| d.get_element_by_id("step-btn"))
                         {
-                            let _ = step_btn.set_attribute("style", if runner.step_mode { "display: inline-block" } else { "display: none" });
+                            let _ = step_btn.set_attribute(
+                                "style",
+                                if runner.step_mode {
+                                    "display: inline-block"
+                                } else {
+                                    "display: none"
+                                },
+                            );
                         }
                     }
                 });
@@ -295,7 +311,14 @@ impl ParticleFilterDemoRunner {
 
         // === MAIN PLOT AREA ===
         // Draw border
-        self.canvas.stroke_rect(offset_x, offset_y, plot_size, plot_size, "rgba(100, 255, 218, 0.3)", 1.0);
+        self.canvas.stroke_rect(
+            offset_x,
+            offset_y,
+            plot_size,
+            plot_size,
+            "rgba(100, 255, 218, 0.3)",
+            1.0,
+        );
 
         // Draw grid
         ctx.set_stroke_style(&JsValue::from_str("rgba(100, 255, 218, 0.08)"));
@@ -319,7 +342,10 @@ impl ParticleFilterDemoRunner {
             let error = (meas.noisy_range - meas.range).abs();
             let alpha = (1.0 - error / 0.1).max(0.1).min(0.5);
 
-            ctx.set_stroke_style(&JsValue::from_str(&format!("rgba(255, 255, 100, {:.2})", alpha)));
+            ctx.set_stroke_style(&JsValue::from_str(&format!(
+                "rgba(255, 255, 100, {:.2})",
+                alpha
+            )));
             ctx.set_line_width(2.0);
             ctx.begin_path();
             ctx.move_to(to_x(self.demo.true_pos.x), to_y(self.demo.true_pos.y));
@@ -331,16 +357,27 @@ impl ParticleFilterDemoRunner {
         ctx.set_font("10px 'Inter', sans-serif");
         for (i, lm) in self.demo.landmarks.iter().enumerate() {
             // Draw square
-            self.canvas.fill_rect(to_x(lm.x) - 5.0, to_y(lm.y) - 5.0, 10.0, 10.0, "#4488ff");
+            self.canvas
+                .fill_rect(to_x(lm.x) - 5.0, to_y(lm.y) - 5.0, 10.0, 10.0, "#4488ff");
             // Draw outline
-            self.canvas.stroke_rect(to_x(lm.x) - 5.0, to_y(lm.y) - 5.0, 10.0, 10.0, "#88bbff", 1.0);
+            self.canvas.stroke_rect(
+                to_x(lm.x) - 5.0,
+                to_y(lm.y) - 5.0,
+                10.0,
+                10.0,
+                "#88bbff",
+                1.0,
+            );
             // Label
             ctx.set_fill_style(&JsValue::from_str("#4488ff"));
             let _ = ctx.fill_text(&format!("L{}", i), to_x(lm.x) + 8.0, to_y(lm.y) + 4.0);
         }
 
         // Draw particles with color/size based on weight
-        let max_weight = self.demo.particles.iter()
+        let max_weight = self
+            .demo
+            .particles
+            .iter()
             .map(|p| p.weight)
             .fold(0.0_f32, f32::max);
 
@@ -361,14 +398,18 @@ impl ParticleFilterDemoRunner {
             // Size: 2-5 pixels based on weight
             let size = 2.0 + 3.0 * norm_weight as f64;
 
-            self.canvas.fill_circle(to_x(particle.pos.x), to_y(particle.pos.y), size, &color);
+            self.canvas
+                .fill_circle(to_x(particle.pos.x), to_y(particle.pos.y), size, &color);
 
             // Draw heading indicator for high-weight particles
             if norm_weight > 0.5 {
                 let len = 8.0;
                 let dx = len * (particle.theta as f64).cos();
                 let dy = -len * (particle.theta as f64).sin(); // flip Y
-                ctx.set_stroke_style(&JsValue::from_str(&format!("rgba(255, 200, 100, {:.2})", alpha * 0.5)));
+                ctx.set_stroke_style(&JsValue::from_str(&format!(
+                    "rgba(255, 200, 100, {:.2})",
+                    alpha * 0.5
+                )));
                 ctx.set_line_width(1.0);
                 ctx.begin_path();
                 ctx.move_to(to_x(particle.pos.x), to_y(particle.pos.y));
@@ -407,22 +448,26 @@ impl ParticleFilterDemoRunner {
         ctx.set_font("11px 'Inter', sans-serif");
 
         // Legend items
-        self.canvas.fill_triangle(panel_x + 8.0, panel_y, 8.0, 0.0, "#00ff88");
+        self.canvas
+            .fill_triangle(panel_x + 8.0, panel_y, 8.0, 0.0, "#00ff88");
         ctx.set_fill_style(&JsValue::from_str("#00ff88"));
         let _ = ctx.fill_text("True Robot", panel_x + 22.0, panel_y + 4.0);
         panel_y += 18.0;
 
-        self.canvas.fill_triangle(panel_x + 8.0, panel_y, 8.0, 0.0, "#00ffff");
+        self.canvas
+            .fill_triangle(panel_x + 8.0, panel_y, 8.0, 0.0, "#00ffff");
         ctx.set_fill_style(&JsValue::from_str("#00ffff"));
         let _ = ctx.fill_text("Estimated", panel_x + 22.0, panel_y + 4.0);
         panel_y += 18.0;
 
-        self.canvas.fill_circle(panel_x + 8.0, panel_y, 4.0, "#ff9664");
+        self.canvas
+            .fill_circle(panel_x + 8.0, panel_y, 4.0, "#ff9664");
         ctx.set_fill_style(&JsValue::from_str("#ff9664"));
         let _ = ctx.fill_text("Particles", panel_x + 22.0, panel_y + 4.0);
         panel_y += 18.0;
 
-        self.canvas.fill_rect(panel_x + 4.0, panel_y - 4.0, 8.0, 8.0, "#4488ff");
+        self.canvas
+            .fill_rect(panel_x + 4.0, panel_y - 4.0, 8.0, 8.0, "#4488ff");
         ctx.set_fill_style(&JsValue::from_str("#4488ff"));
         let _ = ctx.fill_text("Landmarks", panel_x + 22.0, panel_y + 4.0);
         panel_y += 30.0;
@@ -435,16 +480,34 @@ impl ParticleFilterDemoRunner {
 
         ctx.set_font("11px 'Inter', sans-serif");
         let error = self.demo.error();
-        let error_color = if error < 0.05 { "#00ff88" } else if error < 0.1 { "#ffaa00" } else { "#ff5555" };
+        let error_color = if error < 0.05 {
+            "#00ff88"
+        } else if error < 0.1 {
+            "#ffaa00"
+        } else {
+            "#ff5555"
+        };
         ctx.set_fill_style(&JsValue::from_str(error_color));
         let _ = ctx.fill_text(&format!("Error: {:.3}", error), panel_x, panel_y);
         panel_y += 16.0;
 
         ctx.set_fill_style(&JsValue::from_str("#888"));
-        let _ = ctx.fill_text(&format!("N_eff: {:.0}/{}", self.demo.effective_particles, self.demo.particles.len()), panel_x, panel_y);
+        let _ = ctx.fill_text(
+            &format!(
+                "N_eff: {:.0}/{}",
+                self.demo.effective_particles,
+                self.demo.particles.len()
+            ),
+            panel_x,
+            panel_y,
+        );
         panel_y += 16.0;
 
-        let _ = ctx.fill_text(&format!("Max w: {:.4}", self.demo.best_particle_weight), panel_x, panel_y);
+        let _ = ctx.fill_text(
+            &format!("Max w: {:.4}", self.demo.best_particle_weight),
+            panel_x,
+            panel_y,
+        );
         panel_y += 30.0;
 
         // Error history mini-plot
@@ -458,8 +521,10 @@ impl ParticleFilterDemoRunner {
             let plot_h = 50.0;
 
             // Background
-            self.canvas.fill_rect(panel_x, panel_y, plot_w, plot_h, "rgba(30, 30, 40, 0.8)");
-            self.canvas.stroke_rect(panel_x, panel_y, plot_w, plot_h, "#333", 1.0);
+            self.canvas
+                .fill_rect(panel_x, panel_y, plot_w, plot_h, "rgba(30, 30, 40, 0.8)");
+            self.canvas
+                .stroke_rect(panel_x, panel_y, plot_w, plot_h, "#333", 1.0);
 
             // Draw error line
             let history = &self.demo.error_history;
@@ -743,7 +808,11 @@ impl KalmanFilterDemoRunner {
                             .and_then(|w| w.document())
                             .and_then(|d| d.get_element_by_id("pause-btn"))
                         {
-                            btn.set_text_content(Some(if runner.paused { "▶ Play" } else { "⏸ Pause" }));
+                            btn.set_text_content(Some(if runner.paused {
+                                "▶ Play"
+                            } else {
+                                "⏸ Pause"
+                            }));
                         }
                     }
                 });
@@ -789,7 +858,14 @@ impl KalmanFilterDemoRunner {
         let _ = ctx.fill_text(self.demo.phase.description(), margin + 120.0, 20.0);
 
         // === MAIN PLOT ===
-        self.canvas.stroke_rect(offset_x, offset_y, plot_size, plot_size, "rgba(100, 255, 218, 0.3)", 1.0);
+        self.canvas.stroke_rect(
+            offset_x,
+            offset_y,
+            plot_size,
+            plot_size,
+            "rgba(100, 255, 218, 0.3)",
+            1.0,
+        );
 
         // Grid
         ctx.set_stroke_style(&JsValue::from_str("rgba(100, 255, 218, 0.08)"));
@@ -811,7 +887,10 @@ impl KalmanFilterDemoRunner {
             ctx.set_stroke_style(&JsValue::from_str("rgba(0, 255, 136, 0.3)"));
             ctx.set_line_width(1.0);
             ctx.begin_path();
-            ctx.move_to(to_x(self.demo.true_path[0].x), to_y(self.demo.true_path[0].y));
+            ctx.move_to(
+                to_x(self.demo.true_path[0].x),
+                to_y(self.demo.true_path[0].y),
+            );
             for pos in &self.demo.true_path[1..] {
                 ctx.line_to(to_x(pos.x), to_y(pos.y));
             }
@@ -832,12 +911,14 @@ impl KalmanFilterDemoRunner {
 
         // Draw GPS measurements (yellow dots)
         for gps in &self.demo.gps_history {
-            self.canvas.fill_circle(to_x(gps.x), to_y(gps.y), 3.0, "rgba(255, 255, 100, 0.5)");
+            self.canvas
+                .fill_circle(to_x(gps.x), to_y(gps.y), 3.0, "rgba(255, 255, 100, 0.5)");
         }
 
         // Draw last GPS measurement (bright yellow)
         if let Some(gps) = self.demo.last_gps {
-            self.canvas.fill_circle(to_x(gps.x), to_y(gps.y), 6.0, "#ffff00");
+            self.canvas
+                .fill_circle(to_x(gps.x), to_y(gps.y), 6.0, "#ffff00");
             ctx.set_stroke_style(&JsValue::from_str("#ffff00"));
             ctx.set_line_width(1.0);
             ctx.begin_path();
@@ -849,24 +930,39 @@ impl KalmanFilterDemoRunner {
         let (semi_a, semi_b, angle) = self.demo.covariance_ellipse();
         let scale = plot_size as f32;
         ctx.save();
-        ctx.translate(to_x(self.demo.kf_pos.x), to_y(self.demo.kf_pos.y)).ok();
+        ctx.translate(to_x(self.demo.kf_pos.x), to_y(self.demo.kf_pos.y))
+            .ok();
         ctx.rotate(-angle as f64).ok();
         ctx.set_stroke_style(&JsValue::from_str("rgba(0, 255, 255, 0.5)"));
         ctx.set_line_width(2.0);
         ctx.begin_path();
         let _ = ctx.ellipse(
-            0.0, 0.0,
-            (semi_a * scale) as f64, (semi_b * scale) as f64,
-            0.0, 0.0, std::f64::consts::TAU,
+            0.0,
+            0.0,
+            (semi_a * scale) as f64,
+            (semi_b * scale) as f64,
+            0.0,
+            0.0,
+            std::f64::consts::TAU,
         );
         ctx.stroke();
         ctx.restore();
 
         // Draw estimated position (cyan)
-        self.canvas.fill_circle(to_x(self.demo.kf_pos.x), to_y(self.demo.kf_pos.y), 8.0, "#00ffff");
+        self.canvas.fill_circle(
+            to_x(self.demo.kf_pos.x),
+            to_y(self.demo.kf_pos.y),
+            8.0,
+            "#00ffff",
+        );
 
         // Draw true position (green)
-        self.canvas.fill_circle(to_x(self.demo.true_pos.x), to_y(self.demo.true_pos.y), 6.0, "#00ff88");
+        self.canvas.fill_circle(
+            to_x(self.demo.true_pos.x),
+            to_y(self.demo.true_pos.y),
+            6.0,
+            "#00ff88",
+        );
 
         // === INFO PANEL ===
         let panel_x = offset_x + plot_size + 20.0;
@@ -879,17 +975,20 @@ impl KalmanFilterDemoRunner {
 
         ctx.set_font("11px 'Inter', sans-serif");
 
-        self.canvas.fill_circle(panel_x + 6.0, panel_y, 4.0, "#00ff88");
+        self.canvas
+            .fill_circle(panel_x + 6.0, panel_y, 4.0, "#00ff88");
         ctx.set_fill_style(&JsValue::from_str("#00ff88"));
         let _ = ctx.fill_text("True Position", panel_x + 18.0, panel_y + 4.0);
         panel_y += 18.0;
 
-        self.canvas.fill_circle(panel_x + 6.0, panel_y, 4.0, "#00ffff");
+        self.canvas
+            .fill_circle(panel_x + 6.0, panel_y, 4.0, "#00ffff");
         ctx.set_fill_style(&JsValue::from_str("#00ffff"));
         let _ = ctx.fill_text("KF Estimate", panel_x + 18.0, panel_y + 4.0);
         panel_y += 18.0;
 
-        self.canvas.fill_circle(panel_x + 6.0, panel_y, 3.0, "#ffff00");
+        self.canvas
+            .fill_circle(panel_x + 6.0, panel_y, 3.0, "#ffff00");
         ctx.set_fill_style(&JsValue::from_str("#ffff00"));
         let _ = ctx.fill_text("GPS Measurement", panel_x + 18.0, panel_y + 4.0);
         panel_y += 18.0;
@@ -897,7 +996,15 @@ impl KalmanFilterDemoRunner {
         ctx.set_stroke_style(&JsValue::from_str("#00ffff"));
         ctx.set_line_width(1.0);
         ctx.begin_path();
-        let _ = ctx.ellipse(panel_x + 6.0, panel_y, 8.0, 5.0, 0.0, 0.0, std::f64::consts::TAU);
+        let _ = ctx.ellipse(
+            panel_x + 6.0,
+            panel_y,
+            8.0,
+            5.0,
+            0.0,
+            0.0,
+            std::f64::consts::TAU,
+        );
         ctx.stroke();
         ctx.set_fill_style(&JsValue::from_str("#00ffff"));
         let _ = ctx.fill_text("Uncertainty (2σ)", panel_x + 18.0, panel_y + 4.0);
@@ -911,14 +1018,24 @@ impl KalmanFilterDemoRunner {
 
         ctx.set_font("11px 'Inter', sans-serif");
         let error = self.demo.error();
-        let error_color = if error < 0.02 { "#00ff88" } else if error < 0.05 { "#ffaa00" } else { "#ff5555" };
+        let error_color = if error < 0.02 {
+            "#00ff88"
+        } else if error < 0.05 {
+            "#ffaa00"
+        } else {
+            "#ff5555"
+        };
         ctx.set_fill_style(&JsValue::from_str(error_color));
         let _ = ctx.fill_text(&format!("Error: {:.4}", error), panel_x, panel_y);
         panel_y += 16.0;
 
         ctx.set_fill_style(&JsValue::from_str("#888"));
         let uncertainty = self.demo.uncertainty();
-        let _ = ctx.fill_text(&format!("Uncertainty: {:.4}", uncertainty), panel_x, panel_y);
+        let _ = ctx.fill_text(
+            &format!("Uncertainty: {:.4}", uncertainty),
+            panel_x,
+            panel_y,
+        );
         panel_y += 30.0;
 
         // Kalman Gain display
@@ -1106,7 +1223,11 @@ impl ComplementaryFilterDemoRunner {
                             .and_then(|w| w.document())
                             .and_then(|d| d.get_element_by_id("pause-btn"))
                         {
-                            btn.set_text_content(Some(if runner.paused { "▶ Play" } else { "⏸ Pause" }));
+                            btn.set_text_content(Some(if runner.paused {
+                                "▶ Play"
+                            } else {
+                                "⏸ Pause"
+                            }));
                         }
                     }
                 });
@@ -1129,7 +1250,7 @@ impl ComplementaryFilterDemoRunner {
         // Layout: 3 signal plots (accel, fused, gyro) + info panel
         let margin = 20.0;
         let plot_height = 120.0;
-        let plot_width = w - 2.0 * margin - 140.0;  // Leave room for info panel
+        let plot_width = w - 2.0 * margin - 140.0; // Leave room for info panel
 
         // Title bar
         ctx.set_font("bold 14px 'Inter', sans-serif");
@@ -1143,7 +1264,10 @@ impl ComplementaryFilterDemoRunner {
         // === PLOT 1: ACCELEROMETER (jittery, no drift) ===
         let plot1_y = 40.0;
         self.render_signal_plot(
-            margin, plot1_y, plot_width, plot_height,
+            margin,
+            plot1_y,
+            plot_width,
+            plot_height,
             "Accelerometer (jittery, no drift)",
             "#ff6666",
             &self.demo.history.accel,
@@ -1153,7 +1277,10 @@ impl ComplementaryFilterDemoRunner {
         // === PLOT 2: FUSED OUTPUT (best of both) ===
         let plot2_y = plot1_y + plot_height + 20.0;
         self.render_signal_plot(
-            margin, plot2_y, plot_width, plot_height,
+            margin,
+            plot2_y,
+            plot_width,
+            plot_height,
             "Fused Output (complementary filter)",
             "#00ff88",
             &self.demo.history.fused,
@@ -1163,7 +1290,10 @@ impl ComplementaryFilterDemoRunner {
         // === PLOT 3: GYROSCOPE (smooth, drifts) ===
         let plot3_y = plot2_y + plot_height + 20.0;
         self.render_signal_plot(
-            margin, plot3_y, plot_width, plot_height,
+            margin,
+            plot3_y,
+            plot_width,
+            plot_height,
             "Gyroscope (smooth, drifts over time)",
             "#66aaff",
             &self.demo.history.gyro,
@@ -1183,21 +1313,39 @@ impl ComplementaryFilterDemoRunner {
 
         // Accel error
         let accel_err = self.demo.accel_error();
-        let accel_color = if accel_err < 5.0 { "#00ff88" } else if accel_err < 10.0 { "#ffaa00" } else { "#ff5555" };
+        let accel_color = if accel_err < 5.0 {
+            "#00ff88"
+        } else if accel_err < 10.0 {
+            "#ffaa00"
+        } else {
+            "#ff5555"
+        };
         ctx.set_fill_style(&JsValue::from_str(accel_color));
         let _ = ctx.fill_text(&format!("Accel: {:.1}°", accel_err), panel_x, panel_y);
         panel_y += 16.0;
 
         // Fused error
         let fused_err = self.demo.fusion_error();
-        let fused_color = if fused_err < 2.0 { "#00ff88" } else if fused_err < 5.0 { "#ffaa00" } else { "#ff5555" };
+        let fused_color = if fused_err < 2.0 {
+            "#00ff88"
+        } else if fused_err < 5.0 {
+            "#ffaa00"
+        } else {
+            "#ff5555"
+        };
         ctx.set_fill_style(&JsValue::from_str(fused_color));
         let _ = ctx.fill_text(&format!("Fused: {:.1}°", fused_err), panel_x, panel_y);
         panel_y += 16.0;
 
         // Gyro error
         let gyro_err = self.demo.gyro_error();
-        let gyro_color = if gyro_err < 5.0 { "#00ff88" } else if gyro_err < 15.0 { "#ffaa00" } else { "#ff5555" };
+        let gyro_color = if gyro_err < 5.0 {
+            "#00ff88"
+        } else if gyro_err < 15.0 {
+            "#ffaa00"
+        } else {
+            "#ff5555"
+        };
         ctx.set_fill_style(&JsValue::from_str(gyro_color));
         let _ = ctx.fill_text(&format!("Gyro: {:.1}°", gyro_err), panel_x, panel_y);
         panel_y += 30.0;
@@ -1249,8 +1397,10 @@ impl ComplementaryFilterDemoRunner {
 
     fn render_signal_plot(
         &self,
-        x: f64, y: f64,
-        w: f64, h: f64,
+        x: f64,
+        y: f64,
+        w: f64,
+        h: f64,
         title: &str,
         color: &str,
         signal: &[f32],
@@ -1260,7 +1410,8 @@ impl ComplementaryFilterDemoRunner {
 
         // Background
         self.canvas.fill_rect(x, y, w, h, "rgba(20, 20, 30, 0.8)");
-        self.canvas.stroke_rect(x, y, w, h, "rgba(100, 255, 218, 0.2)", 1.0);
+        self.canvas
+            .stroke_rect(x, y, w, h, "rgba(100, 255, 218, 0.2)", 1.0);
 
         // Title
         ctx.set_font("11px 'Inter', sans-serif");
@@ -1275,7 +1426,7 @@ impl ComplementaryFilterDemoRunner {
         let all_values: Vec<f32> = signal.iter().chain(truth.iter()).copied().collect();
         let min_val = all_values.iter().copied().fold(f32::INFINITY, f32::min);
         let max_val = all_values.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-        let range = (max_val - min_val).max(10.0);  // At least 10 degrees range
+        let range = (max_val - min_val).max(10.0); // At least 10 degrees range
         let center = (max_val + min_val) / 2.0;
         let y_min = center - range * 0.6;
         let y_max = center + range * 0.6;
@@ -1478,7 +1629,11 @@ impl EkfSlamDemoRunner {
                             .and_then(|w| w.document())
                             .and_then(|d| d.get_element_by_id("pause-btn"))
                         {
-                            btn.set_text_content(Some(if runner.paused { "▶ Play" } else { "⏸ Pause" }));
+                            btn.set_text_content(Some(if runner.paused {
+                                "▶ Play"
+                            } else {
+                                "⏸ Pause"
+                            }));
                         }
                     }
                 });
@@ -1512,10 +1667,21 @@ impl EkfSlamDemoRunner {
         // === TITLE ===
         ctx.set_font("bold 14px 'Inter', sans-serif");
         ctx.set_fill_style(&JsValue::from_str("#64ffda"));
-        let _ = ctx.fill_text("EKF SLAM - Simultaneous Localization and Mapping", margin, 20.0);
+        let _ = ctx.fill_text(
+            "EKF SLAM - Simultaneous Localization and Mapping",
+            margin,
+            20.0,
+        );
 
         // === MAIN PLOT ===
-        self.canvas.stroke_rect(offset_x, offset_y, plot_size, plot_size, "rgba(100, 255, 218, 0.3)", 1.0);
+        self.canvas.stroke_rect(
+            offset_x,
+            offset_y,
+            plot_size,
+            plot_size,
+            "rgba(100, 255, 218, 0.3)",
+            1.0,
+        );
 
         // Grid
         ctx.set_stroke_style(&JsValue::from_str("rgba(100, 255, 218, 0.08)"));
@@ -1540,7 +1706,8 @@ impl EkfSlamDemoRunner {
             to_x(self.demo.true_pos.x),
             to_y(self.demo.true_pos.y),
             self.demo.sensor_range as f64 * plot_size,
-            0.0, std::f64::consts::TAU
+            0.0,
+            std::f64::consts::TAU,
         );
         ctx.stroke();
 
@@ -1550,7 +1717,10 @@ impl EkfSlamDemoRunner {
             ctx.set_stroke_style(&JsValue::from_str("rgba(0, 255, 136, 0.3)"));
             ctx.set_line_width(1.0);
             ctx.begin_path();
-            ctx.move_to(to_x(self.demo.robot_path[0].x), to_y(self.demo.robot_path[0].y));
+            ctx.move_to(
+                to_x(self.demo.robot_path[0].x),
+                to_y(self.demo.robot_path[0].y),
+            );
             for pos in &self.demo.robot_path[1..] {
                 ctx.line_to(to_x(pos.x), to_y(pos.y));
             }
@@ -1576,25 +1746,37 @@ impl EkfSlamDemoRunner {
             ctx.set_line_width(1.0);
             ctx.begin_path();
             let _ = ctx.ellipse(
-                to_x(lm.pos.x), to_y(lm.pos.y),
+                to_x(lm.pos.x),
+                to_y(lm.pos.y),
                 (sigma_x as f64 * plot_size).max(3.0),
                 (sigma_y as f64 * plot_size).max(3.0),
-                0.0, 0.0, std::f64::consts::TAU
+                0.0,
+                0.0,
+                std::f64::consts::TAU,
             );
             ctx.stroke();
 
             // Landmark point
             let color = if Some(i) == self.demo.last_observed_idx {
-                if self.demo.last_was_new { "#ffff00" } else { "#00ff88" }
+                if self.demo.last_was_new {
+                    "#ffff00"
+                } else {
+                    "#00ff88"
+                }
             } else {
                 "#ff9664"
             };
-            self.canvas.fill_rect(to_x(lm.pos.x) - 4.0, to_y(lm.pos.y) - 4.0, 8.0, 8.0, color);
+            self.canvas
+                .fill_rect(to_x(lm.pos.x) - 4.0, to_y(lm.pos.y) - 4.0, 8.0, 8.0, color);
 
             // Observation count
             ctx.set_font("9px 'Inter', sans-serif");
             ctx.set_fill_style(&JsValue::from_str("#888"));
-            let _ = ctx.fill_text(&format!("×{}", lm.observations), to_x(lm.pos.x) + 6.0, to_y(lm.pos.y) - 6.0);
+            let _ = ctx.fill_text(
+                &format!("×{}", lm.observations),
+                to_x(lm.pos.x) + 6.0,
+                to_y(lm.pos.y) - 6.0,
+            );
         }
 
         // Draw robot uncertainty ellipse
@@ -1604,10 +1786,13 @@ impl EkfSlamDemoRunner {
         ctx.set_line_width(2.0);
         ctx.begin_path();
         let _ = ctx.ellipse(
-            to_x(self.demo.est_pos.x), to_y(self.demo.est_pos.y),
+            to_x(self.demo.est_pos.x),
+            to_y(self.demo.est_pos.y),
             (robot_sigma_x as f64 * plot_size).max(5.0),
             (robot_sigma_y as f64 * plot_size).max(5.0),
-            0.0, 0.0, std::f64::consts::TAU
+            0.0,
+            0.0,
+            std::f64::consts::TAU,
         );
         ctx.stroke();
 
@@ -1640,27 +1825,32 @@ impl EkfSlamDemoRunner {
 
         ctx.set_font("11px 'Inter', sans-serif");
 
-        self.canvas.fill_triangle(panel_x + 8.0, panel_y, 8.0, 0.0, "#00ff88");
+        self.canvas
+            .fill_triangle(panel_x + 8.0, panel_y, 8.0, 0.0, "#00ff88");
         ctx.set_fill_style(&JsValue::from_str("#00ff88"));
         let _ = ctx.fill_text("True Robot", panel_x + 22.0, panel_y + 4.0);
         panel_y += 18.0;
 
-        self.canvas.fill_triangle(panel_x + 8.0, panel_y, 8.0, 0.0, "#00ffff");
+        self.canvas
+            .fill_triangle(panel_x + 8.0, panel_y, 8.0, 0.0, "#00ffff");
         ctx.set_fill_style(&JsValue::from_str("#00ffff"));
         let _ = ctx.fill_text("Estimated", panel_x + 22.0, panel_y + 4.0);
         panel_y += 18.0;
 
-        self.canvas.fill_rect(panel_x + 4.0, panel_y - 4.0, 8.0, 8.0, "#ff9664");
+        self.canvas
+            .fill_rect(panel_x + 4.0, panel_y - 4.0, 8.0, 8.0, "#ff9664");
         ctx.set_fill_style(&JsValue::from_str("#ff9664"));
         let _ = ctx.fill_text("Landmarks", panel_x + 22.0, panel_y + 4.0);
         panel_y += 18.0;
 
-        self.canvas.fill_rect(panel_x + 4.0, panel_y - 4.0, 8.0, 8.0, "#ffff00");
+        self.canvas
+            .fill_rect(panel_x + 4.0, panel_y - 4.0, 8.0, 8.0, "#ffff00");
         ctx.set_fill_style(&JsValue::from_str("#ffff00"));
         let _ = ctx.fill_text("New Discovery", panel_x + 22.0, panel_y + 4.0);
         panel_y += 18.0;
 
-        self.canvas.fill_rect(panel_x + 4.0, panel_y - 4.0, 8.0, 8.0, "#00ff88");
+        self.canvas
+            .fill_rect(panel_x + 4.0, panel_y - 4.0, 8.0, 8.0, "#00ff88");
         ctx.set_fill_style(&JsValue::from_str("#00ff88"));
         let _ = ctx.fill_text("Re-observed", panel_x + 22.0, panel_y + 4.0);
         panel_y += 30.0;
@@ -1674,17 +1864,37 @@ impl EkfSlamDemoRunner {
         ctx.set_font("11px 'Inter', sans-serif");
 
         let robot_error = self.demo.robot_error();
-        let robot_color = if robot_error < 0.03 { "#00ff88" } else if robot_error < 0.08 { "#ffaa00" } else { "#ff5555" };
+        let robot_color = if robot_error < 0.03 {
+            "#00ff88"
+        } else if robot_error < 0.08 {
+            "#ffaa00"
+        } else {
+            "#ff5555"
+        };
         ctx.set_fill_style(&JsValue::from_str(robot_color));
-        let _ = ctx.fill_text(&format!("Robot Error: {:.3}", robot_error), panel_x, panel_y);
+        let _ = ctx.fill_text(
+            &format!("Robot Error: {:.3}", robot_error),
+            panel_x,
+            panel_y,
+        );
         panel_y += 16.0;
 
         ctx.set_fill_style(&JsValue::from_str("#888"));
-        let _ = ctx.fill_text(&format!("Landmarks: {}", self.demo.landmarks.len()), panel_x, panel_y);
+        let _ = ctx.fill_text(
+            &format!("Landmarks: {}", self.demo.landmarks.len()),
+            panel_x,
+            panel_y,
+        );
         panel_y += 16.0;
 
         let map_error = self.demo.map_error();
-        let map_color = if map_error < 0.02 { "#00ff88" } else if map_error < 0.05 { "#ffaa00" } else { "#ff5555" };
+        let map_color = if map_error < 0.02 {
+            "#00ff88"
+        } else if map_error < 0.05 {
+            "#ffaa00"
+        } else {
+            "#ff5555"
+        };
         ctx.set_fill_style(&JsValue::from_str(map_color));
         let _ = ctx.fill_text(&format!("Map Error: {:.3}", map_error), panel_x, panel_y);
         panel_y += 30.0;
@@ -1828,7 +2038,11 @@ impl GraphSlamDemoRunner {
                             .and_then(|w| w.document())
                             .and_then(|d| d.get_element_by_id("pause-btn"))
                         {
-                            btn.set_text_content(Some(if runner.paused { "▶ Play" } else { "⏸ Pause" }));
+                            btn.set_text_content(Some(if runner.paused {
+                                "▶ Play"
+                            } else {
+                                "⏸ Pause"
+                            }));
                         }
                     }
                 });
@@ -1900,7 +2114,14 @@ impl GraphSlamDemoRunner {
         let _ = ctx.fill_text("Graph SLAM - Pose Graph Optimization", margin, 20.0);
 
         // === MAIN PLOT ===
-        self.canvas.stroke_rect(offset_x, offset_y, plot_size, plot_size, "rgba(100, 255, 218, 0.3)", 1.0);
+        self.canvas.stroke_rect(
+            offset_x,
+            offset_y,
+            plot_size,
+            plot_size,
+            "rgba(100, 255, 218, 0.3)",
+            1.0,
+        );
 
         // Grid
         ctx.set_stroke_style(&JsValue::from_str("rgba(100, 255, 218, 0.08)"));
@@ -1922,7 +2143,10 @@ impl GraphSlamDemoRunner {
             ctx.set_stroke_style(&JsValue::from_str("rgba(0, 255, 136, 0.2)"));
             ctx.set_line_width(1.0);
             ctx.begin_path();
-            ctx.move_to(to_x(self.demo.true_path[0].x), to_y(self.demo.true_path[0].y));
+            ctx.move_to(
+                to_x(self.demo.true_path[0].x),
+                to_y(self.demo.true_path[0].y),
+            );
             for pos in &self.demo.true_path[1..] {
                 ctx.line_to(to_x(pos.x), to_y(pos.y));
             }
@@ -1977,7 +2201,8 @@ impl GraphSlamDemoRunner {
             };
 
             let size = if is_latest || is_first { 6.0 } else { 4.0 };
-            self.canvas.fill_circle(to_x(node.pos.x), to_y(node.pos.y), size, color);
+            self.canvas
+                .fill_circle(to_x(node.pos.x), to_y(node.pos.y), size, color);
         }
 
         // Draw true robot position (green)
@@ -2000,22 +2225,26 @@ impl GraphSlamDemoRunner {
 
         ctx.set_font("11px 'Inter', sans-serif");
 
-        self.canvas.fill_triangle(panel_x + 8.0, panel_y, 8.0, 0.0, "#00ff88");
+        self.canvas
+            .fill_triangle(panel_x + 8.0, panel_y, 8.0, 0.0, "#00ff88");
         ctx.set_fill_style(&JsValue::from_str("#00ff88"));
         let _ = ctx.fill_text("True Robot", panel_x + 22.0, panel_y + 4.0);
         panel_y += 18.0;
 
-        self.canvas.fill_circle(panel_x + 8.0, panel_y, 4.0, "#ffff00");
+        self.canvas
+            .fill_circle(panel_x + 8.0, panel_y, 4.0, "#ffff00");
         ctx.set_fill_style(&JsValue::from_str("#ffff00"));
         let _ = ctx.fill_text("First Node", panel_x + 22.0, panel_y + 4.0);
         panel_y += 18.0;
 
-        self.canvas.fill_circle(panel_x + 8.0, panel_y, 4.0, "#00ffff");
+        self.canvas
+            .fill_circle(panel_x + 8.0, panel_y, 4.0, "#00ffff");
         ctx.set_fill_style(&JsValue::from_str("#00ffff"));
         let _ = ctx.fill_text("Latest Node", panel_x + 22.0, panel_y + 4.0);
         panel_y += 18.0;
 
-        self.canvas.fill_circle(panel_x + 8.0, panel_y, 3.0, "#6688ff");
+        self.canvas
+            .fill_circle(panel_x + 8.0, panel_y, 3.0, "#6688ff");
         ctx.set_fill_style(&JsValue::from_str("#6688ff"));
         let _ = ctx.fill_text("Pose Nodes", panel_x + 22.0, panel_y + 4.0);
         panel_y += 18.0;
@@ -2048,10 +2277,18 @@ impl GraphSlamDemoRunner {
 
         ctx.set_font("11px 'Inter', sans-serif");
         ctx.set_fill_style(&JsValue::from_str("#888"));
-        let _ = ctx.fill_text(&format!("Nodes: {}", self.demo.nodes.len()), panel_x, panel_y);
+        let _ = ctx.fill_text(
+            &format!("Nodes: {}", self.demo.nodes.len()),
+            panel_x,
+            panel_y,
+        );
         panel_y += 16.0;
 
-        let _ = ctx.fill_text(&format!("Edges: {}", self.demo.edges.len()), panel_x, panel_y);
+        let _ = ctx.fill_text(
+            &format!("Edges: {}", self.demo.edges.len()),
+            panel_x,
+            panel_y,
+        );
         panel_y += 16.0;
 
         let lc_count = self.demo.loop_closure_count();
@@ -2061,7 +2298,13 @@ impl GraphSlamDemoRunner {
         panel_y += 16.0;
 
         let drift = self.demo.drift_error();
-        let drift_color = if drift < 0.05 { "#00ff88" } else if drift < 0.1 { "#ffaa00" } else { "#ff5555" };
+        let drift_color = if drift < 0.05 {
+            "#00ff88"
+        } else if drift < 0.1 {
+            "#ffaa00"
+        } else {
+            "#ff5555"
+        };
         ctx.set_fill_style(&JsValue::from_str(drift_color));
         let _ = ctx.fill_text(&format!("Drift: {:.3}", drift), panel_x, panel_y);
         panel_y += 16.0;
@@ -2081,5 +2324,237 @@ impl GraphSlamDemoRunner {
         let _ = ctx.fill_text("after loop closures", panel_x, panel_y);
         panel_y += 12.0;
         let _ = ctx.fill_text("are detected.", panel_x, panel_y);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Dark Hallway Demo (Lesson 0)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+pub struct DarkHallwayDemoRunner {
+    canvas: Canvas,
+    // Robot state
+    true_x: f32,
+    est_x: f32,
+    uncertainty: f32,
+    // Game state
+    steps_taken: usize,
+    msg: String,
+    landmarks: Vec<f32>,
+    animation: Option<Rc<AnimationLoop>>,
+    // Drawing constants
+    scale_x: f32,
+}
+
+impl DarkHallwayDemoRunner {
+    pub fn start(canvas_id: &str) -> Result<(), JsValue> {
+        let canvas = Canvas::new(canvas_id)?;
+
+        let runner = DarkHallwayDemoRunner {
+            canvas,
+            true_x: 0.0,
+            est_x: 0.0,
+            uncertainty: 0.1, // Initial small uncertainty
+            steps_taken: 0,
+            msg: "You are in a dark hallway. Click 'Step Blindly' to move.".to_string(),
+            landmarks: vec![15.0, 30.0, 45.0], // Hidden doors at 15m, 30m, 45m
+            animation: None,
+            scale_x: 10.0, // pixels per meter
+        };
+
+        DARK_HALLWAY_DEMO.with(|d| {
+            *d.borrow_mut() = Some(runner);
+        });
+
+        Self::start_animation()?;
+        Self::wire_controls()?;
+
+        Ok(())
+    }
+
+    fn start_animation() -> Result<(), JsValue> {
+        let animation = AnimationLoop::new(move |_dt| {
+            DARK_HALLWAY_DEMO.with(|d| {
+                if let Some(runner) = d.borrow_mut().as_mut() {
+                    runner.render();
+                }
+            });
+        });
+
+        animation.start();
+
+        DARK_HALLWAY_DEMO.with(|d| {
+            if let Some(runner) = d.borrow_mut().as_mut() {
+                runner.animation = Some(Rc::new(animation));
+            }
+        });
+
+        Ok(())
+    }
+
+    fn step(&mut self) {
+        // Move true robot by exactly 3 meters
+        self.true_x += 3.0;
+
+        // Move estimated robot by 3 meters +/- noise
+        let noise = (js_sys::Math::random() * 2.0 - 1.0) as f32; // -1 to 1 drift
+        self.est_x += 3.0 + noise;
+
+        // Uncertainty grows
+        self.uncertainty += 0.5;
+        self.steps_taken += 1;
+
+        self.msg = format!("Step {}. Uncertainty growing...", self.steps_taken);
+        self.render();
+    }
+
+    fn sense(&mut self) {
+        // Sense distance to nearest landmark
+        let mut min_dist = f32::MAX;
+        let mut nearest_lm = 0.0;
+
+        for &lm in &self.landmarks {
+            let dist = (self.true_x - lm).abs();
+            if dist < min_dist {
+                min_dist = dist;
+                nearest_lm = lm;
+            }
+        }
+
+        if min_dist < 2.0 {
+            // Found a wall!
+            self.true_x = nearest_lm + (self.true_x - nearest_lm); // Keep small offset
+            self.est_x = self.true_x; // Reset estimate to truth (perfect fix)
+            self.uncertainty = 0.5; // Collapse uncertainty
+            self.msg = format!("Found a door at {}m! Uncertainty reset.", nearest_lm);
+        } else {
+            // Nothing found
+            self.msg = "Felt around... nothing but wall.".to_string();
+        }
+        self.render();
+    }
+
+    fn render(&self) {
+        let ctx = self.canvas.ctx();
+        let w = self.canvas.width();
+        let h = self.canvas.height();
+        let mid_y = h / 2.0;
+
+        // Clear background
+        ctx.set_fill_style(&"#0a0a12".into());
+        ctx.fill_rect(0.0, 0.0, w, h);
+
+        // Draw hallway limits
+        ctx.set_stroke_style(&"#333".into());
+        ctx.set_line_width(2.0);
+        ctx.begin_path();
+        ctx.move_to(0.0, mid_y - 50.0);
+        ctx.line_to(w, mid_y - 50.0);
+        ctx.move_to(0.0, mid_y + 50.0);
+        ctx.line_to(w, mid_y + 50.0);
+        ctx.stroke();
+
+        let camera_offset = (self.est_x * self.scale_x) as f64 - w / 2.0;
+
+        ctx.save();
+        ctx.translate(-camera_offset, 0.0).unwrap();
+
+        // Draw Landmarks (Hidden from user visually, but we show them for learning)
+        for &lm in &self.landmarks {
+            let x = lm * self.scale_x;
+            ctx.set_fill_style(&"rgba(100, 255, 218, 0.1)".into());
+            ctx.fill_rect((x - 5.0) as f64, (mid_y - 50.0) as f64, 10.0, 100.0);
+
+            // Text label
+            ctx.set_fill_style(&"rgba(100, 255, 218, 0.3)".into());
+            ctx.set_font("12px Inter");
+            let _ = ctx.fill_text("Door", (x - 10.0) as f64, (mid_y - 60.0) as f64);
+        }
+
+        // Draw True Robot (Ghost/Faint)
+        let true_screen_x = self.true_x * self.scale_x;
+        ctx.begin_path();
+        ctx.arc(
+            true_screen_x as f64,
+            mid_y as f64,
+            8.0,
+            0.0,
+            std::f64::consts::PI * 2.0,
+        )
+        .unwrap();
+        ctx.set_fill_style(&"rgba(0, 255, 0, 0.3)".into());
+        ctx.fill();
+
+        // Draw Estimated Robot (Bright)
+        let est_screen_x = self.est_x * self.scale_x;
+        ctx.begin_path();
+        ctx.arc(
+            est_screen_x as f64,
+            mid_y as f64,
+            10.0,
+            0.0,
+            std::f64::consts::PI * 2.0,
+        )
+        .unwrap();
+        ctx.set_fill_style(&"#64ffda".into());
+        ctx.fill();
+
+        // Draw Uncertainty Bubble (Ellipse)
+        let uncertainty_px = self.uncertainty * self.scale_x;
+        ctx.begin_path();
+        let _ = ctx.ellipse(
+            est_screen_x as f64,
+            mid_y as f64,
+            uncertainty_px as f64,
+            15.0,
+            0.0,
+            0.0,
+            std::f64::consts::PI * 2.0,
+        );
+        ctx.set_stroke_style(&"rgba(100, 255, 218, 0.5)".into());
+        ctx.set_line_width(1.0);
+        ctx.stroke();
+
+        ctx.restore();
+
+        // Draw HUD Message
+        ctx.set_font("16px Inter");
+        ctx.set_fill_style(&"#fff".into());
+        let _ = ctx.fill_text(&self.msg, 20.0, 30.0);
+
+        // Draw distance
+        let dist_text = format!("Est Dist: {:.1}m", self.est_x);
+        let _ = ctx.fill_text(&dist_text, (w - 150.0) as f64, 30.0);
+    }
+
+    fn wire_controls() -> Result<(), JsValue> {
+        let window = web_sys::window().unwrap();
+        let document = window.document().unwrap();
+
+        if let Some(btn) = document.get_element_by_id("dh-step-btn") {
+            let closure = Closure::wrap(Box::new(move || {
+                DARK_HALLWAY_DEMO.with(|d| {
+                    if let Some(runner) = d.borrow_mut().as_mut() {
+                        runner.step();
+                    }
+                });
+            }) as Box<dyn FnMut()>);
+            btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+            closure.forget();
+        }
+
+        if let Some(btn) = document.get_element_by_id("dh-sense-btn") {
+            let closure = Closure::wrap(Box::new(move || {
+                DARK_HALLWAY_DEMO.with(|d| {
+                    if let Some(runner) = d.borrow_mut().as_mut() {
+                        runner.sense();
+                    }
+                });
+            }) as Box<dyn FnMut()>);
+            btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+            closure.forget();
+        }
+
+        Ok(())
     }
 }
