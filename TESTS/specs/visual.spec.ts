@@ -11,18 +11,19 @@ import { test, expect } from '@playwright/test';
 test.describe('Visual Regression Tests', () => {
   test('landing-layout', async ({ page }) => {
     // Navigate to the paused simulation for stable screenshots
-    await page.goto('/?paused=true');
-    
+    // intro=false hides the mission overlay for consistent screenshots
+    await page.goto('/?paused=true&intro=false');
+
     // Wait for the canvas to be attached
     await page.waitForSelector('#simulation', { state: 'attached' });
-    
+
     // Wait for critical UI elements to load (fonts, etc)
     await page.waitForSelector('.monolith');
 
-    // Check for new labels
-    await expect(page.locator('#constellation').getByText('Sensors')).toBeVisible();
+    // Check for home page bubble labels
+    await expect(page.locator('#constellation').getByText('Helios')).toBeVisible();
     await expect(page.locator('#constellation').getByText('Learn')).toBeVisible();
-    await expect(page.locator('#constellation').getByText('Automation')).toBeVisible();
+    await expect(page.locator('#constellation').getByText('Tools')).toBeVisible();
     
     // Give the canvas a moment to render
     await page.waitForTimeout(1000);
@@ -34,8 +35,8 @@ test.describe('Visual Regression Tests', () => {
   });
 
   test('canvas-exists', async ({ page }) => {
-    // Navigate to the paused simulation
-    await page.goto('/?paused=true');
+    // Navigate to the paused simulation with intro hidden
+    await page.goto('/?paused=true&intro=false');
     
     // Wait for the canvas to be attached
     const canvas = page.locator('#simulation');

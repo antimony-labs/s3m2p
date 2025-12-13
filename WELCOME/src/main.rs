@@ -566,6 +566,11 @@ fn render_bubbles(document: &Document, bubbles: &[Bubble], show_back: bool) {
         let link = document.create_element("a").unwrap();
         link.set_class_name("monolith");
 
+        // Accessibility: title and aria-label
+        let a11y_label = format!("{} — {}", bubble.label, bubble.description);
+        link.set_attribute("title", &a11y_label).ok();
+        link.set_attribute("aria-label", &a11y_label).ok();
+
         // Set position with inline transform
         let pos_style = format!(
             "transform: translate(-50%, -50%) rotate({:.1}deg) translate(var(--orbit-radius)) rotate({:.1}deg);",
@@ -578,6 +583,7 @@ fn render_bubbles(document: &Document, bubbles: &[Bubble], show_back: bool) {
             BubbleAction::External(url) => {
                 link.set_attribute("href", url).ok();
                 link.set_attribute("target", "_blank").ok();
+                link.set_attribute("rel", "noopener noreferrer").ok();
             }
             BubbleAction::DirectProject(url) => {
                 // Use relative protocol to support both http and https
