@@ -7,13 +7,35 @@ MODIFIED: 2025-12-11
 -->
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SLAM | Localization & Mapping</title>
     <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Rajdhani:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Rajdhani:wght@400;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: 'dark',
+                securityLevel: 'loose',
+            });
+        });
+
+        // Global function for WASM to call
+        window.runMermaid = function () {
+            setTimeout(() => {
+                mermaid.run({
+                    querySelector: '.mermaid',
+                });
+            }, 50); // Small delay to ensure DOM is ready
+        };
+    </script>
     <style>
         :root {
             --bg: #050508;
@@ -26,7 +48,11 @@ MODIFIED: 2025-12-11
             --border: rgba(100, 255, 218, 0.15);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
             background: var(--bg);
@@ -126,8 +152,15 @@ MODIFIED: 2025-12-11
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .lesson-nav {
@@ -137,7 +170,8 @@ MODIFIED: 2025-12-11
             margin-bottom: 30px;
         }
 
-        .back-btn, .nav-btn {
+        .back-btn,
+        .nav-btn {
             background: transparent;
             border: 1px solid var(--border);
             color: var(--accent);
@@ -148,7 +182,8 @@ MODIFIED: 2025-12-11
             transition: all 0.2s;
         }
 
-        .back-btn:hover, .nav-btn:hover {
+        .back-btn:hover,
+        .nav-btn:hover {
             background: var(--accent-dim);
             border-color: var(--accent);
         }
@@ -364,6 +399,7 @@ MODIFIED: 2025-12-11
         .intuition-text {
             font-size: 1rem;
             line-height: 1.8;
+            white-space: pre-line;
         }
 
         .intuition-text strong {
@@ -382,6 +418,7 @@ MODIFIED: 2025-12-11
             font-size: 0.95rem;
             color: var(--text-muted);
             line-height: 1.7;
+            white-space: pre-line;
         }
 
         /* Demo hint */
@@ -490,8 +527,8 @@ MODIFIED: 2025-12-11
             color: var(--accent);
         }
 
-        .going-deeper > p,
-        .math-details > pre {
+        .going-deeper>p,
+        .math-details>pre {
             padding: 0 20px 20px 20px;
             color: var(--text-muted);
             line-height: 1.7;
@@ -536,18 +573,41 @@ MODIFIED: 2025-12-11
 
         /* Responsive */
         @media (max-width: 600px) {
-            .hero h1 { font-size: 2rem; }
-            .lesson-header { flex-direction: column; text-align: center; }
-            .lesson-icon-large { font-size: 3rem; }
-            .control-row { flex-direction: column; align-items: stretch; }
-            .control-row label { min-width: auto; margin-bottom: 5px; }
-            .term:hover::after { left: 0; transform: none; }
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .lesson-header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .lesson-icon-large {
+                font-size: 3rem;
+            }
+
+            .control-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .control-row label {
+                min-width: auto;
+                margin-bottom: 5px;
+            }
+
+            .term:hover::after {
+                left: 0;
+                transform: none;
+            }
         }
     </style>
 </head>
+
 <body>
     <div id="app">
         <div class="loading">Loading...</div>
     </div>
 </body>
+
 </html>

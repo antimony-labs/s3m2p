@@ -81,6 +81,27 @@ pub static GLOSSARY: &[Term] = &[
                  'I've been here before!', you can correct all the accumulated drift. \
                  This 'closing the loop' snaps the whole map into consistency.",
     },
+    Term {
+        word: "odometry",
+        short: "Estimating position by counting wheel rotations or steps",
+        detail: "Calculating where you are based on how much you've moved. \
+                 Like counting steps in the dark. It is accurate over short distances \
+                 but drifts over time as small errors add up.",
+    },
+    Term {
+        word: "proprioception",
+        short: "Internal sensing (Sensing self)",
+        detail: "Sensors that measure what the robot is doing internally. \
+                 Examples: Encoders (wheel speed), IMU (acceleration/rotation). \
+                 These don't need the outside world to work, but they drift.",
+    },
+    Term {
+        word: "exteroception",
+        short: "External sensing (Sensing the world)",
+        detail: "Sensors that look at the world around the robot. \
+                 Examples: Cameras, Lidar, Radar, GPS. \
+                 These allow the robot to correct drift by spotting known landmarks.",
+    },
 ];
 
 /// A single SLAM lesson
@@ -106,75 +127,135 @@ pub struct Lesson {
 /// All SLAM lessons - ordered from simple intuition to complex algorithms
 pub static LESSONS: &[Lesson] = &[
     // ═══════════════════════════════════════════════════════════════════════════
-    // LESSON 0: Complementary Filter (Why Sensor Fusion?)
+    // LESSON 0: The Core Problem (Why SLAM is Hard)
     // ═══════════════════════════════════════════════════════════════════════════
     Lesson {
         id: 0,
+        title: "The Robot's Dilemma",
+        subtitle: "Uncertainty & The Loop",
+        icon: "�",
+        why_it_matters: "Before we solve SLAM, we must feel the pain of NOT having it. \
+                         Why can't robots just know where they are?",
+        intuition: "<h3>The Dark Hallway Analogy</h3>\n\
+            Imagine you are standing in a pitch-black hallway. You want to walk 10 meters forward.\n\n\
+            <strong>Strategy A: Counting Steps (Odometry)</strong><br>\
+            You close your eyes and count steps. 1, 2, 3... You think you've moved 10 meters. \
+            But are you sure? Maybe your stride was short. Maybe you slipped slightly. \
+            Without seeing, your uncertainty grows with every step. After 100 meters, \
+            you could be anywhere.<br>\n\
+            <em>This is <strong>Internal Sensing</strong> (Proprioception). It's smooth but drifts.</em>\n\n\
+            <strong>Strategy B: Touching the Wall (Landmarks)</strong><br>\
+            Now, imagine you touch a doorframe. You know exactly where that door is on your mental map. \
+            Instantly, your uncertainty collapses! You verify: 'Ah, I am at the kitchen door.'<br>\n\
+            <em>This is <strong>External Sensing</strong> (Exteroception). It corrects drift.</em>\n\n\
+            <strong>The Cycle of SLAM:</strong><br>\
+            Robotics is just this dance repeated forever:\n\
+            1. <strong>Predict:</strong> Close eyes, take a step (Uncertainty grows 📈)\n\
+            2. <strong>Update:</strong> Open eyes, see landmark (Uncertainty shrinks 📉)\n\n\
+            <div class=\"mermaid\">\n\
+            graph LR\n\
+                A[Start] --> B(Predict: Move Step)\n\
+                B --> C{Uncertainty Grows}\n\
+                C -->|See Landmark| D[Update: Fix Position]\n\
+                C -->|No Landmark| B\n\
+                D -->|Uncertainty Shrinks| B\n\
+            </div>\n\n\
+            All the math we will learn—Kalman Filters, Particle Filters, Graph SLAM—is just \
+            different ways to mathematically model this 'Open Eyes / Close Eyes' dance.",
+        demo_explanation: r#"
+                The simulation above places you in a <strong>Dark Hallway</strong>. 
+                <br><br>
+                1. Click <strong>Step Blindly</strong> to move forward. Notice how your 'Estimated Distance' (where you think you are) starts drifting from your actual position (the faint ghost). The 'uncertainty bubble' grows with every step.
+                <br><br>
+                2. Click <strong>Touch Wall</strong>. If you are near a hidden door (at 15m, 30m, 45m), you will feel it! This is a "measurement update"—it collapses your uncertainty and snaps your estimate back to reality.
+                <br><br>
+                <strong>Goal:</strong> Try to walk 50 meters without getting completely lost!
+            "#,
+        key_takeaways: &[
+            "Internal sensors (odometry) accumulate error over time (Drift)",
+            "External sensors (cameras/lidar) fix errors relative to landmarks",
+            "SLAM is the cycle of Prediction (Movement) and Correction (Measurement)",
+        ],
+        going_deeper: "In biological systems, this is known as Path Integration (dead reckoning) \
+                       vs. Allothetic Navigation (using external cues). The hippocampus in mammal brains \
+                       contains 'grid cells' that perform a biological version of SLAM!",
+        math_details: "x_t = f(x_{t-1}, u_t)  [Motion Model: Uncertainty increases]\n\
+                       z_t = h(x_t)           [Measurement Model: Uncertainty decreases]",
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // LESSON 1: Complementary Filter (Trusting Two Senses)
+    // ═══════════════════════════════════════════════════════════════════════════
+    Lesson {
+        id: 1,
         title: "Complementary Filter",
         subtitle: "Your First Sensor Fusion",
         icon: "🔄",
-        why_it_matters: "Every phone, drone, and robot uses this. It's the simplest way to \
-                         combine two imperfect sensors into one reliable measurement.",
-        intuition: "Imagine you're trying to measure the tilt of a balance board. You have two sensors:\n\n\
-            The <strong>accelerometer</strong> measures gravity's direction. It always knows which way is 'down' - \
-            great! But it's jittery. Every little vibration shows up as noise. If you're moving, \
-            it can't tell gravity from acceleration.\n\n\
-            The <strong>gyroscope</strong> measures how fast you're rotating. It's smooth and responds instantly \
-            to motion - perfect! But it has a fatal flaw: drift. It slowly accumulates tiny errors. \
-            After a few minutes, it might think you've tilted 30° when you haven't moved at all.\n\n\
-            Here's the key insight: <strong>these weaknesses are opposites!</strong> The accelerometer is wrong \
-            in the short term (jittery) but right in the long term (no drift). The gyroscope is \
-            right in the short term (smooth) but wrong in the long term (drifts). \
-            What if we trust the gyro for quick changes and the accelerometer to keep us anchored?",
-        demo_explanation: "Watch the three signals:\n\n\
-            • <strong>Red line</strong>: Raw accelerometer - see how jittery it is? That's noise.\n\
-            • <strong>Blue line</strong>: Integrated gyroscope - smooth, but watch it slowly drift away from truth.\n\
-            • <strong>Green line</strong>: Fused output - smooth AND accurate!\n\
-            • <strong>Gray dashed</strong>: True angle (what we're trying to measure)\n\n\
+        why_it_matters: "The first step to solving the dilemma: what if we have TWO internal sensors \
+                         that lie in opposite ways? We can make them police each other.",
+        intuition: "<h3>The Drunk Friend & The Watch Analogy</h3>\n\
+            Imagine you want to know what time it is, but you have two flawed sources:\n\n\
+            1. <strong>The Watch (Gyro):</strong> It runs smoothly, but it's fast. Every hour, it gains 1 minute. \
+            If you only check it once a day, it's fine. But wait a week, and it's hours off.<br>\
+            <em>Problem: Drift (Long-term error)</em>\n\n\
+            2. <strong>The Drunk Friend (Accel):</strong> He yells the time at you. He's roughly right on average, \
+            but he shouts 'It's 2:03! No, 2:05! No, 2:01!' from second to second.<br>\
+            <em>Problem: Noise (Short-term jitter)</em>\n\n\
+            <strong>The Solution:</strong><br>\
+            Listen to the Watch for second-to-second changes (it's smooth). \
+            Listen to the Friend to check if you're roughly on track every hour (he corrects the drift).\n\n\
+            is the noisy friend (noisy but knows 'down'). We mix them mathematically.\n\n\
+            <div class=\"mermaid\">\n\
+            graph TD\n\
+                A[Gyroscope] -->|High Pass| C(Integration)\n\
+                B[Accelerometer] -->|Low Pass| D(Gravity Vector)\n\
+                C --> E((Fusion))\n\
+                D --> E\n\
+                E --> F[Estimated Angle]\n\
+            </div>",
+        demo_explanation: "<strong>The Red Line</strong> is the noisy friend (Accel).\n\
+            <strong>The Blue Line</strong> is the drifting watch (Gyro).\n\
+            <strong>The Green Line</strong> is our fused estimate - combining the best of both!\n\n\
             Adjust <strong>α (alpha)</strong> to control the blend:\n\
             • α close to 1: Trust gyro more → smoother but might drift\n\
             • α close to 0: Trust accel more → no drift but jittery\n\
             • Sweet spot (~0.96): Best of both worlds!",
         key_takeaways: &[
-            "Sensors have complementary strengths - combine them!",
-            "The blend parameter (α) controls the tradeoff",
-            "This is the foundation of all sensor fusion",
+            "Gyroscope = Low Drift, High Smoothness (Good for fast moves)",
+            "Accelerometer = High Noise, No Drift (Good for long term)",
+            "Complementary Filter blends them: High-pass Gyro + Low-pass Accel",
         ],
-        going_deeper: "The complementary filter is actually a combination of a high-pass filter \
-                       (for the gyroscope) and a low-pass filter (for the accelerometer). \
-                       The Kalman filter is the 'optimal' version that automatically adjusts \
-                       the blend based on sensor uncertainties.",
+        going_deeper: "This is a frequency-domain approach to fusion. We trust the Gyro for high frequencies \
+                       (fast changes) and the Accel for low frequencies (gravity). It is computationally \
+                       almost free, which is why it's on every flight controller.",
         math_details: "angle = α × (angle + gyro×dt) + (1-α) × accel_angle\n\n\
-                       This is equivalent to:\n\
-                       • High-pass filter on gyro: responds to fast changes\n\
-                       • Low-pass filter on accel: captures slow/DC component\n\n\
-                       Time constant: τ = α×dt / (1-α)",
+                       If α = 0.98:\n\
+                       98% trust in Gyro integration (prediction)\n\
+                       2% trust in Accelerometer (correction)",
     },
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // LESSON 1: Kalman Filter (Optimal Sensor Fusion)
+    // LESSON 2: Kalman Filter (The Optimal Bet)
     // ═══════════════════════════════════════════════════════════════════════════
     Lesson {
-        id: 1,
+        id: 2,
         title: "Kalman Filter",
         subtitle: "Optimal Sensor Fusion",
         icon: "📊",
-        why_it_matters: "Used in everything from GPS to SpaceX rockets. It's the mathematically \
-                         optimal way to combine predictions with measurements.",
-        intuition: "The complementary filter works, but we had to guess the right α value. \
-            What if the sensors automatically told us how much to trust them?\n\n\
-            Enter the Kalman filter. Each sensor reports not just a measurement, but also \
-            how confident it is. The GPS might say 'I think you're at position 100 ± 5 meters.' \
-            The wheel odometry says 'I think you moved 2 meters ± 0.1.' The filter figures out \
-            the best way to combine these.\n\n\
-            The magic is the <strong>Kalman Gain</strong> - it automatically calculates the optimal blend. \
-            When GPS is very uncertain, the gain is low (ignore it). When odometry has drifted \
-            and become uncertain, the gain is high (trust GPS more). The filter tracks its own \
-            uncertainty and updates it after each step.\n\n\
-            Think of it like this: you're lost in a city. Your phone's GPS says you're on Main Street \
-            (but GPS is spotty here). You've been counting steps and think you walked 200 meters north. \
-            A smart combination of both clues is better than trusting either alone.",
-        demo_explanation: "Watch the uncertainty ellipse around the robot:\n\n\
+        why_it_matters: "Complementary filter forced us to guess alpha (0.98?). \
+                         Kalman Filter calculates the PERFECT alpha for every single moment.",
+        intuition: "<h3>The GPS vs. Speedometer Analogy</h3>\n\
+            You are driving in a tunnel. \n\n\
+            1. <strong>Prediction (Speedometer):</strong> You see you're going 60mph. Logic says 'I am 1 mile further than before.' \
+            But tires slip tailored. Your uncertainty bubble <strong>grows</strong> 🎈.\n\n\
+            2. <strong>Correction (GPS):</strong> Suddenly, the GPS gets a signal! It says 'You are at Exit 4.' \
+            This measurement is noisy, but it anchors you. Your uncertainty bubble <strong>shrinks</strong> 🤏.\n\n\
+            <strong>The Magic of Kalman Gain:</strong><br>\
+            The filter asks: 'Who do I trust more right now?'\n\
+            • If GPS is garbage (tunnel), trust speedometer (Gain ~ 0)\n\
+            • If tires are slipping (ice), trust GPS (Gain ~ 1)\n\n\
+            It dynamically adjusts this trust 100 times a second.",
+        demo_explanation: "The <strong>ellipse</strong> around the robot represents our uncertainty (The Bubble).\n\n\
             • <strong>Green dot</strong>: True position (hidden from the filter)\n\
             • <strong>Cyan dot + ellipse</strong>: Kalman filter estimate with uncertainty\n\
             • <strong>Yellow dots</strong>: GPS measurements (noisy but absolute)\n\n\
@@ -183,46 +264,50 @@ pub static LESSONS: &[Lesson] = &[
             • <strong>Shrinks</strong> after GPS update (measurement reduces uncertainty)\n\n\
             Try increasing the GPS interval - watch drift accumulate, then snap back on update!",
         key_takeaways: &[
-            "The Kalman filter calculates the optimal blend automatically",
-            "It tracks uncertainty and updates it over time",
-            "Prediction increases uncertainty; measurements decrease it",
-            "The Kalman Gain tells you how much to trust each measurement",
+            "Prediction (Motion) always INCREASES uncertainty",
+            "Update (Measurement) always DECREASES uncertainty",
+            "Kalman Gain is the calculated 'Trust Factor'",
+            "Gaussian (Bell Curve) assumption is both its power and its weakness",
         ],
-        going_deeper: "The Kalman filter is optimal for systems that are: (1) linear, and \
-                       (2) have Gaussian (bell-curve) noise. For non-linear systems, we use \
-                       the Extended Kalman Filter (EKF) or Unscented Kalman Filter (UKF). \
-                       For non-Gaussian situations, particle filters are better.",
-        math_details: "State: μ (mean), Σ (covariance)\n\n\
-                       PREDICT:\n\
-                       μ' = A×μ + B×u\n\
-                       Σ' = A×Σ×A^T + Q\n\n\
-                       UPDATE:\n\
-                       K = Σ'×H^T × (H×Σ'×H^T + R)^(-1)  [Kalman Gain]\n\
-                       μ = μ' + K×(z - H×μ')  [correct mean]\n\
-                       Σ = (I - K×H)×Σ'  [reduce covariance]",
+        going_deeper: "The Kalman filter is the Best Linear Unbiased Estimator (BLUE). \
+                       It assumes everything is Gaussian. If your robot hits a wall (non-linear stop), \
+                       Kalman fails. That's why we need Lesson 3.",
+        math_details: "1. PREDICT (Bubble Grows):\n\
+                       x' = Fx + Bu  (Physics projection)\n\
+                       P' = FPFᵀ + Q (Add uncertainty Q)\n\n\
+                       2. UPDATE (Bubble Shrinks):\n\
+                       K = P'Hᵀ(HP'Hᵀ + R)⁻¹  (Calculate Gain)\n\
+                       x = x' + K(z - Hx')    (Weighted Average)\n\
+                       P = (I - KH)P'         (Shrink Covariance)",
     },
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // LESSON 2: Particle Filter (When Things Get Non-Linear)
+    // LESSON 3: Particle Filter (The Multiverse)
     // ═══════════════════════════════════════════════════════════════════════════
     Lesson {
-        id: 2,
+        id: 3,
         title: "Particle Filter",
         subtitle: "Monte Carlo Localization",
         icon: "🎯",
-        why_it_matters: "When your robot could be in multiple places at once (like after \
-                         being picked up), the Kalman filter breaks down. Particles handle this.",
-        intuition: "Kalman filters assume you have ONE guess about where you are, with some \
-            uncertainty around it. But what if you have NO IDEA where you are?\n\n\
-            Imagine waking up in a museum with a floor plan but no memory of how you got there. \
-            You could be ANYWHERE. Instead of one guess, you need thousands.\n\n\
-            The particle filter represents your belief with a cloud of particles - each one is \
-            a hypothesis: 'maybe I'm HERE.' As you walk and observe, particles in wrong places \
-            gradually realize 'wait, I wouldn't see the T-Rex from here!' and fade away. \
-            Eventually, the surviving particles cluster around your true location.\n\n\
-            This is called <strong>Monte Carlo Localization</strong> - we're essentially running many \
-            parallel simulations and keeping the ones that match reality.",
-        demo_explanation: "Watch the particle cloud:\n\n\
+        why_it_matters: "Kalman assumes your robot is roughly 'here' (one bell curve). \
+                         What if you have NO idea? Or you might be in Room A OR Room B?",
+        intuition: "<h3>The 'Kidnapped Robot' Problem</h3>\n\
+            Imagine you wake up in a generic office building. You see a hallway. \
+            <strong>Hypothesis 1:</strong> 'I'm on floor 1.'\n\
+            <strong>Hypothesis 2:</strong> 'I'm on floor 2.'\n\n\
+            Kalman cannot handle 'I am in two places at once'. It would average them and say \
+            'You are floating between floors'. 💥\n\n\
+            <strong>The Solution: The Multiverse (Particles)</strong><br>\
+            Instead of tracking ONE position, we simulate 1,000 parallel universe robots.\n\
+            • Universe 1 robot is in the kitchen.\n\
+            • Universe 2 robot is in the hallway.\n\
+            • ...\n\n\
+            As real-you walks 5 meters and sees a red door:\n\
+            • Universe 1 robot says 'There is no red door in the kitchen'. <strong>DELETE.</strong>\n\
+            • Universe 2 robot says 'Yes! Red door matches!' <strong>CLONE/MULTIPLY.</strong>\n\n\
+            This Survival of the Fittest algorithm naturally converges on the truth.",
+        demo_explanation: "Only the strongest hypotheses survive!\n\n\
+            Watch the particle cloud:\n\n\
             • <strong>Green triangle</strong>: True robot pose (hidden from filter)\n\
             • <strong>Orange dots</strong>: Particles (hypotheses about where robot might be)\n\
             • <strong>Cyan triangle</strong>: Estimated pose (weighted average of particles)\n\
@@ -235,51 +320,48 @@ pub static LESSONS: &[Lesson] = &[
             4. <strong>ESTIMATE</strong>: Compute weighted average\n\n\
             Use <strong>Step Mode</strong> to see each phase individually!",
         key_takeaways: &[
-            "Particles represent multiple hypotheses simultaneously",
-            "Natural selection: particles matching observations survive",
-            "Can handle 'kidnapped robot' problem (global localization)",
-            "More particles = better accuracy but higher computation",
+            "Particles = Parallel Universe Hypotheses",
+            "Resampling = Survival of the Fittest (Evolution)",
+            "Can solve Global Localization (Lost Robot problem)",
+            "Computationally heavy (simulating 1000 robots takes CPU)",
         ],
-        going_deeper: "Particle filters can handle any probability distribution and non-linear \
-                       dynamics. The tradeoff is computation - you need many particles for \
-                       accuracy. Techniques like adaptive resampling and importance sampling \
-                       make them practical. FastSLAM uses particles for robot pose and separate \
-                       Kalman filters for each landmark.",
-        math_details: "For N particles with weights w_i:\n\n\
-                       PREDICT: x_i' ~ p(x_t | u_t, x_i)\n\
-                       UPDATE: w_i = p(z_t | x_i') × w_i, then normalize\n\
-                       RESAMPLE when N_eff = 1/Σw_i² gets too low\n\
-                       ESTIMATE: x̂ = Σ w_i × x_i",
+        going_deeper: "Mathematically, this approximates ANY probability distribution using discrete samples \
+                       (Monte Carlo). As N -> infinity, it becomes perfect. In practice, keeping enough \
+                       particles to cover a whole building is hard, so we use techniques like \
+                       'Adaptive Monte Carlo Localization' (AMCL) to adjust particle counts.",
+        math_details: "For each particle i:\n\
+                       1. x_i = motion_model(x_i, u) + noise\n\
+                       2. w_i = measurement_prob(z | x_i)\n\
+                       3. Draw new set of particles based on weights w_i\n\
+                       (High weight = likely to be picked multiple times)",
     },
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // LESSON 3: EKF SLAM (Mapping While Localizing)
+    // LESSON 4: EKF SLAM (The Chicken & Egg)
     // ═══════════════════════════════════════════════════════════════════════════
     Lesson {
-        id: 3,
+        id: 4,
         title: "EKF SLAM",
         subtitle: "Building the Map While You Navigate",
         icon: "🗺️",
         why_it_matters: "The chicken-and-egg problem: you need a map to localize, but need \
                          to know your location to build a map. SLAM solves both simultaneously.",
-        intuition: "So far, we've assumed the robot knows where the landmarks are. But what if \
-            it's exploring a completely unknown environment?\n\n\
-            Imagine exploring a dark cave with a flashlight. You place glow sticks at interesting \
-            spots to help navigate. But here's the problem: you're not sure exactly where YOU are, \
-            so you're not sure exactly where you put the glow sticks. And you need the glow sticks \
-            to figure out where you are. It's circular!\n\n\
-            EKF SLAM solves this by estimating EVERYTHING at once - your position AND all the \
-            landmark positions. When you see a new landmark, you add it to your map. When you \
-            see a landmark again, you update your belief about where BOTH you and the landmark are.\n\n\
-            The magic happens with <strong>correlations</strong>. If you're uncertain about landmark A's position, \
-            and you're uncertain about your position, these uncertainties are connected. When you \
-            get better information about one, it helps the other!",
-        demo_explanation: "Watch the robot explore:\n\n\
-            • Robot discovers landmarks and adds them to the map\n\
-            • Uncertainty ellipses show how confident we are\n\
-            • When robot revisits a landmark, watch the ellipses shrink!\n\n\
-            The key insight: revisiting landmarks reduces uncertainty in BOTH \
-            the robot pose AND other landmarks (through correlations).",
+        intuition: "<h3>The Unknown Cave Problem</h3>\n\
+            So far, we assumed we had a map (we knew where the door/landmark was). \
+            What if we don't? \n\n\
+            1. To know where I am, I need the map.\n\
+            2. To build the map, I need to know where I am.\n\n\
+            <strong>The Solution: Correlation (Entanglement)</strong><br>\
+            SLAM says: 'Okay, I don't know my location, and I don't know the landmark location. \
+            BUT I know relatively how far apart we are!'\n\n\
+            If I find out later that I was 1 meter to the left, I instantly know the landmark \
+            must also be 1 meter to the left. The robot and map are connected by invisible \
+            springs of mathematics (Covariance).",
+        demo_explanation: "Watch the <strong>Ellipses</strong>. \
+            When the robot sees a landmark, the landmark gets an uncertainty bubble.\n\
+            When the robot moves, its bubble grows.\n\n\
+            <strong>The magic moment:</strong> When we see an OLD landmark again (Loop Closure), \
+            the robot snaps into place, AND the other landmarks snap with it because they are connected!",
         key_takeaways: &[
             "SLAM estimates robot pose AND map simultaneously",
             "New observations create correlations between estimates",
@@ -299,27 +381,36 @@ pub static LESSONS: &[Lesson] = &[
     },
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // LESSON 4: Graph SLAM (Modern Large-Scale SLAM)
+    // LESSON 5: Graph SLAM (The Rubber Sheet)
     // ═══════════════════════════════════════════════════════════════════════════
     Lesson {
-        id: 4,
+        id: 5,
         title: "Graph SLAM",
         subtitle: "Scaling to Real-World Maps",
         icon: "🔗",
-        why_it_matters: "EKF SLAM doesn't scale. Modern self-driving cars and robots use \
-                         graph-based SLAM to build maps with millions of points.",
-        intuition: "EKF SLAM maintains a giant covariance matrix that grows quadratically. \
-            For a map with 10,000 landmarks, that's 100 million numbers to track. Not practical.\n\n\
-            Graph SLAM takes a different approach. Think of poses (where the robot was at each time) \
-            as <strong>nodes</strong> in a graph. Constraints between poses (from odometry or landmark observations) \
-            are <strong>edges</strong>. Each edge is like a rubber band with a preferred length.\n\n\
-            The key insight: we don't need to solve this incrementally. We can collect all the \
-            constraints and solve them all at once using optimization. This is MUCH more efficient \
-            and lets us exploit <strong>sparsity</strong> - each pose only connects to nearby poses.\n\n\
-            Loop closure becomes beautifully simple: when we recognize 'I've been here before!', \
-            we add a new edge connecting the current pose to the old one. Then we re-optimize, \
-            and the whole trajectory snaps into consistency, like a tensioned web.",
-        demo_explanation: "Watch the pose graph:\n\n\
+
+        why_it_matters: "EKF SLAM tries to solve the puzzle instantly, every step. \
+                         Graph SLAM says 'Just collect all the clues, and we'll solve the whole puzzle later'.",
+        intuition: "<h3>The Rubber Band Graph</h3>\n\
+            Forget complex matrices. Imagine every place the robot stood is a pin 📌.\n\
+            Every measurement is a rubber band connecting pins.\n\n\
+            1. <strong>Odometry:</strong> 'I moved 1m forward' = Rubber band between Pose A and Pose B.\n\
+            2. <strong>Loop Closure:</strong> 'Hey, Pose Z looks just like Pose A!' = A strong rubber band connecting the start and end.\n\n\
+            If you have drift, the rubber bands are stretched and tight. \
+            When you press <strong>Optimize</strong>, the physics engine effectively lets the graph \
+            snap into its most comfortable (lowest energy) shape. Everything aligns!\n\n\
+            <div class=\"mermaid\">\n\
+            graph LR\n\
+                P1((Pose 1)) -->|Odom| P2((Pose 2))\n\
+                P2 -->|Odom| P3((Pose 3))\n\
+                P3 -->|Odom| P4((Pose 4))\n\
+                P1 -->|Loop Closure| P4\n\
+                style P1 fill:#2E7D32,stroke:#000,stroke-width:2px,color:#fff\n\
+                style P4 fill:#C62828,stroke:#000,stroke-width:2px,color:#fff\n\
+            </div>\n\n\
+            Graph SLAM is basically a giant spring-mass system. We minimize the 'tension' (error) in the springs.",
+        demo_explanation: "<strong>Blue Edges:</strong> Odometry constraints (stiff rubber bands).\n\
+            <strong>Green Edges:</strong> Loop Clean constraints (the magic fix).\n\n\
             • <strong>Nodes</strong>: Robot poses at each timestep\n\
             • <strong>Blue edges</strong>: Odometry constraints (sequential)\n\
             • <strong>Green edges</strong>: Loop closure constraints\n\n\
@@ -327,20 +418,15 @@ pub static LESSONS: &[Lesson] = &[
             Click 'Add Loop Closure' when the robot returns to a previous area,\n\
             then 'Optimize' to see the graph snap into consistency!",
         key_takeaways: &[
-            "Represent SLAM as a graph optimization problem",
-            "Edges are constraints with uncertainty",
-            "Loop closures connect distant nodes",
-            "Batch optimization is more efficient than incremental updates",
-            "Sparse structure enables large-scale maps",
+            "Don't filter step-by-step; optimize the whole path at once",
+            "Every constraint is a spring; Optimization finds the relaxation state",
+            "Sparsity: Most places are only connected to their neighbors",
         ],
-        going_deeper: "State-of-the-art SLAM systems like ORB-SLAM, LIO-SAM, and Cartographer \
-                       are all graph-based. They use sophisticated loop closure detection \
-                       (bag-of-words, scan matching) and efficient solvers (g2o, GTSAM, Ceres). \
-                       Multi-session SLAM and lifelong mapping are active research areas.",
-        math_details: "Minimize: Σ_ij e_ij^T × Ω_ij × e_ij\n\n\
-                       where e_ij = z_ij - h(x_i, x_j) is the error between \
-                       expected and observed relative pose.\n\n\
-                       Solved via Gauss-Newton or Levenberg-Marquardt.\n\
-                       Sparse Cholesky factorization exploits graph structure.",
+        going_deeper: "Modern Graph SLAM uses 'Factor Graphs'. The libraries making this possible \
+                       (g2o, GTSAM, Ceres) use sparse linear algebra to solve systems with millions \
+                       of variables in milliseconds. It's the standard for self-driving cars.",
+        math_details: "minimize E = Σ (z_ij - h(x_i, x_j))²\n\n\
+                       We are finding the set of poses {x} that minimizes the total tension \
+                       in all the rubber bands (constraints).",
     },
 ];

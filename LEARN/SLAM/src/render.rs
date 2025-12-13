@@ -82,7 +82,12 @@ impl LessonRenderer {
                     r#"<span class="term" data-tooltip="{}">{}</span>"#,
                     term.short, original
                 );
-                result = format!("{}{}{}", &result[..pos], tooltip, &result[pos + pattern.len()..]);
+                result = format!(
+                    "{}{}{}",
+                    &result[..pos],
+                    tooltip,
+                    &result[pos + pattern.len()..]
+                );
             }
         }
         result
@@ -97,9 +102,21 @@ impl LessonRenderer {
             .collect::<Vec<_>>()
             .join("");
 
-        // Demo controls for each lesson (reordered: 0=Comp, 1=Kalman, 2=Particle, 3=EKF, 4=Graph)
+        // Demo controls for each lesson (reordered: 0=Intro, 1=Comp, 2=Kalman, 3=Particle, 4=EKF, 5=Graph)
         let demo_controls = match lesson.id {
             0 => {
+                // Lesson 0: The Core Problem - Conceptual only, no interactive controls needed yet
+                r#"
+                <div class="demo-controls" id="demo-controls">
+                    <div class="demo-hint" style="text-align: center; font-style: italic;">
+                        This conceptual lesson establishes the "why". <br>
+                        Interactive simulations start in the next lesson!
+                    </div>
+                </div>
+                "#
+                .to_string()
+            }
+            1 => {
                 // Complementary Filter controls - BEST defaults (min noise), increase to degrade
                 r#"
                 <div class="demo-controls" id="demo-controls">
@@ -136,7 +153,7 @@ impl LessonRenderer {
                 </div>
                 "#.to_string()
             }
-            1 => {
+            2 => {
                 // Kalman Filter controls - BEST defaults (min noise, frequent GPS), increase to degrade
                 r#"
                 <div class="demo-controls" id="demo-controls">
@@ -169,7 +186,7 @@ impl LessonRenderer {
                 </div>
                 "#.to_string()
             }
-            2 => {
+            3 => {
                 // Particle Filter controls - BEST defaults (max particles, min noise), reduce/increase to degrade
                 r#"
                 <div class="demo-controls" id="demo-controls">
@@ -204,7 +221,7 @@ impl LessonRenderer {
                 </div>
                 "#.to_string()
             }
-            3 => {
+            4 => {
                 // EKF SLAM controls - BEST defaults (max range, min noise), reduce/increase to degrade
                 r#"
                 <div class="demo-controls" id="demo-controls">
@@ -238,7 +255,7 @@ impl LessonRenderer {
                 </div>
                 "#.to_string()
             }
-            4 => {
+            5 => {
                 // Graph SLAM controls - BEST defaults (min noise), increase to degrade
                 r#"
                 <div class="demo-controls" id="demo-controls">
@@ -269,7 +286,7 @@ impl LessonRenderer {
                 </div>
                 "#.to_string()
             }
-            _ => r#"<p class="canvas-hint">Interactive visualization coming soon</p>"#.to_string()
+            _ => String::new(),
         };
 
         // Apply glossary tooltips to intuition text
@@ -341,8 +358,8 @@ impl LessonRenderer {
             title = lesson.title,
             subtitle = lesson.subtitle,
             why_it_matters = lesson.why_it_matters,
-            intuition = intuition_html.replace('\n', "<br>"),
-            demo_explanation = lesson.demo_explanation.replace('\n', "<br>"),
+            intuition = intuition_html,
+            demo_explanation = lesson.demo_explanation,
             controls = demo_controls,
             takeaways = takeaways_html,
             going_deeper = lesson.going_deeper,
@@ -355,7 +372,8 @@ impl LessonRenderer {
             } else {
                 String::from(r#"<span></span>"#)
             },
-            next_btn = if lesson.id < 4 {  // Updated for 5 lessons (0-4)
+            next_btn = if lesson.id < 5 {
+                // Updated for 6 lessons (0-5)
                 format!(
                     r#"<button onclick="go_to_lesson({})" class="nav-btn">Next →</button>"#,
                     lesson.id + 1
@@ -366,6 +384,16 @@ impl LessonRenderer {
         );
 
         self.root.set_inner_html(&html);
+
+        // Trigger Mermaid rendering
+        if let Some(window) = web_sys::window() {
+            if let Ok(run_mermaid) = js_sys::Reflect::get(&window, &"runMermaid".into()) {
+                if let Ok(func) = run_mermaid.dyn_into::<js_sys::Function>() {
+                    let _ = func.call0(&JsValue::NULL);
+                }
+            }
+        }
+
         Ok(())
     }
 }
