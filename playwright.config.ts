@@ -27,7 +27,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'cd WELCOME && trunk serve',
+    command: 'cd WELCOME && ./trunk-serve.sh',
     url: 'http://localhost:8080',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,

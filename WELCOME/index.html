@@ -339,11 +339,48 @@ MODIFIED: 2025-12-09
             color: #00ffff;
             font-size: 0.7rem;
             margin-right: auto;
+            font-variant-numeric: tabular-nums;
         }
 
         #stats-row span {
-            display: flex;
+            display: inline-flex;
             align-items: center;
+        }
+
+        /* Micro-sparklines (ultra-light telemetry glyphs) */
+        .sparkline-stat {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .sparkline-stat:focus {
+            outline: 1px solid rgba(0, 255, 255, 0.5);
+            outline-offset: 2px;
+        }
+
+        .spark-label {
+            font-size: 0.5rem;
+            color: rgba(0, 255, 255, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .sparkline-stat svg {
+            width: 40px;
+            height: 12px;
+            vertical-align: middle;
+        }
+
+        .sparkline-stat polyline {
+            vector-effect: non-scaling-stroke;
+        }
+
+        .peek-display {
+            color: #00ffff;
+            font-weight: 500;
         }
 
         #log-row {
@@ -431,9 +468,10 @@ MODIFIED: 2025-12-09
                 display: flex;
                 justify-content: flex-end;
                 flex-wrap: wrap;
-                gap: 10px;
+                gap: 8px;
                 margin-right: 0;
-                font-size: 0.6rem;
+                font-size: 0.55rem;
+                opacity: 0.5;
             }
 
             #stats-row span {
@@ -464,8 +502,26 @@ MODIFIED: 2025-12-09
                 display: block;
                 grid-area: mission;
                 margin-right: 0;
+                font-size: 0.7rem;
+                padding: 6px 12px;
             }
 
+        }
+
+        /* ViewportMode-driven telemetry density */
+        html[data-viewport-mode="mobile-portrait"] #stats-row {
+            font-size: 0.45rem;
+            gap: 3px 6px;
+        }
+
+        html[data-viewport-mode="mobile-portrait"] .sparkline-stat svg {
+            width: 34px;
+            height: 12px;
+        }
+
+        html[data-viewport-mode="mobile-landscape"] #stats-row {
+            font-size: 0.5rem;
+            gap: 4px 10px;
         }
 
         /* ============================================
@@ -701,10 +757,30 @@ MODIFIED: 2025-12-09
                 <span id="stat-pop">POP: 0</span>
                 <span id="stat-gen">GEN: 0</span>
                 <span id="stat-fps">FPS: 60</span>
-                <span id="stat-season">CYCLE: 1</span>
+                <span id="stat-bd" class="sparkline-stat" role="button" tabindex="0" data-peek="">
+                    <span class="spark-label">BD</span>
+                    <svg viewBox="0 0 40 12" preserveAspectRatio="none">
+                        <polyline id="spark-births" points="" fill="none" stroke="#00ff88" stroke-width="1" />
+                        <polyline id="spark-deaths" points="" fill="none" stroke="#ff4444" stroke-width="1" />
+                    </svg>
+                </span>
+                <span id="stat-hcs" class="sparkline-stat" role="button" tabindex="0" data-peek="">
+                    <span class="spark-label">HCS</span>
+                    <svg viewBox="0 0 40 12" preserveAspectRatio="none">
+                        <polyline id="spark-h" points="" fill="none" stroke="#88ff88" stroke-width="1" />
+                        <polyline id="spark-c" points="" fill="none" stroke="#ff8888" stroke-width="1" />
+                        <polyline id="spark-s" points="" fill="none" stroke="#8888ff" stroke-width="1" />
+                    </svg>
+                </span>
+                <span id="stat-div" class="sparkline-stat" role="button" tabindex="0" data-peek="">
+                    <span class="spark-label">DIV</span>
+                    <svg viewBox="0 0 40 12" preserveAspectRatio="none">
+                        <polyline id="spark-div" points="" fill="none" stroke="#ffff00" stroke-width="1" />
+                    </svg>
+                </span>
             </div>
             <div id="log-row">
-                <span id="console-log">System Online...</span>
+                <span id="console-log"></span>
             </div>
             <div id="tech-info">
                 <span class="tech-stack">RUST • WASM • WGPU</span>
@@ -823,7 +899,8 @@ MODIFIED: 2025-12-09
                         <li><strong>BLOG</strong>: Technical writing और project documentation</li>
                     </ul>
                     <p>Attention tools की ओर flow होता है। Tools manufacturing artifacts generate करते हैं।
-                        <strong>Funnel है: Learn → Simulate → Build → Export।</strong></p>
+                        <strong>Funnel है: Learn → Simulate → Build → Export।</strong>
+                    </p>
 
                     <h2>Wedge: Autocrate</h2>
                     <p>पहले से clients को बेचा जा चुका है। Model prove करता है:</p>
@@ -914,7 +991,8 @@ MODIFIED: 2025-12-09
                         <li><strong>BLOG</strong>: Escritura técnica y documentación de proyectos</li>
                     </ul>
                     <p>La atención fluye hacia las herramientas. Las herramientas generan artefactos de fabricación.
-                        <strong>El embudo es: Learn → Simulate → Build → Export.</strong></p>
+                        <strong>El embudo es: Learn → Simulate → Build → Export.</strong>
+                    </p>
 
                     <h2>La cuña: Autocrate</h2>
                     <p>Ya vendido a clientes. Demuestra el modelo:</p>
@@ -1102,6 +1180,54 @@ MODIFIED: 2025-12-09
             document.querySelectorAll('.mission-cta:not(#cta-vision)').forEach(cta => {
                 cta.addEventListener('click', () => {
                     hideMission();
+                });
+            });
+        })();
+    </script>
+
+    <script>
+        // Telemetry tap-peek (mobile-friendly numbers reveal)
+        (function () {
+            const logEl = document.getElementById('console-log');
+            if (!logEl) return;
+
+            let peekToken = 0;
+            let lastNonPeek = '';
+            let timeout = null;
+
+            function setPeek(text) {
+                // Capture current log content before first peek
+                if (!logEl.querySelector('.peek-display')) {
+                    lastNonPeek = logEl.innerHTML;
+                }
+
+                peekToken += 1;
+                const myToken = peekToken;
+
+                logEl.innerHTML = `<span class="peek-display">${text}</span>`;
+
+                if (timeout) clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                    // Only revert if this is still the latest peek and the peek is still visible
+                    if (peekToken === myToken && logEl.querySelector('.peek-display')) {
+                        logEl.innerHTML = lastNonPeek;
+                    }
+                }, 2000);
+            }
+
+            document.querySelectorAll('.sparkline-stat').forEach(el => {
+                // Click for touch/mouse
+                el.addEventListener('click', () => {
+                    const peek = el.getAttribute('data-peek');
+                    if (peek) setPeek(peek);
+                });
+                // Keyboard accessibility
+                el.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        const peek = el.getAttribute('data-peek');
+                        if (peek) setPeek(peek);
+                    }
                 });
             });
         })();

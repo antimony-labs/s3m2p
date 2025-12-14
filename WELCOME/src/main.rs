@@ -14,6 +14,7 @@ use simulation_engine::{
     FoodSource, Genome, Obstacle, PredatorZone, SeasonCycle, SimConfig, SpatialGrid,
 };
 use std::cell::RefCell;
+use std::fmt::Write;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsValue;
@@ -60,6 +61,336 @@ struct SimulationStats {
     max_speed_record: f32,
     max_generation: u16,
     low_diversity_frames: u32,
+}
+
+// ============================================
+// VIEWPORT MODE + DEVICE TUNING
+// ============================================
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ViewportMode {
+    Desktop,
+    MobileLandscape,
+    MobilePortrait,
+}
+
+impl ViewportMode {
+    fn detect(width: f64, height: f64) -> Self {
+        let min_dim = width.min(height);
+        if min_dim < 768.0 {
+            let aspect = width / height.max(1.0);
+            if aspect < 0.85 {
+                ViewportMode::MobilePortrait
+            } else {
+                ViewportMode::MobileLandscape
+            }
+        } else {
+            ViewportMode::Desktop
+        }
+    }
+
+    fn as_str(&self) -> &'static str {
+        match self {
+            ViewportMode::Desktop => "desktop",
+            ViewportMode::MobileLandscape => "mobile-landscape",
+            ViewportMode::MobilePortrait => "mobile-portrait",
+        }
+    }
+
+    fn tuning(&self) -> ViewportTuning {
+        match self {
+            ViewportMode::Desktop => ViewportTuning {
+                // Default: the full show
+                spawn_rate_mult: 1.0,
+                max_boids: 500,
+            },
+            ViewportMode::MobileLandscape => ViewportTuning {
+                spawn_rate_mult: 0.7,
+                max_boids: 350,
+            },
+            ViewportMode::MobilePortrait => ViewportTuning {
+                spawn_rate_mult: 0.5,
+                max_boids: 250,
+            },
+        }
+    }
+}
+
+/// Device-specific simulation tuning (NOT `simulation_engine::SimConfig`)
+#[derive(Clone, Copy, Debug)]
+struct ViewportTuning {
+    /// Spawn rate multiplier for the fountain.
+    /// - 1.0 => baseline
+    /// - <1.0 => spawn less often (slower)
+    spawn_rate_mult: f32,
+    /// Population cap guard (used for fountain + carrying capacity).
+    max_boids: usize,
+}
+
+fn update_viewport_mode(document: &Document) -> ViewportMode {
+    let window = web_sys::window().unwrap();
+    let width = window.inner_width().unwrap().as_f64().unwrap();
+    let height = window.inner_height().unwrap().as_f64().unwrap();
+    let mode = ViewportMode::detect(width, height);
+
+    if let Some(html) = document.document_element() {
+        html.set_attribute("data-viewport-mode", mode.as_str()).ok();
+    }
+
+    mode
+}
+
+fn compute_spawn_interval_frames(base_interval: u32, spawn_rate_mult: f32) -> u32 {
+    if spawn_rate_mult <= 0.0 {
+        return base_interval.saturating_mul(10).max(1);
+    }
+    // spawn_rate_mult < 1.0 => spawn less often (bigger interval)
+    ((base_interval as f32 / spawn_rate_mult).round() as u32).max(1)
+}
+
+// ============================================
+// TELEMETRY (1Hz sampling + micro-sparklines)
+// ============================================
+
+const TELEMETRY_SAMPLES: usize = 10; // ~10 seconds at 1Hz
+
+struct RingBuffer<T: Copy + Default, const N: usize> {
+    data: [T; N],
+    head: usize,
+    count: usize,
+}
+
+impl<T: Copy + Default, const N: usize> RingBuffer<T, N> {
+    fn new() -> Self {
+        Self {
+            data: [T::default(); N],
+            head: 0,
+            count: 0,
+        }
+    }
+
+    fn push(&mut self, val: T) {
+        self.data[self.head] = val;
+        self.head = (self.head + 1) % N;
+        if self.count < N {
+            self.count += 1;
+        }
+    }
+
+    fn iter_oldest_first(&self) -> impl Iterator<Item = T> + '_ {
+        let start = if self.count < N { 0 } else { self.head };
+        (0..self.count).map(move |i| self.data[(start + i) % N])
+    }
+}
+
+struct TelemetryState {
+    // Accumulators (updated every frame from simulation_step returns)
+    birth_acc: u32,
+    death_acc: u32,
+
+    // Ring buffers (pushed at 1Hz)
+    births_buf: RingBuffer<u16, TELEMETRY_SAMPLES>,
+    deaths_buf: RingBuffer<u16, TELEMETRY_SAMPLES>,
+    herbivore_buf: RingBuffer<u16, TELEMETRY_SAMPLES>,
+    carnivore_buf: RingBuffer<u16, TELEMETRY_SAMPLES>,
+    scavenger_buf: RingBuffer<u16, TELEMETRY_SAMPLES>,
+    diversity_buf: RingBuffer<f32, TELEMETRY_SAMPLES>,
+
+    // Timing
+    last_sample_ms: f64,
+
+    // Latest snapshot for peek display
+    latest_births: u16,
+    latest_deaths: u16,
+    latest_h: u16,
+    latest_c: u16,
+    latest_s: u16,
+    latest_div: f32,
+
+    // Scratch (avoid repeated allocations)
+    points_buf: String,
+}
+
+impl TelemetryState {
+    fn new(now_ms: f64) -> Self {
+        Self {
+            birth_acc: 0,
+            death_acc: 0,
+            births_buf: RingBuffer::new(),
+            deaths_buf: RingBuffer::new(),
+            herbivore_buf: RingBuffer::new(),
+            carnivore_buf: RingBuffer::new(),
+            scavenger_buf: RingBuffer::new(),
+            diversity_buf: RingBuffer::new(),
+            last_sample_ms: now_ms,
+            latest_births: 0,
+            latest_deaths: 0,
+            latest_h: 0,
+            latest_c: 0,
+            latest_s: 0,
+            latest_div: 1.0,
+            points_buf: String::with_capacity(128),
+        }
+    }
+}
+
+fn count_roles<const CAP: usize>(arena: &BoidArena<CAP>) -> (u16, u16, u16) {
+    let mut h: u32 = 0;
+    let mut c: u32 = 0;
+    let mut s: u32 = 0;
+
+    for idx in arena.iter_alive() {
+        match arena.roles[idx] {
+            BoidRole::Herbivore => h += 1,
+            BoidRole::Carnivore => c += 1,
+            BoidRole::Scavenger => s += 1,
+        }
+    }
+
+    (
+        h.min(u16::MAX as u32) as u16,
+        c.min(u16::MAX as u32) as u16,
+        s.min(u16::MAX as u32) as u16,
+    )
+}
+
+fn set_polyline_points(document: &Document, id: &str, points: &str) {
+    if let Some(el) = document.get_element_by_id(id) {
+        el.set_attribute("points", points).ok();
+    }
+}
+
+fn update_sparklines(document: &Document, telemetry: &mut TelemetryState) {
+    const SPARK_W: f32 = 40.0;
+    const SPARK_H: f32 = 12.0;
+    let x_step = SPARK_W / ((TELEMETRY_SAMPLES as f32) - 1.0);
+    let y_span = SPARK_H - 1.0;
+
+    // Reuse the same buffer for each polyline
+    let points = &mut telemetry.points_buf;
+
+    // BD: normalize by max births/deaths in window
+    let mut max_bd: u16 = 1;
+    for v in telemetry.births_buf.iter_oldest_first() {
+        max_bd = max_bd.max(v);
+    }
+    for v in telemetry.deaths_buf.iter_oldest_first() {
+        max_bd = max_bd.max(v);
+    }
+    let max_bd_f = max_bd.max(1) as f32;
+
+    // Births (green)
+    points.clear();
+    for (i, v) in telemetry.births_buf.iter_oldest_first().enumerate() {
+        let x = i as f32 * x_step;
+        let y = SPARK_H - ((v as f32 / max_bd_f) * y_span);
+        if i > 0 {
+            points.push(' ');
+        }
+        let _ = write!(points, "{:.1},{:.1}", x, y);
+    }
+    set_polyline_points(document, "spark-births", points);
+
+    // Deaths (red)
+    points.clear();
+    for (i, v) in telemetry.deaths_buf.iter_oldest_first().enumerate() {
+        let x = i as f32 * x_step;
+        let y = SPARK_H - ((v as f32 / max_bd_f) * y_span);
+        if i > 0 {
+            points.push(' ');
+        }
+        let _ = write!(points, "{:.1},{:.1}", x, y);
+    }
+    set_polyline_points(document, "spark-deaths", points);
+
+    // H/C/S: normalize by max count in window
+    let mut max_hcs: u16 = 1;
+    for v in telemetry.herbivore_buf.iter_oldest_first() {
+        max_hcs = max_hcs.max(v);
+    }
+    for v in telemetry.carnivore_buf.iter_oldest_first() {
+        max_hcs = max_hcs.max(v);
+    }
+    for v in telemetry.scavenger_buf.iter_oldest_first() {
+        max_hcs = max_hcs.max(v);
+    }
+    let max_hcs_f = max_hcs.max(1) as f32;
+
+    // Herbivores
+    points.clear();
+    for (i, v) in telemetry.herbivore_buf.iter_oldest_first().enumerate() {
+        let x = i as f32 * x_step;
+        let y = SPARK_H - ((v as f32 / max_hcs_f) * y_span);
+        if i > 0 {
+            points.push(' ');
+        }
+        let _ = write!(points, "{:.1},{:.1}", x, y);
+    }
+    set_polyline_points(document, "spark-h", points);
+
+    // Carnivores
+    points.clear();
+    for (i, v) in telemetry.carnivore_buf.iter_oldest_first().enumerate() {
+        let x = i as f32 * x_step;
+        let y = SPARK_H - ((v as f32 / max_hcs_f) * y_span);
+        if i > 0 {
+            points.push(' ');
+        }
+        let _ = write!(points, "{:.1},{:.1}", x, y);
+    }
+    set_polyline_points(document, "spark-c", points);
+
+    // Scavengers
+    points.clear();
+    for (i, v) in telemetry.scavenger_buf.iter_oldest_first().enumerate() {
+        let x = i as f32 * x_step;
+        let y = SPARK_H - ((v as f32 / max_hcs_f) * y_span);
+        if i > 0 {
+            points.push(' ');
+        }
+        let _ = write!(points, "{:.1},{:.1}", x, y);
+    }
+    set_polyline_points(document, "spark-s", points);
+
+    // DIV: 0–1 clamped
+    points.clear();
+    for (i, v) in telemetry.diversity_buf.iter_oldest_first().enumerate() {
+        let v = v.clamp(0.0, 1.0);
+        let x = i as f32 * x_step;
+        let y = SPARK_H - (v * y_span);
+        if i > 0 {
+            points.push(' ');
+        }
+        let _ = write!(points, "{:.1},{:.1}", x, y);
+    }
+    set_polyline_points(document, "spark-div", points);
+}
+
+fn update_peek_attributes(document: &Document, telemetry: &TelemetryState) {
+    if let Some(el) = document.get_element_by_id("stat-bd") {
+        let peek = format!(
+            "B/D {}/{}",
+            telemetry.latest_births, telemetry.latest_deaths
+        );
+        el.set_attribute("data-peek", &peek).ok();
+        el.set_attribute("aria-label", &peek).ok();
+        el.set_attribute("title", &peek).ok();
+    }
+    if let Some(el) = document.get_element_by_id("stat-hcs") {
+        let peek = format!(
+            "H/C/S {}/{}/{}",
+            telemetry.latest_h, telemetry.latest_c, telemetry.latest_s
+        );
+        el.set_attribute("data-peek", &peek).ok();
+        el.set_attribute("aria-label", &peek).ok();
+        el.set_attribute("title", &peek).ok();
+    }
+    if let Some(el) = document.get_element_by_id("stat-div") {
+        let peek = format!("DIV {:.2}", telemetry.latest_div);
+        el.set_attribute("data-peek", &peek).ok();
+        el.set_attribute("aria-label", &peek).ok();
+        el.set_attribute("title", &peek).ok();
+    }
 }
 
 /// Chakravyu zone - the deadly center where boids can enter but not escape
@@ -111,17 +442,13 @@ impl BubbleLayout {
     /// 2. 2 * orbit_radius * sin(π/N) >= 2 * effective_radius (no overlap)
     ///
     /// We solve for bubble_radius that satisfies BOTH constraints.
-    fn calculate(viewport_min: f64, bubble_count: usize) -> Self {
-        // Responsive constellation sizing:
-        // - Mobile (< 600px): 80% of viewport for better readability
-        // - Tablet (600-1024px): 60% of viewport
-        // - Desktop (> 1024px): 45% of viewport
-        let size_ratio = if viewport_min < 600.0 {
-            0.80 // Mobile: large bubbles for touch targets
-        } else if viewport_min < 1024.0 {
-            0.60 // Tablet: medium
-        } else {
-            0.45 // Desktop: smaller, more elegant
+    fn calculate(viewport_min: f64, bubble_count: usize, mode: ViewportMode) -> Self {
+        // ViewportMode-driven sizing. This provides a single source of truth
+        // (aspect ratio + width guard) for layout decisions.
+        let size_ratio = match mode {
+            ViewportMode::MobilePortrait => 0.85,
+            ViewportMode::MobileLandscape => 0.65,
+            ViewportMode::Desktop => 0.45,
         };
         let constellation_size = viewport_min * size_ratio;
         let big_circle_radius = constellation_size / 2.0;
@@ -162,6 +489,10 @@ impl BubbleLayout {
         } else {
             // Single bubble: center it, make it reasonably sized
             (big_circle_radius * 0.35).clamp(15.0, 50.0)
+        };
+        let bubble_radius = match mode {
+            ViewportMode::MobilePortrait | ViewportMode::MobileLandscape => bubble_radius.max(22.0),
+            ViewportMode::Desktop => bubble_radius,
         };
 
         // Calculate all derived values from bubble_radius
@@ -346,7 +677,6 @@ struct World {
     config: SimConfig,
     width: f32,
     height: f32,
-    last_season: &'static str,
     popups: Vec<PopUp>,
     miasma: Vec<Miasma>,
 }
@@ -502,6 +832,7 @@ fn render_bubbles(document: &Document, bubbles: &[Bubble], show_back: bool) {
     let window = web_sys::window().unwrap();
     let viewport_width = window.inner_width().unwrap().as_f64().unwrap();
     let viewport_height = window.inner_height().unwrap().as_f64().unwrap();
+    let mode = ViewportMode::detect(viewport_width, viewport_height);
 
     // Get telemetry bar height (if exists)
     let telemetry_height = document
@@ -515,7 +846,7 @@ fn render_bubbles(document: &Document, bubbles: &[Bubble], show_back: bool) {
 
     // Calculate layout using new algorithm
     let bubble_count = bubbles.len();
-    let layout = BubbleLayout::calculate(available_min, bubble_count);
+    let layout = BubbleLayout::calculate(available_min, bubble_count, mode);
 
     // Derived values for positioning
     let constellation_size = layout.big_circle_radius * 2.0;
@@ -543,7 +874,8 @@ fn render_bubbles(document: &Document, bubbles: &[Bubble], show_back: bool) {
 
     // Debug log to verify calculations
     web_sys::console::log_1(&format!(
-        "Layout: viewport={}x{}, constellation={:.0}, bubble_r={:.1}, text={:.1}, orbit={:.1}, effective_r={:.1}",
+        "Layout({}): viewport={}x{}, constellation={:.0}, bubble_r={:.1}, text={:.1}, orbit={:.1}, effective_r={:.1}",
+        mode.as_str(),
         viewport_width as i32,
         viewport_height as i32,
         constellation_size,
@@ -888,6 +1220,11 @@ fn main() {
     let window = window().unwrap();
     let document = window.document().unwrap();
 
+    // Establish viewport mode early (drives CSS + tuning)
+    let initial_mode = update_viewport_mode(&document);
+    let initial_tuning = initial_mode.tuning();
+    let viewport_tuning: Rc<RefCell<ViewportTuning>> = Rc::new(RefCell::new(initial_tuning));
+
     // Set up routing and render initial bubbles
     setup_routing(&document);
 
@@ -916,11 +1253,12 @@ fn main() {
     canvas.set_width(w as u32);
     canvas.set_height(h as u32);
 
-    // Resize handler
+    // Resize/orientation handler (canvas + viewport mode + constellation rerender)
     {
         let canvas = canvas.clone();
         let document_for_closure = document.clone();
         let window_for_closure = window.clone();
+        let tuning_for_resize = Rc::clone(&viewport_tuning);
         let closure = Closure::wrap(Box::new(move || {
             let sim_area = document_for_closure.get_element_by_id("simulation-area");
             let (w, h) = if let Some(area) = &sim_area {
@@ -934,6 +1272,11 @@ fn main() {
             };
             canvas.set_width(w as u32);
             canvas.set_height(h as u32);
+
+            // Update viewport mode + tuning, then rerender constellation for new layout
+            let mode = update_viewport_mode(&document_for_closure);
+            *tuning_for_resize.borrow_mut() = mode.tuning();
+            handle_route_change(&document_for_closure);
         }) as Box<dyn FnMut()>);
         window
             .add_event_listener_with_callback("resize", closure.as_ref().unchecked_ref())
@@ -978,6 +1321,7 @@ fn main() {
     let background = BackgroundEffect::new(width as f64, height as f64);
 
     let config = SimConfig {
+        carrying_capacity: initial_tuning.max_boids.max(1),
         reproduction_threshold: 140.0,
         base_mortality: 0.00001, // Reduced mortality to allow population growth
         ..SimConfig::default()
@@ -997,7 +1341,6 @@ fn main() {
         config,
         width,
         height,
-        last_season: "SPRING",
         popups: Vec::new(),
         miasma: Vec::new(),
     }));
@@ -1006,7 +1349,6 @@ fn main() {
     let stat_pop = document.get_element_by_id("stat-pop");
     let stat_gen = document.get_element_by_id("stat-gen");
     let stat_fps = document.get_element_by_id("stat-fps");
-    let stat_season = document.get_element_by_id("stat-season");
 
     let performance: Performance = window.performance().unwrap();
 
@@ -1015,6 +1357,7 @@ fn main() {
 
     let state_clone = state.clone();
     let document_clone = document.clone();
+    let tuning_for_loop = Rc::clone(&viewport_tuning);
     let mut frame_count: u32 = 0;
     let mut last_time = performance.now();
     let mut fps_accumulator = 0.0;
@@ -1027,10 +1370,24 @@ fn main() {
         max_generation: 0,
         low_diversity_frames: 0,
     };
+    let mut last_tuning = initial_tuning;
+    let mut spawn_interval_frames = compute_spawn_interval_frames(6, last_tuning.spawn_rate_mult);
+    let mut telemetry = TelemetryState::new(performance.now());
 
     *g.borrow_mut() = Some(Closure::new(move || {
         let mut s = state_clone.borrow_mut();
         frame_count += 1;
+
+        // Update sim tuning if viewport mode changed (set by resize handler)
+        let tuning_now = { *tuning_for_loop.borrow() };
+        if tuning_now.max_boids != last_tuning.max_boids
+            || (tuning_now.spawn_rate_mult - last_tuning.spawn_rate_mult).abs() > f32::EPSILON
+        {
+            spawn_interval_frames = compute_spawn_interval_frames(6, tuning_now.spawn_rate_mult);
+            // Apply to simulation config (used for reproduction + population pressure)
+            s.config.carrying_capacity = tuning_now.max_boids.max(1);
+            last_tuning = tuning_now;
+        }
 
         // FPS calculation
         let current_time = performance.now();
@@ -1096,8 +1453,8 @@ fn main() {
         }
 
         // === FOUNTAIN OF LIFE ===
-        // Spawn new boids from the circle edge periodically (10 per sec approx)
-        if frame_count.is_multiple_of(6) {
+        // Spawn new boids from the circle edge periodically (mode-tuned)
+        if s.arena.alive_count < last_tuning.max_boids && frame_count % spawn_interval_frames == 0 {
             if let Some(chakravyu) = s.chakravyu {
                 use rand::Rng;
                 let mut rng = rand::thread_rng();
@@ -1145,21 +1502,13 @@ fn main() {
                 fps_frame_count = 0;
             }
 
-            // Update season display
-            if let Some(ref el) = stat_season {
-                el.set_text_content(Some(&format!("SEASON: {}", s.season.season_name())));
+            // Update speed record internally (for stats tracking, but don't log to console)
+            if max_speed > stats.max_speed_record + 0.1 {
+                stats.max_speed_record = max_speed;
+                // Speed record tracking kept for internal stats, but not displayed to avoid clutter
             }
 
             // Log events
-            if max_speed > stats.max_speed_record + 0.1 {
-                stats.max_speed_record = max_speed;
-                log_event(
-                    &document_clone,
-                    &format!("⚡ SPEED RECORD: {:.2}", max_speed),
-                    "event-record",
-                );
-            }
-
             if max_gen > stats.max_generation {
                 stats.max_generation = max_gen;
                 if max_gen.is_multiple_of(5) {
@@ -1201,7 +1550,6 @@ fn main() {
             config,
             width: world_w,
             height: world_h,
-            last_season,
             popups: _, // Popups managed via s.popups
             miasma,
             ..
@@ -1209,28 +1557,6 @@ fn main() {
 
         // Update season
         season.update(1.0);
-
-        // Check for season change
-        let current_season = season.season_name();
-        if current_season != *last_season {
-            *last_season = current_season;
-            log_event(
-                &document_clone,
-                &format!("🌍 {} has arrived!", current_season),
-                "event-record",
-            );
-
-            // Winter is harsh
-            if current_season == "WINTER" {
-                log_event(&document_clone, "❄ Resources are scarce...", "event-death");
-            } else if current_season == "SUMMER" {
-                log_event(
-                    &document_clone,
-                    "☀ Abundance! Food plentiful!",
-                    "event-birth",
-                );
-            }
-        }
 
         // Update Fungal Network with exclusion zones
         fungal_network.update_with_exclusions(exclusion_zones);
@@ -1552,7 +1878,43 @@ fn main() {
             );
         }
 
-        let _ = births; // Suppress unused warnings
+        // Accumulate births/deaths continuously (sampled at 1Hz)
+        telemetry.birth_acc = telemetry.birth_acc.saturating_add(births as u32);
+        telemetry.death_acc = telemetry.death_acc.saturating_add(deaths as u32);
+
+        // 1Hz telemetry sampling + DOM updates (sparklines + peek attributes)
+        if current_time - telemetry.last_sample_ms >= 1000.0 {
+            telemetry.last_sample_ms = current_time;
+
+            // Push births/deaths window sample (clamp to prevent u16 overflow)
+            let b = telemetry.birth_acc.min(u16::MAX as u32) as u16;
+            let d = telemetry.death_acc.min(u16::MAX as u32) as u16;
+            telemetry.births_buf.push(b);
+            telemetry.deaths_buf.push(d);
+            telemetry.latest_births = b;
+            telemetry.latest_deaths = d;
+            telemetry.birth_acc = 0;
+            telemetry.death_acc = 0;
+
+            // Role counts
+            let (h, c, s_count) = count_roles(arena);
+            telemetry.herbivore_buf.push(h);
+            telemetry.carnivore_buf.push(c);
+            telemetry.scavenger_buf.push(s_count);
+            telemetry.latest_h = h;
+            telemetry.latest_c = c;
+            telemetry.latest_s = s_count;
+
+            // Diversity (0–1)
+            if arena.alive_count > 10 {
+                let div = compute_diversity(arena).clamp(0.0, 1.0);
+                telemetry.diversity_buf.push(div);
+                telemetry.latest_div = div;
+            }
+
+            update_sparklines(&document_clone, &mut telemetry);
+            update_peek_attributes(&document_clone, &telemetry);
+        }
 
         // === MASS EXTINCTION CHECK ===
         // When diversity collapses, trigger a reset event
