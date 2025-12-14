@@ -315,10 +315,15 @@ mod tests {
     #[test]
     fn test_fusion_better_than_raw() {
         let mut demo = ComplementaryFilterDemo::default();
+        // Make the gyro meaningfully drift so fusion has something to correct.
+        // With near-zero drift, pure gyro integration can outperform fusion short-term.
+        demo.gyro_drift = 0.8;
+        demo.gyro_noise = 0.2;
+        demo.accel_noise = 0.8;
         demo.reset(42);
 
         // Run for a while
-        for _ in 0..500 {
+        for _ in 0..1500 {
             demo.step(0.016);
         }
 
