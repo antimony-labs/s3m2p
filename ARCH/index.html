@@ -11,6 +11,37 @@ MODIFIED: 2025-12-09
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ARCH - Architecture Explorer</title>
+    <script>
+        // Theme Manager - Site-wide light/dark mode
+        (function() {
+            const THEME_KEY = 'toofoo_theme';
+            function getSystemTheme() {
+                return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+            }
+            function getStoredTheme() {
+                try { return localStorage.getItem(THEME_KEY); }
+                catch { return null; }
+            }
+            function setTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                try { localStorage.setItem(THEME_KEY, theme); } catch {}
+                window.dispatchEvent(new CustomEvent('themechange', { detail: { theme } }));
+            }
+            function initTheme() {
+                const theme = getStoredTheme() || getSystemTheme();
+                setTheme(theme);
+                window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+                    if (!getStoredTheme()) setTheme(e.matches ? 'light' : 'dark');
+                });
+            }
+            window.toggleTheme = function() {
+                const current = document.documentElement.getAttribute('data-theme');
+                setTheme(current === 'light' ? 'dark' : 'light');
+            };
+            window.getCurrentTheme = () => document.documentElement.getAttribute('data-theme') || 'dark';
+            initTheme();
+        })();
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
@@ -41,6 +72,28 @@ MODIFIED: 2025-12-09
             --arch-back: #888899;
             --arch-file: #ccccdd;
             --arch-selected-bg: rgba(255, 255, 255, 0.08);
+            --arch-hover-bg: rgba(255, 255, 255, 0.04);
+            --arch-hover-bg-strong: rgba(255, 255, 255, 0.1);
+            --arch-active-bg: rgba(255, 255, 255, 0.15);
+            --arch-border-subtle: rgba(255, 255, 255, 0.1);
+            --arch-scrollbar: rgba(255, 255, 255, 0.2);
+            --arch-scrollbar-hover: rgba(255, 255, 255, 0.3);
+        }
+
+        :root[data-theme="light"] {
+            --arch-bg: #F5F5F7;
+            --arch-text: #1A1A2E;
+            --arch-dim: #888899;
+            --arch-back: #666677;
+            --arch-file: #333344;
+            --arch-selected-bg: rgba(0, 0, 0, 0.06);
+            --arch-hover-bg: rgba(0, 0, 0, 0.03);
+            --arch-hover-bg-strong: rgba(0, 0, 0, 0.06);
+            --arch-active-bg: rgba(0, 0, 0, 0.1);
+            --arch-border-subtle: rgba(0, 0, 0, 0.1);
+            --arch-scrollbar: rgba(0, 0, 0, 0.15);
+            --arch-scrollbar-hover: rgba(0, 0, 0, 0.25);
+            /* Semantic layer colors stay the same */
         }
 
         * {
@@ -120,7 +173,7 @@ MODIFIED: 2025-12-09
         .tree-line--folder:hover,
         .tree-line--file:hover,
         .tree-line--back:hover {
-            background: rgba(255, 255, 255, 0.04);
+            background: var(--arch-hover-bg);
         }
 
         .tree-line--selected {
@@ -181,7 +234,7 @@ MODIFIED: 2025-12-09
         }
 
         .file-viewer__close:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: var(--arch-hover-bg-strong);
             border-color: var(--arch-text);
         }
 
@@ -221,12 +274,12 @@ MODIFIED: 2025-12-09
         }
 
         .file-viewer__nav-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: var(--arch-hover-bg-strong);
             border-color: var(--arch-file);
         }
 
         .file-viewer__nav-btn:active {
-            background: rgba(255, 255, 255, 0.15);
+            background: var(--arch-active-bg);
         }
 
         .file-viewer__content {
@@ -274,7 +327,7 @@ MODIFIED: 2025-12-09
 
         /* Line numbers styling for Prism plugin */
         .line-numbers .line-numbers-rows {
-            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            border-right: 1px solid var(--arch-border-subtle);
             background: transparent;
         }
 
@@ -297,13 +350,13 @@ MODIFIED: 2025-12-09
 
         .arch-tree::-webkit-scrollbar-thumb,
         .file-viewer__content::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
+            background: var(--arch-scrollbar);
             border-radius: 4px;
         }
 
         .arch-tree::-webkit-scrollbar-thumb:hover,
         .file-viewer__content::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.3);
+            background: var(--arch-scrollbar-hover);
         }
 
         /* ═══════════════════ MOBILE RESPONSIVE ═══════════════════ */
@@ -373,9 +426,41 @@ MODIFIED: 2025-12-09
                 padding-right: 6px;
             }
         }
+
+        /* ═══════════════════ THEME TOGGLE ═══════════════════ */
+        #theme-toggle {
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            z-index: 300;
+            background: var(--arch-bg);
+            border: 1px solid var(--arch-dim);
+            border-radius: 6px;
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            color: var(--arch-dim);
+            transition: border-color 0.2s, color 0.2s;
+        }
+
+        #theme-toggle:hover {
+            border-color: var(--arch-text);
+            color: var(--arch-text);
+        }
+
+        .icon-sun, .icon-moon {
+            display: none;
+        }
+
+        :root[data-theme="dark"] .icon-sun { display: inline; }
+        :root[data-theme="light"] .icon-moon { display: inline; }
     </style>
 </head>
 <body>
+    <button id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle light/dark mode">
+        <span class="icon-sun">&#9788;</span>
+        <span class="icon-moon">&#9790;</span>
+    </button>
     <div id="arch-app"></div>
 </body>
 </html>

@@ -2,7 +2,7 @@
 ═══════════════════════════════════════════════════════════════════════════════
 FILE: index.html | SWARM_ROBOTICS/index.html
 PURPOSE: Web application entry point with HTML structure
-MODIFIED: 2025-12-02
+MODIFIED: 2025-12-27
 ═══════════════════════════════════════════════════════════════════════════════
 -->
 <!DOCTYPE html>
@@ -11,32 +11,111 @@ MODIFIED: 2025-12-02
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Swarm Robotics</title>
+    <script>
+        // Theme Manager - Site-wide light/dark mode
+        (function() {
+            const THEME_KEY = 'toofoo_theme';
+            function getSystemTheme() {
+                return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+            }
+            function getStoredTheme() {
+                try { return localStorage.getItem(THEME_KEY); }
+                catch { return null; }
+            }
+            function setTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                try { localStorage.setItem(THEME_KEY, theme); } catch {}
+                window.dispatchEvent(new CustomEvent('themechange', { detail: { theme } }));
+            }
+            function initTheme() {
+                const theme = getStoredTheme() || getSystemTheme();
+                setTheme(theme);
+                window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+                    if (!getStoredTheme()) setTheme(e.matches ? 'light' : 'dark');
+                });
+            }
+            window.toggleTheme = function() {
+                const current = document.documentElement.getAttribute('data-theme');
+                setTheme(current === 'light' ? 'dark' : 'light');
+            };
+            window.getCurrentTheme = () => document.documentElement.getAttribute('data-theme') || 'dark';
+            initTheme();
+        })();
+    </script>
     <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" />
     <style>
+        :root {
+            --bg-start: #050508;
+            --bg-end: #0a0a12;
+            --text: #e0e0e0;
+            --text-muted: #b0b0b0;
+            --accent: #00ffaa;
+            --accent-dim: rgba(0, 255, 170, 0.1);
+            --accent-border: rgba(0, 255, 170, 0.3);
+            --accent-glow: rgba(0, 255, 170, 0.5);
+            --status: #ffaa00;
+        }
+
+        :root[data-theme="light"] {
+            --bg-start: #F5F5F7;
+            --bg-end: #E8E8EC;
+            --text: #1A1A2E;
+            --text-muted: #555566;
+            --accent: #00aa77;
+            --accent-dim: rgba(0, 170, 119, 0.1);
+            --accent-border: rgba(0, 170, 119, 0.3);
+            --accent-glow: rgba(0, 170, 119, 0.3);
+            --status: #cc8800;
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #050508 0%, #0a0a12 100%);
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
             font-family: 'Monaco', 'Courier New', monospace;
-            color: #e0e0e0;
+            color: var(--text);
         }
         .container { text-align: center; padding: 2rem; max-width: 600px; }
-        h1 { font-size: 2.5rem; margin-bottom: 1rem; color: #00ffaa; text-shadow: 0 0 20px rgba(0, 255, 170, 0.5); }
-        .description { font-size: 1.2rem; margin-bottom: 2rem; color: #b0b0b0; line-height: 1.6; }
-        .status { font-size: 1.5rem; margin-bottom: 2rem; color: #ffaa00; font-weight: bold; }
+        h1 { font-size: 2.5rem; margin-bottom: 1rem; color: var(--accent); text-shadow: 0 0 20px var(--accent-glow); }
+        .description { font-size: 1.2rem; margin-bottom: 2rem; color: var(--text-muted); line-height: 1.6; }
+        .status { font-size: 1.5rem; margin-bottom: 2rem; color: var(--status); font-weight: bold; }
         .back-link {
             display: inline-block; margin-top: 2rem; padding: 0.8rem 1.5rem;
-            background: rgba(0, 255, 170, 0.1); border: 1px solid rgba(0, 255, 170, 0.3);
-            color: #00ffaa; text-decoration: none; border-radius: 4px; transition: all 0.3s ease;
+            background: var(--accent-dim); border: 1px solid var(--accent-border);
+            color: var(--accent); text-decoration: none; border-radius: 4px; transition: all 0.3s ease;
         }
-        .back-link:hover { background: rgba(0, 255, 170, 0.2); border-color: #00ffaa; }
+        .back-link:hover { background: var(--accent-border); border-color: var(--accent); }
+        #theme-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background: var(--accent-dim);
+            border: 1px solid var(--accent-border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 1rem;
+            color: var(--text-muted);
+            transition: border-color 0.2s, color 0.2s;
+        }
+        #theme-toggle:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .icon-sun, .icon-moon { display: none; }
+        :root[data-theme="dark"] .icon-sun { display: inline; }
+        :root[data-theme="light"] .icon-moon { display: inline; }
         @media (max-width: 768px) { h1 { font-size: 1.8rem; } .description { font-size: 1rem; } }
     </style>
 </head>
 <body>
+    <button id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle light/dark mode">
+        <span class="icon-sun">&#9788;</span>
+        <span class="icon-moon">&#9790;</span>
+    </button>
     <div class="container">
         <h1>Swarm Robotics</h1>
         <p class="description">Multi-robot coordination, distributed algorithms, emergent behavior, and swarm intelligence applications.</p>

@@ -1,10 +1,43 @@
 /*
 ═══════════════════════════════════════════════════════════════════════════════
 FILE: style.css | TOOLS/AUTOCRATE/style.css
-PURPOSE: Stylesheet for AutoCrate application with JustSans font and dark theme
-MODIFIED: 2025-12-02
+PURPOSE: Stylesheet for AutoCrate application with JustSans font and light/dark theme
+MODIFIED: 2025-12-27
 ═══════════════════════════════════════════════════════════════════════════════
 */
+
+/* CSS Variables for theming */
+:root {
+    --bg-start: #050508;
+    --bg-end: #0a0a12;
+    --surface: rgba(10, 10, 18, 0.8);
+    --text: #ecf0f1;
+    --text-muted: #a0a0a0;
+    --text-dim: #808080;
+    --accent: #ff6b35;
+    --accent-dim: rgba(255, 107, 53, 0.15);
+    --accent-hover: rgba(255, 107, 53, 0.35);
+    --border: rgba(255, 107, 53, 0.15);
+    --border-hover: rgba(255, 107, 53, 0.35);
+    --input-bg: rgba(0, 0, 0, 0.35);
+    --overlay-bg: rgba(0, 0, 0, 0.65);
+}
+
+:root[data-theme="light"] {
+    --bg-start: #F5F5F7;
+    --bg-end: #E8E8EC;
+    --surface: rgba(255, 255, 255, 0.9);
+    --text: #1A1A2E;
+    --text-muted: #666677;
+    --text-dim: #888899;
+    --accent: #d45520;
+    --accent-dim: rgba(212, 85, 32, 0.1);
+    --accent-hover: rgba(212, 85, 32, 0.2);
+    --border: rgba(212, 85, 32, 0.2);
+    --border-hover: rgba(212, 85, 32, 0.4);
+    --input-bg: rgba(0, 0, 0, 0.05);
+    --overlay-bg: rgba(0, 0, 0, 0.4);
+}
 
 /* AutoCrate styles */
 @font-face {
@@ -30,8 +63,8 @@ MODIFIED: 2025-12-02
 }
 
 body {
-    background: linear-gradient(135deg, #050508 0%, #0a0a12 100%);
-    color: #ecf0f1;
+    background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+    color: var(--text);
     overflow: hidden;
     font-family: 'JustSans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
@@ -50,27 +83,27 @@ header {
 
 h1 {
     font-size: 2rem;
-    color: #ff6b35;
-    text-shadow: 0 0 20px rgba(255, 107, 53, 0.5);
+    color: var(--accent);
+    text-shadow: 0 0 20px var(--accent-dim);
     margin-bottom: 0.25rem;
     font-weight: 700;
 }
 
 .subtitle {
-    color: #a0a0a0;
+    color: var(--text-muted);
     font-size: 0.95rem;
 }
 
 h2 {
     font-size: 1.05rem;
-    color: #ff6b35;
+    color: var(--accent);
     margin: 0 0 1rem 0;
     font-weight: 700;
     letter-spacing: 0.4px;
 }
 
 .unit {
-    color: #606060;
+    color: var(--text-dim);
     font-size: 0.8rem;
     font-weight: 400;
 }
@@ -83,8 +116,8 @@ h2 {
 }
 
 .panel-left {
-    background: rgba(10, 10, 18, 0.8);
-    border: 1px solid rgba(255, 107, 53, 0.15);
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 12px;
     padding: 1.25rem;
     position: sticky;
@@ -99,20 +132,20 @@ h2 {
 
 .viewport-section,
 .details-section {
-    background: rgba(10, 10, 18, 0.8);
-    border: 1px solid rgba(255, 107, 53, 0.15);
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 12px;
     padding: 1.25rem;
 }
 
 .section-title {
     font-size: 0.8rem;
-    color: #808080;
+    color: var(--text-dim);
     text-transform: uppercase;
     letter-spacing: 1px;
     margin-bottom: 1rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--border);
 }
 
 .input-group {
@@ -122,7 +155,7 @@ h2 {
 .input-group label {
     display: block;
     font-size: 0.85rem;
-    color: #a0a0a0;
+    color: var(--text-muted);
     margin-bottom: 0.5rem;
 }
 
@@ -136,10 +169,10 @@ h2 {
 .select {
     width: 100%;
     padding: 0.55rem 0.65rem;
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(255, 107, 53, 0.25);
+    background: var(--input-bg);
+    border: 1px solid var(--border);
     border-radius: 8px;
-    color: #ff6b35;
+    color: var(--accent);
     font-size: 0.9rem;
     font-family: inherit;
 }
@@ -147,17 +180,17 @@ h2 {
 .input-group input[type="number"]:focus,
 .select:focus {
     outline: none;
-    border-color: #ff6b35;
-    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.08);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
 }
 
 #generate-btn {
     width: 100%;
     padding: 0.75rem 0.9rem;
-    background: linear-gradient(135deg, rgba(255, 107, 53, 0.25), rgba(255, 107, 53, 0.12));
-    border: 1px solid rgba(255, 107, 53, 0.55);
+    background: linear-gradient(135deg, var(--accent-hover), var(--accent-dim));
+    border: 1px solid var(--accent);
     border-radius: 10px;
-    color: #ff6b35;
+    color: var(--accent);
     font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
@@ -165,8 +198,8 @@ h2 {
 }
 
 #generate-btn:hover {
-    background: linear-gradient(135deg, rgba(255, 107, 53, 0.35), rgba(255, 107, 53, 0.18));
-    box-shadow: 0 0 22px rgba(255, 107, 53, 0.18);
+    background: linear-gradient(135deg, var(--accent-hover), var(--accent-dim));
+    box-shadow: 0 0 22px var(--accent-dim);
 }
 
 .button-row {
@@ -178,30 +211,30 @@ h2 {
 button.secondary {
     flex: 1;
     padding: 0.6rem 0.7rem;
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: var(--input-bg);
+    border: 1px solid var(--border);
     border-radius: 10px;
-    color: #e0e0e0;
+    color: var(--text);
     font-size: 0.85rem;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 button.secondary:hover {
-    border-color: rgba(255, 107, 53, 0.35);
-    color: #ff6b35;
+    border-color: var(--border-hover);
+    color: var(--accent);
 }
 
 .divider {
     height: 1px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--border);
     margin: 1rem 0;
 }
 
 .info-text {
     margin-top: 0.75rem;
     font-size: 0.8rem;
-    color: #808080;
+    color: var(--text-dim);
     line-height: 1.45;
 }
 
@@ -213,24 +246,24 @@ button.secondary:hover {
 
 .view-btn {
     padding: 0.45rem 0.9rem;
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(255, 107, 53, 0.2);
+    background: var(--input-bg);
+    border: 1px solid var(--border);
     border-radius: 10px;
-    color: #a0a0a0;
+    color: var(--text-muted);
     font-size: 0.8rem;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .view-btn:hover {
-    border-color: #ff6b35;
-    color: #ff6b35;
+    border-color: var(--accent);
+    color: var(--accent);
 }
 
 .view-btn.active {
-    background: rgba(255, 107, 53, 0.12);
-    border-color: #ff6b35;
-    color: #ff6b35;
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
 }
 
 #viewport-canvas {
@@ -251,31 +284,31 @@ button.secondary:hover {
 }
 
 .detail-card {
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 107, 53, 0.1);
+    background: var(--input-bg);
+    border: 1px solid var(--border);
     border-radius: 10px;
     padding: 0.9rem;
 }
 
 .detail-label {
     font-size: 0.75rem;
-    color: #808080;
+    color: var(--text-dim);
     margin-bottom: 0.4rem;
 }
 
 .detail-value {
     font-size: 1rem;
-    color: #ff6b35;
+    color: var(--accent);
     font-weight: 700;
 }
 
 .mono {
     margin-top: 0.75rem;
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--input-bg);
+    border: 1px solid var(--border);
     border-radius: 10px;
     padding: 0.85rem;
-    color: #d7d7d7;
+    color: var(--text);
     font-size: 0.8rem;
     line-height: 1.45;
     overflow: auto;
@@ -315,7 +348,7 @@ button.secondary:hover {
 .modal-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.65);
+    background: var(--overlay-bg);
     backdrop-filter: blur(6px);
 }
 
@@ -323,8 +356,8 @@ button.secondary:hover {
     position: relative;
     width: min(1100px, 96vw);
     max-height: min(80vh, 900px);
-    background: rgba(10, 10, 18, 0.92);
-    border: 1px solid rgba(255, 107, 53, 0.2);
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 14px;
     box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
     overflow: hidden;
@@ -336,29 +369,29 @@ button.secondary:hover {
     justify-content: space-between;
     gap: 0.75rem;
     padding: 0.9rem 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid var(--border);
 }
 
 .modal-title {
-    color: #ff6b35;
+    color: var(--accent);
     font-weight: 700;
     letter-spacing: 0.4px;
 }
 
 .modal-close {
     padding: 0.45rem 0.75rem;
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: var(--input-bg);
+    border: 1px solid var(--border);
     border-radius: 10px;
-    color: #e0e0e0;
+    color: var(--text);
     font-size: 0.85rem;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .modal-close:hover {
-    border-color: rgba(255, 107, 53, 0.35);
-    color: #ff6b35;
+    border-color: var(--border-hover);
+    color: var(--accent);
 }
 
 .modal-body {
@@ -374,43 +407,17 @@ button.secondary:hover {
     position: fixed;
     top: 60px;
     left: 20px;
-    background: rgba(20, 20, 30, 0.9);
-    border: 1px solid #2c3e50;
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 8px;
     padding: 16px;
     width: 280px;
 }
 
-.input-group {
-    margin-bottom: 12px;
-}
-
-.input-group label {
-    display: block;
-    color: #95a5a6;
-    font-size: 12px;
-    margin-bottom: 4px;
-}
-
-.input-group input {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #34495e;
-    border-radius: 4px;
-    background: #1a1a2e;
-    color: #ecf0f1;
-    font-size: 14px;
-}
-
-.input-group input:focus {
-    outline: none;
-    border-color: #3498db;
-}
-
 button.generate {
     width: 100%;
     padding: 12px;
-    background: #3498db;
+    background: var(--accent);
     color: white;
     border: none;
     border-radius: 4px;
@@ -420,5 +427,33 @@ button.generate {
 }
 
 button.generate:hover {
-    background: #2980b9;
+    background: var(--accent-hover);
 }
+
+/* Theme Toggle */
+#theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 100;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 1rem;
+    color: var(--text-muted);
+    transition: border-color 0.2s, color 0.2s;
+}
+
+#theme-toggle:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.icon-sun, .icon-moon {
+    display: none;
+}
+
+:root[data-theme="dark"] .icon-sun { display: inline; }
+:root[data-theme="light"] .icon-moon { display: inline; }
