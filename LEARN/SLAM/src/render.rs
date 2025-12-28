@@ -105,12 +105,19 @@ impl LessonRenderer {
         // Demo controls for each lesson (reordered: 0=Intro, 1=Comp, 2=Kalman, 3=Particle, 4=EKF, 5=Graph)
         let demo_controls = match lesson.id {
             0 => {
-                // Lesson 0: The Core Problem - Conceptual only, no interactive controls needed yet
+                // Lesson 0: Dark Hallway - Interactive controls for step and sense
                 r#"
                 <div class="demo-controls" id="demo-controls">
-                    <div class="demo-hint" style="text-align: center; font-style: italic;">
-                        This conceptual lesson establishes the "why". <br>
-                        Interactive simulations start in the next lesson!
+                    <div class="control-group">
+                        <h4>Navigate the Dark Hallway</h4>
+                        <div class="control-buttons">
+                            <button id="dh-step-btn" class="demo-btn">👣 Step Blindly (+3m)</button>
+                            <button id="dh-sense-btn" class="demo-btn">🖐️ Touch Wall</button>
+                        </div>
+                    </div>
+                    <div class="demo-hint">
+                        <strong>Goal:</strong> Walk 50 meters without getting lost! Doors are hidden at 15m, 30m, and 45m.
+                        Touch the wall near a door to reset your uncertainty.
                     </div>
                 </div>
                 "#
@@ -321,8 +328,11 @@ impl LessonRenderer {
 
                     <!-- 3. Interactive Demo -->
                     <section class="visualization">
-                        <h3>🎮 Try It Yourself</h3>
-                        <canvas id="lesson-canvas" width="800" height="500"></canvas>
+                        <div class="visualization-header">
+                            <h3>🎮 Try It Yourself</h3>
+                            <button class="popout-btn" onclick="toggleDemoPopout()">⛶ Pop Out</button>
+                        </div>
+                        <canvas id="lesson-canvas" width="1600" height="1000"></canvas>
                         <div class="demo-explanation">
                             <p>{demo_explanation}</p>
                         </div>
