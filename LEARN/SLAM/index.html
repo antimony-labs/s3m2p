@@ -48,6 +48,9 @@ MODIFIED: 2025-12-11
             initTheme();
         })();
     </script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -66,6 +69,23 @@ MODIFIED: 2025-12-11
                     querySelector: '.mermaid',
                 });
             }, 50); // Small delay to ensure DOM is ready
+        };
+
+        // Global function for WASM to call for KaTeX rendering
+        window.renderKaTeX = function () {
+            setTimeout(() => {
+                if (window.renderMathInElement) {
+                    renderMathInElement(document.body, {
+                        delimiters: [
+                            {left: '$$', right: '$$', display: true},
+                            {left: '$', right: '$', display: false},
+                            {left: '\\[', right: '\\]', display: true},
+                            {left: '\\(', right: '\\)', display: false}
+                        ],
+                        throwOnError: false
+                    });
+                }
+            }, 100);
         };
     </script>
     <style>
@@ -618,6 +638,107 @@ MODIFIED: 2025-12-11
             background: var(--overlay-bg);
             padding: 15px;
             border-radius: 6px;
+        }
+
+        /* Math content with KaTeX */
+        .math-content {
+            padding: 0 20px 20px 20px;
+            color: var(--text);
+            line-height: 1.8;
+        }
+
+        .math-content p {
+            margin-bottom: 15px;
+        }
+
+        .math-content .katex {
+            font-size: 1.1em;
+        }
+
+        .math-content .katex-display {
+            margin: 1.5em 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        /* Implementation guide */
+        .implementation-guide {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .implementation-guide summary {
+            cursor: pointer;
+            padding: 15px 20px;
+            list-style: none;
+        }
+
+        .implementation-guide summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .implementation-guide summary h3 {
+            display: inline;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .implementation-guide summary h3::before {
+            content: "▶ ";
+            font-size: 0.8rem;
+            margin-right: 8px;
+        }
+
+        .implementation-guide[open] summary h3::before {
+            content: "▼ ";
+        }
+
+        .implementation-guide[open] summary h3 {
+            color: var(--accent);
+        }
+
+        .impl-content {
+            padding: 0 20px 20px 20px;
+            color: var(--text-muted);
+            line-height: 1.7;
+        }
+
+        .impl-content h4 {
+            color: var(--accent);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1rem;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .impl-content pre {
+            background: var(--overlay-bg);
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+
+        .impl-content code {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(100, 255, 218, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+
+        .impl-content ul {
+            margin: 10px 0;
+            padding-left: 25px;
+        }
+
+        .impl-content li {
+            margin-bottom: 8px;
         }
 
         /* Technical term tooltips */

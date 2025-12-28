@@ -354,7 +354,13 @@ impl LessonRenderer {
                     <!-- 6. Math Details (Hidden by default) -->
                     <details class="math-details">
                         <summary><h3>📐 Mathematical Details</h3></summary>
-                        <pre class="math-text">{math_details}</pre>
+                        <div class="math-content">{math_details}</div>
+                    </details>
+
+                    <!-- 7. Implementation Guide (Hidden by default) -->
+                    <details class="implementation-guide">
+                        <summary><h3>💻 Implementation Guide</h3></summary>
+                        <div class="impl-content">{implementation}</div>
                     </details>
                 </div>
 
@@ -374,6 +380,7 @@ impl LessonRenderer {
             takeaways = takeaways_html,
             going_deeper = lesson.going_deeper,
             math_details = lesson.math_details,
+            implementation = lesson.implementation,
             prev_btn = if lesson.id > 0 {
                 format!(
                     r#"<button onclick="go_to_lesson({})" class="nav-btn">← Previous</button>"#,
@@ -399,6 +406,15 @@ impl LessonRenderer {
         if let Some(window) = web_sys::window() {
             if let Ok(run_mermaid) = js_sys::Reflect::get(&window, &"runMermaid".into()) {
                 if let Ok(func) = run_mermaid.dyn_into::<js_sys::Function>() {
+                    let _ = func.call0(&JsValue::NULL);
+                }
+            }
+        }
+
+        // Trigger KaTeX rendering
+        if let Some(window) = web_sys::window() {
+            if let Ok(render_katex) = js_sys::Reflect::get(&window, &"renderKaTeX".into()) {
+                if let Ok(func) = render_katex.dyn_into::<js_sys::Function>() {
                     let _ = func.call0(&JsValue::NULL);
                 }
             }

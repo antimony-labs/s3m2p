@@ -122,6 +122,8 @@ pub struct Lesson {
     pub going_deeper: &'static str,
     /// Mathematical notation (optional, hidden by default)
     pub math_details: &'static str,
+    /// Implementation guide with code prompts and hardware examples
+    pub implementation: &'static str,
 }
 
 /// All SLAM lessons - ordered from simple intuition to complex algorithms
@@ -185,8 +187,65 @@ pub static LESSONS: &[Lesson] = &[
                        (2014 Nobel Prize in Physiology).<br><br>\
                        <strong>In Robotics:</strong> Every robot faces this dilemma—from Mars rovers (use sun angle as landmarks) \
                        to warehouse robots (use QR codes on floors) to self-driving cars (use lane markings and signs).",
-        math_details: "x_t = f(x_{t-1}, u_t)  [Motion Model: Uncertainty increases]\n\
-                       z_t = h(x_t)           [Measurement Model: Uncertainty decreases]",
+        math_details: r#"
+<h4>The State Propagation</h4>
+<p>Your position estimate evolves through motion:</p>
+
+$$x_t = f(x_{t-1}, u_t) + w_t$$
+
+<p><strong>Where:</strong></p>
+<ul>
+<li>$x_t$ = Position at time $t$ (what you're estimating)</li>
+<li>$f(\cdot)$ = Motion model (e.g., $x + v \cdot \Delta t$)</li>
+<li>$u_t$ = Control input (how much you moved)</li>
+<li>$w_t$ = Process noise (uncertainty added per step)</li>
+</ul>
+
+<h4>Error Growth (Why You Get Lost)</h4>
+<p>The <strong>error</strong> between true position and estimate grows with each step:</p>
+
+$$e_t = |x_{true} - x_{estimated}|$$
+
+<p>In the demo, error compounds because:</p>
+$$\sigma_t^2 = \sigma_{t-1}^2 + \sigma_{motion}^2$$
+
+<p>After 10 steps with $\sigma_{motion} = 0.5m$:</p>
+$$\sigma_{10} = \sqrt{10 \times 0.5^2} = 1.58m$$
+        "#,
+        implementation: r#"
+<h4>Dead Reckoning From Scratch</h4>
+
+<pre>
+struct Odometry {
+    x: f32,          // Position estimate (meters)
+    x_var: f32,      // Position variance (uncertainty²)
+    slip_rate: f32,  // How much wheels slip per meter
+}
+
+impl Odometry {
+    fn step(&mut self, encoder_ticks: f32, wheel_radius: f32) {
+        let distance = encoder_ticks * wheel_radius * 2.0 * PI / TICKS_PER_REV;
+        self.x += distance;
+        self.x_var += distance * self.slip_rate;
+    }
+}
+</pre>
+
+<h4>LLM Prompt: Encoder Reading</h4>
+<pre>"Write Rust code to read quadrature encoder on Raspberry Pi GPIO pins 17/18.
+Track cumulative ticks, handle direction reversal, output distance traveled
+assuming 600 ticks/revolution and 0.05m wheel radius."</pre>
+
+<h4>Real Hardware Test</h4>
+<ol>
+<li>Mark starting point with tape</li>
+<li>Drive robot forward 10m</li>
+<li>Measure endpoint error</li>
+<li>Repeat 10 times, calculate mean error</li>
+</ol>
+
+<p>Typical: 2-5% on smooth floors, 10-15% with load/carpet.</p>
+        "#,
     },
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -241,10 +300,92 @@ pub static LESSONS: &[Lesson] = &[
                        <strong>In Practice:</strong> It's computationally almost free (~10 multiplies), which is why it's on \
                        EVERY flight controller: Betaflight, ArduPilot, PX4. Your DJI drone, racing quad, and even \
                        smartphone camera stabilization all use variations of this filter running at 1000-8000Hz.",
-        math_details: "angle = α × (angle + gyro×dt) + (1-α) × accel_angle\n\n\
-                       If α = 0.98:\n\
-                       98% trust in Gyro integration (prediction)\n\
-                       2% trust in Accelerometer (correction)",
+        math_details: r#"
+<h4>Core Equation</h4>
+<p>The complementary filter combines two estimates with complementary weights:</p>
+
+$$\theta_{n} = \alpha \cdot (\theta_{n-1} + \omega \cdot \Delta t) + (1 - \alpha) \cdot \theta_{accel}$$
+
+<p><strong>Where:</strong></p>
+<ul>
+<li>$\theta_{n}$ = Current angle estimate (what we're solving for)</li>
+<li>$\theta_{n-1}$ = Previous angle estimate</li>
+<li>$\omega$ = Gyroscope angular velocity (rad/s or deg/s)</li>
+<li>$\Delta t$ = Time step (e.g., 0.001s for 1000Hz)</li>
+<li>$\theta_{accel}$ = Angle from accelerometer: $\arctan2(a_y, a_z)$</li>
+<li>$\alpha$ = Trust factor (typically 0.96-0.99)</li>
+</ul>
+
+<h4>Error Calculation</h4>
+<p>The <strong>error</strong> is the difference between your estimate and ground truth:</p>
+
+$$e_n = \theta_{true} - \theta_{estimated}$$
+
+<p>In the demo, we calculate:</p>
+<ul>
+<li><strong>Gyro Error:</strong> $|$Ground Truth - Gyro Integration$|$</li>
+<li><strong>Accel Error:</strong> $|$Ground Truth - Accelerometer Reading$|$</li>
+<li><strong>Filter Error:</strong> $|$Ground Truth - Fused Estimate$|$</li>
+</ul>
+
+<h4>Why α ≈ 0.98 Works</h4>
+<p>The cutoff frequency is:</p>
+
+$$f_c = \frac{\alpha}{2\pi \Delta t (1-\alpha)}$$
+
+<p>For $\alpha = 0.98$ at 100Hz ($\Delta t = 0.01s$):</p>
+$$f_c = \frac{0.98}{2\pi \times 0.01 \times 0.02} \approx 0.78 \text{ Hz}$$
+
+<p>Changes faster than 0.78Hz (vibration, quick tilts) → Trust gyro<br>
+Changes slower than 0.78Hz (drift, gravity) → Trust accelerometer</p>
+        "#,
+        implementation: r#"
+<h4>Hardware: IMU Sensors</h4>
+
+<p><strong>Popular IMUs:</strong></p>
+<ul>
+<li><strong>MPU6050</strong> - $2, I2C, 6-axis, perfect for learning</li>
+<li><strong>BMI088</strong> - High-performance racing drones</li>
+<li><strong>ICM-42688-P</strong> - Modern flight controllers</li>
+</ul>
+
+<h4>LLM Prompt: Read MPU6050</h4>
+<pre>"Write Rust code using linux-embedded-hal to read MPU6050
+gyroscope and accelerometer data over I2C at 100Hz.
+Include calibration for gyro bias.
+Target: Raspberry Pi 4"</pre>
+
+<h4>Calculate Accel Angle</h4>
+<pre>
+let theta_accel = accel_y.atan2(
+    (accel_x.powi(2) + accel_z.powi(2)).sqrt()
+);
+</pre>
+
+<h4>Complete Loop</h4>
+<pre>
+struct ComplementaryFilter {
+    angle: f32,
+    alpha: f32,
+}
+
+impl ComplementaryFilter {
+    fn update(&mut self, gyro: f32, accel_angle: f32, dt: f32) -> f32 {
+        let gyro_prediction = self.angle + gyro * dt;
+        self.angle = self.alpha * gyro_prediction + (1.0 - self.alpha) * accel_angle;
+        self.angle
+    }
+}
+</pre>
+
+<h4>LLM Prompt: Real-Time Loop</h4>
+<pre>"Create Rust real-time loop that:
+1. Reads MPU6050 at 100Hz using timer interrupt
+2. Applies complementary filter (alpha=0.98)
+3. Logs angle estimate, gyro, accel, error to CSV
+4. Runs for 60 seconds
+Target: Raspberry Pi 4 with linux-embedded-hal"</pre>
+        "#,
     },
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -300,6 +441,25 @@ pub static LESSONS: &[Lesson] = &[
                        K = P'Hᵀ(HP'Hᵀ + R)⁻¹  (Calculate Gain)\n\
                        x = x' + K(z - Hx')    (Weighted Average)\n\
                        P = (I - KH)P'         (Shrink Covariance)",
+        implementation: r#"
+<h4>1D Kalman Filter</h4>
+<pre>
+struct KalmanFilter1D {
+    x: f32, p: f32, q: f32, r: f32,
+}
+impl KalmanFilter1D {
+    fn predict(&mut self, u: f32) { self.x += u; self.p += self.q; }
+    fn update(&mut self, z: f32) {
+        let k = self.p / (self.p + self.r);
+        self.x += k * (z - self.x);
+        self.p *= (1.0 - k);
+    }
+}
+</pre>
+<h4>LLM Prompt</h4>
+<pre>"Implement 2D Kalman Filter in Rust that fuses GPS (1Hz) and IMU velocity (100Hz).
+State: [x,y,vx,vy]. Target: Raspberry Pi"</pre>
+        "#,
     },
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -359,6 +519,29 @@ pub static LESSONS: &[Lesson] = &[
                        2. w_i = measurement_prob(z | x_i)\n\
                        3. Draw new set of particles based on weights w_i\n\
                        (High weight = likely to be picked multiple times)",
+        implementation: r#"
+<h4>Particle Filter Code</h4>
+<pre>
+struct Particle { x: f32, weight: f32 }
+impl ParticleFilter {
+    fn predict(&mut self, u: f32) {
+        for p in &mut self.particles {
+            p.x += u + rand::normal(0.0, self.motion_noise);
+        }
+    }
+    fn update(&mut self, z: f32) {
+        for p in &mut self.particles {
+            let error = z - p.x;
+            p.weight *= (-0.5 * error.powi(2) / self.sensor_noise.powi(2)).exp();
+        }
+    }
+    fn resample(&mut self) { /* systematic resampling */ }
+}
+</pre>
+<h4>LLM Prompt</h4>
+<pre>"Implement Monte Carlo Localization in Rust for 1D robot with 500 particles.
+Motion: u + N(0,0.1). Sensor: range to landmarks with N(0,0.2) noise."</pre>
+        "#,
     },
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -415,6 +598,25 @@ pub static LESSONS: &[Lesson] = &[
                            [Σ_m₁r Σ_m₁m₁ Σ_m₁m₂...]\n\
                            [...                    ]\n\n\
                        Observing landmark i updates ALL correlated estimates.",
+        implementation: r#"
+<h4>Hardware: Ouster OS1-64 LiDAR</h4>
+<p>64 channels, 360°, up to 120m range, Ethernet/UDP, ~$3k used</p>
+<h4>LLM Prompt: Parse Ouster</h4>
+<pre>"Write Rust UDP server listening on port 7502 for Ouster OS1 lidar.
+Parse binary packets to extract point cloud (x,y,z). Filter points >50m.
+Publish to ROS2 sensor_msgs::PointCloud2"</pre>
+<h4>Landmark Extraction</h4>
+<pre>"Implement RANSAC line fitting on 2D lidar scan. Extract corners
+(intersection of 2 walls). Return landmarks in robot frame (range, bearing)"</pre>
+<h4>Data Association</h4>
+<pre>
+fn mahalanobis_dist(z: Vec2, lm: Vec2, S: Mat2) -> f32 {
+    let innov = z - lm;
+    (innov.transpose() * S.inverse() * innov).sqrt()
+}
+if mahal_dist < 3.0 { /* match */ } else { /* new landmark */ }
+</pre>
+        "#,
     },
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -476,5 +678,25 @@ pub static LESSONS: &[Lesson] = &[
         math_details: "minimize E = Σ (z_ij - h(x_i, x_j))²\n\n\
                        We are finding the set of poses {x} that minimizes the total tension \
                        in all the rubber bands (constraints).",
+        implementation: r#"
+<h4>Graph Optimization with g2o</h4>
+<h4>LLM Prompt: Pose Graph SLAM</h4>
+<pre>"Use g2o Rust bindings to:
+1. Create SE(2) pose graph (x,y,θ nodes)
+2. Add odometry edges between sequential poses
+3. Detect loop closures using ICP on lidar scans
+4. Add loop closure edges with computed transform
+5. Optimize graph using Levenberg-Marquardt
+6. Export optimized trajectory to CSV"</pre>
+<h4>Loop Closure Detection</h4>
+<pre>"Implement scan matching with ICP:
+1. Take current lidar scan
+2. Compare to scans from >30s ago
+3. If ICP converges with <0.2m error, it's a loop closure
+4. Return relative transform (Δx, Δy, Δθ)"</pre>
+<h4>Real Dataset</h4>
+<pre>"Download TUM RGB-D SLAM dataset. Extract odometry and loop closures.
+Build pose graph, optimize, compare to ground truth trajectory."</pre>
+        "#,
     },
 ];
