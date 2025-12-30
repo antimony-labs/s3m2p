@@ -51,6 +51,7 @@ members = [
     "LEARN/ESP32",
     "LEARN/SWARM_ROBOTICS",
     "LEARN/SLAM",
+    "LEARN/GIT",
 
     # Learn CORE engines (shared crates)
     "LEARN/learn_core",

@@ -40,6 +40,7 @@ Use `./SCRIPTS/dev-serve.sh <project>` to start - it auto-kills any existing pro
 | esp32 | 8104 | http://127.0.0.1:8104 | ESP32 tutorials |
 | swarm | 8105 | http://127.0.0.1:8105 | Swarm robotics |
 | slam | 8106 | http://127.0.0.1:8106 | SLAM tutorials |
+| git | 8107 | http://127.0.0.1:8107 | Git tutorials |
 
 ## Agent Protocol
 
