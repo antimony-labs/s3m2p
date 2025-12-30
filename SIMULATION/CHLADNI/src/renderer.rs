@@ -33,16 +33,18 @@ impl WaveRenderer {
     }
 
     pub fn init(&mut self) -> Result<(), JsValue> {
-        // Particle shader
+        // Particle shader - mobile compatible
         let particle_vert = r#"#version 300 es
+            precision highp float;
             in vec2 a_position;
             uniform vec2 u_resolution;
+            uniform float u_point_size;
 
             void main() {
                 vec2 pos = (a_position / u_resolution) * 2.0 - 1.0;
                 pos.y = -pos.y;
                 gl_Position = vec4(pos, 0.0, 1.0);
-                gl_PointSize = 2.0;
+                gl_PointSize = u_point_size;
             }
         "#;
 
@@ -174,6 +176,14 @@ impl WaveRenderer {
                 sim.config.grid_size as f32,
                 sim.config.grid_size as f32,
             );
+
+            // Set point size - scale based on canvas size for mobile compatibility
+            // Use larger points on smaller screens (mobile)
+            let base_point_size = if width < 500.0 { 3.0 } else { 2.0 };
+            let scale = width / sim.config.grid_size as f32;
+            let point_size = (base_point_size * scale).max(1.0).min(8.0);
+            let size_loc = self.gl.get_uniform_location(program, "u_point_size");
+            self.gl.uniform1f(size_loc.as_ref(), point_size);
 
             // Set attributes
             let pos_loc = self.gl.get_attrib_location(program, "a_position") as u32;
