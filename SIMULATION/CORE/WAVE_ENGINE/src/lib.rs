@@ -17,12 +17,13 @@
 //! │   WaveEngine                                                                │
 //! │       │                                                                     │
 //! │       ├── WaveSimulation       (DNA/physics/fields/wave)                    │
+//! │       ├── DrivenWaveSolver2D   (DNA/physics/solvers/pde/fdm)                │
 //! │       ├── FFT2D                (DNA/physics/solvers/pde/spectral)           │
 //! │       └── PlateMode, ChladniMode                                            │
 //! │                                                                             │
 //! │   Simulation modes:                                                         │
 //! │   - Analytical eigenmodes (Chladni patterns)                                │
-//! │   - Numerical time-stepping [TODO]                                          │
+//! │   - Driven plate time-stepping (DrivenWaveSolver2D)                         │
 //! │   - FFT-based spectral solving [TODO]                                       │
 //! │                                                                             │
 //! └─────────────────────────────────────────────────────────────────────────────┘
@@ -45,6 +46,9 @@ pub use dna::physics::fields::wave::{ChladniMode, PlateMode, WaveSimulation};
 
 // Re-export FFT from DNA
 pub use dna::physics::solvers::pde::spectral::FFT2D;
+
+// Re-export driven wave solver from DNA
+pub use dna::physics::solvers::pde::fdm::DrivenWaveSolver2D;
 
 use glam::Vec2;
 
