@@ -178,10 +178,10 @@ impl WaveRenderer {
             );
 
             // Set point size - scale based on canvas size for mobile compatibility
-            // Use larger points on smaller screens (mobile)
-            let base_point_size = if width < 500.0 { 3.0 } else { 2.0 };
-            let scale = width / sim.config.grid_size as f32;
-            let point_size = (base_point_size * scale).max(1.0).min(8.0);
+            // Use smaller base sizes with gentler scaling
+            let base_point_size = if width < 500.0 { 2.0 } else { 1.5 };
+            let scale = (width / sim.config.grid_size as f32).sqrt();
+            let point_size = (base_point_size * scale).max(1.0).min(4.0);
             let size_loc = self.gl.get_uniform_location(program, "u_point_size");
             self.gl.uniform1f(size_loc.as_ref(), point_size);
 
