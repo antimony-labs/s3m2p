@@ -59,9 +59,9 @@ S3M2P/
 ├── DNA/                    # Core algorithms + infrastructure
 ├── WELCOME/                # Landing page (too.foo)
 ├── HELIOS/                 # Solar system (helios.too.foo)
-├── SIMULATIONS/            # Simulations (e.g., chladni.too.foo)
-├── TOOLS/                  # User-facing tools (sensors.too.foo, etc.)
-├── LEARN/                  # Learning topics (ai.too.foo, etc.)
+├── SIMULATION/             # Simulations (e.g., chladni.too.foo)
+├── TOOLS/                  # User-facing tools (autocrate.too.foo, etc.)
+├── LEARN/                  # Learning tutorials (ai.too.foo, slam.too.foo, etc.)
 └── BLOG/                   # Blog platform (blog.too.foo)
 ```
 
@@ -73,31 +73,27 @@ DNA/
 ├── STORAGE_SERVER/         # Storage backend
 └── CLAUDE_AUTOMATION/      # GitHub automation
 
-SIMULATIONS/
+SIMULATION/
 └── CHLADNI/                # Chladni wave patterns (chladni.too.foo)
 
 TOOLS/
-├── SENSORS/                # Sensor test (sensors.too.foo)
 ├── AUTOCRATE/              # Shipping crate generator (autocrate.too.foo)
-└── CRM/                    # CRM (crm.too.foo)
+├── CRM/                    # CRM (crm.too.foo)
+├── PLL/                    # PLL designer (pll.too.foo)
+├── POWER_CIRCUITS/         # Power circuit designer (power.too.foo)
+├── CAD/                    # CAD tools
+└── SPICE/                  # SPICE simulation
 
 LEARN/
-└── AI/                     # AI tutorials (ai.too.foo)
-├── POWER_SUPPLY/           # Power circuit designer
-├── AMPLIFIERS/             # Amplifier designer
-├── EXPORT/                 # Gerber X2 writer (from scratch)
-├── DRC/                    # Design rule checker
-├── CLI/                    # sbl-ecad command
-└── WEB/                    # WASM editor → too.foo/ecad
-
-DNA/
-├── src/
-│   ├── lib.rs              # Core types
-│   ├── schema/             # DNA code schemas (TOML)
-│   ├── sim/                # Simulation algorithms
-│   ├── compute/            # GPU compute abstraction
-│   ├── responsive.rs       # Mobile-first rules
-│   └── export/             # STEP/Gerber serializers
+├── AI/                     # AI/ML tutorials (ai.too.foo)
+├── SLAM/                   # SLAM tutorials (slam.too.foo)
+├── ESP32/                  # ESP32 tutorials (esp32.too.foo)
+├── ARDUINO/                # Arduino tutorials (arduino.too.foo)
+├── UBUNTU/                 # Ubuntu tutorials (ubuntu.too.foo)
+├── OPENCV/                 # OpenCV tutorials (opencv.too.foo)
+├── SWARM_ROBOTICS/         # Swarm robotics (swarm.too.foo)
+├── SENSORS/                # Sensor demos (sensors.too.foo)
+└── ML/                     # ML fundamentals
 ```
 
 ### Philosophy: Build From Scratch
@@ -118,7 +114,7 @@ DNA/
 
 | Level | Case | Example | Rationale |
 |-------|------|---------|-----------|
-| Category folders (L1) | UPPERCASE | `BLOG/`, `LEARN/`, `SIM/` | Fixed landmarks |
+| Category folders (L1) | UPPERCASE | `BLOG/`, `LEARN/`, `SIMULATION/` | Fixed landmarks |
 | Project folders (L2) | UPPERCASE | `HELIOS/`, `AUTOCRATE/` | Fixed project names |
 | Config folders | lowercase | `src/`, `dist/`, `assets/` | Standard conventions |
 | Variable files | lowercase | `main.rs`, `index.html` | Content changes |
@@ -129,18 +125,18 @@ DNA/
 | Folder | Location | Purpose |
 |--------|----------|---------|
 | **DNA/** | `/DNA/` (root) | Shared foundation - simulation engine, algorithms |
-| **CORE/** | `/SIM/HELIOS/CORE/` | Project-specific Rust logic |
+| **CORE/** | Per-project (e.g., `/SIMULATION/CORE/`, `/TOOLS/CORE/`) | Project-specific Rust logic |
 
 DNA = genetic code shared by all | CORE = heart of each project
 
 ## Project Dependencies
 
 ```
-DNA <── SIM/HELIOS
-    <── SIM/TOOFOO
-    <── TOOLS/SIMULATION_CLI
-    <── TOOLS/STORAGE_SERVER
-    <── SW/* (some)
+DNA <── HELIOS
+    <── SIMULATION/CHLADNI
+    <── DNA/SIMULATION_CLI
+    <── DNA/STORAGE_SERVER
+    <── LEARN/* (some)
 ```
 
 ## Core Concepts
