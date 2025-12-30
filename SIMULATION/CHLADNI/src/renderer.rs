@@ -15,15 +15,20 @@ pub struct WaveRenderer {
     particle_program: Option<WebGlProgram>,
     wave_program: Option<WebGlProgram>,
     particle_buffer: Option<WebGlBuffer>,
+    /// Pre-allocated buffer for particle positions (reused each frame)
+    position_buffer_data: Vec<f32>,
 }
 
 impl WaveRenderer {
     pub fn new(gl: GL) -> Self {
+        // Pre-allocate for 50k particles × 2 floats (x, y)
+        let position_buffer_data = Vec::with_capacity(100_000);
         Self {
             gl,
             particle_program: None,
             wave_program: None,
             particle_buffer: None,
+            position_buffer_data,
         }
     }
 
@@ -136,7 +141,7 @@ impl WaveRenderer {
         Ok(shader)
     }
 
-    pub fn render(&self, sim: &ChladniSimulation, width: f32, height: f32) {
+    pub fn render(&mut self, sim: &ChladniSimulation, width: f32, height: f32) {
         self.gl.viewport(0, 0, width as i32, height as i32);
         self.gl.clear_color(0.02, 0.02, 0.05, 1.0);
         self.gl.clear(GL::COLOR_BUFFER_BIT);
@@ -145,17 +150,16 @@ impl WaveRenderer {
         if let (Some(program), Some(buffer)) = (&self.particle_program, &self.particle_buffer) {
             self.gl.use_program(Some(program));
 
-            // Upload particle positions
-            let positions: Vec<f32> = sim
-                .particles
-                .iter()
-                .filter(|p| p.active)
-                .flat_map(|p| [p.pos.x, p.pos.y])
-                .collect();
+            // Reuse pre-allocated buffer for particle positions (no allocation!)
+            self.position_buffer_data.clear();
+            for p in sim.particles.iter().filter(|p| p.active) {
+                self.position_buffer_data.push(p.pos.x);
+                self.position_buffer_data.push(p.pos.y);
+            }
 
             self.gl.bind_buffer(GL::ARRAY_BUFFER, Some(buffer));
             unsafe {
-                let array = js_sys::Float32Array::view(&positions);
+                let array = js_sys::Float32Array::view(&self.position_buffer_data);
                 self.gl.buffer_data_with_array_buffer_view(
                     GL::ARRAY_BUFFER,
                     &array,
@@ -178,7 +182,7 @@ impl WaveRenderer {
                 .vertex_attrib_pointer_with_i32(pos_loc, 2, GL::FLOAT, false, 0, 0);
 
             // Draw particles
-            let particle_count = positions.len() / 2;
+            let particle_count = self.position_buffer_data.len() / 2;
             self.gl.draw_arrays(GL::POINTS, 0, particle_count as i32);
         }
     }

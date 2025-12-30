@@ -29,11 +29,24 @@ web-sys = { version = "0.3", features = [
     "WebGlBuffer",
     "WebGlTexture",
     "WebGlUniformLocation",
+    "AudioContext",
+    "AudioBuffer",
+    "AudioBufferSourceNode",
+    "AnalyserNode",
+    "MediaStream",
+    "MediaStreamConstraints",
+    "MediaStreamTrack",
+    "MediaDevices",
+    "Navigator",
+    "MediaStreamAudioSourceNode",
 ] }
 js-sys = "0.3"
 console_error_panic_hook = "0.1"
 glam = "0.29"
+wasm-bindgen-futures = "0.4"
 wave-engine = { path = "../CORE/WAVE_ENGINE" }
+# Note: Using Web Audio API's built-in FFT (AnalyserNode) instead of rustfft
+# This is more efficient for WASM and doesn't require additional dependencies
 
 [profile.release]
 opt-level = "z"

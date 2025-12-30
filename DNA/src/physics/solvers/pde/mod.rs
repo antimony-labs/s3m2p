@@ -9,5 +9,8 @@
 pub mod spectral;
 pub use spectral::FFT2D;
 
-// pub mod fdm;       // TODO: Finite Difference Method
+/// Finite Difference Method solvers (explicit time-stepping)
+pub mod fdm;
+pub use fdm::DrivenWaveSolver2D;
+
 // pub mod fem;       // TODO: Finite Element Method

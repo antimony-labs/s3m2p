@@ -366,6 +366,7 @@ dependencies = [
  "glam",
  "js-sys",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "wave-engine",
  "web-sys",
 ]
