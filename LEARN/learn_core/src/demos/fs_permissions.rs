@@ -5,7 +5,7 @@
 //! LAYER: LEARN → learn_core → demos
 //! ═══════════════════════════════════════════════════════════════════════════════
 
-use crate::{Demo, ParamMeta};
+use crate::{Demo, ParamMeta, TerminalConfig};
 use std::collections::HashMap;
 
 /// A filesystem node (file or directory)
@@ -75,7 +75,6 @@ impl CommandResult {
 /// Filesystem permissions demo with simulated terminal
 ///
 /// Teaches Unix permissions through an interactive shell simulation.
-#[derive(Clone)]
 pub struct FsPermissionsDemo {
     // Filesystem
     pub inodes: Vec<INode>,
@@ -92,6 +91,9 @@ pub struct FsPermissionsDemo {
     pub output_history: Vec<(String, bool)>, // (line, is_error)
     pub prompt: String,
     max_history: usize,
+
+    // Lesson configuration
+    config: Option<Box<dyn TerminalConfig>>,
 }
 
 impl Default for FsPermissionsDemo {
@@ -107,11 +109,28 @@ impl Default for FsPermissionsDemo {
             output_history: Vec::new(),
             prompt: String::new(),
             max_history: 50,
+            config: None,
         }
     }
 }
 
 impl FsPermissionsDemo {
+    /// Create demo with custom configuration
+    pub fn with_config(config: Box<dyn TerminalConfig>) -> Self {
+        let mut demo = Self::default();
+        demo.config = Some(config);
+        demo
+    }
+
+    /// Get welcome message from config
+    pub fn get_welcome_message(&self) -> &str {
+        if let Some(ref config) = self.config {
+            config.welcome_message()
+        } else {
+            "Ubuntu Linux Permissions Lab\nType 'help' for available commands."
+        }
+    }
+
     /// Initialize the filesystem with a sample structure
     fn init_fs(&mut self) {
         self.inodes.clear();
@@ -122,46 +141,50 @@ impl FsPermissionsDemo {
         self.inodes.push(root);
         self.root_idx = 0;
 
-        // Create /home (idx 1)
+        // Create basic structure
         let home = self.create_dir(0, "home", "root", "root", 0o755);
-
-        // Create /home/user (idx 2)
         let user_home = self.create_dir(home, "user", "user", "user", 0o755);
-
-        // Create files in /home/user
-        self.create_file(user_home, "readme.txt", "user", "user", 0o644);
-        self.create_file(user_home, "secret.txt", "user", "user", 0o600);
-        self.create_file(user_home, "script.sh", "user", "user", 0o755);
-
-        // Create /etc (idx 6)
-        let etc = self.create_dir(0, "etc", "root", "root", 0o755);
-
-        // Create /etc/passwd (idx 7)
-        let passwd = self.create_file(etc, "passwd", "root", "root", 0o644);
-        self.inodes[passwd].content = "root:x:0:0:root:/root:/bin/bash\nuser:x:1000:1000:User:/home/user:/bin/bash".to_string();
-
-        // Create /etc/shadow (idx 8)
-        let shadow = self.create_file(etc, "shadow", "root", "shadow", 0o640);
-        self.inodes[shadow].content = "[encrypted passwords]".to_string();
-
-        // Create /tmp (idx 9)
-        let tmp = self.create_dir(0, "tmp", "root", "root", 0o1777);
-
-        // Create shared file in /tmp
-        self.create_file(tmp, "shared.txt", "user", "user", 0o666);
-
-        // Set cwd to user home
         self.cwd = user_home;
 
         // Initialize users
         self.users.insert("root".to_string(), vec!["root".to_string()]);
-        self.users
-            .insert("user".to_string(), vec!["user".to_string()]);
+        self.users.insert("user".to_string(), vec!["user".to_string()]);
+
+        // Check if we have a custom config
+        let has_config = self.config.is_some();
+
+        if has_config {
+            // Temporarily take ownership of config to avoid borrow issues
+            if let Some(config) = self.config.take() {
+                config.init_filesystem(self);
+                self.config = Some(config);
+            }
+        } else {
+            // Default filesystem
+            self.create_file(user_home, "readme.txt", "user", "user", 0o644);
+            self.create_file(user_home, "secret.txt", "user", "user", 0o600);
+            self.create_file(user_home, "script.sh", "user", "user", 0o755);
+
+            // Create /etc
+            let etc = self.create_dir(0, "etc", "root", "root", 0o755);
+
+            // Create /etc/passwd
+            let passwd = self.create_file(etc, "passwd", "root", "root", 0o644);
+            self.inodes[passwd].content = "root:x:0:0:root:/root:/bin/bash\nuser:x:1000:1000:User:/home/user:/bin/bash".to_string();
+
+            // Create /etc/shadow
+            let shadow = self.create_file(etc, "shadow", "root", "shadow", 0o640);
+            self.inodes[shadow].content = "[encrypted passwords]".to_string();
+
+            // Create /tmp
+            let tmp = self.create_dir(0, "tmp", "root", "root", 0o1777);
+            self.create_file(tmp, "shared.txt", "user", "user", 0o666);
+        }
 
         self.update_prompt();
     }
 
-    fn create_dir(
+    pub fn create_dir(
         &mut self,
         parent_idx: usize,
         name: &str,
@@ -177,7 +200,7 @@ impl FsPermissionsDemo {
         idx
     }
 
-    fn create_file(
+    pub fn create_file(
         &mut self,
         parent_idx: usize,
         name: &str,
@@ -334,6 +357,21 @@ impl FsPermissionsDemo {
         }
 
         let parts: Vec<&str> = cmd.split_whitespace().collect();
+
+        // Check if command is allowed in this lesson
+        if let Some(ref config) = self.config {
+            if !config.allowed_commands().contains(&parts[0]) {
+                let result = CommandResult::err(format!(
+                    "{}: command not available in this lesson\nTry 'help' to see available commands",
+                    parts[0]
+                ));
+                // Add error to output history
+                for line in result.output.lines() {
+                    self.output_history.push((line.to_string(), true));
+                }
+                return result;
+            }
+        }
         let result = match parts[0] {
             "ls" => self.cmd_ls(&parts[1..]),
             "cd" => self.cmd_cd(&parts[1..]),
@@ -343,6 +381,14 @@ impl FsPermissionsDemo {
             "chown" => self.cmd_chown(&parts[1..]),
             "mkdir" => self.cmd_mkdir(&parts[1..]),
             "touch" => self.cmd_touch(&parts[1..]),
+            "rm" => self.cmd_rm(&parts[1..]),
+            "cp" => self.cmd_cp(&parts[1..]),
+            "mv" => self.cmd_mv(&parts[1..]),
+            "echo" => self.cmd_echo(&parts[1..]),
+            "head" => self.cmd_head(&parts[1..]),
+            "tail" => self.cmd_tail(&parts[1..]),
+            "grep" => self.cmd_grep(&parts[1..]),
+            "clear" => self.cmd_clear(),
             "whoami" => CommandResult::ok(&self.current_user),
             "id" => self.cmd_id(),
             "su" => self.cmd_su(&parts[1..]),
@@ -637,21 +683,374 @@ impl FsPermissionsDemo {
         CommandResult::ok("")
     }
 
+    fn cmd_rm(&mut self, args: &[&str]) -> CommandResult {
+        if args.is_empty() {
+            return CommandResult::err("rm: missing operand");
+        }
+
+        let recursive = args.contains(&"-r") || args.contains(&"-rf");
+        let path = args.iter().find(|a| !a.starts_with('-')).copied().unwrap_or("");
+
+        if path.is_empty() {
+            return CommandResult::err("rm: missing operand");
+        }
+
+        let idx = match self.resolve_path(path) {
+            Some(i) => i,
+            None => return CommandResult::err(format!("rm: cannot remove '{}': No such file or directory", path)),
+        };
+
+        // Cannot remove root
+        if idx == self.root_idx {
+            return CommandResult::err("rm: cannot remove '/': Permission denied");
+        }
+
+        let node = &self.inodes[idx];
+
+        // Check if it's a directory
+        if node.is_dir && !recursive {
+            return CommandResult::err(format!("rm: cannot remove '{}': Is a directory", path));
+        }
+
+        // Check if directory is not empty
+        if node.is_dir && !node.children.is_empty() && !recursive {
+            return CommandResult::err(format!("rm: cannot remove '{}': Directory not empty", path));
+        }
+
+        // Check write permission on parent
+        let parent_idx = node.parent.unwrap();
+        if !self.check_permission(&self.inodes[parent_idx], 2) {
+            return CommandResult::err(format!("rm: cannot remove '{}': Permission denied", path));
+        }
+
+        // Remove from parent's children
+        self.inodes[parent_idx].children.retain(|&c| c != idx);
+
+        CommandResult::ok("")
+    }
+
+    fn cmd_cp(&mut self, args: &[&str]) -> CommandResult {
+        if args.len() < 2 {
+            return CommandResult::err("cp: missing file operand");
+        }
+
+        let src = args[0];
+        let dst = args[1];
+
+        let src_idx = match self.resolve_path(src) {
+            Some(i) => i,
+            None => return CommandResult::err(format!("cp: cannot stat '{}': No such file or directory", src)),
+        };
+
+        // Check read permission on source
+        if !self.check_permission(&self.inodes[src_idx], 4) {
+            return CommandResult::err(format!("cp: cannot open '{}' for reading: Permission denied", src));
+        }
+
+        if self.inodes[src_idx].is_dir {
+            return CommandResult::err(format!("cp: -r not specified; omitting directory '{}'", src));
+        }
+
+        // Get source info we need before mutating
+        let src_name = self.inodes[src_idx].name.clone();
+        let content = self.inodes[src_idx].content.clone();
+
+        // Get destination parent and name
+        let (dst_parent_path, dst_name): (&str, String) = if let Some(existing_idx) = self.resolve_path(dst) {
+            let existing = &self.inodes[existing_idx];
+            if existing.is_dir {
+                // Copy into directory
+                (dst, src_name)
+            } else {
+                // Overwrite file
+                if dst.contains('/') {
+                    let (p, n) = dst.rsplit_once('/').unwrap();
+                    (p, n.to_string())
+                } else {
+                    (".", dst.to_string())
+                }
+            }
+        } else {
+            // New file
+            if dst.contains('/') {
+                let (p, n) = dst.rsplit_once('/').unwrap();
+                (p, n.to_string())
+            } else {
+                (".", dst.to_string())
+            }
+        };
+
+        let parent_idx = match self.resolve_path(dst_parent_path) {
+            Some(i) => i,
+            None => return CommandResult::err(format!("cp: cannot create '{}': No such file or directory", dst)),
+        };
+
+        // Check write permission on destination parent
+        if !self.check_permission(&self.inodes[parent_idx], 2) {
+            return CommandResult::err(format!("cp: cannot create '{}': Permission denied", dst));
+        }
+
+        // Create the copy
+        let current_user = self.current_user.clone();
+        let current_group = self.current_group.clone();
+        let new_idx = self.create_file(
+            parent_idx,
+            &dst_name,
+            &current_user,
+            &current_group,
+            0o644,
+        );
+        self.inodes[new_idx].content = content;
+
+        CommandResult::ok("")
+    }
+
+    fn cmd_mv(&mut self, args: &[&str]) -> CommandResult {
+        if args.len() < 2 {
+            return CommandResult::err("mv: missing file operand");
+        }
+
+        let src = args[0];
+        let dst = args[1];
+
+        let src_idx = match self.resolve_path(src) {
+            Some(i) => i,
+            None => return CommandResult::err(format!("mv: cannot stat '{}': No such file or directory", src)),
+        };
+
+        // Cannot move root
+        if src_idx == self.root_idx {
+            return CommandResult::err("mv: cannot move '/': Permission denied");
+        }
+
+        let src_parent_idx = self.inodes[src_idx].parent.unwrap();
+
+        // Check write permission on source parent
+        if !self.check_permission(&self.inodes[src_parent_idx], 2) {
+            return CommandResult::err(format!("mv: cannot move '{}': Permission denied", src));
+        }
+
+        // Determine destination
+        let (dst_parent_idx, new_name) = if let Some(existing_idx) = self.resolve_path(dst) {
+            let existing = &self.inodes[existing_idx];
+            if existing.is_dir {
+                // Move into directory
+                (existing_idx, self.inodes[src_idx].name.clone())
+            } else {
+                // Overwrite existing file - just rename
+                let parent = self.inodes[existing_idx].parent.unwrap();
+                let name = self.inodes[existing_idx].name.clone();
+                // Remove existing
+                self.inodes[parent].children.retain(|&c| c != existing_idx);
+                (parent, name)
+            }
+        } else {
+            // New name/location
+            let (parent_path, name) = if dst.contains('/') {
+                let (p, n) = dst.rsplit_once('/').unwrap();
+                (p, n.to_string())
+            } else {
+                (".", dst.to_string())
+            };
+            let parent_idx = match self.resolve_path(parent_path) {
+                Some(i) => i,
+                None => return CommandResult::err(format!("mv: cannot move '{}' to '{}': No such file or directory", src, dst)),
+            };
+            (parent_idx, name)
+        };
+
+        // Check write permission on destination parent
+        if !self.check_permission(&self.inodes[dst_parent_idx], 2) {
+            return CommandResult::err(format!("mv: cannot move to '{}': Permission denied", dst));
+        }
+
+        // Remove from old parent
+        self.inodes[src_parent_idx].children.retain(|&c| c != src_idx);
+
+        // Add to new parent
+        self.inodes[dst_parent_idx].children.push(src_idx);
+        self.inodes[src_idx].parent = Some(dst_parent_idx);
+        self.inodes[src_idx].name = new_name;
+
+        CommandResult::ok("")
+    }
+
+    fn cmd_echo(&self, args: &[&str]) -> CommandResult {
+        CommandResult::ok(args.join(" "))
+    }
+
+    fn cmd_head(&self, args: &[&str]) -> CommandResult {
+        let mut n = 10usize;
+        let mut path = "";
+
+        for arg in args {
+            if arg.starts_with("-n") {
+                if let Ok(num) = arg[2..].parse() {
+                    n = num;
+                }
+            } else if !arg.starts_with('-') {
+                path = arg;
+            }
+        }
+
+        if path.is_empty() {
+            return CommandResult::err("head: missing file operand");
+        }
+
+        let idx = match self.resolve_path(path) {
+            Some(i) => i,
+            None => return CommandResult::err(format!("head: cannot open '{}': No such file or directory", path)),
+        };
+
+        let node = &self.inodes[idx];
+
+        if node.is_dir {
+            return CommandResult::err(format!("head: error reading '{}': Is a directory", path));
+        }
+
+        if !self.check_permission(node, 4) {
+            return CommandResult::err(format!("head: cannot open '{}': Permission denied", path));
+        }
+
+        let lines: Vec<&str> = node.content.lines().take(n).collect();
+        CommandResult::ok(lines.join("\n"))
+    }
+
+    fn cmd_tail(&self, args: &[&str]) -> CommandResult {
+        let mut n = 10usize;
+        let mut path = "";
+
+        for arg in args {
+            if arg.starts_with("-n") {
+                if let Ok(num) = arg[2..].parse() {
+                    n = num;
+                }
+            } else if !arg.starts_with('-') {
+                path = arg;
+            }
+        }
+
+        if path.is_empty() {
+            return CommandResult::err("tail: missing file operand");
+        }
+
+        let idx = match self.resolve_path(path) {
+            Some(i) => i,
+            None => return CommandResult::err(format!("tail: cannot open '{}': No such file or directory", path)),
+        };
+
+        let node = &self.inodes[idx];
+
+        if node.is_dir {
+            return CommandResult::err(format!("tail: error reading '{}': Is a directory", path));
+        }
+
+        if !self.check_permission(node, 4) {
+            return CommandResult::err(format!("tail: cannot open '{}': Permission denied", path));
+        }
+
+        let all_lines: Vec<&str> = node.content.lines().collect();
+        let start = if all_lines.len() > n { all_lines.len() - n } else { 0 };
+        let lines: Vec<&str> = all_lines[start..].to_vec();
+        CommandResult::ok(lines.join("\n"))
+    }
+
+    fn cmd_grep(&self, args: &[&str]) -> CommandResult {
+        if args.len() < 2 {
+            return CommandResult::err("grep: missing pattern or file");
+        }
+
+        let pattern = args[0];
+        let path = args[1];
+
+        let idx = match self.resolve_path(path) {
+            Some(i) => i,
+            None => return CommandResult::err(format!("grep: {}: No such file or directory", path)),
+        };
+
+        let node = &self.inodes[idx];
+
+        if node.is_dir {
+            return CommandResult::err(format!("grep: {}: Is a directory", path));
+        }
+
+        if !self.check_permission(node, 4) {
+            return CommandResult::err(format!("grep: {}: Permission denied", path));
+        }
+
+        let matches: Vec<&str> = node.content
+            .lines()
+            .filter(|line| line.contains(pattern))
+            .collect();
+
+        if matches.is_empty() {
+            CommandResult::ok("")
+        } else {
+            CommandResult::ok(matches.join("\n"))
+        }
+    }
+
+    fn cmd_clear(&mut self) -> CommandResult {
+        self.output_history.clear();
+        CommandResult::ok("")
+    }
+
     fn cmd_help(&self) -> CommandResult {
-        CommandResult::ok(
-            "Available commands:\n\
-             ls [-l] [path]     - List directory contents\n\
-             cd [path]          - Change directory\n\
-             pwd                - Print working directory\n\
-             cat <file>         - Display file contents\n\
-             chmod <mode> <file> - Change file permissions\n\
-             chown <owner> <file> - Change file owner (root only)\n\
-             mkdir <dir>        - Create directory\n\
-             touch <file>       - Create empty file\n\
-             whoami             - Print current user\n\
-             id                 - Print user identity\n\
-             su [user]          - Switch user (default: root)",
-        )
+        if let Some(ref config) = self.config {
+            let allowed = config.allowed_commands();
+            let mut help_text = String::from("Available commands in this lesson:\n");
+
+            for cmd in allowed {
+                let desc = match *cmd {
+                    "ls" => "ls [-l] [path]      - List directory contents",
+                    "cd" => "cd [path]           - Change directory",
+                    "pwd" => "pwd                 - Print working directory",
+                    "cat" => "cat <file>          - Display file contents",
+                    "head" => "head [-n N] <file>  - Show first N lines",
+                    "tail" => "tail [-n N] <file>  - Show last N lines",
+                    "grep" => "grep <pattern> <file> - Search for pattern",
+                    "chmod" => "chmod <mode> <file> - Change file permissions",
+                    "chown" => "chown <owner> <file> - Change owner (root only)",
+                    "mkdir" => "mkdir <dir>         - Create directory",
+                    "touch" => "touch <file>        - Create empty file",
+                    "rm" => "rm [-r] <path>      - Remove file/directory",
+                    "cp" => "cp <src> <dst>      - Copy file",
+                    "mv" => "mv <src> <dst>      - Move/rename file",
+                    "echo" => "echo <text>         - Print text",
+                    "clear" => "clear               - Clear terminal",
+                    "whoami" => "whoami              - Print current user",
+                    "id" => "id                  - Print user identity",
+                    "su" => "su [user]           - Switch user",
+                    _ => continue,
+                };
+                help_text.push_str(desc);
+                help_text.push('\n');
+            }
+            CommandResult::ok(help_text)
+        } else {
+            CommandResult::ok(
+                "Available commands:\n\
+                 ls [-l] [path]      - List directory contents\n\
+                 cd [path]           - Change directory\n\
+                 pwd                 - Print working directory\n\
+                 cat <file>          - Display file contents\n\
+                 head [-n N] <file>  - Show first N lines (default 10)\n\
+                 tail [-n N] <file>  - Show last N lines (default 10)\n\
+                 grep <pattern> <file> - Search for pattern in file\n\
+                 chmod <mode> <file> - Change file permissions\n\
+                 chown <owner> <file> - Change file owner (root only)\n\
+                 mkdir <dir>         - Create directory\n\
+                 touch <file>        - Create empty file\n\
+                 rm [-r] <path>      - Remove file or directory\n\
+                 cp <src> <dst>      - Copy file\n\
+                 mv <src> <dst>      - Move/rename file\n\
+                 echo <text>         - Print text\n\
+                 clear               - Clear terminal\n\
+                 whoami              - Print current user\n\
+                 id                  - Print user identity\n\
+                 su [user]           - Switch user (default: root)",
+            )
+        }
     }
 }
 

@@ -16,7 +16,11 @@ pub mod demo;
 pub mod math;
 pub mod rng;
 pub mod demos;
+pub mod terminal;
+pub mod diagram;
 
 pub use demo::{Demo, ParamMeta};
 pub use math::{clamp, lerp, smoothstep, Vec2};
 pub use rng::Rng;
+pub use terminal::{TerminalConfig, DefaultConfig};
+pub use diagram::{Diagram, DiagramRenderer, TextAlign, FilesystemTree, PermissionMatrix};

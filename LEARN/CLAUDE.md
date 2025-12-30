@@ -93,4 +93,5 @@ Sensor testing and calibration demos
 | esp32 | 8104 | http://127.0.0.1:8104 |
 | swarm | 8105 | http://127.0.0.1:8105 |
 | slam | 8106 | http://127.0.0.1:8106 |
+| git | 8107 | http://127.0.0.1:8107 |
 | sensors | 8084 | http://127.0.0.1:8084 |

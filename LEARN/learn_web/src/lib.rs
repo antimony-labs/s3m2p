@@ -17,15 +17,17 @@ pub mod canvas;
 pub mod controls;
 pub mod dom;
 pub mod routing;
+pub mod diagram_renderer;
 
 pub use animation::AnimationLoop;
 pub use canvas::Canvas;
 pub use controls::{wire_button, wire_range};
 pub use dom::{get_element, get_element_by_id, set_text};
 pub use routing::{get_current_route, navigate_to, setup_routing, Route};
+pub use diagram_renderer::{CanvasDiagramRenderer, render_diagram};
 
 // Re-export learn_core types commonly used with learn_web
-pub use learn_core::{Demo, ParamMeta, Rng, Vec2};
+pub use learn_core::{Demo, ParamMeta, Rng, Vec2, Diagram, DiagramRenderer};
 
 use wasm_bindgen::JsValue;
 

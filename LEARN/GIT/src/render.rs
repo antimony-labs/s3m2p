@@ -33,9 +33,9 @@ impl LessonRenderer {
         let mut html = String::from(
             r##"
             <header class="hero">
-                <h1>Ubuntu Linux</h1>
-                <p class="subtitle">From History to Mastery - An Interactive Journey</p>
-                <p class="lesson-count">20 Lessons - 7 Phases - Beginner to Intermediate</p>
+                <h1>Git Version Control</h1>
+                <p class="subtitle">From Basics to Mastery - The Essential Developer Tool</p>
+                <p class="lesson-count">6 Lessons - 4 Phases - Beginner to Advanced</p>
             </header>
         "##,
         );
@@ -71,9 +71,7 @@ impl LessonRenderer {
 
             for lesson in phase_lessons {
                 let demo_badge = match lesson.demo_type {
-                    DemoType::Terminal => r##"<span class="badge badge-terminal">Interactive</span>"##,
-                    DemoType::TerminalDiagram => r##"<span class="badge badge-terminal">Visual</span>"##,
-                    DemoType::Calculator => r##"<span class="badge badge-calc">Calculator</span>"##,
+                    DemoType::Diagram => r##"<span class="badge badge-calc">Diagram</span>"##,
                     DemoType::Static => r##"<span class="badge badge-static">Theory</span>"##,
                 };
 
@@ -203,57 +201,11 @@ impl LessonRenderer {
 
         // Determine demo section based on lesson type
         let demo_section = match lesson.demo_type {
-            DemoType::Terminal => {
+            DemoType::Diagram => {
                 String::from(r##"
-                <section class="terminal-section">
-                    <h3>Interactive Terminal</h3>
-                    <div class="terminal" id="terminal">
-                        <div class="terminal-output" id="terminal-output"></div>
-                        <div class="terminal-input-line">
-                            <span class="terminal-prompt" id="terminal-prompt">user@ubuntu:~$ </span>
-                            <input type="text" id="terminal-input" class="terminal-input" autocomplete="off" spellcheck="false" autofocus>
-                        </div>
-                    </div>
-                    <div class="terminal-hints">
-                        <p>Try: <code>ls -l</code>, <code>cat readme.txt</code>, <code>chmod 777 readme.txt</code>, <code>su root</code>, <code>help</code></p>
-                    </div>
-                </section>
-                "##)
-            }
-            DemoType::TerminalDiagram => {
-                String::from(r##"
-                <section class="split-demo">
-                    <div class="terminal-half">
-                        <h3>Interactive Terminal</h3>
-                        <div class="terminal" id="terminal">
-                            <div class="terminal-output" id="terminal-output"></div>
-                            <div class="terminal-input-line">
-                                <span class="terminal-prompt" id="terminal-prompt">user@ubuntu:~$ </span>
-                                <input type="text" id="terminal-input" class="terminal-input" autocomplete="off" spellcheck="false" autofocus>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="diagram-half">
-                        <h3>Live Visualization</h3>
-                        <canvas id="diagram-canvas" width="600" height="400"></canvas>
-                    </div>
-                </section>
-                "##)
-            }
-            DemoType::Calculator => {
-                String::from(r##"
-                <section class="calculator-section">
-                    <h3>Partition Calculator</h3>
-                    <div class="calculator">
-                        <div class="calc-input">
-                            <label for="disk-size">Total Disk Space (GB):</label>
-                            <input type="number" id="disk-size" value="500" min="50" max="4000">
-                            <button onclick="calculatePartitions()">Calculate</button>
-                        </div>
-                        <div class="calc-results" id="calc-results">
-                            <p>Enter disk size and click Calculate</p>
-                        </div>
-                    </div>
+                <section class="diagram-section">
+                    <h3>Visual Diagram</h3>
+                    <canvas id="git-diagram" width="600" height="400"></canvas>
                 </section>
                 "##)
             }

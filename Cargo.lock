@@ -940,6 +940,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "git-learn"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "js-sys",
+ "learn_core",
+ "learn_web",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
 name = "glam"
 version = "0.29.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

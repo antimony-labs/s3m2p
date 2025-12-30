@@ -11,7 +11,11 @@ use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlInputElement};
 
 use learn_core::demos::FsPermissionsDemo;
-use learn_core::Demo;
+use learn_core::{Demo, TerminalConfig, DefaultConfig};
+use crate::terminal_configs::{
+    Lesson5Config, Lesson7Config, Lesson8Config, Lesson9Config, Lesson10Config,
+    Lesson11Config, DefaultLessonConfig
+};
 
 // Thread-local state for the currently running demo
 thread_local! {
@@ -24,9 +28,10 @@ pub struct FsPermissionsDemoRunner {
 }
 
 impl FsPermissionsDemoRunner {
-    /// Start the Filesystem Permissions demo
-    pub fn start() -> Result<(), JsValue> {
-        let mut demo = FsPermissionsDemo::default();
+    /// Start the Filesystem Permissions demo with lesson-specific config
+    pub fn start(lesson_id: usize) -> Result<(), JsValue> {
+        let config = create_terminal_config(lesson_id);
+        let mut demo = FsPermissionsDemo::with_config(config);
         demo.reset(42);
 
         let runner = FsPermissionsDemoRunner { demo };
@@ -95,9 +100,13 @@ impl FsPermissionsDemoRunner {
                 if let Some(output_el) = get_element("terminal-output") {
                     output_el.set_inner_html("");
 
-                    // Add welcome message
-                    Self::append_line("Ubuntu Linux Permissions Lab", false);
-                    Self::append_line("Type 'help' for available commands.", false);
+                    // Get welcome message from config
+                    let welcome = runner.demo.get_welcome_message();
+
+                    // Add welcome message (split by lines)
+                    for line in welcome.lines() {
+                        Self::append_line(line, false);
+                    }
                     Self::append_line("", false);
                 }
             }
@@ -139,6 +148,20 @@ pub fn stop_demo() {
     CURRENT_DEMO.with(|d| {
         *d.borrow_mut() = None;
     });
+}
+
+/// Create terminal config for specific lesson
+fn create_terminal_config(lesson_id: usize) -> Box<dyn TerminalConfig> {
+    match lesson_id {
+        5 => Box::new(Lesson5Config),
+        7 => Box::new(Lesson7Config),
+        8 => Box::new(Lesson8Config),
+        9 => Box::new(Lesson9Config),
+        10 => Box::new(Lesson10Config),
+        11 => Box::new(Lesson11Config),
+        // Lessons 12-20: Use minimal config for non-terminal or advanced lessons
+        _ => Box::new(DefaultLessonConfig),
+    }
 }
 
 fn get_element(id: &str) -> Option<Element> {
