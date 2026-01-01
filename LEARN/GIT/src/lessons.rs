@@ -136,6 +136,18 @@ pub static GLOSSARY: &[Term] = &[
         detail: "Gets new commits from remote but doesn't change your working files. \
                  Lets you review changes before merging. 'git pull' = fetch + merge.",
     },
+    Term {
+        word: "worktree",
+        short: "Additional working directory for same repo",
+        detail: "Lets you have multiple branches checked out simultaneously in different directories. \
+                 All worktrees share the same .git database. Great for context switching.",
+    },
+    Term {
+        word: "signed commit",
+        short: "Commit with cryptographic proof of authorship",
+        detail: "Uses GPG or SSH to prove you actually made the commit. \
+                 GitHub shows 'Verified' badge. Prevents impersonation.",
+    },
 ];
 
 /// A single Git lesson with rich pedagogical structure
@@ -178,7 +190,7 @@ pub static PHASES: &[&str] = &[
     "Software Engineering",
 ];
 
-/// All Git lessons - 15 lessons across 7 phases
+/// All Git lessons - 18 lessons across 7 phases
 pub static LESSONS: &[Lesson] = &[
     // ═══════════════════════════════════════════════════════════════════════════
     // PHASE 1: ORIGINS & PHILOSOPHY
@@ -2395,5 +2407,547 @@ Add `gitleaks` to pre-commit for local protection."#,
 <strong>Skipping hooks too often:</strong>
 If everyone uses `--no-verify`, hooks are useless.
 If hooks are too slow/annoying, fix them rather than bypassing."#,
+    },
+
+    Lesson {
+        id: 15,
+        title: "Worktrees",
+        subtitle: "Multiple Working Directories",
+        icon: "📂",
+        phase: "Advanced Workflows",
+        why_it_matters: "Ever needed to check something on another branch without losing your current work? \
+                         Worktrees let you have multiple branches checked out simultaneously in different directories.",
+        description: "Use git worktree to work on multiple branches in parallel without stashing or committing.",
+        intuition: r#"<h3>The Multiple Desks Analogy</h3>
+
+Imagine you're working on a complex project at your desk. Papers are spread everywhere—you're in the middle of something important.
+
+Suddenly, your boss asks you to quickly review yesterday's report. With a single desk, you'd have to:
+1. Stack all your papers neatly (git stash)
+2. Pull out yesterday's papers
+3. Review them
+4. Put them away
+5. Unstack your original papers (git stash pop)
+
+<strong>With multiple desks</strong> (worktrees):
+1. Walk to another desk that already has yesterday's papers
+2. Review them
+3. Walk back to your original desk—nothing moved
+
+<h3>How Worktrees Work</h3>
+
+```
+~/projects/myapp/           # Main worktree (main branch)
+~/projects/myapp-feature/   # Feature worktree (feature/login branch)
+~/projects/myapp-hotfix/    # Hotfix worktree (hotfix/security branch)
+```
+
+All three share the same .git database but have separate working directories.
+No stashing. No lost context. No commit-before-switching."#,
+        content: r###"
+## Creating Worktrees
+
+```bash
+# Create worktree for existing branch
+git worktree add ../myapp-feature feature/login
+
+# Create worktree with new branch
+git worktree add -b hotfix/urgent ../myapp-hotfix main
+
+# Create worktree at specific commit
+git worktree add ../myapp-v1 v1.0.0
+```
+
+## Managing Worktrees
+
+```bash
+# List all worktrees
+git worktree list
+
+# Output:
+# /home/user/myapp         abc123 [main]
+# /home/user/myapp-feature def456 [feature/login]
+# /home/user/myapp-hotfix  ghi789 [hotfix/urgent]
+
+# Remove worktree (after deleting directory)
+rm -rf ../myapp-hotfix
+git worktree prune
+
+# Or remove directly
+git worktree remove ../myapp-hotfix
+
+# Lock worktree (prevent accidental deletion)
+git worktree lock ../myapp-feature
+git worktree unlock ../myapp-feature
+```
+
+## Use Cases
+
+### 1. Quick Bug Fix While Developing
+
+```bash
+# You're on feature branch, need to fix production bug
+git worktree add -b hotfix/crash ../hotfix main
+cd ../hotfix
+# Fix bug, commit, push, PR
+cd ../myapp
+git worktree remove ../hotfix
+# Continue feature work—nothing was disturbed
+```
+
+### 2. Reviewing Pull Requests
+
+```bash
+# Check out PR branch for testing
+git fetch origin pull/123/head:pr-123
+git worktree add ../pr-review pr-123
+cd ../pr-review
+# Test, review, comment
+git worktree remove ../pr-review
+```
+
+### 3. Comparing Versions
+
+```bash
+# Check out old version for comparison
+git worktree add ../v1-reference v1.0.0
+# Now you can diff, test, or run both versions simultaneously
+```
+
+### 4. Long-Running Tasks
+
+```bash
+# Build takes 30 minutes? Keep working on another branch
+git worktree add ../myapp-build main
+cd ../myapp-build
+make release &
+cd ../myapp
+# Continue development while build runs
+```
+
+## Worktrees vs Alternatives
+
+| Scenario | Worktree | Stash | Clone |
+|----------|----------|-------|-------|
+| Quick branch switch | ✅ Instant | ⚠️ Slower | ❌ Slow |
+| Parallel branches | ✅ Easy | ❌ Not possible | ✅ Possible |
+| Shared history | ✅ Yes | ✅ Yes | ⚠️ Separate |
+| Disk space | ✅ Minimal | ✅ None | ❌ Full copy |
+| Complexity | ⚠️ Medium | ✅ Low | ⚠️ Medium |
+"###,
+        key_concepts: &["Worktree", "git worktree add", "git worktree list", "Parallel Development"],
+        concept_definitions: &[
+            ("Worktree", "Additional working directory linked to same repository"),
+            ("git worktree add", "Create new worktree for a branch"),
+            ("git worktree list", "Show all worktrees for this repository"),
+            ("Parallel Development", "Working on multiple branches simultaneously"),
+        ],
+        key_takeaways: &[
+            "Worktrees = multiple branches checked out simultaneously",
+            "Share same .git database, minimal disk space",
+            "No stashing or committing required to switch context",
+            "Perfect for hotfixes, PR reviews, comparisons",
+        ],
+        dos_and_donts: r###"## ✅ DO
+
+- **Use for context switching**: Hotfixes while developing features
+- **Use for PR reviews**: Test branches without disrupting work
+- **Clean up after yourself**: Remove worktrees when done
+- **Lock important worktrees**: Prevent accidental removal
+
+## ❌ DON'T
+
+- **Don't checkout same branch in multiple worktrees**: Git prevents this
+- **Don't forget to prune**: `git worktree prune` cleans stale entries
+- **Don't leave worktrees forever**: They can get stale and confusing
+"###,
+        going_deeper: r#"<strong>Bare repositories with worktrees:</strong>
+Advanced setup: Clone as bare repo, add worktrees for each branch.
+`git clone --bare repo.git .bare`
+`git worktree add main main`
+All branches are worktrees, no "main" working directory.
+
+<strong>IDE support:</strong>
+Most IDEs handle worktrees well—each worktree opens as a separate project.
+VSCode, IntelliJ, and others recognize worktree structure."#,
+        common_mistakes: r#"<strong>Same branch in multiple worktrees:</strong>
+Git prevents this because it would cause confusion—which worktree's changes win?
+If you need this, one worktree should be detached HEAD.
+
+<strong>Forgetting worktrees exist:</strong>
+`git worktree list` shows all worktrees. Check periodically and clean up stale ones."#,
+    },
+
+    Lesson {
+        id: 16,
+        title: "Security & Signing",
+        subtitle: "Verified Commits & Secrets",
+        icon: "🔐",
+        phase: "Software Engineering",
+        why_it_matters: "Anyone can set git config user.name to 'Linus Torvalds'. Signed commits prove \
+                         identity cryptographically. And leaked secrets in Git history are a nightmare.",
+        description: "Sign commits with GPG/SSH, protect secrets, and understand Git security best practices.",
+        intuition: r#"<h3>The Identity Problem</h3>
+
+Git's user.name and user.email are just text—anyone can fake them:
+
+```bash
+git config user.name "Elon Musk"
+git config user.email "elon@tesla.com"
+git commit -m "Fire everyone"
+```
+
+This commit would <em>look like</em> it came from Elon. Scary, right?
+
+<strong>Signed commits</strong> solve this. They use cryptographic signatures that can only be
+created with your private key. GitHub shows a "Verified" badge on signed commits.
+
+<h3>The Secrets Problem</h3>
+
+Git remembers <em>everything</em>. If you commit an API key and then delete it,
+the key is still in history. Forever. Anyone who clones can find it.
+
+```bash
+# This shows ALL content ever committed
+git log -p --all | grep "API_KEY"
+```
+
+Prevention is the only real solution—once secrets are in history,
+you need to rewrite history (painful) or rotate the credentials (essential)."#,
+        content: r###"
+## GPG Signed Commits
+
+### Setup GPG Key
+
+```bash
+# Generate key pair
+gpg --full-generate-key
+# Choose: RSA and RSA, 4096 bits, no expiration
+
+# List keys (get the KEY_ID)
+gpg --list-secret-keys --keyid-format=long
+# Output: sec rsa4096/KEY_ID 2024-01-01 [SC]
+
+# Export public key (add to GitHub)
+gpg --armor --export KEY_ID
+
+# Configure Git
+git config --global user.signingkey KEY_ID
+git config --global commit.gpgsign true   # Sign all commits
+```
+
+### Signing Commits
+
+```bash
+# Sign a single commit
+git commit -S -m "Signed commit"
+
+# Verify signatures
+git log --show-signature
+
+# Verify specific commit
+git verify-commit abc123
+```
+
+## SSH Signed Commits (Git 2.34+)
+
+```bash
+# Configure SSH signing
+git config --global gpg.format ssh
+git config --global user.signingkey ~/.ssh/id_ed25519.pub
+
+# Sign commits (same as GPG)
+git commit -S -m "SSH signed commit"
+```
+
+## Protecting Secrets
+
+### Prevention: .gitignore
+
+```gitignore
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Credentials
+*.pem
+*.key
+credentials.json
+secrets.yaml
+
+# IDE with potential secrets
+.idea/
+.vscode/settings.json
+```
+
+### Prevention: git-secrets
+
+```bash
+# Install
+brew install git-secrets  # macOS
+# or build from source
+
+# Initialize in repo
+git secrets --install
+
+# Add AWS patterns
+git secrets --register-aws
+
+# Add custom patterns
+git secrets --add 'password\s*=\s*.+'
+git secrets --add --allowed 'password = "example"'
+
+# Scan history
+git secrets --scan-history
+```
+
+### Prevention: Pre-commit Hooks
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.0
+    hooks:
+      - id: gitleaks
+```
+
+### Response: If Secrets Are Leaked
+
+```bash
+# 1. Immediately rotate the credential!
+# This is the most important step.
+
+# 2. Remove from history (if necessary)
+# Use BFG Repo-Cleaner (faster than filter-branch)
+bfg --replace-text secrets.txt repo.git
+
+# 3. Force push (coordinate with team)
+git push --force --all
+
+# 4. Notify affected parties
+```
+
+## GitHub Security Features
+
+| Feature | Purpose |
+|---------|---------|
+| Secret scanning | Alerts on committed secrets |
+| Dependabot | Security updates for dependencies |
+| Code scanning | SAST analysis |
+| Branch protection | Require signed commits |
+| Verified badge | Shows commit is signed |
+"###,
+        key_concepts: &["Signed Commits", "GPG", "git-secrets", "Verified Badge"],
+        concept_definitions: &[
+            ("Signed Commits", "Cryptographically prove commit authorship"),
+            ("GPG", "GNU Privacy Guard—encryption and signing tool"),
+            ("git-secrets", "Tool to prevent committing secrets"),
+            ("Verified Badge", "GitHub indicator that commit signature is valid"),
+        ],
+        key_takeaways: &[
+            "Signed commits prove identity cryptographically",
+            "GPG or SSH keys can sign commits",
+            "Once secrets are in history, they're there forever",
+            "Prevention > cure: use .gitignore and pre-commit hooks",
+        ],
+        dos_and_donts: r###"## ✅ DO
+
+- **Sign commits on important projects**: Open source, corporate
+- **Use git-secrets or gitleaks**: Prevent accidents
+- **Rotate leaked credentials immediately**: Don't just delete from repo
+- **Enable GitHub secret scanning**: Free protection
+- **Add .env to .gitignore before first commit**: Prevention is easier
+
+## ❌ DON'T
+
+- **Don't commit secrets, ever**: Not even "temporarily"
+- **Don't rely on .gitignore after commit**: It's too late
+- **Don't share GPG private keys**: One key per person
+- **Don't ignore secret scanning alerts**: They're real problems
+"###,
+        going_deeper: r#"<strong>Requiring signed commits:</strong>
+GitHub branch protection can require all commits to be signed.
+Settings > Branches > Branch protection > Require signed commits.
+
+<strong>Vigilant mode:</strong>
+GitHub can mark unsigned commits as "Unverified" rather than just not showing a badge.
+Helps identify potentially spoofed commits.
+
+<strong>Rewriting history:</strong>
+BFG Repo-Cleaner is 10-100x faster than git filter-branch for removing secrets.
+But it requires force-push and coordination—everyone must re-clone."#,
+        common_mistakes: r#"<strong>Deleting secret doesn't remove it:</strong>
+`git rm .env && git commit` leaves .env in history.
+You need to rewrite history with BFG or filter-branch.
+
+<strong>GPG key expiration:</strong>
+If your GPG key expires, old commits still show as verified.
+But you can't make new signed commits until you extend or replace the key."#,
+    },
+
+    Lesson {
+        id: 17,
+        title: "The Dos and Don'ts",
+        subtitle: "Git Best Practices Reference",
+        icon: "📋",
+        phase: "Best Practices",
+        why_it_matters: "After 17 lessons, here's your cheat sheet. A comprehensive reference of \
+                         everything you should and shouldn't do with Git, organized by category.",
+        description: "The ultimate Git best practices reference card. Print it, bookmark it, live by it.",
+        intuition: r#"<h3>The Master Reference</h3>
+
+This lesson consolidates all the dos and don'ts from the entire curriculum.
+Use it as a quick reference when you're unsure about best practices.
+
+<h3>The Golden Rules</h3>
+
+1. <strong>Commit early, commit often</strong>—small commits are easier to understand and revert
+2. <strong>Never rebase public history</strong>—you'll break everyone's clones
+3. <strong>Never commit secrets</strong>—they're in history forever
+4. <strong>Write meaningful commit messages</strong>—your future self will thank you
+5. <strong>Use branches for everything</strong>—main should always be deployable"#,
+        content: r###"
+## Commits
+
+| ✅ DO | ❌ DON'T |
+|-------|----------|
+| Commit early and often | Batch many changes into one commit |
+| Write meaningful messages | Use "fix", "update", "WIP" |
+| Use imperative mood: "Add feature" | Use past tense: "Added feature" |
+| Keep commits atomic (one purpose) | Mix unrelated changes |
+| Reference issues: Refs #42 | Leave commits orphaned |
+
+### Commit Message Template
+```
+type: short summary (50 chars)
+
+Longer explanation of WHY this change was needed.
+The diff shows WHAT changed; the message explains WHY.
+
+Refs #42
+```
+
+## Branches
+
+| ✅ DO | ❌ DON'T |
+|-------|----------|
+| Use feature branches | Work directly on main |
+| Use descriptive names: `feature/user-auth` | Use vague names: `my-branch` |
+| Delete merged branches | Let stale branches accumulate |
+| Keep branches short-lived | Let branches diverge for weeks |
+| Pull/rebase from main regularly | Wait until merge to discover conflicts |
+
+## History
+
+| ✅ DO | ❌ DON'T |
+|-------|----------|
+| Rebase local branches before pushing | Rebase pushed/shared branches |
+| Use `revert` for public history | Use `reset` on public history |
+| Squash before merging (if team prefers) | Leave "fix typo" commits in PR |
+| Use interactive rebase for cleanup | Force-push to shared branches |
+
+## Collaboration
+
+| ✅ DO | ❌ DON'T |
+|-------|----------|
+| Pull before pushing | Force-push without team agreement |
+| Write clear PR descriptions | Open PRs without context |
+| Respond to review feedback | Ignore or argue with reviewers |
+| Keep PRs small and focused | Create 2000-line PRs |
+| Test before opening PR | Push broken code for review |
+
+## Remotes
+
+| ✅ DO | ❌ DON'T |
+|-------|----------|
+| Use SSH keys for auth | Commit with HTTPS and passwords |
+| Fetch before making assumptions | Assume your local is current |
+| Name remotes clearly (origin, upstream) | Use confusing remote names |
+| Push with `-u` to set upstream | Manually specify remote every time |
+
+## Security
+
+| ✅ DO | ❌ DON'T |
+|-------|----------|
+| Use .gitignore for secrets | Commit .env files, even "just for testing" |
+| Use git-secrets or gitleaks | Rely on manual review |
+| Sign commits on important repos | Assume user.name is trustworthy |
+| Rotate leaked credentials immediately | Just delete the file and push |
+| Enable GitHub secret scanning | Ignore security alerts |
+
+## Recovery
+
+| ✅ DO | ❌ DON'T |
+|-------|----------|
+| Check reflog when panicking | Panic and think data is lost |
+| Use `revert` for pushed commits | Use `reset --hard` on pushed commits |
+| Create backup branch before risky ops | YOLO dangerous operations |
+| Understand reset modes (soft/mixed/hard) | Use `--hard` without thinking |
+
+## Workflow
+
+| ✅ DO | ❌ DON'T |
+|-------|----------|
+| Agree on team workflow | Mix Git Flow and GitHub Flow |
+| Document your conventions | Assume everyone knows |
+| Use CI/CD for testing | Rely only on local tests |
+| Require PR reviews | Merge your own PRs |
+| Use branch protection rules | Allow direct pushes to main |
+
+## Organization
+
+| ✅ DO | ❌ DON'T |
+|-------|----------|
+| Use clear issue descriptions | Create vague issues |
+| Link PRs to issues | Leave issues orphaned |
+| Use labels and milestones | Let issues pile up without organization |
+| Close issues with context | Close without explanation |
+
+## Large Files & Scale
+
+| ✅ DO | ❌ DON'T |
+|-------|----------|
+| Use Git LFS for binaries | Commit large files directly |
+| Use sparse checkout for monorepos | Clone entire monorepo unnecessarily |
+| Clean up submodules | Let submodules go stale |
+| Keep repo size reasonable | Let history bloat with binaries |
+"###,
+        key_concepts: &["Best Practices", "Git Hygiene", "Team Conventions", "Reference Card"],
+        concept_definitions: &[
+            ("Best Practices", "Proven patterns that prevent problems"),
+            ("Git Hygiene", "Habits that keep repository clean and useful"),
+            ("Team Conventions", "Agreed-upon standards for consistency"),
+            ("Reference Card", "Quick-lookup guide for common decisions"),
+        ],
+        key_takeaways: &[
+            "Commit early, often, and meaningfully",
+            "Never rebase public history",
+            "Never commit secrets",
+            "Use branches for everything",
+            "When in doubt, check the reflog",
+        ],
+        dos_and_donts: "",  // This IS the dos and don'ts lesson!
+        going_deeper: r#"<strong>Team onboarding:</strong>
+Use this reference as part of developer onboarding.
+New team members should read this before their first commit.
+
+<strong>Automation:</strong>
+Many of these rules can be enforced with:
+- Pre-commit hooks (formatting, secrets)
+- Branch protection rules (require reviews)
+- CI/CD (require passing tests)
+
+<strong>Continuous improvement:</strong>
+Update this list as your team learns from mistakes.
+Every incident is an opportunity to add a new guideline."#,
+        common_mistakes: r#"<strong>Not having documented conventions:</strong>
+"Everyone knows how we do things" is a myth.
+Write it down. This lesson is a template.
+
+<strong>Enforcing too late:</strong>
+Catch problems at commit time with hooks, not at PR time with reviews.
+The earlier you catch issues, the cheaper they are to fix."#,
     },
 ];

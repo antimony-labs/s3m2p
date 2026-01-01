@@ -58,7 +58,7 @@ impl LessonRenderer {
             <header class="hero">
                 <h1>Git Version Control</h1>
                 <p class="subtitle">From History to Mastery - The Complete Guide</p>
-                <p class="lesson-count">15 Lessons · 7 Phases · Beginner to Advanced</p>
+                <p class="lesson-count">18 Lessons · 7 Phases · Beginner to Advanced</p>
             </header>
         "##,
         );
