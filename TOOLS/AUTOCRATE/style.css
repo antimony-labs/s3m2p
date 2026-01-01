@@ -95,6 +95,28 @@ button.generate + button.generate:hover {
     background: #229954;
 }
 
+button.export {
+    width: 100%;
+    padding: 8px;
+    background: rgba(52, 152, 219, 0.2);
+    color: #3498db;
+    border: 1px solid #3498db;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 6px;
+}
+
+button.export:hover {
+    background: rgba(52, 152, 219, 0.3);
+    border-color: #5dade2;
+}
+
+button.export:active {
+    background: rgba(52, 152, 219, 0.4);
+}
+
 .input-panel h3 {
     color: #3498db;
     font-size: 16px;

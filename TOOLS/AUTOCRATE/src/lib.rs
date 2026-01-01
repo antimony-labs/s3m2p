@@ -13,6 +13,8 @@ pub mod render;
 pub mod assembly;
 pub mod generator;
 pub mod step_converter;
+pub mod manufacturing;
+pub mod export;
 
 pub use constants::LumberSize;
 pub use geometry::*;
@@ -192,6 +194,11 @@ pub fn start() -> Result<(), JsValue> {
     let input_style = document.get_element_by_id("style").unwrap().dyn_into::<HtmlSelectElement>()?;
     let btn_generate = document.get_element_by_id("generate").unwrap();
     let btn_export = document.get_element_by_id("export-step").unwrap();
+    let btn_export_cut_list = document.get_element_by_id("export-cut-list").unwrap();
+    let btn_export_bom = document.get_element_by_id("export-bom").unwrap();
+    let btn_export_nailing = document.get_element_by_id("export-nailing").unwrap();
+    let btn_export_json = document.get_element_by_id("export-json").unwrap();
+    let btn_export_gcode = document.get_element_by_id("export-gcode").unwrap();
     let btn_view3d = document.get_element_by_id("view-3d").unwrap();
     let btn_view2d = document.get_element_by_id("view-2d").unwrap();
 
@@ -199,7 +206,9 @@ pub fn start() -> Result<(), JsValue> {
     let assembly = Rc::new(RefCell::new(CrateAssembly::default()));
     let mesh_buffers_rc = Rc::new(RefCell::new(Vec::new()));
     let colors_rc = Rc::new(RefCell::new(Vec::new()));
-    
+    let manufacturing_data = Rc::new(RefCell::new(None::<manufacturing::ManufacturingData>));
+    let spec_rc = Rc::new(RefCell::new(CrateSpec::default()));
+
     // Renderer must be wrapped to be shared among event listeners
     let renderer = Rc::new(RefCell::new(renderer));
 
@@ -209,6 +218,8 @@ pub fn start() -> Result<(), JsValue> {
         let mesh_buffers_rc = mesh_buffers_rc.clone();
         let colors_rc = colors_rc.clone();
         let renderer = renderer.clone();
+        let manufacturing_data = manufacturing_data.clone();
+        let spec_rc = spec_rc.clone();
         let input_length = input_length.clone();
         let input_width = input_width.clone();
         let input_height = input_height.clone();
@@ -239,6 +250,11 @@ pub fn start() -> Result<(), JsValue> {
             // Generate assembly
             let new_assembly = generator::generate_crate(&spec, style);
             *assembly.borrow_mut() = new_assembly;
+
+            // Generate manufacturing data
+            let mfg_data = manufacturing::generate_manufacturing_data(&assembly.borrow(), weight);
+            *manufacturing_data.borrow_mut() = Some(mfg_data);
+            *spec_rc.borrow_mut() = spec.clone();
 
             // Update camera orthographic size based on dimensions
             let max_dim = length.max(width).max(height);
@@ -274,7 +290,7 @@ pub fn start() -> Result<(), JsValue> {
     btn_generate.add_event_listener_with_callback("click", update_scene.as_ref().unchecked_ref())?;
     update_scene.forget(); // Keep alive
 
-    // Bind Export Button
+    // Bind Export STEP Button
     {
         let assembly = assembly.clone();
         let closure = Closure::wrap(Box::new(move || {
@@ -284,6 +300,92 @@ pub fn start() -> Result<(), JsValue> {
             let _ = download_file("crate.step", &step_content);
         }) as Box<dyn FnMut()>);
         btn_export.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+
+    // Bind Export Cut List Button
+    {
+        let manufacturing_data = manufacturing_data.clone();
+        let closure = Closure::wrap(Box::new(move || {
+            if let Some(mfg) = manufacturing_data.borrow().as_ref() {
+                let csv = export::csv::export_cut_list_csv(&mfg.cut_list);
+                let _ = download_file("autocrate_cut_list.csv", &csv);
+                web_sys::console::log_1(&"Cut list exported".into());
+            } else {
+                web_sys::console::warn_1(&"No manufacturing data - generate crate first".into());
+            }
+        }) as Box<dyn FnMut()>);
+        btn_export_cut_list.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+
+    // Bind Export BOM Button
+    {
+        let manufacturing_data = manufacturing_data.clone();
+        let closure = Closure::wrap(Box::new(move || {
+            if let Some(mfg) = manufacturing_data.borrow().as_ref() {
+                let csv = export::csv::export_bom_csv(&mfg.bom);
+                let _ = download_file("autocrate_bom.csv", &csv);
+                web_sys::console::log_1(&"BOM exported".into());
+            } else {
+                web_sys::console::warn_1(&"No manufacturing data - generate crate first".into());
+            }
+        }) as Box<dyn FnMut()>);
+        btn_export_bom.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+
+    // Bind Export Nailing Coordinates Button
+    {
+        let manufacturing_data = manufacturing_data.clone();
+        let closure = Closure::wrap(Box::new(move || {
+            if let Some(mfg) = manufacturing_data.borrow().as_ref() {
+                let csv = export::csv::export_nailing_csv(&mfg.nailing_coords);
+                let _ = download_file("autocrate_nailing_coords.csv", &csv);
+                web_sys::console::log_1(&"Nailing coordinates exported".into());
+            } else {
+                web_sys::console::warn_1(&"No manufacturing data - generate crate first".into());
+            }
+        }) as Box<dyn FnMut()>);
+        btn_export_nailing.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+
+    // Bind Export JSON Button
+    {
+        let assembly = assembly.clone();
+        let spec_rc = spec_rc.clone();
+        let manufacturing_data = manufacturing_data.clone();
+        let closure = Closure::wrap(Box::new(move || {
+            if let Some(mfg) = manufacturing_data.borrow().as_ref() {
+                let json = export::json::export_assembly_json(
+                    &assembly.borrow(),
+                    &spec_rc.borrow(),
+                    mfg
+                );
+                let _ = download_file("autocrate_assembly.json", &json);
+                web_sys::console::log_1(&"Assembly JSON exported".into());
+            } else {
+                web_sys::console::warn_1(&"No manufacturing data - generate crate first".into());
+            }
+        }) as Box<dyn FnMut()>);
+        btn_export_json.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+
+    // Bind Export G-code Button
+    {
+        let manufacturing_data = manufacturing_data.clone();
+        let closure = Closure::wrap(Box::new(move || {
+            if let Some(mfg) = manufacturing_data.borrow().as_ref() {
+                let gcode = export::gcode::export_cnc_gcode(&mfg.cnc_program, export::gcode::GcodeUnits::Imperial);
+                let _ = download_file("autocrate_cnc.gcode", &gcode);
+                web_sys::console::log_1(&"CNC G-code exported".into());
+            } else {
+                web_sys::console::warn_1(&"No manufacturing data - generate crate first".into());
+            }
+        }) as Box<dyn FnMut()>);
+        btn_export_gcode.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
         closure.forget();
     }
 
