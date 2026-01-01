@@ -152,14 +152,62 @@
     @media (max-width: 768px) {
       .message-panel {
         width: 100%;
-        background: rgba(5,5,8,0.92);
-        padding: 30px;
-        justify-content: flex-start;
-        padding-top: 100px;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        background: none;
+        padding: 40px 30px;
+        justify-content: center;
       }
-      .status-code { font-size: 80px; left: 30px; top: 20px; }
-      .title { font-size: 28px; }
-      .rule-display { display: none; }
+      .status-code {
+        font-size: 60px;
+        left: 50%;
+        top: 30px;
+        transform: translateX(-50%);
+        opacity: 0.05;
+      }
+      .title {
+        font-size: 32px;
+        text-shadow: 0 2px 20px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.7);
+        background: rgba(5,5,8,0.75);
+        padding: 12px 20px;
+        border-radius: 6px;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+      .subtitle {
+        font-size: 14px;
+        margin-bottom: 20px;
+        text-shadow: 0 2px 12px rgba(0,0,0,0.9);
+        background: rgba(0,136,255,0.15);
+        padding: 8px 16px;
+        border-radius: 4px;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+      .description {
+        font-size: 14px;
+        max-width: 100%;
+        color: #ddd;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.9);
+        background: rgba(5,5,8,0.7);
+        padding: 16px;
+        border-radius: 6px;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+      .rule-display {
+        margin-top: 30px;
+        padding: 16px;
+        background: rgba(255,102,0,0.15);
+        border-left: 2px solid rgba(255,102,0,0.4);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+      .rule-label { font-size: 9px; }
+      .rule-text { font-size: 12px; }
+      .nav-hint { left: 30px; bottom: 15px; }
     }
   </style>
 </head>
@@ -210,7 +258,7 @@
     let bornTotal = 0;
     let diedTotal = 0;
 
-    const PARTICLE_COUNT = Math.floor((width * height) / 150);
+    let PARTICLE_COUNT = 0;  // Calculated in resize()
     const SCALE = 2;
     const MAX_AGE = 500;
     const DECAY_START = 125;
