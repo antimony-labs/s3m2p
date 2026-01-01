@@ -20,6 +20,8 @@ pub enum Route {
     Category(CategoryId),
     /// Architecture diagram view
     Architecture,
+    /// About Antimony Labs intro page
+    About,
 }
 
 impl Route {
@@ -30,6 +32,7 @@ impl Route {
             "#/sims" => Route::Category(CategoryId::Simulations),
             "#/learn" => Route::Category(CategoryId::Learn),
             "#/arch" => Route::Architecture,
+            "#/about" => Route::About,
             _ => Route::Home,
         }
     }
@@ -40,6 +43,7 @@ impl Route {
             Route::Home => "",
             Route::Category(id) => id.hash_route(),
             Route::Architecture => "#/arch",
+            Route::About => "#/about",
         }
     }
 }
