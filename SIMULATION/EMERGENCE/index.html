@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergence | too.foo</title>
+    <meta name="description" content="Interactive boids ecosystem simulation demonstrating emergent behavior in multi-agent systems.">
+
+    <!-- Trunk: copy local static assets into dist/ -->
+    <link data-trunk rel="copy-dir" href="assets" />
+
+    <!-- Theme (local copy for this sub-app) -->
+    <link rel="stylesheet" href="assets/theme.css">
+
+    <!-- Trunk will inject WASM here -->
+    <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" />
+
+    <style>
+        /* ═══════════════════════════════════════════════════════════════════
+           Emergence Simulation Styles
+           ═══════════════════════════════════════════════════════════════════ */
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: var(--font-sans);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #app-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        #simulation-area {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        #simulation {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg);
+        }
+
+        /* Controls Overlay */
+        #controls {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: var(--header-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px var(--shadow);
+            z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-group {
+            margin-bottom: 0.75rem;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+            color: var(--text);
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background-color: var(--bg-elevated);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--border);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: none;
+        }
+
+        /* Telemetry Bar */
+        #telemetry-bar {
+            height: 50px;
+            background-color: var(--bg-elevated);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+            gap: 2rem;
+            font-size: 0.85rem;
+            color: var(--text);
+            overflow-x: auto;
+        }
+
+        .telemetry-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .telemetry-label {
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .telemetry-value {
+            font-family: var(--font-mono);
+            color: var(--accent);
+        }
+
+        .sparkline {
+            width: 80px;
+            height: 24px;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 600px) {
+            #controls {
+                top: 0.5rem;
+                left: 0.5rem;
+                padding: 0.75rem;
+                max-width: calc(100vw - 1rem);
+            }
+
+            #telemetry-bar {
+                font-size: 0.75rem;
+                gap: 1rem;
+                padding: 0 0.5rem;
+            }
+
+            .sparkline {
+                width: 60px;
+                height: 20px;
+            }
+        }
+
+        /* Header Override for Simulation */
+        header {
+            position: relative;
+            background-color: var(--bg-elevated);
+        }
+
+        .home-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin-right: 1rem;
+        }
+
+        .home-link:hover {
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div style="display: flex; align-items: center;">
+            <a href="https://too.foo" class="home-link">← Home</a>
+            <div class="header-logo">
+                <img src="assets/antimony.svg" class="bubble-mark" alt="Antimony Labs" style="width: 28px; height: 28px;">
+                <span class="site-name">Emergence</span>
+            </div>
+        </div>
+        <button id="theme-toggle" aria-label="Toggle theme">
+            <span class="icon-light">☀️</span>
+            <span class="icon-dark">🌙</span>
+        </button>
+    </header>
+
+    <!-- App Container -->
+    <div id="app-container">
+        <!-- Simulation Area -->
+        <div id="simulation-area">
+            <canvas id="simulation"></canvas>
+
+            <!-- Controls Overlay -->
+            <div id="controls">
+                <div class="control-buttons control-group">
+                    <button id="pause-btn">⏸ Pause</button>
+                    <button id="reset-btn">↻ Reset</button>
+                </div>
+
+                <div class="control-group">
+                    <label for="population-slider">
+                        Population Cap: <span id="population-value">2000</span>
+                    </label>
+                    <input type="range" id="population-slider" min="100" max="4096" value="2000" step="100">
+                </div>
+
+                <div class="control-group">
+                    <label for="speed-slider">
+                        Speed: <span id="speed-value">1.0x</span>
+                    </label>
+                    <input type="range" id="speed-slider" min="0.1" max="3.0" value="1.0" step="0.1">
+                </div>
+            </div>
+        </div>
+
+        <!-- Telemetry Bar -->
+        <div id="telemetry-bar">
+            <div class="telemetry-item">
+                <span class="telemetry-label">POP</span>
+                <span class="telemetry-value" id="pop-count">0</span>
+            </div>
+
+            <div class="telemetry-item">
+                <span class="telemetry-label">GEN</span>
+                <span class="telemetry-value" id="gen-count">0</span>
+            </div>
+
+            <div class="telemetry-item">
+                <span class="telemetry-label">FPS</span>
+                <span class="telemetry-value" id="fps-count">60</span>
+            </div>
+
+            <div class="telemetry-item">
+                <span class="telemetry-label">Births</span>
+                <svg class="sparkline" viewBox="0 0 80 24" preserveAspectRatio="none" aria-hidden="true">
+                    <polyline id="spark-births" points="" fill="none" stroke="#00c27a" stroke-width="1" />
+                </svg>
+            </div>
+
+            <div class="telemetry-item">
+                <span class="telemetry-label">Deaths</span>
+                <svg class="sparkline" viewBox="0 0 80 24" preserveAspectRatio="none" aria-hidden="true">
+                    <polyline id="spark-deaths" points="" fill="none" stroke="#ff4d4d" stroke-width="1" />
+                </svg>
+            </div>
+
+            <div class="telemetry-item">
+                <span class="telemetry-label">H/C/S</span>
+                <span class="telemetry-value" id="role-counts">0/0/0</span>
+            </div>
+
+            <div class="telemetry-item">
+                <span class="telemetry-label">Diversity</span>
+                <svg class="sparkline" viewBox="0 0 80 24" preserveAspectRatio="none" aria-hidden="true">
+                    <polyline id="spark-diversity" points="" fill="none" stroke="#f6c945" stroke-width="1" />
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/theme.js"></script>
+</body>
+</html>

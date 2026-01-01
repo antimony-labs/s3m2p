@@ -1,0 +1,163 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   FILE: theme.css | SIMULATION/EMERGENCE/assets/theme.css
+   PURPOSE: Shared theme system for too.foo apps (local copy for this sub-app)
+   MODIFIED: 2025-12-14
+   ═══════════════════════════════════════════════════════════════════════════════
+
+   - Light/dark theme with CSS variables
+   - System font stack
+   - Sticky header with animated SVG mark + theme toggle
+   - Accessibility (prefers-reduced-motion, focus states)
+*/
+
+:root {
+  /* Light theme (default) */
+  --bg: #fbfbfd;
+  --bg-elevated: #ffffff;
+  --text: #0b0b12;
+  --text-muted: #4b4b5c;
+  --accent: #007c89;
+  --accent-hover: #00616b;
+  --border: #e7e7ee;
+  --shadow: rgba(11, 11, 18, 0.12);
+  --code-bg: #f1f2f6;
+  --header-bg: rgba(251, 251, 253, 0.85);
+  --accent-glow: rgba(0, 124, 137, 0.22);
+
+  /* Sans-serif stack for UI */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  /* Monospace stack for code */
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: #050508;
+  --bg-elevated: #0b0b12;
+  --text: #e6e6f0;
+  --text-muted: #9a9ab3;
+  --accent: #00e5ff;
+  --accent-hover: #64f0ff;
+  --border: rgba(255, 255, 255, 0.12);
+  --shadow: rgba(0, 0, 0, 0.5);
+  --code-bg: #0b0b12;
+  --header-bg: rgba(5, 5, 8, 0.72);
+  --accent-glow: rgba(0, 229, 255, 0.22);
+
+  color-scheme: dark;
+}
+
+/* System preference fallback */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #050508;
+    --bg-elevated: #0b0b12;
+    --text: #e6e6f0;
+    --text-muted: #9a9ab3;
+    --accent: #00e5ff;
+    --accent-hover: #64f0ff;
+    --border: rgba(255, 255, 255, 0.12);
+    --shadow: rgba(0, 0, 0, 0.5);
+    --code-bg: #0b0b12;
+    --header-bg: rgba(5, 5, 8, 0.72);
+    --accent-glow: rgba(0, 229, 255, 0.22);
+
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: var(--font-sans);
+  color: var(--text);
+  background-color: var(--bg);
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+code, pre {
+  font-family: var(--font-mono);
+  background-color: var(--code-bg);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  backdrop-filter: blur(10px);
+}
+
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.bubble-mark {
+  width: 32px;
+  height: 32px;
+  animation: gentle-float 6s ease-in-out infinite;
+  filter: drop-shadow(0 0 12px var(--accent-glow));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble-mark { animation: none; }
+}
+
+@keyframes gentle-float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  25% { transform: translateY(-4px) rotate(2deg); }
+  50% { transform: translateY(0px) rotate(0deg); }
+  75% { transform: translateY(-4px) rotate(-2deg); }
+}
+
+.site-name { font-family: var(--font-mono); }
+
+#theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  transition: background-color 0.2s, transform 0.1s;
+  padding: 0;
+}
+
+#theme-toggle:hover { background-color: var(--bg-elevated); }
+#theme-toggle:active { transform: scale(0.95); }
+#theme-toggle:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+[data-theme="light"] .icon-dark { display: none; }
+[data-theme="dark"] .icon-light { display: none; }
+:root:not([data-theme]) .icon-dark { display: none; }
+
+*:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+a { color: var(--accent); transition: color 0.2s; }
+a:hover { color: var(--accent-hover); }
+
+button { font-family: inherit; color: var(--text); }
+
+

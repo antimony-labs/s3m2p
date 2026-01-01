@@ -12,5 +12,8 @@ for arg in "$@"; do
     args+=("$arg")
   fi
 done
-exec trunk serve "${args[@]}"
+
+# Always serve index.html so Trunk doesn't require any Rust manifest.
+exec trunk serve index.html "${args[@]}"
+
 

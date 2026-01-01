@@ -1,8 +1,21 @@
-#!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════════════
-# FILE: watch_tree.sh | WELCOME/watch_tree.sh
-# PURPOSE: Watch script for monitoring directory tree changes during development
-# MODIFIED: 2025-11-30
+# FILE: Trunk.toml | SIMULATION/EMERGENCE/Trunk.toml
+# PURPOSE: Trunk build configuration for Emergence boids simulation
+# MODIFIED: 2025-12-14
 # ═══════════════════════════════════════════════════════════════════════════════
 
-watch -n 1 --color tree -C
+[build]
+target = "index.html"
+dist = "dist"
+public_url = "/"
+filehash = true
+
+[watch]
+watch = ["src", "index.html", "../DNA/src"]
+
+[serve]
+addresses = ["127.0.0.1"]
+port = 8089
+
+[tools]
+wasm_bindgen = "0.2.93"

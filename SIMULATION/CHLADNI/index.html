@@ -7,30 +7,19 @@ MODIFIED: 2025-12-02
 -->
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chladni Patterns | too.foo</title>
     <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link
-        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Rajdhani:wght@400;600&display=swap"
-        rel="stylesheet">
+    <link data-trunk rel="copy-dir" href="assets" />
+    <link rel="stylesheet" href="assets/theme.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html,
-        body {
-            width: 100%;
-            height: 100%;
-            background: #050508;
-            font-family: 'Rajdhani', sans-serif;
-            color: #e0e0e0;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%; height: 100%;
+            background: var(--bg);
+            color: var(--text);
             overflow: hidden;
         }
 
@@ -38,31 +27,6 @@ MODIFIED: 2025-12-02
             display: flex;
             flex-direction: column;
             height: 100%;
-        }
-
-        header {
-            padding: 15px 20px;
-            background: rgba(10, 15, 20, 0.9);
-            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        header h1 {
-            font-size: 1.2rem;
-            color: #00ffff;
-            font-weight: 600;
-        }
-
-        header a {
-            color: #888;
-            text-decoration: none;
-            font-size: 0.9rem;
-        }
-
-        header a:hover {
-            color: #00ffff;
         }
 
         #main-content {
@@ -78,9 +42,9 @@ MODIFIED: 2025-12-02
             display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(10, 15, 20, 0.5);
+            background: var(--bg-elevated);
             border-radius: 12px;
-            border: 1px solid rgba(0, 255, 255, 0.2);
+            border: 1px solid var(--border);
             padding: 20px;
         }
 
@@ -103,9 +67,9 @@ MODIFIED: 2025-12-02
         #controls-panel {
             width: 280px;
             flex-shrink: 0;
-            background: rgba(10, 15, 20, 0.9);
+            background: var(--bg-elevated);
             border-radius: 12px;
-            border: 1px solid rgba(0, 255, 255, 0.2);
+            border: 1px solid var(--border);
             padding: 20px;
             display: flex;
             flex-direction: column;
@@ -121,7 +85,7 @@ MODIFIED: 2025-12-02
 
         .control-section h3 {
             font-size: 0.85rem;
-            color: #00ffff;
+            color: var(--accent);
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -130,19 +94,19 @@ MODIFIED: 2025-12-02
 
         .mode-info {
             font-size: 0.75rem;
-            color: #888;
+            color: var(--text-muted);
             line-height: 1.4;
             margin-bottom: 8px;
         }
 
         .about-text {
             font-size: 0.75rem;
-            color: #777;
+            color: var(--text-muted);
             line-height: 1.5;
         }
 
         .about-text a {
-            color: #00ffff;
+            color: var(--accent);
             text-decoration: none;
         }
 
@@ -161,12 +125,12 @@ MODIFIED: 2025-12-02
             justify-content: space-between;
             align-items: center;
             font-size: 0.8rem;
-            color: #aaa;
+            color: var(--text-muted);
         }
 
         .slider-value {
-            font-family: 'JetBrains Mono', monospace;
-            color: #00ffff;
+            font-family: var(--font-mono);
+            color: var(--accent);
             font-size: 0.75rem;
         }
 
@@ -174,7 +138,7 @@ MODIFIED: 2025-12-02
             -webkit-appearance: none;
             width: 100%;
             height: 6px;
-            background: rgba(0, 255, 255, 0.15);
+            background: var(--border);
             border-radius: 3px;
             outline: none;
         }
@@ -183,7 +147,7 @@ MODIFIED: 2025-12-02
             -webkit-appearance: none;
             width: 16px;
             height: 16px;
-            background: #00ffff;
+            background: var(--accent);
             border-radius: 50%;
             cursor: pointer;
             transition: transform 0.15s;
@@ -196,7 +160,7 @@ MODIFIED: 2025-12-02
         input[type="range"]::-moz-range-thumb {
             width: 16px;
             height: 16px;
-            background: #00ffff;
+            background: var(--accent);
             border-radius: 50%;
             cursor: pointer;
             border: none;
@@ -211,9 +175,9 @@ MODIFIED: 2025-12-02
         .mode-btn {
             padding: 10px 12px;
             background: transparent;
-            border: 1px solid rgba(0, 255, 255, 0.3);
-            color: #00ffff;
-            font-family: 'JetBrains Mono', monospace;
+            border: 1px solid var(--border);
+            color: var(--accent);
+            font-family: var(--font-mono);
             font-size: 0.8rem;
             cursor: pointer;
             transition: all 0.2s;
@@ -221,32 +185,32 @@ MODIFIED: 2025-12-02
         }
 
         .mode-btn:hover {
-            background: rgba(0, 255, 255, 0.1);
-            border-color: rgba(0, 255, 255, 0.6);
+            background: var(--bg);
+            border-color: var(--accent);
         }
 
         .mode-btn.active {
-            background: rgba(0, 255, 255, 0.2);
-            border-color: #00ffff;
+            background: var(--bg);
+            border-color: var(--accent);
         }
 
         #info-panel {
             margin-top: auto;
             padding-top: 16px;
-            border-top: 1px solid rgba(0, 255, 255, 0.1);
+            border-top: 1px solid var(--border);
         }
 
         #info-panel .info-row {
             display: flex;
             justify-content: space-between;
             font-size: 0.75rem;
-            color: #666;
+            color: var(--text-muted);
             margin-bottom: 6px;
         }
 
         #info-panel .info-value {
-            font-family: 'JetBrains Mono', monospace;
-            color: rgba(0, 255, 255, 0.6);
+            font-family: var(--font-mono);
+            color: var(--accent);
         }
 
         .reset-btn {
@@ -254,7 +218,7 @@ MODIFIED: 2025-12-02
             background: rgba(255, 100, 100, 0.1);
             border: 1px solid rgba(255, 100, 100, 0.3);
             color: #ff6464;
-            font-family: 'Rajdhani', sans-serif;
+            font-family: var(--font-sans);
             font-size: 0.85rem;
             font-weight: 600;
             cursor: pointer;
@@ -267,135 +231,20 @@ MODIFIED: 2025-12-02
             border-color: rgba(255, 100, 100, 0.6);
         }
 
-        /* Mode toggle */
-        .mode-toggle {
-            display: flex;
-            gap: 8px;
-        }
-
-        .mode-toggle-btn {
-            flex: 1;
-            padding: 10px 16px;
-            background: transparent;
-            border: 1px solid rgba(0, 255, 255, 0.3);
-            color: #00ffff;
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 0.85rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            border-radius: 6px;
-        }
-
-        .mode-toggle-btn:hover {
-            background: rgba(0, 255, 255, 0.1);
-        }
-
-        .mode-toggle-btn.active {
-            background: rgba(0, 255, 255, 0.2);
-            border-color: #00ffff;
-        }
-
-        /* Audio visualization canvases */
-        .audio-viz-canvas {
-            width: 100%;
-            height: 50px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 4px;
-            border: 1px solid rgba(0, 255, 255, 0.1);
-        }
-
-        /* Band energy bars */
-        .band-bars {
-            display: flex;
-            gap: 8px;
-            height: 40px;
-            align-items: flex-end;
-        }
-
-        .band-bar {
-            flex: 1;
-            background: linear-gradient(to top, rgba(0, 255, 255, 0.3), rgba(0, 255, 255, 0.8));
-            border-radius: 2px;
-            transition: height 0.05s;
-        }
-
-        .band-label {
-            font-size: 0.65rem;
-            color: #666;
-            text-align: center;
-            margin-top: 4px;
-        }
-
-        /* RMS meter */
-        .rms-meter {
-            height: 8px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 4px;
-            overflow: hidden;
-        }
-
-        .rms-fill {
-            height: 100%;
-            background: linear-gradient(to right, #00ffff, #00ff88);
-            transition: width 0.05s;
-            width: 0%;
-        }
-
-        /* Speaker position indicator */
-        .speaker-indicator {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            color: rgba(0, 255, 255, 0.6);
-        }
-
-        /* Resonance meter */
-        .resonance-meter {
-            height: 20px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 10px;
-            overflow: hidden;
-            border: 1px solid rgba(0, 255, 255, 0.2);
-        }
-
-        .resonance-fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(to right, #ff4444, #ffaa00, #44ff44);
-            transition: width 0.1s;
-            border-radius: 10px;
-        }
-
-        .resonance-label {
-            text-align: center;
-            font-size: 0.8rem;
-            margin-top: 4px;
-            color: #888;
-            font-weight: 600;
-        }
-
-        /* Hidden sections */
-        .hidden {
-            display: none !important;
-        }
-
         @media (max-width: 900px) {
             #main-content {
                 flex-direction: column;
                 padding: 10px;
                 gap: 10px;
             }
-
             #simulation-window {
                 flex: 1;
                 min-height: 0;
             }
-
             #canvas-container {
                 max-width: 100%;
                 max-height: 100%;
             }
-
             #controls-panel {
                 width: 100%;
                 flex-direction: row;
@@ -404,47 +253,48 @@ MODIFIED: 2025-12-02
                 padding: 15px;
                 order: 1;
             }
-
             #simulation-window {
                 order: 0;
             }
-
             .control-section {
                 flex: 1;
                 min-width: 140px;
             }
-
             .control-section h3 {
                 font-size: 0.75rem;
             }
-
             #mode-buttons {
                 grid-template-columns: repeat(3, 1fr);
             }
-
             #info-panel {
                 margin-top: 0;
                 padding-top: 0;
                 border-top: none;
                 display: none;
             }
-
             #about-section {
                 display: none;
             }
-
             .mode-info {
                 display: none;
             }
         }
     </style>
 </head>
-
 <body>
     <div id="app">
         <header>
-            <h1>Chladni Patterns</h1>
-            <a href="/">← back to too.foo</a>
+            <div style="display:flex; align-items:center;">
+                <a href="https://too.foo" class="home-link">← Home</a>
+                <div class="header-logo">
+                    <img src="assets/antimony.svg" class="bubble-mark" alt="Antimony Labs" style="width:28px; height:28px;">
+                    <span class="site-name">Chladni</span>
+                </div>
+            </div>
+            <button id="theme-toggle" aria-label="Toggle theme">
+                <span class="icon-light">☀️</span>
+                <span class="icon-dark">🌙</span>
+            </button>
         </header>
         <div id="main-content">
             <div id="simulation-window">
@@ -453,132 +303,33 @@ MODIFIED: 2025-12-02
                 </div>
             </div>
             <div id="controls-panel">
-                <!-- Simulation Mode Toggle -->
                 <div class="control-section">
-                    <h3>Simulation Mode</h3>
-                    <div class="mode-toggle">
-                        <button class="mode-toggle-btn active" id="demo-mode-btn">Demo</button>
-                        <button class="mode-toggle-btn" id="live-mode-btn">Live</button>
+                    <h3>Wave Parameters</h3>
+                    <div class="slider-control">
+                        <div class="slider-label">
+                            <span>Frequency</span>
+                            <span class="slider-value" id="freq-value">1.0x</span>
+                        </div>
+                        <input type="range" id="frequency-slider" min="0.1" max="3.0" step="0.1" value="1.0">
+                    </div>
+                    <div class="slider-control">
+                        <div class="slider-label">
+                            <span>Amplitude</span>
+                            <span class="slider-value" id="amp-value">1.0</span>
+                        </div>
+                        <input type="range" id="amplitude-slider" min="0.1" max="2.0" step="0.1" value="1.0">
                     </div>
                 </div>
-
-                <!-- Demo Mode Controls -->
-                <div id="demo-controls">
-                    <div class="control-section">
-                        <h3>Wave Parameters</h3>
-                        <div class="slider-control">
-                            <div class="slider-label">
-                                <span>Frequency</span>
-                                <span class="slider-value" id="freq-value">1.0x</span>
-                            </div>
-                            <input type="range" id="frequency-slider" min="0.1" max="3.0" step="0.1" value="1.0">
-                        </div>
-                        <div class="slider-control">
-                            <div class="slider-label">
-                                <span>Amplitude</span>
-                                <span class="slider-value" id="amp-value">1.0</span>
-                            </div>
-                            <input type="range" id="amplitude-slider" min="0.1" max="2.0" step="0.1" value="1.0">
-                        </div>
-                    </div>
-                    <div class="control-section">
-                        <h3>Mode Selection</h3>
-                        <p class="mode-info">Each mode (m,n) creates a unique standing wave pattern.</p>
-                        <div id="mode-buttons">
-                            <button class="mode-btn active" data-m="3" data-n="2">(3,2)</button>
-                            <button class="mode-btn" data-m="4" data-n="3">(4,3)</button>
-                            <button class="mode-btn" data-m="5" data-n="4">(5,4)</button>
-                            <button class="mode-btn" data-m="6" data-n="5">(6,5)</button>
-                            <button class="mode-btn" data-m="7" data-n="3">(7,3)</button>
-                            <button class="mode-btn" data-m="8" data-n="5">(8,5)</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Live Mode Controls -->
-                <div id="live-controls" class="hidden">
-                    <div class="control-section">
-                        <h3>Audio Input</h3>
-                        <button class="mode-btn" id="audio-toggle-btn" style="width: 100%; margin-bottom: 8px;">
-                            Enable Microphone
-                        </button>
-                        <div id="mic-name" style="font-size: 0.7rem; color: #888; margin-bottom: 8px; word-break: break-word;"></div>
-                        <div class="slider-control">
-                            <div class="slider-label">
-                                <span>Level</span>
-                                <span class="slider-value" id="rms-value">0%</span>
-                            </div>
-                            <div class="rms-meter">
-                                <div class="rms-fill" id="rms-fill"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="control-section">
-                        <h3>Waveform</h3>
-                        <canvas class="audio-viz-canvas" id="waveform-canvas" width="240" height="50"></canvas>
-                    </div>
-                    <div class="control-section">
-                        <h3>Frequency Bands</h3>
-                        <div class="band-bars">
-                            <div style="flex:1; display:flex; flex-direction:column; align-items:center;">
-                                <div class="band-bar" id="band-0" style="height:5%;"></div>
-                                <div class="band-label">Sub</div>
-                            </div>
-                            <div style="flex:1; display:flex; flex-direction:column; align-items:center;">
-                                <div class="band-bar" id="band-1" style="height:5%;"></div>
-                                <div class="band-label">Bass</div>
-                            </div>
-                            <div style="flex:1; display:flex; flex-direction:column; align-items:center;">
-                                <div class="band-bar" id="band-2" style="height:5%;"></div>
-                                <div class="band-label">Mid</div>
-                            </div>
-                            <div style="flex:1; display:flex; flex-direction:column; align-items:center;">
-                                <div class="band-bar" id="band-3" style="height:5%;"></div>
-                                <div class="band-label">High</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="control-section">
-                        <h3>Speaker Position</h3>
-                        <p class="mode-info">Click on the plate to set excitation point</p>
-                        <div class="speaker-indicator" id="speaker-pos">Center (0.50, 0.50)</div>
-                    </div>
-                    <div class="control-section">
-                        <h3>Tuning</h3>
-                        <div class="slider-control">
-                            <div class="slider-label">
-                                <span>Plate Constant</span>
-                                <span class="slider-value" id="plate-const-value">50</span>
-                            </div>
-                            <input type="range" id="plate-const-slider" min="10" max="500" step="10" value="50">
-                        </div>
-                        <p class="mode-info">Lower = more complex patterns. Higher = simpler patterns.</p>
-                        <div class="slider-control">
-                            <div class="slider-label">
-                                <span>Amplitude</span>
-                                <span class="slider-value" id="live-amp-value">1.0</span>
-                            </div>
-                            <input type="range" id="live-amplitude-slider" min="0.1" max="2.0" step="0.1" value="1.0">
-                        </div>
-                    </div>
-                    <div class="control-section">
-                        <h3>Pitch Accuracy</h3>
-                        <div class="resonance-meter">
-                            <div class="resonance-fill" id="resonance-fill"></div>
-                        </div>
-                        <div class="resonance-label" id="resonance-label">Off pitch</div>
-                        <div class="info-row" style="margin-top: 12px;">
-                            <span>Your Freq</span>
-                            <span class="info-value" id="detected-freq">-- Hz</span>
-                        </div>
-                        <div class="info-row">
-                            <span>Target Mode</span>
-                            <span class="info-value" id="detected-mode">(--,--)</span>
-                        </div>
-                        <div class="info-row">
-                            <span>Target Freq</span>
-                            <span class="info-value" id="target-freq">-- Hz</span>
-                        </div>
+                <div class="control-section">
+                    <h3>Mode Selection</h3>
+                    <p class="mode-info">Each mode (m,n) creates a unique standing wave pattern. Higher numbers = more complex patterns.</p>
+                    <div id="mode-buttons">
+                        <button class="mode-btn active" data-m="3" data-n="2">(3,2)</button>
+                        <button class="mode-btn" data-m="4" data-n="3">(4,3)</button>
+                        <button class="mode-btn" data-m="5" data-n="4">(5,4)</button>
+                        <button class="mode-btn" data-m="6" data-n="5">(6,5)</button>
+                        <button class="mode-btn" data-m="7" data-n="3">(7,3)</button>
+                        <button class="mode-btn" data-m="8" data-n="5">(8,5)</button>
                     </div>
                 </div>
                 <div class="control-section">
@@ -588,9 +339,7 @@ MODIFIED: 2025-12-02
                 <div class="control-section" id="about-section">
                     <h3>About</h3>
                     <p class="about-text">
-                        Chladni patterns form when a vibrating plate causes particles to collect along nodal lines -
-                        regions where the plate doesn't move. Discovered by Ernst Chladni in 1787, these patterns reveal
-                        the physics of standing waves.
+                        Chladni patterns form when a vibrating plate causes particles to collect along nodal lines - regions where the plate doesn't move. Discovered by Ernst Chladni in 1787, these patterns reveal the physics of standing waves.
                     </p>
                 </div>
                 <div id="info-panel">
@@ -600,61 +349,17 @@ MODIFIED: 2025-12-02
                     </div>
                     <div class="info-row">
                         <span>Particles</span>
-                        <span class="info-value" id="particle-count">50000</span>
-                    </div>
-                    <div class="info-row">
-                        <span>Audio</span>
-                        <span class="info-value" id="audio-status">Off</span>
+                        <span class="info-value" id="particle-count">5000</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
     <script>
-        // === State ===
-        let isLiveMode = false;
-        let audioEnabled = false;
-        let speakerX = 0.5;
-        let speakerY = 0.5;
-
-        // === Waveform Canvas Setup ===
-        const waveformCanvas = document.getElementById('waveform-canvas');
-        const waveformCtx = waveformCanvas.getContext('2d');
-
-        // === Simulation Mode Toggle ===
-        const demoModeBtn = document.getElementById('demo-mode-btn');
-        const liveModeBtn = document.getElementById('live-mode-btn');
-        const demoControls = document.getElementById('demo-controls');
-        const liveControls = document.getElementById('live-controls');
-
-        function setSimulationMode(live) {
-            isLiveMode = live;
-            if (live) {
-                demoModeBtn.classList.remove('active');
-                liveModeBtn.classList.add('active');
-                demoControls.classList.add('hidden');
-                liveControls.classList.remove('hidden');
-                if (window.setChladniSimulationMode) {
-                    window.setChladniSimulationMode(true);
-                }
-            } else {
-                liveModeBtn.classList.remove('active');
-                demoModeBtn.classList.add('active');
-                liveControls.classList.add('hidden');
-                demoControls.classList.remove('hidden');
-                if (window.setChladniSimulationMode) {
-                    window.setChladniSimulationMode(false);
-                }
-            }
-        }
-
-        demoModeBtn.addEventListener('click', () => setSimulationMode(false));
-        liveModeBtn.addEventListener('click', () => setSimulationMode(true));
-
-        // === Demo Mode: Mode button handling ===
-        document.querySelectorAll('#mode-buttons .mode-btn').forEach(btn => {
+        // Mode button handling
+        document.querySelectorAll('.mode-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.querySelectorAll('#mode-buttons .mode-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 document.getElementById('mode-display').textContent = btn.textContent;
                 if (window.setChladniMode) {
@@ -663,7 +368,7 @@ MODIFIED: 2025-12-02
             });
         });
 
-        // === Demo Mode: Frequency slider ===
+        // Frequency slider
         const freqSlider = document.getElementById('frequency-slider');
         const freqValue = document.getElementById('freq-value');
         freqSlider.addEventListener('input', () => {
@@ -674,7 +379,7 @@ MODIFIED: 2025-12-02
             }
         });
 
-        // === Demo Mode: Amplitude slider ===
+        // Amplitude slider
         const ampSlider = document.getElementById('amplitude-slider');
         const ampValue = document.getElementById('amp-value');
         ampSlider.addEventListener('input', () => {
@@ -685,228 +390,13 @@ MODIFIED: 2025-12-02
             }
         });
 
-        // === Live Mode: Amplitude slider ===
-        const liveAmpSlider = document.getElementById('live-amplitude-slider');
-        const liveAmpValue = document.getElementById('live-amp-value');
-        liveAmpSlider.addEventListener('input', () => {
-            const val = parseFloat(liveAmpSlider.value);
-            liveAmpValue.textContent = val.toFixed(1);
-            if (window.setChladniAmplitude) {
-                window.setChladniAmplitude(val);
-            }
-        });
-
-        // === Live Mode: Plate Constant slider ===
-        const plateConstSlider = document.getElementById('plate-const-slider');
-        const plateConstValue = document.getElementById('plate-const-value');
-        plateConstSlider.addEventListener('input', () => {
-            const val = parseFloat(plateConstSlider.value);
-            plateConstValue.textContent = val.toFixed(0);
-            if (window.setChladniPlateConstant) {
-                window.setChladniPlateConstant(val);
-            }
-        });
-
-        // === Reset button ===
+        // Reset button
         document.getElementById('reset-btn').addEventListener('click', () => {
             if (window.resetChladniParticles) {
                 window.resetChladniParticles();
             }
         });
-
-        // === Audio toggle button ===
-        const audioToggleBtn = document.getElementById('audio-toggle-btn');
-        const audioStatus = document.getElementById('audio-status');
-        const micNameEl = document.getElementById('mic-name');
-
-        // Get microphone name after permission is granted
-        async function updateMicrophoneName() {
-            try {
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                const audioInputs = devices.filter(d => d.kind === 'audioinput');
-                // Find the default or first available microphone
-                const defaultMic = audioInputs.find(d => d.deviceId === 'default') || audioInputs[0];
-                if (defaultMic && defaultMic.label) {
-                    micNameEl.textContent = 'Mic: ' + defaultMic.label;
-                } else if (audioInputs.length > 0) {
-                    micNameEl.textContent = 'Mic: Device ' + (audioInputs.length) + ' available';
-                }
-            } catch (e) {
-                console.log('Could not enumerate devices:', e);
-            }
-        }
-
-        audioToggleBtn.addEventListener('click', () => {
-            if (!audioEnabled) {
-                if (window.enableChladniAudio) {
-                    window.enableChladniAudio();
-                    audioToggleBtn.textContent = 'Disable Microphone';
-                    audioToggleBtn.style.background = 'rgba(255, 100, 100, 0.2)';
-                    audioToggleBtn.style.borderColor = 'rgba(255, 100, 100, 0.6)';
-                    audioEnabled = true;
-                    if (audioStatus) audioStatus.textContent = 'On';
-                    // Get microphone name after a short delay (permission needs time)
-                    setTimeout(updateMicrophoneName, 500);
-                }
-            } else {
-                if (window.disableChladniAudio) {
-                    window.disableChladniAudio();
-                    audioToggleBtn.textContent = 'Enable Microphone';
-                    audioToggleBtn.style.background = 'transparent';
-                    audioToggleBtn.style.borderColor = 'rgba(0, 255, 255, 0.3)';
-                    audioEnabled = false;
-                    if (audioStatus) audioStatus.textContent = 'Off';
-                    micNameEl.textContent = '';
-                }
-            }
-        });
-
-        // === Speaker Position Click Handler ===
-        const simCanvas = document.getElementById('simulation');
-        simCanvas.addEventListener('click', (e) => {
-            if (!isLiveMode) return;
-            const rect = simCanvas.getBoundingClientRect();
-            speakerX = (e.clientX - rect.left) / rect.width;
-            speakerY = (e.clientY - rect.top) / rect.height;
-            speakerX = Math.max(0.05, Math.min(0.95, speakerX));
-            speakerY = Math.max(0.05, Math.min(0.95, speakerY));
-            document.getElementById('speaker-pos').textContent =
-                `(${speakerX.toFixed(2)}, ${speakerY.toFixed(2)})`;
-            if (window.setChladniSpeakerPosition) {
-                window.setChladniSpeakerPosition(speakerX, speakerY);
-            }
-        });
-
-        // === Waveform Rendering ===
-        function drawWaveform(data) {
-            const ctx = waveformCtx;
-            const w = waveformCanvas.width;
-            const h = waveformCanvas.height;
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-            ctx.fillRect(0, 0, w, h);
-            ctx.strokeStyle = '#00ffff';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            const sliceWidth = w / data.length;
-            let x = 0;
-            for (let i = 0; i < data.length; i++) {
-                const v = (data[i] + 1) / 2; // normalize -1..1 to 0..1
-                const y = h - v * h;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-                x += sliceWidth;
-            }
-            ctx.stroke();
-        }
-
-        // === Main Update Loop for Live Mode ===
-        // This runs every frame and updates visualizations from WASM audio data
-
-        function updateLiveMode() {
-            if (!isLiveMode) {
-                requestAnimationFrame(updateLiveMode);
-                return;
-            }
-
-            // Get real audio data from WASM (AudioAnalyzer processes audio in Rust)
-            if (window.isChladniAudioActive && window.isChladniAudioActive() && window.getChladniDriverParams) {
-                const params = window.getChladniDriverParams();
-                if (params && params.length >= 5) {
-                    const rms = params[0];
-                    const bands = [params[1], params[2], params[3], params[4]];
-
-                    // Update RMS meter
-                    const rmsFill = document.getElementById('rms-fill');
-                    rmsFill.style.width = (rms * 100) + '%';
-                    document.getElementById('rms-value').textContent = Math.round(rms * 100) + '%';
-
-                    // Update band bars
-                    for (let i = 0; i < 4; i++) {
-                        const bar = document.getElementById('band-' + i);
-                        bar.style.height = (5 + bands[i] * 95) + '%';
-                    }
-
-                    // Draw waveform based on RMS (visual representation)
-                    const waveData = new Float32Array(128);
-                    const t = Date.now() * 0.005;
-                    for (let i = 0; i < 128; i++) {
-                        // Mix of frequencies based on band energies
-                        waveData[i] = (
-                            Math.sin(i * 0.05 + t) * bands[0] * 0.3 +
-                            Math.sin(i * 0.1 + t * 1.5) * bands[1] * 0.3 +
-                            Math.sin(i * 0.3 + t * 2) * bands[2] * 0.2 +
-                            Math.sin(i * 0.6 + t * 3) * bands[3] * 0.2
-                        ) * rms * 2;
-                    }
-                    drawWaveform(waveData);
-                }
-
-                // Update resonance and pitch accuracy display
-                if (window.getChladniDriverParams) {
-                    const params = window.getChladniDriverParams();
-                    // params[0] = rms, but we stored resonance in speaker_x position
-                    // We need a separate export for this
-                }
-
-                if (window.getChladniAudioFrequency) {
-                    const freq = window.getChladniAudioFrequency();
-                    document.getElementById('detected-freq').textContent =
-                        freq > 0 ? freq.toFixed(0) + ' Hz' : '-- Hz';
-                }
-
-                // Update detected mode and calculate resonance
-                if (window.getChladniCurrentMode && window.getChladniPlateConstant) {
-                    const mode = window.getChladniCurrentMode();
-                    const plateConst = window.getChladniPlateConstant();
-                    if (mode && mode.length >= 2) {
-                        const m = mode[0], n = mode[1];
-                        document.getElementById('detected-mode').textContent =
-                            '(' + m + ',' + n + ')';
-
-                        // Calculate target eigenfrequency
-                        const targetFreq = plateConst * (m * m + n * n);
-                        document.getElementById('target-freq').textContent =
-                            targetFreq.toFixed(0) + ' Hz';
-
-                        // Calculate resonance quality
-                        const detectedFreq = window.getChladniAudioFrequency();
-                        if (detectedFreq > 0) {
-                            const freqError = Math.abs(detectedFreq - targetFreq) / targetFreq;
-                            const resonance = Math.max(0, Math.min(1, 1 - freqError * 5));
-
-                            // Update resonance meter
-                            document.getElementById('resonance-fill').style.width =
-                                (resonance * 100) + '%';
-
-                            // Update label
-                            const label = document.getElementById('resonance-label');
-                            if (resonance > 0.9) {
-                                label.textContent = 'PERFECT!';
-                                label.style.color = '#44ff44';
-                            } else if (resonance > 0.7) {
-                                label.textContent = 'Close!';
-                                label.style.color = '#88ff88';
-                            } else if (resonance > 0.4) {
-                                label.textContent = 'Getting there...';
-                                label.style.color = '#ffaa00';
-                            } else {
-                                label.textContent = 'Off pitch';
-                                label.style.color = '#888';
-                            }
-                        }
-                    }
-                }
-            } else if (audioEnabled) {
-                // Audio enabled but not active yet - show waiting state
-                const rmsFill = document.getElementById('rms-fill');
-                rmsFill.style.width = '0%';
-                document.getElementById('rms-value').textContent = 'Waiting...';
-            }
-
-            requestAnimationFrame(updateLiveMode);
-        }
-        updateLiveMode();
     </script>
+    <script src="assets/theme.js"></script>
 </body>
-
 </html>

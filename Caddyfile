@@ -42,6 +42,10 @@ arch.dev.too.foo {
 	reverse_proxy localhost:8087
 }
 
+emergence.dev.too.foo {
+	reverse_proxy localhost:8089
+}
+
 pll.dev.too.foo {
 	reverse_proxy localhost:8090
 }

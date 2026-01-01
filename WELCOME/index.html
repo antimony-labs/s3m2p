@@ -1,1347 +1,520 @@
 <!DOCTYPE html>
-<!--
-═══════════════════════════════════════════════════════════════════════════════
-FILE: index.html | WELCOME/index.html
-PURPOSE: Landing page HTML with constellation layout, telemetry bar, and WASM integration
-MODIFIED: 2025-12-09
-═══════════════════════════════════════════════════════════════════════════════
--->
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>too.foo — Antimony Labs</title>
-    <meta name="description"
-        content="Antimony Labs builds open-source engineering tools, simulations, and manufacturing compilers — in Rust/WASM/WebGPU.">
-    <meta name="theme-color" content="#050508">
-    <script>
-        // Theme Manager - Site-wide light/dark mode
-        (function() {
-            const THEME_KEY = 'toofoo_theme';
-            function getSystemTheme() {
-                return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-            }
-            function getStoredTheme() {
-                try { return localStorage.getItem(THEME_KEY); }
-                catch { return null; }
-            }
-            function setTheme(theme) {
-                document.documentElement.setAttribute('data-theme', theme);
-                try { localStorage.setItem(THEME_KEY, theme); } catch {}
-                // Update theme-color meta
-                const meta = document.querySelector('meta[name="theme-color"]');
-                if (meta) meta.content = theme === 'light' ? '#F5F5F7' : '#050508';
-                window.dispatchEvent(new CustomEvent('themechange', { detail: { theme } }));
-            }
-            function initTheme() {
-                const theme = getStoredTheme() || getSystemTheme();
-                setTheme(theme);
-                window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
-                    if (!getStoredTheme()) setTheme(e.matches ? 'light' : 'dark');
-                });
-            }
-            window.toggleTheme = function() {
-                const current = document.documentElement.getAttribute('data-theme');
-                setTheme(current === 'light' ? 'dark' : 'light');
-            };
-            window.getCurrentTheme = () => document.documentElement.getAttribute('data-theme') || 'dark';
-            initTheme();
-        })();
-    </script>
-
-    <!-- Open Graph -->
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="Antimony Labs">
-    <meta property="og:title" content="too.foo — Antimony Labs">
-    <meta property="og:description"
-        content="Antimony Labs builds open-source engineering tools, simulations, and manufacturing compilers — in Rust/WASM/WebGPU.">
-    <meta property="og:url" content="https://too.foo">
-    <meta property="og:image" content="https://too.foo/assets/og.png">
-
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="too.foo — Antimony Labs">
-    <meta name="twitter:description"
-        content="Antimony Labs builds open-source engineering tools, simulations, and manufacturing compilers.">
-    <meta name="twitter:image" content="https://too.foo/assets/og.png">
-
-    <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Antimony Labs | too.foo</title>
+    <meta name="description" content="Antimony Labs - Open-source engineering tools, simulations, and manufacturing compilers built in Rust/WASM/WebGPU.">
+    <!-- Trunk: copy static assets + secondary pages into dist/ -->
     <link data-trunk rel="copy-dir" href="assets" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Rajdhani:wght@400;500;600;700&display=swap"
-        rel="stylesheet">
+    <link data-trunk rel="copy-file" href="about.html" />
+    <link data-trunk rel="copy-file" href="license.html" />
+    <link rel="stylesheet" href="assets/theme.css">
     <style>
-        /* CSS Variables for theming */
-        :root {
-            --bg: #050508;
-            --bg-alt: #08080c;
-            --surface: rgba(10, 15, 20, 0.85);
-            --surface-hover: rgba(0, 20, 30, 0.9);
-            --text: #e0e0e0;
-            --text-muted: rgba(255, 255, 255, 0.8);
-            --text-dim: rgba(255, 255, 255, 0.6);
-            --text-faint: rgba(255, 255, 255, 0.4);
-            --accent: #00ffff;
-            --accent-bright: #00ff00;
-            --accent-dim: rgba(0, 255, 255, 0.2);
-            --accent-faint: rgba(0, 255, 255, 0.1);
-            --border: rgba(0, 255, 255, 0.2);
-            --border-dim: rgba(0, 255, 255, 0.15);
-            --border-hover: rgba(0, 255, 255, 0.6);
-            --shadow: rgba(0, 0, 0, 0.5);
-            --overlay: rgba(0, 0, 0, 0.92);
-            --glow: rgba(0, 255, 255, 0.3);
-            --glow-strong: rgba(0, 255, 255, 0.6);
-        }
+        /* ═══════════════════════════════════════════════════════════════════
+           Landing Page Specific Styles
+           ═══════════════════════════════════════════════════════════════════ */
 
-        :root[data-theme="light"] {
-            --bg: #F5F5F7;
-            --bg-alt: #E8E8EC;
-            --surface: rgba(255, 255, 255, 0.9);
-            --surface-hover: rgba(230, 245, 250, 0.95);
-            --text: #1A1A2E;
-            --text-muted: rgba(26, 26, 46, 0.85);
-            --text-dim: rgba(26, 26, 46, 0.6);
-            --text-faint: rgba(26, 26, 46, 0.4);
-            --accent: #008B8B;
-            --accent-bright: #006666;
-            --accent-dim: rgba(0, 139, 139, 0.15);
-            --accent-faint: rgba(0, 139, 139, 0.08);
-            --border: rgba(0, 139, 139, 0.25);
-            --border-dim: rgba(0, 139, 139, 0.15);
-            --border-hover: rgba(0, 139, 139, 0.5);
-            --shadow: rgba(0, 0, 0, 0.15);
-            --overlay: rgba(245, 245, 247, 0.95);
-            --glow: rgba(0, 139, 139, 0.2);
-            --glow-strong: rgba(0, 139, 139, 0.4);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html,
         body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            touch-action: none;
-            background: var(--bg);
-            font-family: 'Rajdhani', sans-serif;
-            color: var(--text);
-        }
-
-        /* ============================================
-           MAIN LAYOUT
-           ============================================ */
-        #app-container {
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            width: 100%;
-            height: 100%;
         }
 
-        #simulation-area {
-            position: relative;
+        main {
             flex: 1;
-            min-height: 0;
-            overflow: hidden;
-        }
-
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
-
-        #ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
-
-        /* ============================================
-           CONSTELLATION LAYOUT - All sizes calculated dynamically
-           ============================================ */
-        #constellation {
-            position: absolute;
-            /* Position and size set by JavaScript */
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: var(--constellation-size);
-            height: var(--constellation-size);
-            pointer-events: none;
-        }
-
-        /* Central Core Container */
-        #center-core {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
             display: flex;
             flex-direction: column;
-            align-items: center;
             justify-content: center;
-            z-index: 50;
-            pointer-events: auto;
         }
 
-        /* Central Fluctuating Text - Hidden, moved to footer */
-        #center-text-container {
-            display: none;
-        }
-
-        /* Monolith Icons - All sizes calculated */
-        .monolith {
-            pointer-events: auto;
-            position: absolute;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.27);
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
+        /* Top section: mission */
+        .top {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 2.5rem 1.5rem 1.25rem;
+            gap: 2rem;
             align-items: center;
+            text-align: center;
+        }
+
+        @media (min-width: 900px) {
+            .top { padding: 3.25rem 1.5rem 1.75rem; }
+        }
+
+        /* Aspect-ratio aware scaling (set by theme.js) */
+        html[data-vp="mobile-portrait"] .top { padding-top: 2rem; }
+        html[data-vp="mobile-landscape"] .top { padding-top: 1.25rem; }
+
+        .hero h1 {
+            font-size: clamp(2rem, 3.2vw, 2.75rem);
+            margin: 0 0 0.5rem;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.02em;
+            display: inline-flex;
+            align-items: baseline;
+            gap: 0.18em;
+            flex-wrap: wrap;
             justify-content: center;
-            text-decoration: none;
-            /* All sizes calculated by JavaScript */
-            width: var(--bubble-size);
-            height: var(--bubble-size);
-            border-radius: 50%;
-            border: 1px solid var(--border);
-            background: var(--surface);
-            backdrop-filter: blur(6px);
-            -webkit-tap-highlight-color: transparent;
-            box-shadow: 0 0 10px var(--shadow);
-            /* Position at center of constellation - transform handles placement */
-            top: 50%;
-            left: 50%;
-            /* NO CSS transform - inline style handles rotation & translation */
         }
 
-        /* Antimony Bubble (Center) */
-        #antimony-bubble {
-            width: 120px;
-            height: 120px;
-            cursor: pointer;
-            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-            filter: drop-shadow(0 0 10px var(--glow));
-        }
-
-        #antimony-bubble:hover {
-            transform: scale(1.15) rotate(5deg);
-            filter: drop-shadow(0 0 20px var(--glow-strong));
-        }
-
-        .monolith img {
-            width: 60%;
-            height: 60%;
-        }
-
-        .monolith::before {
-            content: '';
-            position: absolute;
-            inset: -2px;
-            border-radius: 50%;
-            border: 1px solid var(--accent-faint);
-            pointer-events: none;
-        }
-
-        .monolith img {
-            width: 70%;
-            height: 70%;
-            filter: drop-shadow(0 0 2px var(--glow));
-            transition: transform 0.2s;
-        }
-
-        .monolith span {
-            position: absolute;
-            bottom: -25px;
-            font-family: 'Rajdhani', sans-serif;
-            color: var(--text-muted);
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-shadow: 0 0 5px var(--shadow);
-            opacity: 0;
-            letter-spacing: 1px;
-            transition: all 0.3s;
+        .brand-word {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 0.06em;
             white-space: nowrap;
-            text-transform: uppercase;
-            background: var(--surface);
-            padding: 2px 6px;
-            border-radius: 4px;
-            border: 1px solid var(--accent-faint);
         }
 
-        .monolith:hover {
-            border-color: var(--border-hover);
-            background: var(--surface-hover);
-            box-shadow: 0 0 25px var(--glow-strong), inset 0 0 15px var(--accent-faint);
-            z-index: 200;
-        }
-
-        .monolith:hover img {
-            transform: scale(1.2);
-            filter: drop-shadow(0 0 8px var(--glow-strong));
-        }
-
-        .monolith:hover span {
-            opacity: 1;
-            transform: translateY(5px);
-            color: var(--accent);
-            border-color: var(--glow);
-        }
-
-        /* Bubble label styling - always visible */
-        .bubble-label {
-            display: block;
-            font-size: 0.8rem;
-            font-weight: 600;
-            opacity: 1 !important;
-        }
-
-        /* Bubble description styling - hidden by default */
-        .bubble-description {
-            display: block;
-            font-size: 0.65rem;
-            font-weight: 400;
-            margin-top: 2px;
-            color: var(--text-dim);
-            text-transform: none;
-            letter-spacing: 0;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .monolith:hover .bubble-description {
-            opacity: 1;
-            color: var(--accent);
-        }
-
-        /* ============================================
-           CURVED TEXT LABELS (Issue #46)
-           Always visible, wraps around bottom of bubble
-           ============================================ */
-        .bubble-text-arc {
-            position: absolute;
-            pointer-events: none;
-            overflow: visible;
-            z-index: 90;
-        }
-
-        .bubble-text-arc text {
-            font-family: 'Rajdhani', sans-serif;
-            font-weight: 600;
-            fill: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .bubble-text-arc textPath {
-            /* Inherits from text element */
-        }
-
-        /* Hide the old hover-only label since we now have always-visible curved text */
-        .monolith span {
-            display: none;
-        }
-
-        /* Desktop Adjustments */
-        @media (min-width: 768px) {
-
-            /* Constellation size handled by viewport units above */
-            #center-text-container {
-                font-size: 2rem;
-            }
-        }
-
-        /* Back Button */
-        #back-button {
-            display: none;
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 500;
-            pointer-events: auto;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            border: 1px solid var(--glow);
-            background: var(--surface);
-            backdrop-filter: blur(6px);
-            cursor: pointer;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.27);
-            text-decoration: none;
-            color: var(--accent);
-            font-size: 1.5rem;
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        #back-button:hover {
-            border-color: var(--border-hover);
-            background: var(--surface-hover);
-            box-shadow: 0 0 25px var(--glow-strong);
-            transform: scale(1.1);
-        }
-
-        /* ============================================
-           TELEMETRY BAR
-           ============================================ */
-        #telemetry-bar {
-            flex-shrink: 0;
-            height: 40px;
-            background: var(--bg-alt);
-            border-top: 1px solid var(--border-dim);
-            font-family: 'JetBrains Mono', monospace;
-            display: flex;
-            flex-direction: row;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 20px;
-            position: relative;
-            z-index: 1000;
-        }
-
-        #stats-row {
-            display: flex;
-            gap: 20px;
-            color: var(--accent);
-            font-size: 0.7rem;
-            margin-right: auto;
-            font-variant-numeric: tabular-nums;
-        }
-
-        #stats-row span {
-            display: inline-flex;
-            align-items: center;
-        }
-
-        /* Micro-sparklines (ultra-light telemetry glyphs) */
-        .sparkline-stat {
-            display: inline-flex;
-            align-items: center;
-            gap: 3px;
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .sparkline-stat:focus {
-            outline: 1px solid var(--glow);
-            outline-offset: 2px;
-        }
-
-        .spark-label {
-            font-size: 0.5rem;
-            color: var(--accent);
-            opacity: 0.6;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .sparkline-stat svg {
-            width: 40px;
-            height: 12px;
-            vertical-align: middle;
-        }
-
-        .sparkline-stat polyline {
-            vector-effect: non-scaling-stroke;
-        }
-
-        .peek-display {
-            color: var(--accent);
-            font-weight: 500;
-        }
-
-        #log-row {
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            color: var(--accent-bright);
-            font-size: 0.7rem;
-            opacity: 0.8;
-            display: flex;
-            align-items: center;
-        }
-
-        #log-row::before {
-            content: '>';
-            margin-right: 8px;
-            color: var(--accent-bright);
-            animation: blink 1s infinite;
-        }
-
-        @keyframes blink {
-            50% {
-                opacity: 0;
-            }
-        }
-
-        #tech-info {
-            font-size: 0.6rem;
-            color: var(--text-faint);
-            text-align: right;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 14px;
-        }
-
-        #tech-info .tech-stack {
-            opacity: 0.6;
-        }
-
-        #tech-info .tech-meta {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 6px;
-        }
-
-        #tech-info .tech-by {
-            opacity: 0.6;
-        }
-
-        #tech-info .tech-by::before {
-            content: "• ";
-            opacity: 0.6;
-        }
-
-        #commit-link {
-            color: var(--accent);
-            text-decoration: none;
+        .atom-o {
+            width: 0.98em;
+            height: 0.98em;
             display: inline-block;
-            white-space: nowrap;
+            vertical-align: -0.12em;
+            flex: 0 0 auto;
         }
 
-        #commit-link:hover {
-            text-decoration: underline;
+        .atom-o img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            pointer-events: none;
+            user-select: none;
         }
 
-        @media (max-width: 600px) {
-            #telemetry-bar {
-                display: grid;
-                grid-template-columns: auto 1fr;
-                grid-template-areas:
-                    "mission stats"
-                    "log log"
-                    "tech tech";
-                height: auto;
-                padding: 8px 12px;
-                padding-bottom: calc(8px + env(safe-area-inset-bottom));
-                gap: 8px 10px;
-                align-items: center;
-            }
-
-            #stats-row {
-                grid-area: stats;
-                display: flex;
-                justify-content: flex-end;
-                flex-wrap: wrap;
-                gap: 8px;
-                margin-right: 0;
-                font-size: 0.55rem;
-                opacity: 0.5;
-            }
-
-            #stats-row span {
-                white-space: nowrap;
-            }
-
-            #log-row {
-                grid-area: log;
-                position: static;
-                transform: none;
-                font-size: 0.65rem;
-                width: 100%;
-            }
-
-            #tech-info {
-                grid-area: tech;
-                display: flex;
-                flex-direction: row;
-                align-items: center;
-                justify-content: space-between;
-                font-size: 0.55rem;
-                text-align: left;
-                line-height: 1.25;
-                gap: 10px;
-            }
-
-            #mission-btn {
-                display: block;
-                grid-area: mission;
-                margin-right: 0;
-                font-size: 0.7rem;
-                padding: 6px 12px;
-            }
-
+        .tagline {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            margin: 0;
+            font-weight: 400;
         }
 
-        /* ViewportMode-driven telemetry density */
-        html[data-viewport-mode="mobile-portrait"] #stats-row {
-            font-size: 0.45rem;
-            gap: 3px 6px;
+        .subtitle {
+            font-size: 1rem;
+            color: var(--text-muted);
+            margin: 1rem 0 0;
+            line-height: 1.6;
         }
 
-        html[data-viewport-mode="mobile-portrait"] .sparkline-stat svg {
-            width: 34px;
-            height: 12px;
+        .about {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin: 1rem 0 0;
         }
 
-        html[data-viewport-mode="mobile-landscape"] #stats-row {
-            font-size: 0.5rem;
-            gap: 4px 10px;
+        /* Mission block */
+        .mission {
+            margin-top: 2rem;
+            display: grid;
+            gap: 0.75rem;
+            justify-items: center;
         }
 
-        /* ============================================
-           MISSION OVERLAY (First-time visitor intro)
-           ============================================ */
-        #mission-overlay {
+        .mission h2 {
+            margin: 0.75rem 0 0;
+            font-size: 0.95rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+        }
+
+        .mission p {
+            margin: 0;
+            max-width: 56ch;
+            color: var(--text-muted);
+        }
+
+        .pills {
+            margin-top: 0.75rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: var(--bg-elevated);
+            color: var(--text);
+            font-size: 0.9rem;
+            text-decoration: none;
+        }
+
+        .pill svg { width: 16px; height: 16px; }
+
+        /* Panels (opened by footer bubbles) */
+        .panel {
             position: fixed;
             inset: 0;
-            background: var(--overlay);
-            backdrop-filter: blur(12px);
-            z-index: 10001;
             display: none;
-            justify-content: center;
+            z-index: 115;
+            padding: 16px;
             align-items: center;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            justify-content: center;
+        }
+        .panel:target { display: flex; }
+
+        .panel-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
         }
 
-        #mission-overlay.visible {
-            display: flex;
-            opacity: 1;
-        }
-
-        #mission-panel {
+        .panel-card {
             position: relative;
-            background: var(--surface);
-            border: 1px solid var(--glow);
-            max-width: 420px;
-            width: 90%;
-            padding: 32px 24px;
-            text-align: center;
-            box-shadow: 0 0 60px var(--accent-faint);
+            width: min(92vw, 920px);
+            max-height: min(78vh, 780px);
+            overflow: auto;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            background: var(--bg-elevated);
+            box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55);
+            padding: 16px;
         }
 
-        #mission-panel h1 {
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 1.8rem;
-            color: var(--accent);
-            margin-bottom: 8px;
+        html[data-vp="mobile-portrait"] .panel {
+            align-items: flex-end;
+            padding: 0;
+        }
+        html[data-vp="mobile-portrait"] .panel-card {
+            width: 100%;
+            max-height: 78vh;
+            border-radius: 18px 18px 0 0;
+            border-left: none;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 2px 2px 10px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 12px;
+        }
+        .panel-title {
+            margin: 0;
+            font-size: 1.1rem;
             font-weight: 700;
         }
-
-        #mission-panel .tagline {
-            font-size: 1.1rem;
-            color: var(--text);
-            margin-bottom: 16px;
-            font-style: italic;
-        }
-
-        #mission-panel .description {
-            font-size: 0.9rem;
-            color: var(--text-dim);
-            line-height: 1.5;
-            margin-bottom: 20px;
-        }
-
-        #mission-panel .instruction {
-            font-size: 0.85rem;
-            color: var(--accent);
-            opacity: 0.8;
-            margin-bottom: 24px;
-        }
-
-        .mission-ctas {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .mission-cta {
-            display: block;
-            padding: 12px 20px;
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 1rem;
-            font-weight: 600;
-            text-decoration: none;
+        .panel-close {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 999px;
             border: 1px solid var(--border);
-            background: var(--accent-faint);
-            color: var(--accent);
-            transition: all 0.2s ease;
+            color: var(--text);
+            text-decoration: none;
+            background: transparent;
+        }
+        .panel-close:hover { background: var(--code-bg); }
+
+        .panel-desc {
+            margin: 0 0 12px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
         }
 
-        .mission-cta:hover {
-            background: var(--accent-dim);
-            border-color: var(--border-hover);
+        .section-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
         }
 
-        #mission-close {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            background: none;
-            border: none;
-            color: var(--accent);
-            font-size: 1.8rem;
-            cursor: pointer;
-            padding: 8px;
+        .section-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: background-color 0.2s;
         }
 
-        /* Mission Button (always visible in telemetry bar) */
-        #mission-btn {
-            background: none;
-            border: 1px solid var(--glow);
-            color: var(--accent);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.65rem;
-            padding: 4px 10px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            margin-right: 12px;
+        .section-item:hover {
+            background-color: var(--bg-elevated);
         }
 
-        #mission-btn:hover {
-            border-color: var(--border-hover);
-            background: var(--accent-faint);
+        .section-item-icon {
+            width: 32px;
+            height: 32px;
+            margin-right: 0.75rem;
+            flex-shrink: 0;
         }
 
-        /* Vision View Styling */
-        #mission-vision {
-            text-align: left;
-            max-height: 70vh;
-            overflow-y: auto;
+        .section-item-info {
+            flex: 1;
         }
 
-        #mission-vision h1 {
-            text-align: center;
-            margin-bottom: 20px;
+        .section-item-label {
+            font-weight: 500;
+            color: var(--text);
+            display: block;
+            margin-bottom: 0.25rem;
         }
 
-        #mission-vision h2 {
-            color: var(--accent);
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 1.1rem;
-            margin-top: 20px;
-            margin-bottom: 10px;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 4px;
-        }
-
-        #mission-vision p {
+        .section-item-desc {
             font-size: 0.85rem;
             color: var(--text-muted);
-            line-height: 1.5;
-            margin-bottom: 12px;
         }
 
-        #mission-vision ul {
-            margin-left: 20px;
-            margin-bottom: 12px;
-        }
-
-        #mission-vision li {
-            font-size: 0.85rem;
-            color: var(--text-dim);
-            margin-bottom: 6px;
-            line-height: 1.4;
-        }
-
-        #mission-vision strong {
-            color: var(--accent);
-        }
-
-        .lang-switcher {
-            text-align: center;
-            font-size: 0.75rem;
-            margin-bottom: 16px;
-            color: var(--text-dim);
-        }
-
-        .lang-switcher a {
-            color: var(--accent);
-            opacity: 0.7;
-            text-decoration: none;
-            transition: color 0.2s ease, opacity 0.2s ease;
-        }
-
-        .lang-switcher a:hover {
-            color: var(--accent);
-            opacity: 1;
-            text-decoration: underline;
-        }
-
-        .lang-switcher a.lang-active {
-            color: var(--accent);
-            opacity: 1;
-            font-weight: bold;
-        }
-
-        .vision-back-btn {
-            background: none;
-            border: 1px solid var(--glow);
-            color: var(--accent);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            padding: 6px 12px;
-            cursor: pointer;
-            margin-bottom: 16px;
-            transition: all 0.2s ease;
-        }
-
-        .vision-back-btn:hover {
-            border-color: var(--border-hover);
-            background: var(--accent-faint);
-        }
-
-        /* Make CTA button look like link */
-        button.mission-cta {
-            width: 100%;
-            cursor: pointer;
-        }
-
-        /* Theme Toggle */
-        #theme-toggle {
-            background: none;
-            border: 1px solid var(--border-dim);
-            border-radius: 6px;
-            padding: 4px 8px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            color: var(--text-faint);
-            transition: border-color 0.2s, color 0.2s;
-            margin-left: 8px;
-        }
-
-        #theme-toggle:hover {
-            border-color: var(--accent);
-            color: var(--accent);
-        }
-
-        .icon-sun, .icon-moon { display: none; }
-        :root[data-theme="dark"] .icon-sun { display: inline; }
-        :root[data-theme="light"] .icon-moon { display: inline; }
+        /* Footer dock spacing handled by `.has-footer-dock` (theme.css) */
     </style>
 </head>
-
-<body>
-    <div id="app-container">
-        <div id="simulation-area">
-            <canvas id="simulation"></canvas>
-            <div id="ui-layer">
-                <!-- Back Button (hidden by default) -->
-                <a id="back-button" href="#">&larr;</a>
-
-                <!-- Constellation Layout -->
-                <div id="constellation">
-                    <!-- Central Glitch Core -->
-                    <div id="center-core">
-                        <div id="center-text-container" style="opacity: 0;">Antimony</div>
-                    </div>
-                    <!-- Bubbles are dynamically rendered by Rust/WASM -->
-                </div>
-            </div>
+<body class="has-footer-dock">
+    <!-- Sticky Header -->
+    <header>
+        <div class="header-logo">
+            <img src="assets/islands/antimony.svg" class="bubble-mark" alt="Antimony Labs">
+            <span class="site-name">too.foo</span>
         </div>
+        <button id="theme-toggle" aria-label="Toggle theme">
+            <span class="icon-light" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z" stroke="currentColor" stroke-width="1.75" />
+                    <path d="M12 2v2.5M12 19.5V22M4.22 4.22 6 6M18 18l1.78 1.78M2 12h2.5M19.5 12H22M4.22 19.78 6 18M18 6l1.78-1.78" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+                </svg>
+            </span>
+            <span class="icon-dark" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="M21 14.2A7.5 7.5 0 0 1 9.8 3a6.5 6.5 0 1 0 11.2 11.2Z" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/>
+                </svg>
+            </span>
+        </button>
+    </header>
 
-        <div id="telemetry-bar">
-            <button id="mission-btn">MISSION</button>
-            <div id="stats-row">
-                <span id="stat-pop">POP: 0</span>
-                <span id="stat-gen">GEN: 0</span>
-                <span id="stat-fps">FPS: 60</span>
-                <span id="stat-bd" class="sparkline-stat" role="button" tabindex="0" data-peek="">
-                    <span class="spark-label">BD</span>
-                    <svg viewBox="0 0 40 12" preserveAspectRatio="none">
-                        <polyline id="spark-births" points="" fill="none" stroke="#00ff88" stroke-width="1" />
-                        <polyline id="spark-deaths" points="" fill="none" stroke="#ff4444" stroke-width="1" />
-                    </svg>
-                </span>
-                <span id="stat-hcs" class="sparkline-stat" role="button" tabindex="0" data-peek="">
-                    <span class="spark-label">HCS</span>
-                    <svg viewBox="0 0 40 12" preserveAspectRatio="none">
-                        <polyline id="spark-h" points="" fill="none" stroke="#88ff88" stroke-width="1" />
-                        <polyline id="spark-c" points="" fill="none" stroke="#ff8888" stroke-width="1" />
-                        <polyline id="spark-s" points="" fill="none" stroke="#8888ff" stroke-width="1" />
-                    </svg>
-                </span>
-                <span id="stat-div" class="sparkline-stat" role="button" tabindex="0" data-peek="">
-                    <span class="spark-label">DIV</span>
-                    <svg viewBox="0 0 40 12" preserveAspectRatio="none">
-                        <polyline id="spark-div" points="" fill="none" stroke="#ffff00" stroke-width="1" />
-                    </svg>
-                </span>
-            </div>
-            <div id="log-row">
-                <span id="console-log"></span>
-            </div>
-            <div id="tech-info">
-                <span class="tech-stack">RUST • WASM • WGPU</span>
-                <span class="tech-meta">
-                    <a id="commit-link" href="#" target="_blank" rel="noopener noreferrer">Loading...</a>
-                    <span class="tech-by">by Shivam</span>
-                </span>
-                <button id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle light/dark mode">
-                    <span class="icon-sun">&#9788;</span>
-                    <span class="icon-moon">&#9790;</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Mission Overlay (first-time visitor intro) -->
-    <div id="mission-overlay">
-        <div id="mission-panel">
-            <button id="mission-close">&times;</button>
-            <!-- Intro View -->
-            <div id="mission-intro">
-                <h1>Antimony Labs</h1>
+    <main>
+        <!-- Hero -->
+        <div class="top">
+            <!-- Hero -->
+            <section class="hero">
+                <h1 aria-label="Antimony Labs">
+                    <span class="brand-word" aria-hidden="true">
+                        <span>Antim</span>
+                        <span class="atom-o">
+                            <img src="assets/islands/antimony.svg" alt="">
+                        </span>
+                        <span>ny</span>
+                    </span>
+                    <span aria-hidden="true">Labs</span>
+                </h1>
                 <p class="tagline">Let AI design, humans build.</p>
-                <p class="description">Open-source engineering tools, simulations, and manufacturing compilers — built
-                    in Rust/WASM/WebGPU.</p>
-                <p class="instruction">Tap a bubble to open a project.</p>
-                <div class="mission-ctas">
-                    <a href="#/tools" class="mission-cta" id="cta-tools">Explore Tools</a>
-                    <a href="https://helios.too.foo" class="mission-cta" id="cta-helios">Open Helios</a>
-                    <button class="mission-cta" id="cta-vision">Read Vision</button>
-                </div>
-            </div>
-            <!-- Vision View -->
-            <div id="mission-vision" style="display: none;">
-                <button id="vision-back" class="vision-back-btn">&larr; Back</button>
-                <h1 id="vision-title">Vision</h1>
-                <p class="lang-switcher">
-                    <a href="#" data-lang="en" class="lang-active">English</a> |
-                    <a href="#" data-lang="hi">हिन्दी</a> |
-                    <a href="#" data-lang="zh">中文</a> |
-                    <a href="#" data-lang="es">Español</a> |
-                    <a href="#" data-lang="ar">العربية</a>
+                <p class="subtitle">Open-source engineering tools, simulations, and manufacturing compilers — built in Rust/WASM/WebGPU.</p>
+                <p class="about">I’m Shivam. I’m building the kernel and the apps for making physical products.</p>
+            </section>
+
+            <section class="mission" aria-label="Mission">
+                <h2>Mission</h2>
+                <p>
+                    Build an open, composable “kernel” for making physical products — from ideas to manufacturing-ready artifacts.
                 </p>
-
-                <!-- English -->
-                <div class="vision-content" data-lang="en">
-                    <h2>A product for making products</h2>
-                    <p><strong>Antimony Labs</strong> is a compiler for physical products — one unified system that
-                        outputs manufacturing-ready artifacts.</p>
-                    <p>Today's landscape is fragmented: G-code for CAM, dozens of CAD formats, Gerber files, netlists,
-                        BOMs in spreadsheets. <strong>The goal: one file for manufacturing.</strong></p>
-
-                    <h2>Why now</h2>
-                    <p>LLMs can generate code, but engineering needs <strong>correctness, repeatability, and
-                            auditability</strong>. The winning stack is "LLM + deterministic kernel + tests."</p>
-                    <p>Every piece of software will eventually be rewritten with AI assistance. <strong>Rust</strong> is
-                        the foundation — memory-safe, fast, compiles to WASM for the browser. Build it right once.</p>
-
-                    <h2>The architecture</h2>
-                    <ul>
-                        <li><strong>DNA</strong>: The kernel — math, physics, CAD primitives, exporters. Deterministic
-                            and tested.</li>
-                        <li><strong>CORE</strong>: Engines — domain workflows (CAD, SPICE, export).</li>
-                        <li><strong>TOOLS</strong>: Products — thin UIs that share the kernel.</li>
-                    </ul>
-
-                    <h2>Capturing attention to create value</h2>
-                    <p>AI generates value when humans engage. Our ecosystem:</p>
-                    <ul>
-                        <li><strong>SIMULATIONS</strong>: Interactive demos that teach physics concepts</li>
-                        <li><strong>LEARN</strong>: Tutorials on AI, embedded systems, robotics</li>
-                        <li><strong>BLOG</strong>: Technical writing and project documentation</li>
-                    </ul>
-                    <p>Attention flows to tools. Tools generate manufacturing artifacts. <strong>The funnel is: Learn →
-                            Simulate → Build → Export.</strong></p>
-
-                    <h2>The wedge: Autocrate</h2>
-                    <p>Already sold to clients. Proves the model:</p>
-                    <ul>
-                        <li><strong>Input</strong>: Crate spec (dims, weight, compliance)</li>
-                        <li><strong>Output</strong>: STEP assembly + BOM + Cut List</li>
-                    </ul>
-                    <p><strong>MBD-first</strong>: one STEP file sufficient for manufacturing.</p>
-
-                    <h2>What's next</h2>
-                    <ul>
-                        <li>Unified export: STEP + Gerber + G-code from the same design graph</li>
-                        <li>More products: power circuits, parametric CAD, PCB layout</li>
-                        <li>AI-assisted iteration with kernel tests as the safety net</li>
-                    </ul>
+                <p>
+                    Use the bubbles below to jump into tools, simulations, or learning modules.
+                </p>
+                <div class="pills" aria-label="Quick links">
+                    <a class="pill" href="#panel-tools">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14 7.5V6a2 2 0 0 0-4 0v1.5M7 10h10l-1 10H8L7 10Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+                        Tools
+                    </a>
+                    <a class="pill" href="#panel-simulations">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12c2.5-4 13.5-4 16 0-2.5 4-13.5 4-16 0Z" stroke="currentColor" stroke-width="1.6"/><path d="M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" stroke="currentColor" stroke-width="1.6"/></svg>
+                        Simulations
+                    </a>
+                    <a class="pill" href="#panel-learn">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 19V6.5A2.5 2.5 0 0 1 7.5 4H19v15H7.5A2.5 2.5 0 0 0 5 21" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+                        Learn
+                    </a>
                 </div>
+            </section>
+        </div>
+    </main>
 
-                <!-- Hindi -->
-                <div class="vision-content" data-lang="hi" style="display: none;">
-                    <h2>उत्पाद बनाने के लिए एक उत्पाद</h2>
-                    <p><strong>Antimony Labs</strong> भौतिक उत्पादों के लिए एक compiler है — एक unified system जो
-                        manufacturing-ready artifacts output करता है।</p>
-                    <p>आज का landscape fragmented है: CAM के लिए G-code, दर्जनों CAD formats, Gerber files, netlists,
-                        spreadsheets में BOMs। <strong>लक्ष्य: manufacturing के लिए एक file।</strong></p>
-
-                    <h2>अभी क्यों</h2>
-                    <p>LLMs code generate कर सकते हैं, लेकिन engineering को <strong>correctness, repeatability, और
-                            auditability</strong> चाहिए। Winning stack है "LLM + deterministic kernel + tests।"</p>
-                    <p>हर software AI assistance से rewrite होगा। <strong>Rust</strong> foundation है — memory-safe,
-                        fast, browser के लिए WASM में compile होता है। एक बार सही बनाओ।</p>
-
-                    <h2>Architecture</h2>
-                    <ul>
-                        <li><strong>DNA</strong>: Kernel — math, physics, CAD primitives, exporters। Deterministic और
-                            tested।</li>
-                        <li><strong>CORE</strong>: Engines — domain workflows (CAD, SPICE, export)।</li>
-                        <li><strong>TOOLS</strong>: Products — thin UIs जो kernel share करते हैं।</li>
-                    </ul>
-
-                    <h2>Value create करने के लिए attention capture करना</h2>
-                    <p>AI value generate करता है जब humans engage करते हैं। हमारा ecosystem:</p>
-                    <ul>
-                        <li><strong>SIMULATIONS</strong>: Interactive demos जो physics concepts सिखाते हैं</li>
-                        <li><strong>LEARN</strong>: AI, embedded systems, robotics पर tutorials</li>
-                        <li><strong>BLOG</strong>: Technical writing और project documentation</li>
-                    </ul>
-                    <p>Attention tools की ओर flow होता है। Tools manufacturing artifacts generate करते हैं।
-                        <strong>Funnel है: Learn → Simulate → Build → Export।</strong>
-                    </p>
-
-                    <h2>Wedge: Autocrate</h2>
-                    <p>पहले से clients को बेचा जा चुका है। Model prove करता है:</p>
-                    <ul>
-                        <li><strong>Input</strong>: Crate spec (dims, weight, compliance)</li>
-                        <li><strong>Output</strong>: STEP assembly + BOM + Cut List</li>
-                    </ul>
-                    <p><strong>MBD-first</strong>: manufacturing के लिए एक STEP file पर्याप्त।</p>
-
-                    <h2>आगे क्या है</h2>
-                    <ul>
-                        <li>Unified export: same design graph से STEP + Gerber + G-code</li>
-                        <li>More products: power circuits, parametric CAD, PCB layout</li>
-                        <li>AI-assisted iteration जिसमें kernel tests safety net हैं</li>
-                    </ul>
-                </div>
-
-                <!-- Chinese -->
-                <div class="vision-content" data-lang="zh" style="display: none;">
-                    <h2>制造产品的产品</h2>
-                    <p><strong>Antimony Labs</strong> 是实体产品的编译器——一个输出制造就绪工件的统一系统。</p>
-                    <p>当今的格局是碎片化的：CAM 用 G-code，数十种 CAD 格式，Gerber 文件，网表，电子表格中的 BOM。<strong>目标：制造只需一个文件。</strong></p>
-
-                    <h2>为什么是现在</h2>
-                    <p>LLM 可以生成代码，但工程需要<strong>正确性、可重复性和可审计性</strong>。制胜组合是"LLM + 确定性内核 + 测试"。</p>
-                    <p>每个软件最终都会在 AI 辅助下重写。<strong>Rust</strong> 是基础——内存安全、快速、编译为浏览器的 WASM。一次构建正确。</p>
-
-                    <h2>架构</h2>
-                    <ul>
-                        <li><strong>DNA</strong>：内核——数学、物理、CAD 原语、导出器。确定性且经过测试。</li>
-                        <li><strong>CORE</strong>：引擎——领域工作流（CAD、SPICE、导出）。</li>
-                        <li><strong>TOOLS</strong>：产品——共享内核的轻量 UI。</li>
-                    </ul>
-
-                    <h2>捕获注意力以创造价值</h2>
-                    <p>当人类参与时，AI 创造价值。我们的生态系统：</p>
-                    <ul>
-                        <li><strong>SIMULATIONS</strong>：教授物理概念的交互式演示</li>
-                        <li><strong>LEARN</strong>：AI、嵌入式系统、机器人教程</li>
-                        <li><strong>BLOG</strong>：技术写作和项目文档</li>
-                    </ul>
-                    <p>注意力流向工具。工具生成制造工件。<strong>漏斗是：Learn → Simulate → Build → Export。</strong></p>
-
-                    <h2>楔子：Autocrate</h2>
-                    <p>已售给客户。证明模型：</p>
-                    <ul>
-                        <li><strong>输入</strong>：Crate 规格（尺寸、重量、合规性）</li>
-                        <li><strong>输出</strong>：STEP 装配体 + BOM + 切割清单</li>
-                    </ul>
-                    <p><strong>MBD 优先</strong>：一个 STEP 文件足以制造。</p>
-
-                    <h2>下一步</h2>
-                    <ul>
-                        <li>统一导出：从同一设计图导出 STEP + Gerber + G-code</li>
-                        <li>更多产品：电源电路、参数化 CAD、PCB 布局</li>
-                        <li>以内核测试为安全网的 AI 辅助迭代</li>
-                    </ul>
-                </div>
-
-                <!-- Spanish -->
-                <div class="vision-content" data-lang="es" style="display: none;">
-                    <h2>Un producto para hacer productos</h2>
-                    <p><strong>Antimony Labs</strong> es un compilador para productos físicos — un sistema unificado que
-                        produce artefactos listos para fabricación.</p>
-                    <p>El panorama actual está fragmentado: G-code para CAM, docenas de formatos CAD, archivos Gerber,
-                        netlists, BOMs en hojas de cálculo. <strong>El objetivo: un archivo para fabricación.</strong>
-                    </p>
-
-                    <h2>Por qué ahora</h2>
-                    <p>Los LLMs pueden generar código, pero la ingeniería necesita <strong>corrección, repetibilidad y
-                            auditabilidad</strong>. La combinación ganadora es "LLM + kernel determinista + tests."</p>
-                    <p>Todo software eventualmente será reescrito con asistencia de IA. <strong>Rust</strong> es la base
-                        — memory-safe, rápido, compila a WASM para el navegador. Constrúyelo bien una vez.</p>
-
-                    <h2>La arquitectura</h2>
-                    <ul>
-                        <li><strong>DNA</strong>: El kernel — matemáticas, física, primitivas CAD, exportadores.
-                            Determinista y testeado.</li>
-                        <li><strong>CORE</strong>: Motores — flujos de trabajo de dominio (CAD, SPICE, export).</li>
-                        <li><strong>TOOLS</strong>: Productos — UIs ligeras que comparten el kernel.</li>
-                    </ul>
-
-                    <h2>Capturar atención para crear valor</h2>
-                    <p>La IA genera valor cuando los humanos participan. Nuestro ecosistema:</p>
-                    <ul>
-                        <li><strong>SIMULATIONS</strong>: Demos interactivas que enseñan conceptos de física</li>
-                        <li><strong>LEARN</strong>: Tutoriales sobre IA, sistemas embebidos, robótica</li>
-                        <li><strong>BLOG</strong>: Escritura técnica y documentación de proyectos</li>
-                    </ul>
-                    <p>La atención fluye hacia las herramientas. Las herramientas generan artefactos de fabricación.
-                        <strong>El embudo es: Learn → Simulate → Build → Export.</strong>
-                    </p>
-
-                    <h2>La cuña: Autocrate</h2>
-                    <p>Ya vendido a clientes. Demuestra el modelo:</p>
-                    <ul>
-                        <li><strong>Input</strong>: Especificación de crate (dimensiones, peso, cumplimiento)</li>
-                        <li><strong>Output</strong>: Ensamblaje STEP + BOM + Lista de corte</li>
-                    </ul>
-                    <p><strong>MBD-first</strong>: un archivo STEP suficiente para fabricación.</p>
-
-                    <h2>Qué sigue</h2>
-                    <ul>
-                        <li>Exportación unificada: STEP + Gerber + G-code desde el mismo grafo de diseño</li>
-                        <li>Más productos: circuitos de potencia, CAD paramétrico, layout PCB</li>
-                        <li>Iteración asistida por IA con tests del kernel como red de seguridad</li>
-                    </ul>
-                </div>
-
-                <!-- Arabic -->
-                <div class="vision-content" data-lang="ar" style="display: none;" dir="rtl">
-                    <h2>منتج لصنع المنتجات</h2>
-                    <p><strong>Antimony Labs</strong> هو مُجمِّع للمنتجات المادية — نظام موحد ينتج مخرجات جاهزة للتصنيع.
-                    </p>
-                    <p>المشهد الحالي مجزأ: G-code لـ CAM، عشرات تنسيقات CAD، ملفات Gerber، قوائم الشبكات، BOMs في جداول
-                        البيانات. <strong>الهدف: ملف واحد للتصنيع.</strong></p>
-
-                    <h2>لماذا الآن</h2>
-                    <p>يمكن لـ LLMs توليد الكود، لكن الهندسة تحتاج <strong>الصحة، والتكرارية، والقابلية
-                            للتدقيق</strong>. التركيبة الفائزة هي "LLM + نواة حتمية + اختبارات."</p>
-                    <p>كل برنامج سيُعاد كتابته في النهاية بمساعدة الذكاء الاصطناعي. <strong>Rust</strong> هو الأساس —
-                        آمن للذاكرة، سريع، يُجمَّع إلى WASM للمتصفح. ابنِه بشكل صحيح مرة واحدة.</p>
-
-                    <h2>البنية</h2>
-                    <ul>
-                        <li><strong>DNA</strong>: النواة — الرياضيات، الفيزياء، أساسيات CAD، المُصدِّرون. حتمي ومُختبر.
-                        </li>
-                        <li><strong>CORE</strong>: المحركات — سير عمل المجال (CAD، SPICE، التصدير).</li>
-                        <li><strong>TOOLS</strong>: المنتجات — واجهات مستخدم خفيفة تشارك النواة.</li>
-                    </ul>
-
-                    <h2>جذب الانتباه لخلق القيمة</h2>
-                    <p>الذكاء الاصطناعي يولد قيمة عندما يشارك البشر. منظومتنا:</p>
-                    <ul>
-                        <li><strong>SIMULATIONS</strong>: عروض تفاعلية تُعلِّم مفاهيم الفيزياء</li>
-                        <li><strong>LEARN</strong>: دروس عن الذكاء الاصطناعي، الأنظمة المدمجة، الروبوتات</li>
-                        <li><strong>BLOG</strong>: الكتابة التقنية وتوثيق المشاريع</li>
-                    </ul>
-                    <p>الانتباه يتدفق نحو الأدوات. الأدوات تولد مخرجات التصنيع. <strong>القمع هو: Learn ← Simulate ←
-                            Build ← Export.</strong></p>
-
-                    <h2>الوتد: Autocrate</h2>
-                    <p>بيعت بالفعل للعملاء. تثبت النموذج:</p>
-                    <ul>
-                        <li><strong>المدخل</strong>: مواصفات الصندوق (الأبعاد، الوزن، الامتثال)</li>
-                        <li><strong>المخرج</strong>: تجميع STEP + BOM + قائمة القطع</li>
-                    </ul>
-                    <p><strong>MBD أولاً</strong>: ملف STEP واحد يكفي للتصنيع.</p>
-
-                    <h2>ما التالي</h2>
-                    <ul>
-                        <li>تصدير موحد: STEP + Gerber + G-code من نفس رسم التصميم</li>
-                        <li>المزيد من المنتجات: دوائر الطاقة، CAD البارامتري، تخطيط PCB</li>
-                        <li>التكرار بمساعدة الذكاء الاصطناعي مع اختبارات النواة كشبكة أمان</li>
-                    </ul>
-                </div>
+    <!-- Panels (opened via footer bubbles) -->
+    <div id="panel-tools" class="panel" role="dialog" aria-modal="true" aria-label="Tools">
+        <a class="panel-backdrop" href="#" aria-label="Close"></a>
+        <div class="panel-card">
+            <div class="panel-head">
+                <h2 class="panel-title">Tools</h2>
+                <a class="panel-close" href="#" aria-label="Close">×</a>
+            </div>
+            <p class="panel-desc">Engineering tools — lightweight UIs until you enter a specific tool.</p>
+            <div class="section-grid">
+                <a href="https://pll.too.foo" class="section-item">
+                    <img src="assets/islands/pll.svg" class="section-item-icon" alt="PLL">
+                    <div class="section-item-info">
+                        <span class="section-item-label">PLL</span>
+                        <span class="section-item-desc">Phase Lock Loop Designer</span>
+                    </div>
+                </a>
+                <a href="https://sensors.too.foo" class="section-item">
+                    <img src="assets/islands/sensors.svg" class="section-item-icon" alt="Sensors">
+                    <div class="section-item-info">
+                        <span class="section-item-label">Sensors</span>
+                        <span class="section-item-desc">Mobile Sensor Testing</span>
+                    </div>
+                </a>
+                <a href="https://autocrate.too.foo" class="section-item">
+                    <img src="assets/islands/automation.svg" class="section-item-icon" alt="AutoCrate">
+                    <div class="section-item-info">
+                        <span class="section-item-label">AutoCrate</span>
+                        <span class="section-item-desc">Shipping Crate Generator</span>
+                    </div>
+                </a>
+                <a href="https://crm.too.foo" class="section-item">
+                    <img src="assets/islands/crm.svg" class="section-item-icon" alt="CRM">
+                    <div class="section-item-info">
+                        <span class="section-item-label">CRM</span>
+                        <span class="section-item-desc">Customer Relations</span>
+                    </div>
+                </a>
+                <a href="https://power.too.foo" class="section-item">
+                    <img src="assets/islands/power.svg" class="section-item-icon" alt="Power">
+                    <div class="section-item-info">
+                        <span class="section-item-label">Power</span>
+                        <span class="section-item-desc">Power Circuit Designer</span>
+                    </div>
+                </a>
             </div>
         </div>
     </div>
 
-    <!-- Architecture Diagram Container -->
-    <div id="arch-container"
-        style="display: none; position: fixed; inset: 0; background: rgba(5, 5, 8, 0.95); z-index: 5000; justify-content: center; align-items: center;">
+    <div id="panel-simulations" class="panel" role="dialog" aria-modal="true" aria-label="Simulations">
+        <a class="panel-backdrop" href="#" aria-label="Close"></a>
+        <div class="panel-card">
+            <div class="panel-head">
+                <h2 class="panel-title">Simulations</h2>
+                <a class="panel-close" href="#" aria-label="Close">×</a>
+            </div>
+            <p class="panel-desc">Interactive simulations (WASM) — loaded only when you enter one.</p>
+            <div class="section-grid">
+                <a href="https://helios.too.foo" class="section-item">
+                    <img src="assets/islands/helios.svg" class="section-item-icon" alt="Helios">
+                    <div class="section-item-info">
+                        <span class="section-item-label">Helios</span>
+                        <span class="section-item-desc">Heliosphere visualization</span>
+                    </div>
+                </a>
+                <a href="https://chladni.too.foo" class="section-item">
+                    <img src="assets/islands/chladni.svg" class="section-item-icon" alt="Chladni">
+                    <div class="section-item-info">
+                        <span class="section-item-label">Chladni</span>
+                        <span class="section-item-desc">Wave Pattern Simulation</span>
+                    </div>
+                </a>
+                <a href="https://emergence.too.foo" class="section-item">
+                    <img src="assets/islands/sims.svg" class="section-item-icon" alt="Emergence">
+                    <div class="section-item-info">
+                        <span class="section-item-label">Emergence</span>
+                        <span class="section-item-desc">Boids Ecosystem Simulation</span>
+                    </div>
+                </a>
+            </div>
+        </div>
     </div>
 
-    <!-- JS Helper for Rust -->
-    <script>
-        const textEl = document.getElementById('center-text-container');
+    <div id="panel-learn" class="panel" role="dialog" aria-modal="true" aria-label="Learn">
+        <a class="panel-backdrop" href="#" aria-label="Close"></a>
+        <div class="panel-card">
+            <div class="panel-head">
+                <h2 class="panel-title">Learn</h2>
+                <a class="panel-close" href="#" aria-label="Close">×</a>
+            </div>
+            <p class="panel-desc">Learning modules — small, focused, and fast.</p>
+            <div class="section-grid">
+                <a href="https://ai.too.foo" class="section-item">
+                    <img src="assets/islands/ai.svg" class="section-item-icon" alt="AI">
+                    <div class="section-item-info">
+                        <span class="section-item-label">AI</span>
+                        <span class="section-item-desc">Machine Learning & Neural Networks</span>
+                    </div>
+                </a>
+                <a href="https://ubuntu.too.foo" class="section-item">
+                    <img src="assets/islands/ubuntu.svg" class="section-item-icon" alt="Ubuntu">
+                    <div class="section-item-info">
+                        <span class="section-item-label">Ubuntu</span>
+                        <span class="section-item-desc">Linux System Administration</span>
+                    </div>
+                </a>
+                <a href="https://opencv.too.foo" class="section-item">
+                    <img src="assets/islands/opencv.svg" class="section-item-icon" alt="OpenCV">
+                    <div class="section-item-info">
+                        <span class="section-item-label">OpenCV</span>
+                        <span class="section-item-desc">Computer Vision</span>
+                    </div>
+                </a>
+                <a href="https://arduino.too.foo" class="section-item">
+                    <img src="assets/islands/arduino.svg" class="section-item-icon" alt="Arduino">
+                    <div class="section-item-info">
+                        <span class="section-item-label">Arduino</span>
+                        <span class="section-item-desc">Embedded Systems</span>
+                    </div>
+                </a>
+                <a href="https://esp32.too.foo" class="section-item">
+                    <img src="assets/islands/esp32.svg" class="section-item-icon" alt="ESP32">
+                    <div class="section-item-info">
+                        <span class="section-item-label">ESP32</span>
+                        <span class="section-item-desc">IoT Development</span>
+                    </div>
+                </a>
+                <a href="https://swarm.too.foo" class="section-item">
+                    <img src="assets/islands/swarm.svg" class="section-item-icon" alt="Swarm">
+                    <div class="section-item-info">
+                        <span class="section-item-label">Swarm</span>
+                        <span class="section-item-desc">Multi-Robot Coordination</span>
+                    </div>
+                </a>
+                <a href="https://slam.too.foo" class="section-item">
+                    <img src="assets/islands/slam.svg" class="section-item-icon" alt="SLAM">
+                    <div class="section-item-info">
+                        <span class="section-item-label">SLAM</span>
+                        <span class="section-item-desc">Localization & Mapping</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
 
-        window.updateCenterText = function (text, opacity, logoOpacity, useGlitch) {
-            if (textEl) {
-                textEl.innerText = text;
-                textEl.style.opacity = opacity;
-                if (useGlitch) {
-                    // Apply random transform jitter
-                    const jitter = 2.0;
-                    textEl.style.transform = `translate(${(Math.random() - 0.5) * jitter}px, ${(Math.random() - 0.5) * jitter}px)`;
-                    textEl.style.filter = 'blur(0.5px)';
-                } else {
-                    textEl.style.transform = 'none';
-                    textEl.style.filter = 'none';
-                }
-            }
-        };
-    </script>
+    <footer class="site-footer">
+        <nav class="bubble-dock" aria-label="Always available navigation">
+            <a class="dock-link" href="#panel-tools" aria-label="Tools">
+                <img class="dock-icon" src="assets/islands/tools.svg" alt="">
+                <span class="dock-label">Tools</span>
+            </a>
+            <a class="dock-link" href="#panel-simulations" aria-label="Simulations">
+                <img class="dock-icon" src="assets/islands/sims.svg" alt="">
+                <span class="dock-label">Sims</span>
+            </a>
+            <a class="dock-link" href="#panel-learn" aria-label="Learn">
+                <img class="dock-icon" src="assets/islands/learn.svg" alt="">
+                <span class="dock-label">Learn</span>
+            </a>
+            <a class="dock-link" href="https://blog.too.foo" aria-label="Blog">
+                <img class="dock-icon" src="assets/islands/blog.svg" alt="">
+                <span class="dock-label">Blog</span>
+            </a>
+            <a class="dock-link" href="https://x.com/LazyShivam" target="_blank" rel="noopener" aria-label="X">
+                <img class="dock-icon" src="assets/islands/x.svg" alt="">
+                <span class="dock-label">X</span>
+            </a>
+            <a class="dock-link" href="about.html" aria-label="Vision">
+                <img class="dock-icon" src="assets/islands/antimony.svg" alt="">
+                <span class="dock-label">Vision</span>
+            </a>
+        </nav>
+        <div class="footer-meta">
+            © 2025 Shivam Bhardwaj • <a href="license.html">MIT</a> • <a href="https://github.com/Shivam-Bhardwaj/S3M2P">GitHub</a>
+        </div>
+    </footer>
 
-    <script>
-        // Mission Overlay Logic
-        (function () {
-            const missionOverlay = document.getElementById('mission-overlay');
-            const missionCloseBtn = document.getElementById('mission-close');
-            const missionBtn = document.getElementById('mission-btn');
-            const missionIntro = document.getElementById('mission-intro');
-            const missionVision = document.getElementById('mission-vision');
-            const ctaVision = document.getElementById('cta-vision');
-            const visionBack = document.getElementById('vision-back');
-            const storageKey = 'toofoo_intro_dismissed_v1';
-
-            // Check for ?intro=false param (for Playwright tests)
-            const urlParams = new URLSearchParams(window.location.search);
-            const introParam = urlParams.get('intro');
-
-            function showMission() {
-                missionOverlay.classList.add('visible');
-                // Reset to intro view when opening
-                missionIntro.style.display = 'block';
-                missionVision.style.display = 'none';
-            }
-
-            function hideMission() {
-                missionOverlay.classList.remove('visible');
-                localStorage.setItem(storageKey, 'true');
-            }
-
-            function showVision() {
-                missionIntro.style.display = 'none';
-                missionVision.style.display = 'block';
-            }
-
-            function showIntro() {
-                missionVision.style.display = 'none';
-                missionIntro.style.display = 'block';
-            }
-
-            // Show on first visit unless intro=false
-            if (introParam !== 'false' && !localStorage.getItem(storageKey)) {
-                showMission();
-            }
-
-            // Close button
-            missionCloseBtn.addEventListener('click', hideMission);
-
-            // Click outside to close
-            missionOverlay.addEventListener('click', (e) => {
-                if (e.target === missionOverlay) hideMission();
-            });
-
-            // Escape key to close
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && missionOverlay.classList.contains('visible')) {
-                    hideMission();
-                }
-            });
-
-            // Mission button to reopen
-            if (missionBtn) {
-                missionBtn.addEventListener('click', showMission);
-            }
-
-            // Vision toggle
-            if (ctaVision) {
-                ctaVision.addEventListener('click', showVision);
-            }
-            if (visionBack) {
-                visionBack.addEventListener('click', showIntro);
-            }
-
-            // Language switcher for Vision
-            const visionTitle = document.getElementById('vision-title');
-            const visionTitles = { en: 'Vision', hi: 'विज़न', zh: '愿景', es: 'Visión', ar: 'الرؤية' };
-            document.querySelectorAll('.lang-switcher a').forEach(link => {
-                link.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const lang = link.dataset.lang;
-                    // Hide all content, show selected
-                    document.querySelectorAll('.vision-content').forEach(c => c.style.display = 'none');
-                    document.querySelector(`.vision-content[data-lang="${lang}"]`).style.display = 'block';
-                    // Update active link
-                    document.querySelectorAll('.lang-switcher a').forEach(l => l.classList.remove('lang-active'));
-                    link.classList.add('lang-active');
-                    // Update title
-                    if (visionTitle) visionTitle.textContent = visionTitles[lang] || 'Vision';
-                });
-            });
-
-            // CTA links close overlay (except vision button)
-            document.querySelectorAll('.mission-cta:not(#cta-vision)').forEach(cta => {
-                cta.addEventListener('click', () => {
-                    hideMission();
-                });
-            });
-        })();
-    </script>
-
-    <script>
-        // Telemetry tap-peek (mobile-friendly numbers reveal)
-        (function () {
-            const logEl = document.getElementById('console-log');
-            if (!logEl) return;
-
-            let peekToken = 0;
-            let lastNonPeek = '';
-            let timeout = null;
-
-            function setPeek(text) {
-                // Capture current log content before first peek
-                if (!logEl.querySelector('.peek-display')) {
-                    lastNonPeek = logEl.innerHTML;
-                }
-
-                peekToken += 1;
-                const myToken = peekToken;
-
-                logEl.innerHTML = `<span class="peek-display">${text}</span>`;
-
-                if (timeout) clearTimeout(timeout);
-                timeout = setTimeout(() => {
-                    // Only revert if this is still the latest peek and the peek is still visible
-                    if (peekToken === myToken && logEl.querySelector('.peek-display')) {
-                        logEl.innerHTML = lastNonPeek;
-                    }
-                }, 2000);
-            }
-
-            document.querySelectorAll('.sparkline-stat').forEach(el => {
-                // Click for touch/mouse
-                el.addEventListener('click', () => {
-                    const peek = el.getAttribute('data-peek');
-                    if (peek) setPeek(peek);
-                });
-                // Keyboard accessibility
-                el.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        const peek = el.getAttribute('data-peek');
-                        if (peek) setPeek(peek);
-                    }
-                });
-            });
-        })();
-    </script>
+    <script src="assets/theme.js"></script>
 </body>
-
 </html>

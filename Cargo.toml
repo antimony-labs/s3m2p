@@ -24,14 +24,15 @@ members = [
     "TOOLS/CORE/CAD_ENGINE",
 
     # L1 Bubbles (deployed)
-    "WELCOME",
+    # "WELCOME", # Now pure HTML, no Rust
     "HELIOS",
     "HELIOS/server",
     "BLOG",
-    "ARCH",
+    # "ARCH", # Removed from top-level site
 
     # Simulations (L2 under Simulations bubble)
     "SIMULATION/CHLADNI",
+    "SIMULATION/EMERGENCE",
 
     # Tools (L2 under Tools bubble)
     "TOOLS/AUTOCRATE",

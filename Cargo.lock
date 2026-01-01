@@ -111,19 +111,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "69f7f8c3906b62b754cd5326047894316021dcfe5a194c8ea52bdd94934a3457"
 
 [[package]]
-name = "arch"
-version = "0.1.0"
-dependencies = [
- "console_error_panic_hook",
- "js-sys",
- "serde",
- "serde_json",
- "toml",
- "wasm-bindgen",
- "web-sys",
-]
-
-[[package]]
 name = "arduino-learn"
 version = "0.1.0"
 dependencies = [
@@ -665,6 +652,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "emergence"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "getrandom 0.2.16",
+ "glam",
+ "js-sys",
+ "rand",
+ "simulation-engine",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -3440,20 +3441,6 @@ checksum = "5a6580f308b1fad9207618087a65c04e7a10bc77e02c8e84e9b00dd4b12fa0bb"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "welcome"
-version = "0.1.0"
-dependencies = [
- "console_error_panic_hook",
- "getrandom 0.2.16",
- "glam",
- "js-sys",
- "rand",
- "simulation-engine",
- "wasm-bindgen",
- "web-sys",
 ]
 
 [[package]]

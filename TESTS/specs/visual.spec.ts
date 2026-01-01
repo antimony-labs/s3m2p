@@ -10,44 +10,32 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Visual Regression Tests', () => {
   test('landing-layout', async ({ page }) => {
-    // Navigate to the paused simulation for stable screenshots
-    // intro=false hides the mission overlay for consistent screenshots
-    await page.goto('/?paused=true&intro=false');
+    // Static landing page (no WASM/canvas)
+    await page.goto('/');
 
-    // Wait for the canvas to be attached
-    await page.waitForSelector('#simulation', { state: 'attached' });
+    // Wait for the header mark + footer dock
+    await page.waitForSelector('header .bubble-mark', { state: 'visible' });
+    await page.waitForSelector('footer .bubble-dock', { state: 'visible' });
 
-    // Wait for critical UI elements to load (fonts, etc)
-    await page.waitForSelector('.monolith');
+    // Verify core copy + nav affordances exist
+    await expect(page.getByRole('heading', { name: 'Antimony Labs' })).toBeVisible();
+    await expect(page.locator('footer .bubble-dock').getByText('Tools')).toBeVisible();
+    await expect(page.locator('footer .bubble-dock').getByText('Sims')).toBeVisible();
+    await expect(page.locator('footer .bubble-dock').getByText('Learn')).toBeVisible();
 
-    // Check for home page bubble labels (verify key bubbles are visible)
-    await expect(page.locator('#constellation').getByText('Helios')).toBeVisible();
-    await expect(page.locator('#constellation').getByText('Learn')).toBeVisible();
-    await expect(page.locator('#constellation').getByText('Tools')).toBeVisible();
-    await expect(page.locator('#constellation').getByText('Simulations')).toBeVisible();
-    await expect(page.locator('#constellation').getByText('Blog')).toBeVisible();
-
-    // Give the canvas a moment to render
-    await page.waitForTimeout(1000);
+    // Footer bubbles open panels (CSS :target)
+    await page.click('footer .bubble-dock >> text=Tools');
+    await expect(page.locator('#panel-tools')).toBeVisible();
 
     // Take a screenshot and compare with baseline
     await expect(page).toHaveScreenshot('landing-layout.png', {
-      maxDiffPixels: 500, // Increased tolerance for particle variations
+      maxDiffPixels: 150,
     });
   });
 
-  test('canvas-exists', async ({ page }) => {
-    // Navigate to the paused simulation with intro hidden
-    await page.goto('/?paused=true&intro=false');
-
-    // Wait for the canvas to be attached
-    const canvas = page.locator('#simulation');
-    await canvas.waitFor({ state: 'attached' });
-
-    // Check that the canvas has a width greater than 0
-    const boundingBox = await canvas.boundingBox();
-    expect(boundingBox).not.toBeNull();
-    expect(boundingBox!.width).toBeGreaterThan(0);
-    expect(boundingBox!.height).toBeGreaterThan(0);
+  test('license-page', async ({ page }) => {
+    await page.goto('/license.html');
+    await expect(page.getByRole('heading', { name: 'License' })).toBeVisible();
+    await expect(page.locator('pre.license-text')).toContainText('MIT License');
   });
 });

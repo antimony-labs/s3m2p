@@ -29,7 +29,6 @@ declare -A PROJECT_PORTS=(
     ["autocrate"]="8084"
     ["blog"]="8085"
     ["learn"]="8086"
-    ["arch"]="8087"
     ["pll"]="8090"
     ["power"]="8091"
     ["ai"]="8100"
@@ -41,6 +40,7 @@ declare -A PROJECT_PORTS=(
     ["slam"]="8106"
     ["coming_soon"]="8107"
     ["crm"]="8108"
+    ["emergence"]="8089"
 
 )
 
@@ -53,7 +53,6 @@ declare -A PROJECT_DIRS=(
     ["autocrate"]="TOOLS/AUTOCRATE"
     ["blog"]="BLOG"
     ["learn"]="LEARN"
-    ["arch"]="ARCH"
     ["pll"]="TOOLS/PLL"
     ["power"]="COMING_SOON"
     ["ai"]="COMING_SOON"
@@ -65,6 +64,7 @@ declare -A PROJECT_DIRS=(
     ["slam"]="LEARN/SLAM"
     ["coming_soon"]="COMING_SOON"
     ["crm"]="COMING_SOON"
+    ["emergence"]="SIMULATION/EMERGENCE"
 
 )
 
@@ -74,6 +74,7 @@ declare -A PAGES_PROJECTS=(
     ["helios"]="helios-too-foo"
     ["blog"]="blog-too-foo"
     ["chladni"]="chladni-too-foo"
+    ["emergence"]="emergence-too-foo"
     ["sensors"]="sensors-too-foo"
     ["autocrate"]="autocrate-too-foo"
     ["crm"]="crm-too-foo"
@@ -88,7 +89,6 @@ declare -A PAGES_PROJECTS=(
     ["swarm"]="swarm-too-foo"
     ["slam"]="slam-too-foo"
     ["power"]="power-too-foo"
-    ["arch"]="arch-too-foo"
 )
 
 # Static projects that don't need trunk build (deploy root dir directly)
