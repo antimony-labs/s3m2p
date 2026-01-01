@@ -198,7 +198,95 @@ pub fn create_box_brep(writer: &mut StepWriter, transform: Mat4, min: Vec3, max:
 pub fn convert_assembly_to_step(assembly: &CrateAssembly) -> StepWriter {
     let mut writer = StepWriter::new();
 
-    // Iterate through the assembly nodes and convert them to STEP entities
+    // === 1. Create Product Structure (ISO 10303-242 hierarchy) ===
+    let app_context = writer.add_application_context("mechanical_design");
+    let product_context = writer.add_product_context("mechanical", app_context, "mechanical");
+    let product = writer.add_product(
+        "AUTOCRATE-001",
+        "AutoCrate Assembly",
+        "ASTM D6039 Shipping Crate",
+        vec![product_context]
+    );
+    let product_formation = writer.add_product_definition_formation(
+        "1.0",
+        Some("Initial design".to_string()),
+        product
+    );
+    let def_context = writer.add_product_definition_context(
+        "design",
+        app_context,
+        "design"
+    );
+    let product_def = writer.add_product_definition(
+        "design",
+        Some("Design definition".to_string()),
+        product_formation,
+        def_context
+    );
+    let product_def_shape = writer.add_product_definition_shape(
+        Some("Assembly Shape".to_string()),
+        None,
+        product_def
+    );
+
+    // === 2. Create Datum Reference Frame (A|B|C) ===
+    // Datum A: Base plane (Z=0, bottom of skids) - PRIMARY
+    let datum_a_aspect = writer.add_shape_aspect(
+        "Datum A Feature",
+        Some("Base plane at Z=0".to_string()),
+        product_def_shape,
+        true
+    );
+    let datum_a = writer.add_datum(
+        "Datum A",
+        Some("Base plane (Z=0, bottom of skids)".to_string()),
+        datum_a_aspect,
+        "A"
+    );
+    let datum_ref_a = writer.add_datum_reference(1, datum_a); // Precedence 1 = primary
+
+    // Datum B: Width centerplane (YZ at X=0) - SECONDARY
+    let datum_b_aspect = writer.add_shape_aspect(
+        "Datum B Feature",
+        Some("Width centerplane".to_string()),
+        product_def_shape,
+        true
+    );
+    let datum_b = writer.add_datum(
+        "Datum B",
+        Some("Width centerplane (YZ at X=0)".to_string()),
+        datum_b_aspect,
+        "B"
+    );
+    let datum_ref_b = writer.add_datum_reference(2, datum_b); // Precedence 2 = secondary
+
+    // Datum C: Length centerplane (XZ at Y=0) - TERTIARY
+    let datum_c_aspect = writer.add_shape_aspect(
+        "Datum C Feature",
+        Some("Length centerplane".to_string()),
+        product_def_shape,
+        true
+    );
+    let datum_c = writer.add_datum(
+        "Datum C",
+        Some("Length centerplane (XZ at Y=0)".to_string()),
+        datum_c_aspect,
+        "C"
+    );
+    let datum_ref_c = writer.add_datum_reference(3, datum_c); // Precedence 3 = tertiary
+
+    // Create datum system (A|B|C)
+    let datum_system = writer.add_datum_system(
+        "Primary DRF",
+        Some("A|B|C".to_string()),
+        product_def_shape,
+        vec![datum_ref_a, datum_ref_b, datum_ref_c]
+    );
+
+    // === 3. Iterate through components and add geometry + tolerances ===
+    let mut brep_ids = Vec::new();
+    let unit_inch = EntityId(99999); // Placeholder - should create proper SI_UNIT
+
     for node in &assembly.nodes {
         if node.id == assembly.root_id {
             continue;
@@ -209,9 +297,101 @@ pub fn convert_assembly_to_step(assembly: &CrateAssembly) -> StepWriter {
             node.transform.translation.to_vec3()
         );
 
-        // create_box_brep expects local min/max
-        create_box_brep(&mut writer, global_transform, node.bounds.min.to_vec3(), node.bounds.max.to_vec3());
+        // Create B-rep geometry
+        let brep_id = create_box_brep(&mut writer, global_transform, node.bounds.min.to_vec3(), node.bounds.max.to_vec3());
+        brep_ids.push(brep_id);
+
+        // Add PMI/GD&T based on component type
+        match &node.component_type {
+            ComponentType::Skid { .. } => {
+                // Skid top surface - flatness tolerance ±0.125"
+                let aspect = writer.add_shape_aspect(
+                    &format!("{} Top Surface", node.name),
+                    Some("Skid mounting surface".to_string()),
+                    product_def_shape,
+                    true
+                );
+                let magnitude = writer.add_length_measure_with_unit(0.125, unit_inch);
+                writer.add_flatness_tolerance("Flatness 0.125\"", magnitude, aspect);
+
+                // Material designation
+                writer.add_material_designation(&node.name, "ASTM D245 No.2 Southern Pine, Pressure Treated");
+            },
+
+            ComponentType::Floorboard { .. } => {
+                // Floorboard top surface - flatness tolerance ±0.0625"
+                let aspect = writer.add_shape_aspect(
+                    &format!("{} Top Surface", node.name),
+                    Some("Floor mounting surface".to_string()),
+                    product_def_shape,
+                    true
+                );
+                let magnitude = writer.add_length_measure_with_unit(0.0625, unit_inch);
+                writer.add_flatness_tolerance("Flatness 0.0625\"", magnitude, aspect);
+
+                writer.add_material_designation(&node.name, "ASTM D245 No.2 Southern Pine");
+            },
+
+            ComponentType::Cleat { is_vertical, .. } => {
+                if *is_vertical {
+                    // Vertical cleat - perpendicularity to Datum A ±0.5°
+                    let aspect = writer.add_shape_aspect(
+                        &format!("{} Vertical Face", node.name),
+                        Some("Corner post face".to_string()),
+                        product_def_shape,
+                        true
+                    );
+                    let magnitude = writer.add_length_measure_with_unit(0.0625, unit_inch); // ~0.5° in linear
+                    writer.add_perpendicularity_tolerance(
+                        "Perp 0.0625\" | A",
+                        magnitude,
+                        aspect,
+                        datum_system
+                    );
+                }
+
+                writer.add_material_designation(&node.name, "ASTM D245 No.2 Southern Pine");
+            },
+
+            ComponentType::Panel { .. } => {
+                writer.add_material_designation(&node.name, "ASTM D3043 Grade C-C Plywood, 3/4\"");
+            },
+
+            ComponentType::Nail { x, y, z, .. } => {
+                // Nail position - position tolerance ±0.25" relative to A|B|C
+                let aspect = writer.add_shape_aspect(
+                    &format!("Nail at ({:.1}, {:.1}, {:.1})", x, y, z),
+                    Some(format!("Nailing coordinate {:.1},{:.1},{:.1}", x, y, z)),
+                    product_def_shape,
+                    true
+                );
+                let magnitude = writer.add_length_measure_with_unit(0.25, unit_inch);
+                writer.add_position_tolerance(
+                    &format!("Pos 0.25\" | A|B|C"),
+                    Some("Datum-referenced fastener location".to_string()),
+                    magnitude,
+                    aspect,
+                    datum_system
+                );
+
+                writer.add_material_designation(&node.name, "ASTM F1667 16d Common Nail, Galvanized");
+            },
+
+            _ => {
+                // Other components - generic material
+                writer.add_material_designation(&node.name, "As specified");
+            }
+        }
     }
+
+    // === 4. Create shape representation and link to product ===
+    let geom_context = writer.add_geometric_representation_context("3D", "assembly");
+    let shape_rep = writer.add_shape_representation(
+        "AutoCrate Assembly Geometry",
+        brep_ids,
+        geom_context
+    );
+    writer.add_shape_definition_representation(product_def_shape, shape_rep);
 
     writer
 }

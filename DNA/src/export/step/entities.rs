@@ -103,6 +103,18 @@ pub fn write_step_optional<T: Display>(opt: Option<T>, w: &mut dyn Write) -> io:
     }
 }
 
+/// Write STEP list of entity IDs: (#1, #2, #3)
+pub fn write_entity_list(ids: &[EntityId], w: &mut dyn Write) -> io::Result<()> {
+    write!(w, "(")?;
+    for (i, id) in ids.iter().enumerate() {
+        if i > 0 {
+            write!(w, ",")?;
+        }
+        write!(w, "{}", id)?;
+    }
+    write!(w, ")")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -3,6 +3,9 @@
 use super::entities::*;
 use super::primitives::{CartesianPoint, Direction, Axis2Placement3D, Vector, Line, Plane};
 use super::topology::{VertexPoint, EdgeCurve, OrientedEdge, FaceBound, AdvancedFace, ClosedShell, ManifoldSolidBrep};
+use super::product::*;
+use super::gdt::*;
+use super::pmi::*;
 use std::io::{self, Write};
 
 pub struct StepWriter {
@@ -181,6 +184,328 @@ impl StepWriter {
             outer,
         };
         self.entities.push((id, Box::new(manifold_solid_brep)));
+        id
+    }
+
+    // ===== Product Structure Helpers =====
+
+    /// Add an APPLICATION_CONTEXT
+    pub fn add_application_context(&mut self, application: &str) -> EntityId {
+        let id = self.id_gen.next();
+        let ctx = ApplicationContext {
+            id,
+            application: application.to_string(),
+        };
+        self.entities.push((id, Box::new(ctx)));
+        id
+    }
+
+    /// Add a PRODUCT_CONTEXT
+    pub fn add_product_context(&mut self, name: &str, frame_of_reference: EntityId, discipline_type: &str) -> EntityId {
+        let id = self.id_gen.next();
+        let ctx = ProductContext {
+            id,
+            name: name.to_string(),
+            frame_of_reference,
+            discipline_type: discipline_type.to_string(),
+        };
+        self.entities.push((id, Box::new(ctx)));
+        id
+    }
+
+    /// Add a PRODUCT
+    pub fn add_product(&mut self, id_string: &str, name: &str, description: &str, frame_of_reference: Vec<EntityId>) -> EntityId {
+        let id = self.id_gen.next();
+        let product = Product {
+            id,
+            id_string: id_string.to_string(),
+            name: name.to_string(),
+            description: description.to_string(),
+            frame_of_reference,
+        };
+        self.entities.push((id, Box::new(product)));
+        id
+    }
+
+    /// Add a PRODUCT_DEFINITION_FORMATION
+    pub fn add_product_definition_formation(&mut self, id_string: &str, description: Option<String>, of_product: EntityId) -> EntityId {
+        let id = self.id_gen.next();
+        let formation = ProductDefinitionFormation {
+            id,
+            id_string: id_string.to_string(),
+            description,
+            of_product,
+        };
+        self.entities.push((id, Box::new(formation)));
+        id
+    }
+
+    /// Add a PRODUCT_DEFINITION_CONTEXT
+    pub fn add_product_definition_context(&mut self, name: &str, frame_of_reference: EntityId, life_cycle_stage: &str) -> EntityId {
+        let id = self.id_gen.next();
+        let ctx = ProductDefinitionContext {
+            id,
+            name: name.to_string(),
+            frame_of_reference,
+            life_cycle_stage: life_cycle_stage.to_string(),
+        };
+        self.entities.push((id, Box::new(ctx)));
+        id
+    }
+
+    /// Add a PRODUCT_DEFINITION
+    pub fn add_product_definition(&mut self, id_string: &str, description: Option<String>, formation: EntityId, frame_of_reference: EntityId) -> EntityId {
+        let id = self.id_gen.next();
+        let def = ProductDefinition {
+            id,
+            id_string: id_string.to_string(),
+            description,
+            formation,
+            frame_of_reference,
+        };
+        self.entities.push((id, Box::new(def)));
+        id
+    }
+
+    /// Add a PRODUCT_DEFINITION_SHAPE
+    pub fn add_product_definition_shape(&mut self, name: Option<String>, description: Option<String>, definition: EntityId) -> EntityId {
+        let id = self.id_gen.next();
+        let shape = ProductDefinitionShape {
+            id,
+            name,
+            description,
+            definition,
+        };
+        self.entities.push((id, Box::new(shape)));
+        id
+    }
+
+    /// Add a SHAPE_REPRESENTATION
+    pub fn add_shape_representation(&mut self, name: &str, items: Vec<EntityId>, context_of_items: EntityId) -> EntityId {
+        let id = self.id_gen.next();
+        let rep = ShapeRepresentation {
+            id,
+            name: name.to_string(),
+            items,
+            context_of_items,
+        };
+        self.entities.push((id, Box::new(rep)));
+        id
+    }
+
+    /// Add a SHAPE_DEFINITION_REPRESENTATION
+    pub fn add_shape_definition_representation(&mut self, definition: EntityId, used_representation: EntityId) -> EntityId {
+        let id = self.id_gen.next();
+        let sdr = ShapeDefinitionRepresentation {
+            id,
+            definition,
+            used_representation,
+        };
+        self.entities.push((id, Box::new(sdr)));
+        id
+    }
+
+    /// Add a GEOMETRIC_REPRESENTATION_CONTEXT
+    pub fn add_geometric_representation_context(&mut self, context_identifier: &str, context_type: &str) -> EntityId {
+        let id = self.id_gen.next();
+        let ctx = GeometricRepresentationContext {
+            id,
+            context_identifier: context_identifier.to_string(),
+            context_type: context_type.to_string(),
+        };
+        self.entities.push((id, Box::new(ctx)));
+        id
+    }
+
+    // ===== GD&T Helpers =====
+
+    /// Add a SHAPE_ASPECT
+    pub fn add_shape_aspect(&mut self, name: &str, description: Option<String>, of_shape: EntityId, product_definitional: bool) -> EntityId {
+        let id = self.id_gen.next();
+        let aspect = ShapeAspect {
+            id,
+            name: name.to_string(),
+            description,
+            of_shape,
+            product_definitional,
+        };
+        self.entities.push((id, Box::new(aspect)));
+        id
+    }
+
+    /// Add a DATUM (datum feature for GD&T)
+    pub fn add_datum(&mut self, name: &str, description: Option<String>, of_shape: EntityId, identification: &str) -> EntityId {
+        let id = self.id_gen.next();
+        let datum = Datum {
+            id,
+            name: name.to_string(),
+            description,
+            of_shape,
+            product_definitional: false,
+            identification: identification.to_string(),
+        };
+        self.entities.push((id, Box::new(datum)));
+        id
+    }
+
+    /// Add a DATUM_REFERENCE
+    pub fn add_datum_reference(&mut self, precedence: u32, referenced_datum: EntityId) -> EntityId {
+        let id = self.id_gen.next();
+        let datum_ref = DatumReference {
+            id,
+            precedence,
+            referenced_datum,
+        };
+        self.entities.push((id, Box::new(datum_ref)));
+        id
+    }
+
+    /// Add a DATUM_SYSTEM
+    pub fn add_datum_system(&mut self, name: &str, description: Option<String>, of_shape: EntityId, constituents: Vec<EntityId>) -> EntityId {
+        let id = self.id_gen.next();
+        let system = DatumSystem {
+            id,
+            name: name.to_string(),
+            description,
+            of_shape,
+            product_definitional: true,
+            constituents,
+        };
+        self.entities.push((id, Box::new(system)));
+        id
+    }
+
+    /// Add a LENGTH_MEASURE_WITH_UNIT
+    pub fn add_length_measure_with_unit(&mut self, value: f64, unit: EntityId) -> EntityId {
+        let id = self.id_gen.next();
+        let measure = LengthMeasureWithUnit {
+            id,
+            value,
+            unit,
+        };
+        self.entities.push((id, Box::new(measure)));
+        id
+    }
+
+    /// Add a FLATNESS_TOLERANCE
+    pub fn add_flatness_tolerance(&mut self, name: &str, magnitude: EntityId, toleranced_shape_aspect: EntityId) -> EntityId {
+        let id = self.id_gen.next();
+        let tolerance = FlatnessTolerance {
+            id,
+            base: GeometricToleranceBase {
+                name: name.to_string(),
+                description: None,
+                magnitude,
+                toleranced_shape_aspect,
+            },
+        };
+        self.entities.push((id, Box::new(tolerance)));
+        id
+    }
+
+    /// Add a STRAIGHTNESS_TOLERANCE
+    pub fn add_straightness_tolerance(&mut self, name: &str, magnitude: EntityId, toleranced_shape_aspect: EntityId) -> EntityId {
+        let id = self.id_gen.next();
+        let tolerance = StraightnessTolerance {
+            id,
+            base: GeometricToleranceBase {
+                name: name.to_string(),
+                description: None,
+                magnitude,
+                toleranced_shape_aspect,
+            },
+        };
+        self.entities.push((id, Box::new(tolerance)));
+        id
+    }
+
+    /// Add a PERPENDICULARITY_TOLERANCE
+    pub fn add_perpendicularity_tolerance(&mut self, name: &str, magnitude: EntityId, toleranced_shape_aspect: EntityId, datum_system: EntityId) -> EntityId {
+        let id = self.id_gen.next();
+        let tolerance = PerpendicularityTolerance {
+            id,
+            base: GeometricToleranceBase {
+                name: name.to_string(),
+                description: None,
+                magnitude,
+                toleranced_shape_aspect,
+            },
+            datum_system,
+        };
+        self.entities.push((id, Box::new(tolerance)));
+        id
+    }
+
+    /// Add a POSITION_TOLERANCE
+    pub fn add_position_tolerance(&mut self, name: &str, description: Option<String>, magnitude: EntityId, toleranced_shape_aspect: EntityId, datum_system: EntityId) -> EntityId {
+        let id = self.id_gen.next();
+        let tolerance = PositionTolerance {
+            id,
+            base: GeometricToleranceBase {
+                name: name.to_string(),
+                description,
+                magnitude,
+                toleranced_shape_aspect,
+            },
+            datum_system,
+        };
+        self.entities.push((id, Box::new(tolerance)));
+        id
+    }
+
+    // ===== PMI Helpers =====
+
+    /// Add a MATERIAL_DESIGNATION
+    pub fn add_material_designation(&mut self, name: &str, specification: &str) -> EntityId {
+        let id = self.id_gen.next();
+        let mat = MaterialDesignation {
+            id,
+            name: name.to_string(),
+            specification: specification.to_string(),
+        };
+        self.entities.push((id, Box::new(mat)));
+        id
+    }
+
+    /// Add a PLUS_MINUS_TOLERANCE
+    pub fn add_plus_minus_tolerance(&mut self, name: &str, nominal_value: f64, upper_bound: f64, lower_bound: f64, unit: EntityId) -> EntityId {
+        let id = self.id_gen.next();
+        let tolerance = PlusMinusTolerance {
+            id,
+            name: name.to_string(),
+            nominal_value,
+            upper_bound,
+            lower_bound,
+            unit,
+        };
+        self.entities.push((id, Box::new(tolerance)));
+        id
+    }
+
+    /// Add a DIMENSIONAL_SIZE
+    pub fn add_dimensional_size(&mut self, name: &str, description: Option<String>, applies_to: EntityId) -> EntityId {
+        let id = self.id_gen.next();
+        let dim = DimensionalSize {
+            id,
+            name: name.to_string(),
+            description,
+            applies_to,
+        };
+        self.entities.push((id, Box::new(dim)));
+        id
+    }
+
+    /// Add a DIMENSIONAL_LOCATION
+    pub fn add_dimensional_location(&mut self, name: &str, description: Option<String>, relating_shape_aspect: EntityId, related_shape_aspect: EntityId) -> EntityId {
+        let id = self.id_gen.next();
+        let dim = DimensionalLocation {
+            id,
+            name: name.to_string(),
+            description,
+            relating_shape_aspect,
+            related_shape_aspect,
+        };
+        self.entities.push((id, Box::new(dim)));
         id
     }
 
