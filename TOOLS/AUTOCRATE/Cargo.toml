@@ -15,9 +15,12 @@ description = "ASTM standard shipping crate generator"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+dna = { path = "../../DNA" }
 autocrate-engine = { path = "../CORE/AUTOCRATE_ENGINE" }
 serde-wasm-bindgen = "0.6"
-glam = { version = "0.29", features = ["serde"] }
+glam = { version = "0.29", features = ["rand", "serde"] }
+rand = "0.8"
+getrandom = { version = "0.2", features = ["js"] }
 wasm-bindgen = "=0.2.93"
 wasm-bindgen-futures = "0.4"
 console_error_panic_hook = "0.1"
@@ -27,16 +30,25 @@ serde = { version = "1.0", features = ["derive"] }
 [dependencies.web-sys]
 version = "0.3"
 features = [
-    # Canvas
+    # Canvas 2D
     "CanvasRenderingContext2d",
     "HtmlCanvasElement",
     "CanvasGradient",
+    # WebGL2
+    "WebGl2RenderingContext",
+    "WebGlBuffer",
+    "WebGlProgram",
+    "WebGlShader",
+    "WebGlUniformLocation",
+    "WebGlVertexArrayObject",
+    "WebGlTexture",
     # DOM
     "Document",
     "Element",
     "Window",
     "HtmlElement",
     "DomRect",
+    "DomTokenList",
     # Events
     "MouseEvent",
     "KeyboardEvent",
@@ -50,8 +62,12 @@ features = [
     "Event",
     # Files
     "Blob",
+    "BlobPropertyBag",
     "Url",
     "HtmlAnchorElement",
+    "CssStyleDeclaration",
+    # Image data
+    "ImageData",
     # Utility
     "Performance",
     "console",

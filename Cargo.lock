@@ -170,8 +170,11 @@ version = "0.1.0"
 dependencies = [
  "autocrate-engine",
  "console_error_panic_hook",
+ "dna",
+ "getrandom 0.2.16",
  "glam",
  "js-sys",
+ "rand",
  "serde",
  "serde-wasm-bindgen",
  "wasm-bindgen",
