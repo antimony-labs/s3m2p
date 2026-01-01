@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Cargo.toml | BLOG/Cargo.toml
+# PURPOSE: Blog engine dependencies for markdown-based content with client-side routing
+# MODIFIED: 2025-11-29
+# ═══════════════════════════════════════════════════════════════════════════════
+
 [package]
 name = "blog"
 version = "0.1.0"

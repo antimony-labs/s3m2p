@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: main.rs | DNA/SIMULATION_CLI/src/main.rs
+//! PURPOSE: Application entry point and initialization
+//! MODIFIED: 2025-12-02
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use clap::{Parser, Subcommand};
 use dna::spatial::SpatialKey;
 use glam::Vec3;

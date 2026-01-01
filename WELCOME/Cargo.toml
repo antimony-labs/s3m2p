@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Cargo.toml | WELCOME/Cargo.toml
+# PURPOSE: Cargo manifest for landing page with simulation engine and WASM dependencies
+# MODIFIED: 2025-12-09
+# ═══════════════════════════════════════════════════════════════════════════════
+
 [package]
 name = "welcome"
 version = "0.1.0"
@@ -5,7 +11,7 @@ edition = "2021"
 license = "MIT"
 
 [dependencies]
-dna = { path = "../DNA" }
+simulation-engine = { path = "../SIMULATION/CORE/SIMULATION_ENGINE" }
 glam = { version = "0.29", features = ["rand"] }
 rand = "0.8"
 getrandom = { version = "0.2", features = ["js"] }
@@ -29,5 +35,10 @@ features = [
     "DomRect",
     "Performance",
     "CanvasGradient",
-    "ImageData", 
+    "ImageData",
+    "CssStyleDeclaration",
+    "WheelEvent",
+    "MouseEvent",
+    "Event",
+    "SvgElement",
 ]

@@ -1,0 +1,88 @@
+# Caddyfile for S3M2P local development
+# Maps *.dev.too.foo to localhost ports (accessible on LAN)
+# Requires Caddy to be installed: https://caddyserver.com/docs/install
+{
+	auto_https off
+	# Listen on all interfaces (accessible from other devices on network)
+	http_port 80
+	https_port 443
+}
+
+# Main landing page
+welcome.dev.too.foo {
+	reverse_proxy localhost:8080
+}
+
+# Projects
+helios.dev.too.foo {
+	reverse_proxy localhost:8081
+}
+
+chladni.dev.too.foo {
+	reverse_proxy localhost:8082
+}
+
+sensors.dev.too.foo {
+	reverse_proxy localhost:8083
+}
+
+autocrate.dev.too.foo {
+	reverse_proxy localhost:8084
+}
+
+blog.dev.too.foo {
+	reverse_proxy localhost:8085
+}
+
+learn.dev.too.foo {
+	reverse_proxy localhost:8086
+}
+
+arch.dev.too.foo {
+	reverse_proxy localhost:8087
+}
+
+pll.dev.too.foo {
+	reverse_proxy localhost:8090
+}
+
+power.dev.too.foo {
+	reverse_proxy localhost:8091
+}
+
+ai.dev.too.foo {
+	reverse_proxy localhost:8100
+}
+
+ubuntu.dev.too.foo {
+	reverse_proxy localhost:8101
+}
+
+opencv.dev.too.foo {
+	reverse_proxy localhost:8102
+}
+
+arduino.dev.too.foo {
+	reverse_proxy localhost:8103
+}
+
+esp32.dev.too.foo {
+	reverse_proxy localhost:8104
+}
+
+swarm.dev.too.foo {
+	reverse_proxy localhost:8105
+}
+
+slam.dev.too.foo {
+	reverse_proxy localhost:8106
+}
+
+git.dev.too.foo {
+	reverse_proxy localhost:8107
+}
+
+# Catch-all for other subdomains (optional, redirects to welcome)
+*.dev.too.foo {
+	reverse_proxy localhost:8080
+}

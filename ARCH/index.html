@@ -1,0 +1,466 @@
+<!--
+═══════════════════════════════════════════════════════════════════════════════
+FILE: index.html | ARCH/index.html
+PURPOSE: Entry point for ARCH architecture explorer with HTML/DOM-based rendering and file viewer
+MODIFIED: 2025-12-09
+═══════════════════════════════════════════════════════════════════════════════
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARCH - Architecture Explorer</title>
+    <script>
+        // Theme Manager - Site-wide light/dark mode
+        (function() {
+            const THEME_KEY = 'toofoo_theme';
+            function getSystemTheme() {
+                return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+            }
+            function getStoredTheme() {
+                try { return localStorage.getItem(THEME_KEY); }
+                catch { return null; }
+            }
+            function setTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                try { localStorage.setItem(THEME_KEY, theme); } catch {}
+                window.dispatchEvent(new CustomEvent('themechange', { detail: { theme } }));
+            }
+            function initTheme() {
+                const theme = getStoredTheme() || getSystemTheme();
+                setTheme(theme);
+                window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+                    if (!getStoredTheme()) setTheme(e.matches ? 'light' : 'dark');
+                });
+            }
+            window.toggleTheme = function() {
+                const current = document.documentElement.getAttribute('data-theme');
+                setTheme(current === 'light' ? 'dark' : 'light');
+            };
+            window.getCurrentTheme = () => document.documentElement.getAttribute('data-theme') || 'dark';
+            initTheme();
+        })();
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <!-- Load common language components -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-clike.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-toml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markdown.min.js"></script>
+    <link data-trunk rel="rust" data-wasm-opt="z" />
+    <style>
+        :root {
+            --arch-bg: #0a0a0f;
+            --arch-text: #ffffff;
+            --arch-dim: #555566;
+            --arch-dna: #3b82f6;
+            --arch-core: #14b8a6;
+            --arch-project: #a855f7;
+            --arch-tool: #f59e0b;
+            --arch-learn: #22c55e;
+            --arch-back: #888899;
+            --arch-file: #ccccdd;
+            --arch-selected-bg: rgba(255, 255, 255, 0.08);
+            --arch-hover-bg: rgba(255, 255, 255, 0.04);
+            --arch-hover-bg-strong: rgba(255, 255, 255, 0.1);
+            --arch-active-bg: rgba(255, 255, 255, 0.15);
+            --arch-border-subtle: rgba(255, 255, 255, 0.1);
+            --arch-scrollbar: rgba(255, 255, 255, 0.2);
+            --arch-scrollbar-hover: rgba(255, 255, 255, 0.3);
+        }
+
+        :root[data-theme="light"] {
+            --arch-bg: #F5F5F7;
+            --arch-text: #1A1A2E;
+            --arch-dim: #888899;
+            --arch-back: #666677;
+            --arch-file: #333344;
+            --arch-selected-bg: rgba(0, 0, 0, 0.06);
+            --arch-hover-bg: rgba(0, 0, 0, 0.03);
+            --arch-hover-bg-strong: rgba(0, 0, 0, 0.06);
+            --arch-active-bg: rgba(0, 0, 0, 0.1);
+            --arch-border-subtle: rgba(0, 0, 0, 0.1);
+            --arch-scrollbar: rgba(0, 0, 0, 0.15);
+            --arch-scrollbar-hover: rgba(0, 0, 0, 0.25);
+            /* Semantic layer colors stay the same */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+            background: var(--arch-bg);
+            color: var(--arch-text);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        #arch-app {
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .arch-container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ═══════════════════ HEADER ═══════════════════ */
+        .arch-header {
+            padding: 14px;
+            font-size: 13px;
+            border-bottom: 1px solid var(--arch-dim);
+            flex-shrink: 0;
+        }
+
+        .arch-header__title {
+            color: var(--arch-text);
+            font-weight: 600;
+        }
+
+        .arch-header__subtitle {
+            color: var(--arch-dim);
+        }
+
+        /* ═══════════════════ TREE VIEW ═══════════════════ */
+        .arch-tree {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 14px;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+        }
+
+        .tree-line {
+            font-size: 13px;
+            line-height: 1.5;
+            padding: 2px 0;
+            cursor: default;
+            user-select: text;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tree-line--folder,
+        .tree-line--file,
+        .tree-line--back {
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            padding: 2px 4px;
+            margin: 0 -4px;
+            border-radius: 3px;
+        }
+
+        .tree-line--folder:hover,
+        .tree-line--file:hover,
+        .tree-line--back:hover {
+            background: var(--arch-hover-bg);
+        }
+
+        .tree-line--selected {
+            background: var(--arch-selected-bg) !important;
+        }
+
+        .tree-line--separator,
+        .tree-line--none {
+            cursor: default;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .tree-line__name {
+            /* Color set inline from Rust */
+        }
+
+        .tree-line__suffix {
+            color: var(--arch-dim);
+        }
+
+        /* ═══════════════════ FILE VIEWER ═══════════════════ */
+        .file-viewer {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--arch-bg);
+            z-index: 200;
+            flex-direction: column;
+        }
+
+        .file-viewer--active {
+            display: flex;
+        }
+
+        .file-viewer__header {
+            padding: 12px 14px;
+            border-bottom: 2px solid var(--arch-file);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .file-viewer__close {
+            background: transparent;
+            border: 1px solid var(--arch-dim);
+            color: var(--arch-text);
+            padding: 6px 10px;
+            cursor: pointer;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            border-radius: 3px;
+            transition: background 0.15s ease;
+        }
+
+        .file-viewer__close:hover {
+            background: var(--arch-hover-bg-strong);
+            border-color: var(--arch-text);
+        }
+
+        .file-viewer__title {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .file-viewer__filename {
+            color: var(--arch-file);
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .file-viewer__path {
+            color: var(--arch-dim);
+            font-size: 11px;
+        }
+
+        .file-viewer__nav {
+            display: flex;
+            gap: 6px;
+            margin-left: auto;
+        }
+
+        .file-viewer__nav-btn {
+            background: transparent;
+            border: 1px solid var(--arch-dim);
+            color: var(--arch-text);
+            padding: 6px 12px;
+            cursor: pointer;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            border-radius: 3px;
+            transition: background 0.15s ease;
+        }
+
+        .file-viewer__nav-btn:hover {
+            background: var(--arch-hover-bg-strong);
+            border-color: var(--arch-file);
+        }
+
+        .file-viewer__nav-btn:active {
+            background: var(--arch-active-bg);
+        }
+
+        .file-viewer__content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            padding: 14px;
+        }
+
+        .code-display {
+            margin: 0;
+            padding: 0;
+            font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            color: var(--arch-text);
+            white-space: pre;
+            tab-size: 4;
+        }
+
+        .code-display code {
+            display: block;
+        }
+
+        /* Prism.js overrides for better dark theme integration */
+        pre[class*="language-"] {
+            margin: 0;
+            padding: 0;
+            background: var(--arch-bg) !important;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+        }
+
+        code[class*="language-"] {
+            background: var(--arch-bg) !important;
+            font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            text-shadow: none;
+            /* Don't override color - let Prism handle token colors */
+        }
+
+        /* Line numbers styling for Prism plugin */
+        .line-numbers .line-numbers-rows {
+            border-right: 1px solid var(--arch-border-subtle);
+            background: transparent;
+        }
+
+        .line-numbers-rows > span:before {
+            color: var(--arch-dim);
+            padding-right: 12px;
+        }
+
+        /* ═══════════════════ SCROLLBARS ═══════════════════ */
+        .arch-tree::-webkit-scrollbar,
+        .file-viewer__content::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .arch-tree::-webkit-scrollbar-track,
+        .file-viewer__content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .arch-tree::-webkit-scrollbar-thumb,
+        .file-viewer__content::-webkit-scrollbar-thumb {
+            background: var(--arch-scrollbar);
+            border-radius: 4px;
+        }
+
+        .arch-tree::-webkit-scrollbar-thumb:hover,
+        .file-viewer__content::-webkit-scrollbar-thumb:hover {
+            background: var(--arch-scrollbar-hover);
+        }
+
+        /* ═══════════════════ MOBILE RESPONSIVE ═══════════════════ */
+        @media (max-width: 500px) {
+            .arch-header {
+                font-size: 11px;
+                padding: 12px;
+            }
+
+            .tree-line {
+                font-size: 11px;
+            }
+
+            .arch-tree {
+                padding: 12px;
+            }
+
+            .file-viewer__header {
+                padding: 10px 12px;
+            }
+
+            .file-viewer__filename {
+                font-size: 12px;
+            }
+
+            .file-viewer__path {
+                font-size: 10px;
+            }
+
+            .file-viewer__content {
+                padding: 10px;
+            }
+
+            .code-display,
+            code[class*="language-"] {
+                font-size: 10px;
+                line-height: 1.5;
+            }
+
+            .line-numbers-rows > span:before {
+                padding-right: 8px;
+            }
+
+            .file-viewer__nav {
+                gap: 4px;
+            }
+
+            .file-viewer__nav-btn {
+                font-size: 10px;
+                padding: 4px 8px;
+            }
+        }
+
+        /* Very narrow screens */
+        @media (max-width: 400px) {
+            .file-viewer__close {
+                font-size: 10px;
+                padding: 4px 8px;
+            }
+
+            .code-display,
+            code[class*="language-"] {
+                font-size: 9px;
+            }
+
+            .line-numbers-rows > span:before {
+                padding-right: 6px;
+            }
+        }
+
+        /* ═══════════════════ THEME TOGGLE ═══════════════════ */
+        #theme-toggle {
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            z-index: 300;
+            background: var(--arch-bg);
+            border: 1px solid var(--arch-dim);
+            border-radius: 6px;
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            color: var(--arch-dim);
+            transition: border-color 0.2s, color 0.2s;
+        }
+
+        #theme-toggle:hover {
+            border-color: var(--arch-text);
+            color: var(--arch-text);
+        }
+
+        .icon-sun, .icon-moon {
+            display: none;
+        }
+
+        :root[data-theme="dark"] .icon-sun { display: inline; }
+        :root[data-theme="light"] .icon-moon { display: inline; }
+    </style>
+</head>
+<body>
+    <button id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle light/dark mode">
+        <span class="icon-sun">&#9788;</span>
+        <span class="icon-moon">&#9790;</span>
+    </button>
+    <div id="arch-app"></div>
+</body>
+</html>

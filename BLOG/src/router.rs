@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: router.rs | BLOG/src/router.rs
+//! PURPOSE: Client-side router handling navigation between posts and tag pages
+//! MODIFIED: 2025-11-29
+//! LAYER: BLOG
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 // Client-side router for blog navigation
 // Handles URL changes without full page reloads
 

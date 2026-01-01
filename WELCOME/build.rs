@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: build.rs | WELCOME/build.rs
+//! PURPOSE: Build script to capture git commit hash and timestamp for deployment tracking
+//! MODIFIED: 2025-11-30
+//! LAYER: WELCOME (landing)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use std::process::Command;
 
 fn main() {

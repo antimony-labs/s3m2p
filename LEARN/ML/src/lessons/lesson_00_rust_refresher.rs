@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lesson_00_rust_refresher.rs | ML/src/lessons/lesson_00_rust_refresher.rs
+//! PURPOSE: Rust fundamentals refresher covering syntax and key concepts
+//! MODIFIED: 2025-11-26
+//! LAYER: LEARN → ML
+//! ═══════════════════════════════════════════════════════════════════════════════
 pub fn run() {
     println!("--- Lesson 00: Rust Refresher (Meta Learning) ---");
 

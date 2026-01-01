@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: rust-toolchain.toml | ./rust-toolchain.toml
+# PURPOSE: Pinned Rust toolchain configuration for consistent builds across environments
+# MODIFIED: 2025-11-29
+# ═══════════════════════════════════════════════════════════════════════════════
+
 [toolchain]
 channel = "stable"
 components = ["rustfmt", "clippy"]

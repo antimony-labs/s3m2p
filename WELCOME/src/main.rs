@@ -1,12 +1,20 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: main.rs | WELCOME/src/main.rs
+//! PURPOSE: WASM entry point with constellation UI, boid simulation, and fungal network rendering
+//! MODIFIED: 2025-12-09
+//! LAYER: WELCOME (landing)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 #![allow(unexpected_cfgs)]
 
-use dna::{
+use glam::Vec2;
+use simulation_engine::{
     apply_predator_zones, compute_diversity, compute_flocking_forces, feed_from_sources,
     get_boid_color, simulation_step, trigger_mass_extinction, BoidArena, BoidRole, BoidState,
     FoodSource, Genome, Obstacle, PredatorZone, SeasonCycle, SimConfig, SpatialGrid,
 };
-use glam::Vec2;
 use std::cell::RefCell;
+use std::fmt::Write;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsValue;
@@ -21,7 +29,10 @@ use shader::BackgroundEffect;
 mod bubbles;
 mod routing;
 use bubbles::{get_category, Bubble, BubbleAction, CategoryId, HOME_BUBBLES};
-use routing::{get_current_route, navigate_home, Route};
+use routing::{get_current_route, navigate_home, navigate_to, Route};
+
+mod arch_diagram;
+use arch_diagram::render_architecture_diagram;
 
 /// Type alias for the animation frame closure pattern
 type AnimationCallback = Rc<RefCell<Option<Closure<dyn FnMut()>>>>;
@@ -52,6 +63,336 @@ struct SimulationStats {
     low_diversity_frames: u32,
 }
 
+// ============================================
+// VIEWPORT MODE + DEVICE TUNING
+// ============================================
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ViewportMode {
+    Desktop,
+    MobileLandscape,
+    MobilePortrait,
+}
+
+impl ViewportMode {
+    fn detect(width: f64, height: f64) -> Self {
+        let min_dim = width.min(height);
+        if min_dim < 768.0 {
+            let aspect = width / height.max(1.0);
+            if aspect < 0.85 {
+                ViewportMode::MobilePortrait
+            } else {
+                ViewportMode::MobileLandscape
+            }
+        } else {
+            ViewportMode::Desktop
+        }
+    }
+
+    fn as_str(&self) -> &'static str {
+        match self {
+            ViewportMode::Desktop => "desktop",
+            ViewportMode::MobileLandscape => "mobile-landscape",
+            ViewportMode::MobilePortrait => "mobile-portrait",
+        }
+    }
+
+    fn tuning(&self) -> ViewportTuning {
+        match self {
+            ViewportMode::Desktop => ViewportTuning {
+                // Default: the full show
+                spawn_rate_mult: 1.0,
+                max_boids: 500,
+            },
+            ViewportMode::MobileLandscape => ViewportTuning {
+                spawn_rate_mult: 0.7,
+                max_boids: 350,
+            },
+            ViewportMode::MobilePortrait => ViewportTuning {
+                spawn_rate_mult: 0.5,
+                max_boids: 250,
+            },
+        }
+    }
+}
+
+/// Device-specific simulation tuning (NOT `simulation_engine::SimConfig`)
+#[derive(Clone, Copy, Debug)]
+struct ViewportTuning {
+    /// Spawn rate multiplier for the fountain.
+    /// - 1.0 => baseline
+    /// - <1.0 => spawn less often (slower)
+    spawn_rate_mult: f32,
+    /// Population cap guard (used for fountain + carrying capacity).
+    max_boids: usize,
+}
+
+fn update_viewport_mode(document: &Document) -> ViewportMode {
+    let window = web_sys::window().unwrap();
+    let width = window.inner_width().unwrap().as_f64().unwrap();
+    let height = window.inner_height().unwrap().as_f64().unwrap();
+    let mode = ViewportMode::detect(width, height);
+
+    if let Some(html) = document.document_element() {
+        html.set_attribute("data-viewport-mode", mode.as_str()).ok();
+    }
+
+    mode
+}
+
+fn compute_spawn_interval_frames(base_interval: u32, spawn_rate_mult: f32) -> u32 {
+    if spawn_rate_mult <= 0.0 {
+        return base_interval.saturating_mul(10).max(1);
+    }
+    // spawn_rate_mult < 1.0 => spawn less often (bigger interval)
+    ((base_interval as f32 / spawn_rate_mult).round() as u32).max(1)
+}
+
+// ============================================
+// TELEMETRY (1Hz sampling + micro-sparklines)
+// ============================================
+
+const TELEMETRY_SAMPLES: usize = 10; // ~10 seconds at 1Hz
+
+struct RingBuffer<T: Copy + Default, const N: usize> {
+    data: [T; N],
+    head: usize,
+    count: usize,
+}
+
+impl<T: Copy + Default, const N: usize> RingBuffer<T, N> {
+    fn new() -> Self {
+        Self {
+            data: [T::default(); N],
+            head: 0,
+            count: 0,
+        }
+    }
+
+    fn push(&mut self, val: T) {
+        self.data[self.head] = val;
+        self.head = (self.head + 1) % N;
+        if self.count < N {
+            self.count += 1;
+        }
+    }
+
+    fn iter_oldest_first(&self) -> impl Iterator<Item = T> + '_ {
+        let start = if self.count < N { 0 } else { self.head };
+        (0..self.count).map(move |i| self.data[(start + i) % N])
+    }
+}
+
+struct TelemetryState {
+    // Accumulators (updated every frame from simulation_step returns)
+    birth_acc: u32,
+    death_acc: u32,
+
+    // Ring buffers (pushed at 1Hz)
+    births_buf: RingBuffer<u16, TELEMETRY_SAMPLES>,
+    deaths_buf: RingBuffer<u16, TELEMETRY_SAMPLES>,
+    herbivore_buf: RingBuffer<u16, TELEMETRY_SAMPLES>,
+    carnivore_buf: RingBuffer<u16, TELEMETRY_SAMPLES>,
+    scavenger_buf: RingBuffer<u16, TELEMETRY_SAMPLES>,
+    diversity_buf: RingBuffer<f32, TELEMETRY_SAMPLES>,
+
+    // Timing
+    last_sample_ms: f64,
+
+    // Latest snapshot for peek display
+    latest_births: u16,
+    latest_deaths: u16,
+    latest_h: u16,
+    latest_c: u16,
+    latest_s: u16,
+    latest_div: f32,
+
+    // Scratch (avoid repeated allocations)
+    points_buf: String,
+}
+
+impl TelemetryState {
+    fn new(now_ms: f64) -> Self {
+        Self {
+            birth_acc: 0,
+            death_acc: 0,
+            births_buf: RingBuffer::new(),
+            deaths_buf: RingBuffer::new(),
+            herbivore_buf: RingBuffer::new(),
+            carnivore_buf: RingBuffer::new(),
+            scavenger_buf: RingBuffer::new(),
+            diversity_buf: RingBuffer::new(),
+            last_sample_ms: now_ms,
+            latest_births: 0,
+            latest_deaths: 0,
+            latest_h: 0,
+            latest_c: 0,
+            latest_s: 0,
+            latest_div: 1.0,
+            points_buf: String::with_capacity(128),
+        }
+    }
+}
+
+fn count_roles<const CAP: usize>(arena: &BoidArena<CAP>) -> (u16, u16, u16) {
+    let mut h: u32 = 0;
+    let mut c: u32 = 0;
+    let mut s: u32 = 0;
+
+    for idx in arena.iter_alive() {
+        match arena.roles[idx] {
+            BoidRole::Herbivore => h += 1,
+            BoidRole::Carnivore => c += 1,
+            BoidRole::Scavenger => s += 1,
+        }
+    }
+
+    (
+        h.min(u16::MAX as u32) as u16,
+        c.min(u16::MAX as u32) as u16,
+        s.min(u16::MAX as u32) as u16,
+    )
+}
+
+fn set_polyline_points(document: &Document, id: &str, points: &str) {
+    if let Some(el) = document.get_element_by_id(id) {
+        el.set_attribute("points", points).ok();
+    }
+}
+
+fn update_sparklines(document: &Document, telemetry: &mut TelemetryState) {
+    const SPARK_W: f32 = 40.0;
+    const SPARK_H: f32 = 12.0;
+    let x_step = SPARK_W / ((TELEMETRY_SAMPLES as f32) - 1.0);
+    let y_span = SPARK_H - 1.0;
+
+    // Reuse the same buffer for each polyline
+    let points = &mut telemetry.points_buf;
+
+    // BD: normalize by max births/deaths in window
+    let mut max_bd: u16 = 1;
+    for v in telemetry.births_buf.iter_oldest_first() {
+        max_bd = max_bd.max(v);
+    }
+    for v in telemetry.deaths_buf.iter_oldest_first() {
+        max_bd = max_bd.max(v);
+    }
+    let max_bd_f = max_bd.max(1) as f32;
+
+    // Births (green)
+    points.clear();
+    for (i, v) in telemetry.births_buf.iter_oldest_first().enumerate() {
+        let x = i as f32 * x_step;
+        let y = SPARK_H - ((v as f32 / max_bd_f) * y_span);
+        if i > 0 {
+            points.push(' ');
+        }
+        let _ = write!(points, "{:.1},{:.1}", x, y);
+    }
+    set_polyline_points(document, "spark-births", points);
+
+    // Deaths (red)
+    points.clear();
+    for (i, v) in telemetry.deaths_buf.iter_oldest_first().enumerate() {
+        let x = i as f32 * x_step;
+        let y = SPARK_H - ((v as f32 / max_bd_f) * y_span);
+        if i > 0 {
+            points.push(' ');
+        }
+        let _ = write!(points, "{:.1},{:.1}", x, y);
+    }
+    set_polyline_points(document, "spark-deaths", points);
+
+    // H/C/S: normalize by max count in window
+    let mut max_hcs: u16 = 1;
+    for v in telemetry.herbivore_buf.iter_oldest_first() {
+        max_hcs = max_hcs.max(v);
+    }
+    for v in telemetry.carnivore_buf.iter_oldest_first() {
+        max_hcs = max_hcs.max(v);
+    }
+    for v in telemetry.scavenger_buf.iter_oldest_first() {
+        max_hcs = max_hcs.max(v);
+    }
+    let max_hcs_f = max_hcs.max(1) as f32;
+
+    // Herbivores
+    points.clear();
+    for (i, v) in telemetry.herbivore_buf.iter_oldest_first().enumerate() {
+        let x = i as f32 * x_step;
+        let y = SPARK_H - ((v as f32 / max_hcs_f) * y_span);
+        if i > 0 {
+            points.push(' ');
+        }
+        let _ = write!(points, "{:.1},{:.1}", x, y);
+    }
+    set_polyline_points(document, "spark-h", points);
+
+    // Carnivores
+    points.clear();
+    for (i, v) in telemetry.carnivore_buf.iter_oldest_first().enumerate() {
+        let x = i as f32 * x_step;
+        let y = SPARK_H - ((v as f32 / max_hcs_f) * y_span);
+        if i > 0 {
+            points.push(' ');
+        }
+        let _ = write!(points, "{:.1},{:.1}", x, y);
+    }
+    set_polyline_points(document, "spark-c", points);
+
+    // Scavengers
+    points.clear();
+    for (i, v) in telemetry.scavenger_buf.iter_oldest_first().enumerate() {
+        let x = i as f32 * x_step;
+        let y = SPARK_H - ((v as f32 / max_hcs_f) * y_span);
+        if i > 0 {
+            points.push(' ');
+        }
+        let _ = write!(points, "{:.1},{:.1}", x, y);
+    }
+    set_polyline_points(document, "spark-s", points);
+
+    // DIV: 0–1 clamped
+    points.clear();
+    for (i, v) in telemetry.diversity_buf.iter_oldest_first().enumerate() {
+        let v = v.clamp(0.0, 1.0);
+        let x = i as f32 * x_step;
+        let y = SPARK_H - (v * y_span);
+        if i > 0 {
+            points.push(' ');
+        }
+        let _ = write!(points, "{:.1},{:.1}", x, y);
+    }
+    set_polyline_points(document, "spark-div", points);
+}
+
+fn update_peek_attributes(document: &Document, telemetry: &TelemetryState) {
+    if let Some(el) = document.get_element_by_id("stat-bd") {
+        let peek = format!(
+            "B/D {}/{}",
+            telemetry.latest_births, telemetry.latest_deaths
+        );
+        el.set_attribute("data-peek", &peek).ok();
+        el.set_attribute("aria-label", &peek).ok();
+        el.set_attribute("title", &peek).ok();
+    }
+    if let Some(el) = document.get_element_by_id("stat-hcs") {
+        let peek = format!(
+            "H/C/S {}/{}/{}",
+            telemetry.latest_h, telemetry.latest_c, telemetry.latest_s
+        );
+        el.set_attribute("data-peek", &peek).ok();
+        el.set_attribute("aria-label", &peek).ok();
+        el.set_attribute("title", &peek).ok();
+    }
+    if let Some(el) = document.get_element_by_id("stat-div") {
+        let peek = format!("DIV {:.2}", telemetry.latest_div);
+        el.set_attribute("data-peek", &peek).ok();
+        el.set_attribute("aria-label", &peek).ok();
+        el.set_attribute("title", &peek).ok();
+    }
+}
+
 /// Chakravyu zone - the deadly center where boids can enter but not escape
 #[derive(Clone, Copy, Debug)]
 #[allow(dead_code)]
@@ -60,6 +401,142 @@ struct ChakravyuZone {
     radius: f32,
     _energy_drain: f32,
     inward_force: f32, // Used for rush mechanics
+}
+
+// ============================================
+// BUBBLE LAYOUT CALCULATIONS (Issue #46)
+// ============================================
+
+/// All calculated layout values for the bubble constellation
+/// Implements the spacing requirements:
+/// - Text size = 10% of bubble diameter
+/// - Text gap from bubble = 2% of bubble diameter
+/// - Outer margin = 5% of (bubble + text) diameter
+#[derive(Clone, Copy, Debug)]
+struct BubbleLayout {
+    /// Radius of the constellation circle
+    big_circle_radius: f64,
+    /// Radius of each bubble
+    bubble_radius: f64,
+    /// Font size for curved text (10% of diameter)
+    text_size: f64,
+    /// Gap between bubble edge and text (2% of diameter)
+    text_gap: f64,
+    /// Outer margin between bubbles (5% of effective diameter)
+    #[allow(dead_code)]
+    outer_margin: f64,
+    /// Total radius including bubble + gap + text + margin
+    effective_radius: f64,
+    /// Distance from center to bubble center
+    orbit_radius: f64,
+}
+
+impl BubbleLayout {
+    /// Calculate layout values given viewport and bubble count
+    ///
+    /// Key insight: Each bubble's visual footprint = bubble + gap + text
+    /// This "effective diameter" must be used for ALL spacing calculations.
+    ///
+    /// Constraints:
+    /// 1. orbit_radius + effective_radius <= big_circle_radius (fit inside)
+    /// 2. 2 * orbit_radius * sin(π/N) >= 2 * effective_radius (no overlap)
+    ///
+    /// We solve for bubble_radius that satisfies BOTH constraints.
+    fn calculate(viewport_min: f64, bubble_count: usize, mode: ViewportMode) -> Self {
+        // ViewportMode-driven sizing. This provides a single source of truth
+        // (aspect ratio + width guard) for layout decisions.
+        let size_ratio = match mode {
+            ViewportMode::MobilePortrait => 0.85,
+            ViewportMode::MobileLandscape => 0.65,
+            ViewportMode::Desktop => 0.45,
+        };
+        let constellation_size = viewport_min * size_ratio;
+        let big_circle_radius = constellation_size / 2.0;
+
+        // Text sizing ratios (as fraction of bubble DIAMETER)
+        let text_size_ratio = 0.10; // 10% of diameter
+        let text_gap_ratio = 0.08; // 8% of diameter
+        let edge_margin_ratio = 0.05; // 5% margin from constellation edge
+
+        // effective_radius = bubble_radius + text_gap + text_size
+        //                  = r + (2r * text_gap_ratio) + (2r * text_size_ratio)
+        //                  = r * (1 + 2*0.08 + 2*0.10) = r * 1.36
+        let effective_multiplier = 1.0 + 2.0 * text_gap_ratio + 2.0 * text_size_ratio;
+
+        let bubble_radius = if bubble_count > 1 {
+            let half_angle = std::f64::consts::PI / bubble_count as f64;
+            let sin_half = half_angle.sin();
+
+            // Constraint 1: orbit + effective_radius * (1 + edge_margin) <= big_circle_radius
+            //   orbit <= big_circle_radius - effective_multiplier * r * 1.05
+            //
+            // Constraint 2: orbit >= effective_radius / sin(half_angle)
+            //   orbit >= effective_multiplier * r / sin_half
+            //
+            // For both to be satisfiable:
+            //   effective_multiplier * r / sin_half <= big_circle_radius - effective_multiplier * r * 1.05
+            //   effective_multiplier * r * (1/sin_half + 1.05) <= big_circle_radius
+            //   r <= big_circle_radius / (effective_multiplier * (1/sin_half + 1.05))
+
+            let constraint_factor = 1.0 / sin_half + 1.0 + edge_margin_ratio;
+            let max_radius = big_circle_radius / (effective_multiplier * constraint_factor);
+
+            // Apply practical limits
+            let min_radius = 15.0; // Minimum for usability
+            let max_practical = 55.0; // Maximum to prevent huge bubbles
+
+            max_radius.max(min_radius).min(max_practical)
+        } else {
+            // Single bubble: center it, make it reasonably sized
+            (big_circle_radius * 0.35).clamp(15.0, 50.0)
+        };
+        let bubble_radius = match mode {
+            ViewportMode::MobilePortrait | ViewportMode::MobileLandscape => bubble_radius.max(22.0),
+            ViewportMode::Desktop => bubble_radius,
+        };
+
+        // Calculate all derived values from bubble_radius
+        let diameter = bubble_radius * 2.0;
+        let text_size = diameter * text_size_ratio;
+        let text_gap = diameter * text_gap_ratio;
+        let effective_radius = bubble_radius + text_gap + text_size;
+        let outer_margin = effective_radius * edge_margin_ratio;
+
+        // Calculate orbit radius: place bubbles as far out as possible
+        // while keeping effective_radius inside big_circle
+        let orbit_radius = if bubble_count > 1 {
+            big_circle_radius - effective_radius - outer_margin
+        } else {
+            0.0 // Single bubble at center
+        };
+
+        BubbleLayout {
+            big_circle_radius,
+            bubble_radius,
+            text_size,
+            text_gap,
+            outer_margin,
+            effective_radius,
+            orbit_radius,
+        }
+    }
+
+    /// Verify no bubbles overlap (returns true if layout is valid)
+    #[allow(dead_code)]
+    fn validate(&self, bubble_count: usize) -> bool {
+        if bubble_count <= 1 {
+            return true;
+        }
+
+        let angle_step = std::f64::consts::TAU / bubble_count as f64;
+        let min_distance = 2.0 * self.effective_radius + 0.5; // 0.5px epsilon
+
+        // Check distance between adjacent bubbles
+        // d = 2 * orbit * sin(angle_step / 2)
+        let actual_distance = 2.0 * self.orbit_radius * (angle_step / 2.0).sin();
+
+        actual_distance >= min_distance
+    }
 }
 
 /// Update the single-line console log (replaces content)
@@ -93,7 +570,10 @@ fn update_commit_info(document: &Document) {
         };
 
         // GitHub commit URL
-        let commit_url = format!("https://github.com/Shivam-Bhardwaj/S3M2P/commit/{}", COMMIT_HASH);
+        let commit_url = format!(
+            "https://github.com/Shivam-Bhardwaj/S3M2P/commit/{}",
+            COMMIT_HASH
+        );
 
         // Update link
         commit_link.set_attribute("href", &commit_url).ok();
@@ -197,7 +677,6 @@ struct World {
     config: SimConfig,
     width: f32,
     height: f32,
-    last_season: &'static str,
     popups: Vec<PopUp>,
     miasma: Vec<Miasma>,
 }
@@ -236,6 +715,86 @@ fn is_paused() -> bool {
 // BUBBLE RENDERING
 // ============================================
 
+/// SVG namespace for creating SVG elements
+const SVG_NS: &str = "http://www.w3.org/2000/svg";
+
+/// Create an SVG element with curved text below the bubble
+/// The text follows an arc centered at the bottom of the bubble
+fn create_curved_text_svg(
+    document: &Document,
+    label: &str,
+    layout: &BubbleLayout,
+    index: usize,
+) -> Option<web_sys::Element> {
+    // SVG dimensions - encompasses the bubble plus text area
+    let svg_size = layout.effective_radius * 2.0;
+    let center = svg_size / 2.0;
+
+    // Arc for text: positioned below the bubble
+    // Arc radius = bubble_radius + text_gap + text_size/2 (center of text)
+    let arc_radius = layout.bubble_radius + layout.text_gap + layout.text_size / 2.0;
+
+    // In SVG coords (y increases downward):
+    // - 0° is right, 90° is bottom, 180° is left, 270° is top
+    // - For bottom arc: start at lower-left (~135°), end at lower-right (~45°)
+    // - Arc spans ~90° centered at bottom (6 o'clock position)
+    let arc_start_angle = 135.0_f64.to_radians(); // Lower-left
+    let arc_end_angle = 45.0_f64.to_radians(); // Lower-right
+
+    // Calculate arc endpoints
+    let x1 = center + arc_radius * arc_start_angle.cos();
+    let y1 = center + arc_radius * arc_start_angle.sin();
+    let x2 = center + arc_radius * arc_end_angle.cos();
+    let y2 = center + arc_radius * arc_end_angle.sin();
+
+    // Create SVG element
+    let svg = document.create_element_ns(Some(SVG_NS), "svg").ok()?;
+    svg.set_attribute("class", "bubble-text-arc").ok();
+    svg.set_attribute("width", &format!("{:.1}", svg_size)).ok();
+    svg.set_attribute("height", &format!("{:.1}", svg_size))
+        .ok();
+    svg.set_attribute("viewBox", &format!("0 0 {:.1} {:.1}", svg_size, svg_size))
+        .ok();
+
+    // Create defs for the path
+    let defs = document.create_element_ns(Some(SVG_NS), "defs").ok()?;
+
+    // Create arc path (clockwise arc at bottom of circle)
+    let path = document.create_element_ns(Some(SVG_NS), "path").ok()?;
+    let path_id = format!("text-arc-{}", index);
+    path.set_attribute("id", &path_id).ok();
+
+    // SVG arc: M x1,y1 A rx,ry rotation large-arc sweep x2,y2
+    // large-arc=0 (small arc), sweep=0 (counter-clockwise, goes through bottom)
+    let arc_d = format!(
+        "M {:.2} {:.2} A {:.2} {:.2} 0 0 0 {:.2} {:.2}",
+        x1, y1, arc_radius, arc_radius, x2, y2
+    );
+    path.set_attribute("d", &arc_d).ok();
+    path.set_attribute("fill", "none").ok();
+    defs.append_child(&path).ok();
+    svg.append_child(&defs).ok();
+
+    // Create text element
+    let text = document.create_element_ns(Some(SVG_NS), "text").ok()?;
+    text.set_attribute("font-size", &format!("{:.1}", layout.text_size))
+        .ok();
+
+    // Create textPath referencing our arc
+    let text_path = document.create_element_ns(Some(SVG_NS), "textPath").ok()?;
+    text_path
+        .set_attribute("href", &format!("#{}", path_id))
+        .ok();
+    text_path.set_attribute("startOffset", "50%").ok();
+    text_path.set_attribute("text-anchor", "middle").ok();
+    text_path.set_text_content(Some(label));
+
+    text.append_child(&text_path).ok();
+    svg.append_child(&text).ok();
+
+    Some(svg)
+}
+
 /// Clear existing bubbles and render new ones
 fn render_bubbles(document: &Document, bubbles: &[Bubble], show_back: bool) {
     let constellation = match document.get_element_by_id("constellation") {
@@ -243,10 +802,16 @@ fn render_bubbles(document: &Document, bubbles: &[Bubble], show_back: bool) {
         None => return,
     };
 
-    // Remove existing bubbles (but keep center-core)
+    // Remove existing bubbles and text arcs
     let monoliths = document.get_elements_by_class_name("monolith");
     while monoliths.length() > 0 {
         if let Some(el) = monoliths.item(0) {
+            el.remove();
+        }
+    }
+    let text_arcs = document.get_elements_by_class_name("bubble-text-arc");
+    while text_arcs.length() > 0 {
+        if let Some(el) = text_arcs.item(0) {
             el.remove();
         }
     }
@@ -254,79 +819,70 @@ fn render_bubbles(document: &Document, bubbles: &[Bubble], show_back: bool) {
     // Show/hide back button
     if let Some(back_btn) = document.get_element_by_id("back-button") {
         if show_back {
-            back_btn
-                .set_attribute("style", "display: flex;")
-                .ok();
+            back_btn.set_attribute("style", "display: flex;").ok();
         } else {
-            back_btn
-                .set_attribute("style", "display: none;")
-                .ok();
+            back_btn.set_attribute("style", "display: none;").ok();
         }
     }
 
     // ============================================
-    // CALCULATE ALL LAYOUT VALUES DYNAMICALLY
+    // CALCULATE LAYOUT USING NEW ALGORITHM (Issue #46)
     // ============================================
 
     let window = web_sys::window().unwrap();
     let viewport_width = window.inner_width().unwrap().as_f64().unwrap();
     let viewport_height = window.inner_height().unwrap().as_f64().unwrap();
+    let mode = ViewportMode::detect(viewport_width, viewport_height);
 
     // Get telemetry bar height (if exists)
     let telemetry_height = document
         .get_element_by_id("telemetry-bar")
-        .and_then(|el| Some(el.get_bounding_client_rect().height()))
+        .map(|el| el.get_bounding_client_rect().height())
         .unwrap_or(0.0);
 
     // Available vertical space = viewport - telemetry
     let available_height = viewport_height - telemetry_height;
     let available_min = viewport_width.min(available_height);
 
-    // Constellation size = 35% of available space (balanced for mobile/desktop)
-    let constellation_size = available_min * 0.35;
-
-    // Bubble size = 12% of constellation (scales proportionally)
-    let bubble_size = constellation_size * 0.12;
-
-    // Calculate orbit radius based on bubble count
+    // Calculate layout using new algorithm
     let bubble_count = bubbles.len();
+    let layout = BubbleLayout::calculate(available_min, bubble_count, mode);
+
+    // Derived values for positioning
+    let constellation_size = layout.big_circle_radius * 2.0;
+    let bubble_size = layout.bubble_radius * 2.0;
+    let orbit_radius = layout.orbit_radius;
+
     let angle_step = std::f64::consts::TAU / bubble_count as f64;
     let start_angle = -std::f64::consts::FRAC_PI_2;
 
-    // Minimum radius to prevent overlap: R = W / (2 * sin(π/N)) * padding
-    let min_orbit = if bubble_count > 1 {
-        let half_angle = std::f64::consts::PI / bubble_count as f64;
-        (bubble_size / (2.0 * half_angle.sin())) * 1.4 // 1.4 = spacing factor
-    } else {
-        constellation_size * 0.3 // Single bubble default
-    };
+    // Calculate vertical offset to center the visual mass
+    // Each bubble's visual center is shifted down by (text_gap + text_size)
+    // So we shift the entire constellation UP by that full amount
+    let vertical_offset = layout.text_gap + layout.text_size;
 
-    // Target orbit = 75% of constellation radius (inside circle, near edge)
-    let target_orbit = (constellation_size / 2.0) * 0.75;
-
-    // Use whichever ensures proper spacing
-    let orbit_radius = min_orbit.max(target_orbit);
-
-    // Set ALL CSS variables dynamically
+    // Set CSS variables dynamically, including the vertical offset
     constellation
         .set_attribute(
             "style",
             &format!(
-                "--constellation-size: {}px; --bubble-size: {}px; --orbit-radius: {}px;",
-                constellation_size, bubble_size, orbit_radius
+                "--constellation-size: {:.1}px; --bubble-size: {:.1}px; --orbit-radius: {:.1}px; --text-size: {:.1}px; transform: translate(-50%, -50%) translateY(-{:.1}px);",
+                constellation_size, bubble_size, orbit_radius, layout.text_size, vertical_offset
             ),
         )
         .ok();
 
     // Debug log to verify calculations
     web_sys::console::log_1(&format!(
-        "Layout: viewport={}x{}, available={}, constellation={}, bubble={}, orbit={}",
+        "Layout({}): viewport={}x{}, constellation={:.0}, bubble_r={:.1}, text={:.1}, orbit={:.1}, effective_r={:.1}",
+        mode.as_str(),
         viewport_width as i32,
         viewport_height as i32,
-        available_min as i32,
-        constellation_size as i32,
-        bubble_size as i32,
-        orbit_radius as i32
+        constellation_size,
+        layout.bubble_radius,
+        layout.text_size,
+        orbit_radius,
+        layout.effective_radius
     )
     .into());
 
@@ -334,13 +890,20 @@ fn render_bubbles(document: &Document, bubbles: &[Bubble], show_back: bool) {
         let angle = start_angle + (i as f64 * angle_step);
         let angle_deg = angle.to_degrees();
 
+        // Calculate bubble position in pixels (for SVG positioning)
+        let bubble_x = constellation_size / 2.0 + orbit_radius * angle.cos();
+        let bubble_y = constellation_size / 2.0 + orbit_radius * angle.sin();
+
         // Create the bubble element
         let link = document.create_element("a").unwrap();
         link.set_class_name("monolith");
 
+        // Accessibility: title and aria-label
+        let a11y_label = format!("{} — {}", bubble.label, bubble.description);
+        link.set_attribute("title", &a11y_label).ok();
+        link.set_attribute("aria-label", &a11y_label).ok();
+
         // Set position with inline transform
-        // Transform chain: rotate to angle → translate outward → rotate back to upright
-        // Also translate by half bubble size to center on orbit point
         let pos_style = format!(
             "transform: translate(-50%, -50%) rotate({:.1}deg) translate(var(--orbit-radius)) rotate({:.1}deg);",
             angle_deg, -angle_deg
@@ -352,9 +915,29 @@ fn render_bubbles(document: &Document, bubbles: &[Bubble], show_back: bool) {
             BubbleAction::External(url) => {
                 link.set_attribute("href", url).ok();
                 link.set_attribute("target", "_blank").ok();
+                link.set_attribute("rel", "noopener noreferrer").ok();
             }
             BubbleAction::DirectProject(url) => {
-                link.set_attribute("href", url).ok();
+                // Use relative protocol to support both http and https
+                // If we are on localhost, we might want to use port-based URLs
+                // But for now, let's assume the URL provided in bubbles.rs is correct
+                // or we can make it relative if it's a subdomain.
+
+                // Check if we are in dev mode (localhost/127.0.0.1)
+                let window = web_sys::window().unwrap();
+                let hostname = window.location().hostname().unwrap_or_default();
+
+                let final_url = if hostname == "localhost" || hostname == "127.0.0.1" {
+                    // In dev mode, we might need to map subdomains to ports if not using a proxy
+                    // But if the user set up /etc/hosts, subdomains work.
+                    // If they use ports, we need a mapping.
+                    // For now, let's trust the URL but ensure it's protocol-relative
+                    url.to_string()
+                } else {
+                    url.to_string()
+                };
+
+                link.set_attribute("href", &final_url).ok();
             }
             BubbleAction::Category(cat_id) => {
                 let hash = cat_id.hash_route();
@@ -369,33 +952,184 @@ fn render_bubbles(document: &Document, bubbles: &[Bubble], show_back: bool) {
         img.set_attribute("alt", bubble.label).ok();
         link.append_child(&img).ok();
 
-        // Add label
-        let span = document.create_element("span").unwrap();
-        span.set_text_content(Some(bubble.label));
-        link.append_child(&span).ok();
-
         // Add to constellation
         constellation.append_child(&link).ok();
+
+        // Create and position SVG curved text
+        if let Some(svg) = create_curved_text_svg(document, bubble.label, &layout, i) {
+            let svg_size = layout.effective_radius * 2.0;
+            let svg_style = format!(
+                "left: {:.1}px; top: {:.1}px; width: {:.1}px; height: {:.1}px;",
+                bubble_x - svg_size / 2.0,
+                bubble_y - svg_size / 2.0,
+                svg_size,
+                svg_size
+            );
+            svg.set_attribute("style", &svg_style).ok();
+            constellation.append_child(&svg).ok();
+        }
     }
 }
 
 /// Render the home page bubbles
 fn render_home(document: &Document) {
+    // Ensure center bubble is present
+    render_center_bubble(document);
     render_bubbles(document, HOME_BUBBLES, false);
 }
 
 /// Render a category page
 fn render_category(document: &Document, category_id: CategoryId) {
     let category = get_category(category_id);
+    // Ensure center bubble is present
+    render_center_bubble(document);
     render_bubbles(document, category.bubbles, true);
 }
 
 /// Handle route changes
 fn handle_route_change(document: &Document) {
     let route = get_current_route();
+
+    // Toggle containers
+    let arch_container = document.get_element_by_id("arch-container");
+    let about_container = document.get_element_by_id("about-container");
+    let back_button = document.get_element_by_id("back-button");
+
+    // Handle arch-container visibility
+    if let Some(container) = arch_container {
+        if matches!(route, Route::Architecture) {
+            container.set_attribute("style", "display: flex; position: fixed; inset: 0; background: rgba(5, 5, 8, 0.95); z-index: 5000; justify-content: center; align-items: center;").ok();
+            if let Some(btn) = back_button.as_ref() {
+                btn.set_attribute("style", "display: flex; z-index: 5001;").ok();
+            }
+        } else {
+            container.set_attribute("style", "display: none;").ok();
+        }
+    }
+
+    // Handle about-container visibility
+    if let Some(container) = about_container {
+        if matches!(route, Route::About) {
+            container.set_attribute("style", "display: flex;").ok();
+            if let Some(btn) = back_button.as_ref() {
+                btn.set_attribute("style", "display: flex; z-index: 5001;").ok();
+            }
+        } else {
+            container.set_attribute("style", "display: none;").ok();
+        }
+    }
+
     match route {
         Route::Home => render_home(document),
         Route::Category(cat_id) => render_category(document, cat_id),
+        Route::Architecture => render_architecture_diagram(document),
+        Route::About => render_about_page(document),
+    }
+}
+
+/// Render the central Antimony bubble
+fn render_center_bubble(document: &Document) {
+    let center_core = match document.get_element_by_id("center-core") {
+        Some(el) => el,
+        None => return,
+    };
+
+    // Clear previous content (except text container which we want to keep/manage)
+    // Actually, let's just append the image if it doesn't exist.
+    if document.get_element_by_id("antimony-bubble").is_some() {
+        return;
+    }
+
+    // Create the Antimony Bubble Image
+    let img = document.create_element("img").unwrap();
+    img.set_id("antimony-bubble");
+    img.set_attribute("src", "assets/islands/antimony.svg").ok();
+    img.set_attribute("alt", "Antimony Architecture").ok();
+
+    // Click -> Navigate to About page
+    let on_click = Closure::wrap(Box::new(move || {
+        navigate_to(Route::About);
+    }) as Box<dyn FnMut()>);
+    img.add_event_listener_with_callback("click", on_click.as_ref().unchecked_ref())
+        .ok();
+    on_click.forget();
+
+    // Insert before text container
+    if let Some(text_container) = document.get_element_by_id("center-text-container") {
+        center_core.insert_before(&img, Some(&text_container)).ok();
+    } else {
+        center_core.append_child(&img).ok();
+    }
+}
+
+/// Render the About Antimony Labs intro page
+fn render_about_page(document: &Document) {
+    let container = match document.get_element_by_id("about-container") {
+        Some(el) => el,
+        None => return,
+    };
+    container.set_inner_html("");
+
+    let panel = document.create_element("div").unwrap();
+    panel.set_attribute("class", "about-panel").ok();
+    panel.set_inner_html(
+        r##"
+        <button id="about-close">&times;</button>
+        <div class="about-logo">
+            <img src="assets/islands/antimony.svg" alt="Antimony Labs" />
+        </div>
+        <h1>Antimony Labs</h1>
+        <p class="tagline">Let AI design, humans build.</p>
+
+        <div class="about-sections">
+            <div class="about-section">
+                <h2>What We Build</h2>
+                <p>Open-source engineering tools, simulations, and manufacturing compilers - built in Rust/WASM/WebGPU.</p>
+            </div>
+
+            <div class="about-section">
+                <h2>The Vision</h2>
+                <p>A compiler for physical products - one unified system that outputs manufacturing-ready artifacts. From CAD to G-code, Gerber files to BOMs.</p>
+            </div>
+
+            <div class="about-section">
+                <h2>Explore</h2>
+                <ul class="about-links">
+                    <li><a href="#/tools">Tools</a> - Engineering applications</li>
+                    <li><a href="#/sims">Simulations</a> - Interactive physics demos</li>
+                    <li><a href="#/learn">Learn</a> - Tutorials on AI, robotics, embedded</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="about-cta">
+            <a href="#" class="back-home-btn">Back to Home</a>
+        </div>
+    "##,
+    );
+    container.append_child(&panel).ok();
+
+    // Close button handler
+    if let Some(close_btn) = document.get_element_by_id("about-close") {
+        let closure = Closure::wrap(Box::new(move |_: web_sys::Event| {
+            navigate_home();
+        }) as Box<dyn FnMut(_)>);
+        close_btn
+            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+            .ok();
+        closure.forget();
+    }
+
+    // Back home button handler
+    if let Some(back_btn) = document.query_selector(".back-home-btn").ok().flatten() {
+        let closure = Closure::wrap(Box::new(move |e: web_sys::Event| {
+            e.prevent_default();
+            navigate_home();
+        }) as Box<dyn FnMut(_)>);
+        back_btn
+            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+            .ok();
+        closure.forget();
     }
 }
 
@@ -562,6 +1296,11 @@ fn main() {
     let window = window().unwrap();
     let document = window.document().unwrap();
 
+    // Establish viewport mode early (drives CSS + tuning)
+    let initial_mode = update_viewport_mode(&document);
+    let initial_tuning = initial_mode.tuning();
+    let viewport_tuning: Rc<RefCell<ViewportTuning>> = Rc::new(RefCell::new(initial_tuning));
+
     // Set up routing and render initial bubbles
     setup_routing(&document);
 
@@ -590,11 +1329,12 @@ fn main() {
     canvas.set_width(w as u32);
     canvas.set_height(h as u32);
 
-    // Resize handler
+    // Resize/orientation handler (canvas + viewport mode + constellation rerender)
     {
         let canvas = canvas.clone();
         let document_for_closure = document.clone();
         let window_for_closure = window.clone();
+        let tuning_for_resize = Rc::clone(&viewport_tuning);
         let closure = Closure::wrap(Box::new(move || {
             let sim_area = document_for_closure.get_element_by_id("simulation-area");
             let (w, h) = if let Some(area) = &sim_area {
@@ -608,6 +1348,11 @@ fn main() {
             };
             canvas.set_width(w as u32);
             canvas.set_height(h as u32);
+
+            // Update viewport mode + tuning, then rerender constellation for new layout
+            let mode = update_viewport_mode(&document_for_closure);
+            *tuning_for_resize.borrow_mut() = mode.tuning();
+            handle_route_change(&document_for_closure);
         }) as Box<dyn FnMut()>);
         window
             .add_event_listener_with_callback("resize", closure.as_ref().unchecked_ref())
@@ -652,6 +1397,7 @@ fn main() {
     let background = BackgroundEffect::new(width as f64, height as f64);
 
     let config = SimConfig {
+        carrying_capacity: initial_tuning.max_boids.max(1),
         reproduction_threshold: 140.0,
         base_mortality: 0.00001, // Reduced mortality to allow population growth
         ..SimConfig::default()
@@ -671,7 +1417,6 @@ fn main() {
         config,
         width,
         height,
-        last_season: "SPRING",
         popups: Vec::new(),
         miasma: Vec::new(),
     }));
@@ -680,7 +1425,6 @@ fn main() {
     let stat_pop = document.get_element_by_id("stat-pop");
     let stat_gen = document.get_element_by_id("stat-gen");
     let stat_fps = document.get_element_by_id("stat-fps");
-    let stat_season = document.get_element_by_id("stat-season");
 
     let performance: Performance = window.performance().unwrap();
 
@@ -689,6 +1433,7 @@ fn main() {
 
     let state_clone = state.clone();
     let document_clone = document.clone();
+    let tuning_for_loop = Rc::clone(&viewport_tuning);
     let mut frame_count: u32 = 0;
     let mut last_time = performance.now();
     let mut fps_accumulator = 0.0;
@@ -701,10 +1446,24 @@ fn main() {
         max_generation: 0,
         low_diversity_frames: 0,
     };
+    let mut last_tuning = initial_tuning;
+    let mut spawn_interval_frames = compute_spawn_interval_frames(6, last_tuning.spawn_rate_mult);
+    let mut telemetry = TelemetryState::new(performance.now());
 
     *g.borrow_mut() = Some(Closure::new(move || {
         let mut s = state_clone.borrow_mut();
         frame_count += 1;
+
+        // Update sim tuning if viewport mode changed (set by resize handler)
+        let tuning_now = { *tuning_for_loop.borrow() };
+        if tuning_now.max_boids != last_tuning.max_boids
+            || (tuning_now.spawn_rate_mult - last_tuning.spawn_rate_mult).abs() > f32::EPSILON
+        {
+            spawn_interval_frames = compute_spawn_interval_frames(6, tuning_now.spawn_rate_mult);
+            // Apply to simulation config (used for reproduction + population pressure)
+            s.config.carrying_capacity = tuning_now.max_boids.max(1);
+            last_tuning = tuning_now;
+        }
 
         // FPS calculation
         let current_time = performance.now();
@@ -770,8 +1529,8 @@ fn main() {
         }
 
         // === FOUNTAIN OF LIFE ===
-        // Spawn new boids from the circle edge periodically (10 per sec approx)
-        if frame_count.is_multiple_of(6) {
+        // Spawn new boids from the circle edge periodically (mode-tuned)
+        if s.arena.alive_count < last_tuning.max_boids && frame_count % spawn_interval_frames == 0 {
             if let Some(chakravyu) = s.chakravyu {
                 use rand::Rng;
                 let mut rng = rand::thread_rng();
@@ -819,21 +1578,13 @@ fn main() {
                 fps_frame_count = 0;
             }
 
-            // Update season display
-            if let Some(ref el) = stat_season {
-                el.set_text_content(Some(&format!("SEASON: {}", s.season.season_name())));
+            // Update speed record internally (for stats tracking, but don't log to console)
+            if max_speed > stats.max_speed_record + 0.1 {
+                stats.max_speed_record = max_speed;
+                // Speed record tracking kept for internal stats, but not displayed to avoid clutter
             }
 
             // Log events
-            if max_speed > stats.max_speed_record + 0.1 {
-                stats.max_speed_record = max_speed;
-                log_event(
-                    &document_clone,
-                    &format!("⚡ SPEED RECORD: {:.2}", max_speed),
-                    "event-record",
-                );
-            }
-
             if max_gen > stats.max_generation {
                 stats.max_generation = max_gen;
                 if max_gen.is_multiple_of(5) {
@@ -875,7 +1626,6 @@ fn main() {
             config,
             width: world_w,
             height: world_h,
-            last_season,
             popups: _, // Popups managed via s.popups
             miasma,
             ..
@@ -883,28 +1633,6 @@ fn main() {
 
         // Update season
         season.update(1.0);
-
-        // Check for season change
-        let current_season = season.season_name();
-        if current_season != *last_season {
-            *last_season = current_season;
-            log_event(
-                &document_clone,
-                &format!("🌍 {} has arrived!", current_season),
-                "event-record",
-            );
-
-            // Winter is harsh
-            if current_season == "WINTER" {
-                log_event(&document_clone, "❄ Resources are scarce...", "event-death");
-            } else if current_season == "SUMMER" {
-                log_event(
-                    &document_clone,
-                    "☀ Abundance! Food plentiful!",
-                    "event-birth",
-                );
-            }
-        }
 
         // Update Fungal Network with exclusion zones
         fungal_network.update_with_exclusions(exclusion_zones);
@@ -1226,7 +1954,43 @@ fn main() {
             );
         }
 
-        let _ = births; // Suppress unused warnings
+        // Accumulate births/deaths continuously (sampled at 1Hz)
+        telemetry.birth_acc = telemetry.birth_acc.saturating_add(births as u32);
+        telemetry.death_acc = telemetry.death_acc.saturating_add(deaths as u32);
+
+        // 1Hz telemetry sampling + DOM updates (sparklines + peek attributes)
+        if current_time - telemetry.last_sample_ms >= 1000.0 {
+            telemetry.last_sample_ms = current_time;
+
+            // Push births/deaths window sample (clamp to prevent u16 overflow)
+            let b = telemetry.birth_acc.min(u16::MAX as u32) as u16;
+            let d = telemetry.death_acc.min(u16::MAX as u32) as u16;
+            telemetry.births_buf.push(b);
+            telemetry.deaths_buf.push(d);
+            telemetry.latest_births = b;
+            telemetry.latest_deaths = d;
+            telemetry.birth_acc = 0;
+            telemetry.death_acc = 0;
+
+            // Role counts
+            let (h, c, s_count) = count_roles(arena);
+            telemetry.herbivore_buf.push(h);
+            telemetry.carnivore_buf.push(c);
+            telemetry.scavenger_buf.push(s_count);
+            telemetry.latest_h = h;
+            telemetry.latest_c = c;
+            telemetry.latest_s = s_count;
+
+            // Diversity (0–1)
+            if arena.alive_count > 10 {
+                let div = compute_diversity(arena).clamp(0.0, 1.0);
+                telemetry.diversity_buf.push(div);
+                telemetry.latest_div = div;
+            }
+
+            update_sparklines(&document_clone, &mut telemetry);
+            update_peek_attributes(&document_clone, &telemetry);
+        }
 
         // === MASS EXTINCTION CHECK ===
         // When diversity collapses, trigger a reset event
@@ -1317,26 +2081,32 @@ fn main() {
             let text = "::रागद्वेषवियुक्तैस्तु::void* // <आत्मवश्यैर्विधेयात्मा>; // fn(प्रसादमधिगच्छति) -> Peace";
 
             // Draw text in a circle
-            let radius = chakravyu.radius as f64 - 10.0;
-            let chars: Vec<char> = text.chars().collect();
-            let angle_step = std::f64::consts::TAU / (chars.len() as f64);
+            let radius = (chakravyu.radius as f64 - 10.0).max(0.0);
+            if radius > 1.0 {
+                let chars: Vec<char> = text.chars().collect();
+                let angle_step = std::f64::consts::TAU / (chars.len() as f64);
 
-            for (i, char) in chars.iter().enumerate() {
-                ctx.save();
-                let angle = i as f64 * angle_step;
-                ctx.rotate(angle).unwrap();
-                ctx.translate(0.0, -radius).unwrap();
-                ctx.fill_text(&char.to_string(), 0.0, 0.0).unwrap();
-                ctx.restore();
+                for (i, char) in chars.iter().enumerate() {
+                    ctx.save();
+                    let angle = i as f64 * angle_step;
+                    ctx.rotate(angle).unwrap();
+                    ctx.translate(0.0, -radius).unwrap();
+                    ctx.fill_text(&char.to_string(), 0.0, 0.0).unwrap();
+                    ctx.restore();
+                }
             }
 
             // Inner faint shield circle
-            ctx.begin_path();
-            ctx.arc(0.0, 0.0, radius - 15.0, 0.0, std::f64::consts::TAU)
-                .unwrap();
-            ctx.set_stroke_style(&JsValue::from_str("rgba(0, 255, 170, 0.1)"));
-            ctx.set_line_width(1.0);
-            ctx.stroke();
+            let inner_radius = (radius - 15.0).max(0.0);
+            if inner_radius > 0.0 {
+                ctx.begin_path();
+                ctx.arc(0.0, 0.0, inner_radius, 0.0, std::f64::consts::TAU)
+                    .unwrap();
+
+                ctx.set_stroke_style(&JsValue::from_str("rgba(0, 255, 170, 0.1)"));
+                ctx.set_line_width(1.0);
+                ctx.stroke();
+            }
 
             ctx.restore();
         }

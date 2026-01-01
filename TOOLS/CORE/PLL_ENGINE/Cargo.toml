@@ -1,0 +1,18 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Cargo.toml | TOOLS/CORE/PLL_ENGINE/Cargo.toml
+# PURPOSE: Package manifest for PLL engine with DNA and SPICE dependencies
+# MODIFIED: 2025-12-09
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[package]
+name = "pll-engine"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+dna.workspace = true
+spice-engine = { path = "../../../SIMULATION/CORE/SPICE_ENGINE" }
+serde.workspace = true
+
+[lints]
+workspace = true

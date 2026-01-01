@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: routing.rs | WELCOME/src/routing.rs
+//! PURPOSE: Hash-based client-side routing for single-page application category navigation
+//! MODIFIED: 2025-12-09
+//! LAYER: WELCOME (landing)
+//! ═══════════════════════════════════════════════════════════════════════════════
+//!
 //! Hash-based routing for too.foo SPA navigation
 //!
 //! Routes are in the format `#/category` (e.g., `#/tools`, `#/sims`, `#/learn`)
@@ -11,6 +18,10 @@ pub enum Route {
     Home,
     /// Category page - shows sub-bubbles for a category
     Category(CategoryId),
+    /// Architecture diagram view
+    Architecture,
+    /// About Antimony Labs intro page
+    About,
 }
 
 impl Route {
@@ -20,15 +31,19 @@ impl Route {
             "#/tools" => Route::Category(CategoryId::Tools),
             "#/sims" => Route::Category(CategoryId::Simulations),
             "#/learn" => Route::Category(CategoryId::Learn),
+            "#/arch" => Route::Architecture,
+            "#/about" => Route::About,
             _ => Route::Home,
         }
     }
 
     /// Get the hash string for this route
-    pub fn to_hash(&self) -> &'static str {
+    pub fn to_hash(self) -> &'static str {
         match self {
             Route::Home => "",
             Route::Category(id) => id.hash_route(),
+            Route::Architecture => "#/arch",
+            Route::About => "#/about",
         }
     }
 }

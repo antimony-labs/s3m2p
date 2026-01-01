@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lib.rs | WELCOME/src/lib.rs
+//! PURPOSE: Library root for landing page with bubble navigation and visual simulations
+//! MODIFIED: 2025-12-01
+//! LAYER: WELCOME (landing)
+//! ═══════════════════════════════════════════════════════════════════════════════
+//!
 //! WELCOME crate - too.foo landing page
 //!
 //! This crate implements the landing page for too.foo with:

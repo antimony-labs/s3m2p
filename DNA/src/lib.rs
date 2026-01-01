@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lib.rs | DNA/src/lib.rs
+//! PURPOSE: Foundation library root - physics, math, world, data structures
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 // Suppress wasm_bindgen cfg warnings from macro expansion
 #![allow(unexpected_cfgs)]
 
@@ -5,21 +12,33 @@ use glam::Vec2;
 use rand::Rng;
 
 // ============================================================================
-// DOMAIN-SPECIFIC MODULES (Heliosphere/Astronomy)
+// NEW ARCHITECTURE MODULES (DNA/CORE/SRC Refactor)
+// See REFACTOR.md for full architecture documentation
 // ============================================================================
 
-pub mod heliosphere;
-pub use heliosphere::*;
+/// WORLD - The Stage (coordinate systems, topology, grids)
+pub mod world;
 
-pub mod coordinates;
-pub use coordinates::*;
+/// PHYSICS - The Rules (mechanics, fields, solvers)
+pub mod physics;
 
-pub mod solar_wind;
-pub use solar_wind::*;
+/// MATH - The Language (vectors, matrices, complex numbers)
+pub mod math;
 
-pub mod heliosphere_model;
-pub use heliosphere_model::*;
+/// DATA - Data Structures (arena, spatial grid, mesh, graph)
+pub mod data;
 
+// ============================================================================
+// SIMULATION PRIMITIVES
+// ============================================================================
+
+// Note: coordinates module moved to world::transforms::astronomical
+// Re-export for backward compatibility
+pub use world::transforms::astronomical as coordinates;
+
+pub mod sim;
+
+/// Spatial indexing for cube-sphere LOD data (stars, planets, etc.)
 pub mod spatial;
 pub use spatial::*;
 
@@ -39,9 +58,12 @@ pub use zones::*;
 pub mod interaction;
 pub use interaction::*;
 
-/// Random number generation helpers
-pub mod random;
-// Note: don't re-export random to avoid collision with rand crate
+// Note: random module moved to math::random
+// Re-export for backward compatibility (don't glob re-export to avoid rand collision)
+pub use math::random::{
+    random_angle, random_direction, random_in_annulus, random_in_circle, random_in_rect,
+    random_in_rect_with_margin, random_index, random_velocity, random_velocity_range, roll_chance,
+};
 
 /// Population statistics and metrics
 pub mod statistics;
@@ -54,21 +76,57 @@ pub mod powerlaw;
 pub mod color;
 pub use color::*;
 
+/// Wave field simulation with FFT
+/// Note: FFT migrated to physics/solvers/pde/spectral, Chladni to physics/fields/wave
+pub mod wave_field;
+pub use wave_field::*;
+
+// Also export from new locations
+pub use physics::fields::wave::{ChladniMode, PlateMode, WaveSimulation};
+pub use physics::solvers::pde::FFT2D;
+
+/// PLL (Phase-Locked Loop) circuit design
+pub mod pll;
+pub use pll::*;
+
+/// SPICE circuit simulation engine
+/// DEPRECATED: Use `physics::electromagnetics::lumped` or `spice_engine` crate
+#[deprecated(
+    since = "0.1.0",
+    note = "use `physics::electromagnetics::lumped` instead"
+)]
+pub mod spice;
+
+/// Autocrate crate generation algorithms
+pub mod autocrate;
+
 // ============================================================================
 // MATH AND FILTERING MODULES
 // ============================================================================
 
-/// 2x2 Matrix operations for 2D transforms and filters
-pub mod mat2;
-pub use mat2::Mat2;
+// Mat2 canonical location
+pub use math::mat::Mat2;
 
 /// Extended Kalman Filter for state estimation
+/// DEPRECATED: Use `physics::solvers::filters::EKF`
+#[deprecated(since = "0.1.0", note = "use `physics::solvers::filters::EKF` instead")]
 pub mod ekf;
-pub use ekf::EKF;
+
+// Canonical export from new location
+pub use physics::solvers::filters::{smooth_trajectory, EKF};
 
 /// A* and grid-based pathfinding
 pub mod pathfinding;
 pub use pathfinding::{astar, GridMap, Heuristic, PathResult};
+
+/// Export module (PDF, Gerber X2)
+pub mod export;
+
+/// CAD module (B-Rep solid modeling)
+pub mod cad;
+
+/// Security module (secrets and PII detection)
+pub mod security;
 
 // ============================================================================
 // CORE TYPES

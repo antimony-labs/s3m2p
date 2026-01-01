@@ -1,42 +1,150 @@
 <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <filter id="glow-soft">
-        <feGaussianBlur stdDeviation="1" result="blur" />
-        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-    </filter>
-    <linearGradient id="scan-gradient" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="transparent"/>
-      <stop offset="50%" stop-color="#87CEEB"/> <!-- Sky Blue -->
-      <stop offset="100%" stop-color="transparent"/>
+    <linearGradient id="profileGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#87CEEB" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#4682B4" stop-opacity="0.4"/>
     </linearGradient>
+    <linearGradient id="scanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#87CEEB" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#87CEEB" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#87CEEB" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <clipPath id="profileClip">
+      <circle cx="100" cy="85" r="40"/>
+    </clipPath>
   </defs>
-  
+
   <style>
-    @keyframes scan-face {
-      0% { transform: translateY(-20px); opacity: 0; }
-      50% { opacity: 0.8; }
-      100% { transform: translateY(20px); opacity: 0; }
+    @keyframes scan {
+      0% { transform: translateY(-60px); opacity: 0; }
+      20% { opacity: 0.8; }
+      80% { opacity: 0.8; }
+      100% { transform: translateY(60px); opacity: 0; }
     }
-    .scanner {
-      fill: url(#scan-gradient);
-      animation: scan-face 3s infinite linear;
+    @keyframes orbit {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
     }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.05); }
+    }
+    @keyframes data-stream {
+      0% { stroke-dashoffset: 20; }
+      100% { stroke-dashoffset: 0; }
+    }
+    @keyframes blink {
+      0%, 90%, 100% { opacity: 1; }
+      95% { opacity: 0.3; }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+
+    .scanner { animation: scan 3s ease-in-out infinite; }
+    .orbit-ring { transform-origin: 100px 100px; animation: orbit 20s linear infinite; }
+    .orbit-ring-reverse { transform-origin: 100px 100px; animation: orbit 15s linear infinite reverse; }
+    .pulse { animation: pulse 3s ease-in-out infinite; }
+    .data { stroke-dasharray: 5, 5; animation: data-stream 1s linear infinite; }
+    .blink { animation: blink 4s ease-in-out infinite; }
+    .float { animation: float 3s ease-in-out infinite; }
   </style>
-  
-  <g transform="translate(100, 100) scale(1.3) translate(-100, -100)">
-  <g filter="url(#glow-soft)">
-      <!-- Head - White -->
-      <circle cx="100" cy="80" r="25" stroke="#ffffff" stroke-width="2" fill="none" />
-      
-      <!-- Body - White -->
-      <path d="M60 150 Q 100 170 140 150 L 140 140 Q 100 110 60 140 Z" stroke="#ffffff" stroke-width="2" fill="none" />
-      
-      <!-- Tech Elements - Sky Blue -->
-      <circle cx="100" cy="80" r="10" fill="#87CEEB" fill-opacity="0.2" />
-      <rect x="95" y="78" width="10" height="4" fill="#ffffff" />
+
+  <!-- Background tech circles -->
+  <circle cx="100" cy="100" r="95" fill="none" stroke="#87CEEB" stroke-width="0.5" opacity="0.1"/>
+  <circle cx="100" cy="100" r="85" fill="none" stroke="#87CEEB" stroke-width="0.5" opacity="0.15" stroke-dasharray="10 5"/>
+
+  <!-- Orbiting data points -->
+  <g class="orbit-ring">
+    <circle cx="100" cy="8" r="3" fill="#87CEEB" opacity="0.6"/>
+    <circle cx="192" cy="100" r="2" fill="#87CEEB" opacity="0.4"/>
+    <circle cx="100" cy="192" r="2.5" fill="#87CEEB" opacity="0.5"/>
   </g>
-  
+  <g class="orbit-ring-reverse">
+    <circle cx="15" cy="100" r="2" fill="#ffffff" opacity="0.4"/>
+    <circle cx="160" cy="40" r="1.5" fill="#ffffff" opacity="0.3"/>
+  </g>
+
+  <!-- Connection lines -->
+  <g stroke="#87CEEB" stroke-width="0.5" opacity="0.3" class="data">
+    <line x1="30" y1="30" x2="60" y2="55"/>
+    <line x1="170" y1="30" x2="140" y2="55"/>
+    <line x1="30" y1="170" x2="65" y2="145"/>
+    <line x1="170" y1="170" x2="135" y2="145"/>
+  </g>
+
+  <!-- Profile circle background -->
+  <circle cx="100" cy="85" r="42" fill="none" stroke="#87CEEB" stroke-width="2" opacity="0.3" class="pulse"/>
+  <circle cx="100" cy="85" r="40" fill="url(#profileGrad)" opacity="0.2"/>
+
+  <!-- Person silhouette -->
+  <g filter="url(#glow)" class="float">
+    <!-- Head -->
+    <circle cx="100" cy="70" r="18" fill="none" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="100" cy="70" r="18" fill="#87CEEB" opacity="0.1"/>
+
+    <!-- Face features -->
+    <circle cx="93" cy="67" r="2" fill="#ffffff" opacity="0.8" class="blink"/>
+    <circle cx="107" cy="67" r="2" fill="#ffffff" opacity="0.8" class="blink"/>
+    <path d="M95,77 Q100,80 105,77" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.6"/>
+
+    <!-- Body -->
+    <path d="M70,140 Q70,115 85,105 Q100,95 115,105 Q130,115 130,140"
+          fill="none" stroke="#ffffff" stroke-width="2"/>
+    <path d="M70,140 Q70,115 85,105 Q100,95 115,105 Q130,115 130,140"
+          fill="#87CEEB" opacity="0.1"/>
+  </g>
+
   <!-- Scanning effect -->
-  <rect x="60" y="60" width="80" height="80" class="scanner" opacity="0.4" />
+  <rect x="55" y="50" width="90" height="20" fill="url(#scanGrad)" class="scanner" opacity="0.5"/>
+
+  <!-- Tech overlay elements -->
+  <g stroke="#87CEEB" stroke-width="1" fill="none" opacity="0.5">
+    <!-- Corner brackets -->
+    <path d="M55,50 L55,55 L60,55"/>
+    <path d="M145,50 L145,55 L140,55"/>
+    <path d="M55,120 L55,115 L60,115"/>
+    <path d="M145,120 L145,115 L140,115"/>
+  </g>
+
+  <!-- Data points around profile -->
+  <g fill="#87CEEB">
+    <circle cx="55" cy="70" r="2" opacity="0.5" class="pulse"/>
+    <circle cx="145" cy="70" r="2" opacity="0.5" class="pulse" style="animation-delay: -0.5s"/>
+    <circle cx="70" cy="120" r="2" opacity="0.4" class="pulse" style="animation-delay: -1s"/>
+    <circle cx="130" cy="120" r="2" opacity="0.4" class="pulse" style="animation-delay: -1.5s"/>
+  </g>
+
+  <!-- Info lines -->
+  <g stroke="#ffffff" stroke-width="1" opacity="0.4">
+    <line x1="135" y1="155" x2="175" y2="155"/>
+    <line x1="140" y1="165" x2="170" y2="165"/>
+    <line x1="145" y1="175" x2="165" y2="175"/>
+  </g>
+
+  <!-- Status indicators -->
+  <g fill="#87CEEB">
+    <circle cx="180" cy="155" r="3" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;0.3;0.8" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="175" cy="165" r="2" opacity="0.6">
+      <animate attributeName="opacity" values="0.6;0.2;0.6" dur="2s" begin="0.3s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <!-- Network nodes in corners -->
+  <g fill="#87CEEB" opacity="0.3">
+    <circle cx="20" cy="20" r="4"/>
+    <circle cx="180" cy="20" r="4"/>
+    <circle cx="20" cy="180" r="4"/>
+    <circle cx="180" cy="180" r="4"/>
   </g>
 </svg>

@@ -1,2 +1,8 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Trunk.toml | TOOLS/CRM/Trunk.toml
+# PURPOSE: Trunk build configuration for CRM WASM bundling
+# MODIFIED: 2025-12-02
+# ═══════════════════════════════════════════════════════════════════════════════
+
 [build]
 dist = "dist"

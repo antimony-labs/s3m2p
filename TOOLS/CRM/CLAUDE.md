@@ -5,14 +5,14 @@ Customer relationship management for antimony-labs.
 ## Build & Run
 
 ```bash
-trunk serve SW/CRM/index.html --open
-trunk build --release SW/CRM/index.html
+trunk serve TOOLS/CRM/index.html --open
+trunk build --release TOOLS/CRM/index.html
 ```
 
 ## Architecture
 
 ```
-SW/CRM/
+TOOLS/CRM/
   src/
     lib.rs       # WASM entry point, core types
   index.html     # Entry point

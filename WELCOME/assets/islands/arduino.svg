@@ -1,0 +1,113 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="boardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00979D" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#006064" stop-opacity="0.2"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <style>
+    @keyframes led-blink { 0%, 45%, 55%, 100% { fill: #ff0000; opacity: 0.8; } 50% { fill: #ff0000; opacity: 0.2; } }
+    @keyframes power-led { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    @keyframes signal { 0% { stroke-dashoffset: 20; } 100% { stroke-dashoffset: 0; } }
+    @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+    .led-blink { animation: led-blink 1s ease-in-out infinite; }
+    .power-led { animation: power-led 2s ease-in-out infinite; }
+    .signal { stroke-dasharray: 5, 5; animation: signal 1s linear infinite; }
+    .pulse { animation: pulse 2s ease-in-out infinite; }
+  </style>
+
+  <!-- PCB Board -->
+  <g filter="url(#glow)">
+    <rect x="30" y="40" width="140" height="120" rx="6" fill="url(#boardGrad)" stroke="#00979D" stroke-width="2"/>
+
+    <!-- Board texture/traces -->
+    <g stroke="#00979D" stroke-width="0.5" opacity="0.3">
+      <line x1="40" y1="60" x2="160" y2="60"/>
+      <line x1="40" y1="80" x2="160" y2="80"/>
+      <line x1="40" y1="100" x2="160" y2="100"/>
+      <line x1="40" y1="120" x2="160" y2="120"/>
+      <line x1="40" y1="140" x2="160" y2="140"/>
+    </g>
+  </g>
+
+  <!-- Microcontroller chip -->
+  <g>
+    <rect x="70" y="70" width="60" height="40" rx="2" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+    <!-- Chip pins -->
+    <g fill="#C0C0C0">
+      <rect x="75" y="65" width="4" height="8"/>
+      <rect x="85" y="65" width="4" height="8"/>
+      <rect x="95" y="65" width="4" height="8"/>
+      <rect x="105" y="65" width="4" height="8"/>
+      <rect x="115" y="65" width="4" height="8"/>
+      <rect x="75" y="107" width="4" height="8"/>
+      <rect x="85" y="107" width="4" height="8"/>
+      <rect x="95" y="107" width="4" height="8"/>
+      <rect x="105" y="107" width="4" height="8"/>
+      <rect x="115" y="107" width="4" height="8"/>
+    </g>
+    <!-- Chip label -->
+    <text x="100" y="93" fill="#00979D" font-family="monospace" font-size="8" text-anchor="middle">ATmega</text>
+  </g>
+
+  <!-- Pin headers -->
+  <g fill="#1a1a1a" stroke="#C0C0C0" stroke-width="0.5">
+    <!-- Digital pins -->
+    <rect x="35" y="45" width="130" height="8" rx="1"/>
+    <!-- Analog pins -->
+    <rect x="35" y="147" width="130" height="8" rx="1"/>
+  </g>
+
+  <!-- Pin holes -->
+  <g fill="#C0C0C0">
+    <circle cx="45" cy="49" r="2"/>
+    <circle cx="55" cy="49" r="2"/>
+    <circle cx="65" cy="49" r="2"/>
+    <circle cx="75" cy="49" r="2"/>
+    <circle cx="85" cy="49" r="2"/>
+    <circle cx="95" cy="49" r="2"/>
+    <circle cx="105" cy="49" r="2"/>
+    <circle cx="115" cy="49" r="2"/>
+    <circle cx="125" cy="49" r="2"/>
+    <circle cx="135" cy="49" r="2"/>
+    <circle cx="145" cy="49" r="2"/>
+    <circle cx="155" cy="49" r="2"/>
+  </g>
+
+  <!-- LEDs -->
+  <circle cx="45" cy="130" r="4" class="led-blink"/>
+  <circle cx="155" cy="130" r="4" fill="#00ff00" class="power-led"/>
+
+  <!-- USB connector -->
+  <rect x="85" y="155" width="30" height="15" rx="2" fill="#C0C0C0" stroke="#888" stroke-width="1"/>
+  <rect x="90" y="158" width="20" height="8" fill="#1a1a1a"/>
+
+  <!-- Signal lines from pins -->
+  <g stroke="#00979D" stroke-width="1" fill="none" class="signal">
+    <path d="M45,45 L45,25 L25,25"/>
+    <path d="M155,45 L155,25 L175,25"/>
+    <path d="M45,155 L45,175 L25,175"/>
+    <path d="M155,155 L155,175 L175,175"/>
+  </g>
+
+  <!-- External connection points -->
+  <g fill="#00979D" class="pulse">
+    <circle cx="25" cy="25" r="4"/>
+    <circle cx="175" cy="25" r="4"/>
+    <circle cx="25" cy="175" r="4"/>
+    <circle cx="175" cy="175" r="4"/>
+  </g>
+
+  <!-- Labels -->
+  <text x="45" y="140" fill="#ffffff" font-family="monospace" font-size="5">L</text>
+  <text x="152" y="140" fill="#ffffff" font-family="monospace" font-size="5">PWR</text>
+</svg>

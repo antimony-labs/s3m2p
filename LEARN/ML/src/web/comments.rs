@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: comments.rs | ML/src/web/comments.rs
+//! PURPOSE: Comment system implementation for web interface
+//! MODIFIED: 2025-11-26
+//! LAYER: LEARN → ML
+//! ═══════════════════════════════════════════════════════════════════════════════
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use std::fs::{self, File};

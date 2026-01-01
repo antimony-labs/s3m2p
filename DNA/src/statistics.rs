@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: statistics.rs | DNA/src/statistics.rs
+//! PURPOSE: Defines PopulationMetrics and MetricsHistory for tracking simulation statistics (population, diversity, generations, energy)
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 //! Population statistics and metrics
 //!
 //! Provides utilities for computing and tracking simulation metrics:
@@ -239,8 +246,10 @@ mod tests {
 
         // All herbivores
         for i in 0..50 {
-            let mut genes = Genome::default();
-            genes.role = BoidRole::Herbivore;
+            let genes = Genome {
+                role: BoidRole::Herbivore,
+                ..Default::default()
+            };
             arena.spawn(Vec2::new(i as f32, 0.0), Vec2::ZERO, genes);
         }
 
@@ -262,18 +271,24 @@ mod tests {
 
         // Equal distribution
         for i in 0..20 {
-            let mut genes = Genome::default();
-            genes.role = BoidRole::Herbivore;
+            let genes = Genome {
+                role: BoidRole::Herbivore,
+                ..Default::default()
+            };
             arena.spawn(Vec2::new(i as f32, 0.0), Vec2::ZERO, genes);
         }
         for i in 0..20 {
-            let mut genes = Genome::default();
-            genes.role = BoidRole::Carnivore;
+            let genes = Genome {
+                role: BoidRole::Carnivore,
+                ..Default::default()
+            };
             arena.spawn(Vec2::new(i as f32, 10.0), Vec2::ZERO, genes);
         }
         for i in 0..20 {
-            let mut genes = Genome::default();
-            genes.role = BoidRole::Scavenger;
+            let genes = Genome {
+                role: BoidRole::Scavenger,
+                ..Default::default()
+            };
             arena.spawn(Vec2::new(i as f32, 20.0), Vec2::ZERO, genes);
         }
 
@@ -295,13 +310,17 @@ mod tests {
         let mut arena: BoidArena<100> = BoidArena::new();
 
         for i in 0..30 {
-            let mut genes = Genome::default();
-            genes.role = BoidRole::Herbivore;
+            let genes = Genome {
+                role: BoidRole::Herbivore,
+                ..Default::default()
+            };
             arena.spawn(Vec2::new(i as f32, 0.0), Vec2::ZERO, genes);
         }
         for i in 0..10 {
-            let mut genes = Genome::default();
-            genes.role = BoidRole::Carnivore;
+            let genes = Genome {
+                role: BoidRole::Carnivore,
+                ..Default::default()
+            };
             arena.spawn(Vec2::new(i as f32, 10.0), Vec2::ZERO, genes);
         }
 

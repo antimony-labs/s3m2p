@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lesson_09_alphazero.rs | ML/src/lessons/lesson_09_alphazero.rs
+//! PURPOSE: AlphaZero combining MCTS with deep neural networks
+//! MODIFIED: 2025-11-26
+//! LAYER: LEARN → ML
+//! ═══════════════════════════════════════════════════════════════════════════════
 //! Lesson 09: AlphaZero - Self-Play Mastery
 //!
 //! AlphaZero combines MCTS with neural networks. Instead of random rollouts,

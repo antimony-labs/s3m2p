@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lesson_06_qlearning.rs | ML/src/lessons/lesson_06_qlearning.rs
+//! PURPOSE: Q-learning temporal difference reinforcement learning
+//! MODIFIED: 2025-11-26
+//! LAYER: LEARN → ML
+//! ═══════════════════════════════════════════════════════════════════════════════
 //! Lesson 06: Q-Learning
 //!
 //! Q-Learning learns a "value" for each (state, action) pair.

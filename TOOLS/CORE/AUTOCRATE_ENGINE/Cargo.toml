@@ -1,0 +1,18 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Cargo.toml | TOOLS/CORE/AUTOCRATE_ENGINE/Cargo.toml
+# PURPOSE: Package manifest for AutoCrate engine with DNA dependencies
+# MODIFIED: 2025-12-09
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[package]
+name = "autocrate-engine"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+dna.workspace = true
+serde.workspace = true
+glam.workspace = true
+
+[lints]
+workspace = true

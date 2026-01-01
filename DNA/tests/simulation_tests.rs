@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: simulation_tests.rs | DNA/tests/simulation_tests.rs
+//! PURPOSE: Unit and integration tests
+//! MODIFIED: 2025-11-29
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use dna::{
     compute_diversity, compute_flocking_forces, process_predation, process_scavenging,
     simulation_step, trigger_mass_extinction, BoidArena, BoidRole, Genome, SimConfig, SpatialGrid,
@@ -12,8 +19,10 @@ fn populate_arena_specific<const CAP: usize>(
 ) {
     for i in 0..count {
         let pos = Vec2::new(i as f32 * 2.0, 0.0);
-        let mut genes = Genome::default();
-        genes.role = role;
+        let genes = Genome {
+            role,
+            ..Genome::default()
+        };
         arena.spawn(pos, Vec2::ZERO, genes);
     }
 }

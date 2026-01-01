@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lesson_11_agi.rs | ML/src/lessons/lesson_11_agi.rs
+//! PURPOSE: AGI architecture and approaches to general intelligence
+//! MODIFIED: 2025-11-26
+//! LAYER: LEARN → ML
+//! ═══════════════════════════════════════════════════════════════════════════════
 //! Lesson 11: AGI Architecture (Multimodal Integration & Reasoning)
 //!
 //! AGI combines multiple AI capabilities into a unified system that can:

@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lib.rs | TOOLS/CRM/src/lib.rs
+//! PURPOSE: Customer relationship management WASM application with contact and deal tracking
+//! MODIFIED: 2025-12-02
+//! LAYER: TOOLS → CRM
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 #![allow(unexpected_cfgs)]
 
 use wasm_bindgen::prelude::*;

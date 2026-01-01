@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lesson_03_neural_networks.rs | ML/src/lessons/lesson_03_neural_networks.rs
+//! PURPOSE: Neural networks with backpropagation implementation
+//! MODIFIED: 2025-11-26
+//! LAYER: LEARN → ML
+//! ═══════════════════════════════════════════════════════════════════════════════
 use crate::engine::Value;
 use rand::prelude::*;
 

@@ -1,47 +1,69 @@
 # Start Work on Issue
 
-You are starting work on GitHub issue #$ARGUMENTS.
+Start work on GitHub issue #$ARGUMENTS using worktree isolation.
 
-## Instructions
+## Workflow (ALWAYS use worktrees)
 
-1. **Fetch issue details** using `gh issue view $ARGUMENTS --json title,body,labels`
-
-2. **Determine the project** from the issue labels (`project:xxx`) or title prefix (`[project]`)
-
-3. **Check if worktree exists** for this issue:
+1. **Check current location**:
    ```bash
-   ./scripts/worktree.sh goto $ARGUMENTS
+   pwd
+   git branch --show-current
    ```
 
-4. **If no worktree**, create one:
+2. **If on main branch** - create/switch to worktree:
    ```bash
-   ./scripts/worktree.sh create $ARGUMENTS
+   ./SCRIPTS/worktree.sh create $ARGUMENTS
    ```
-   Then inform the user to `cd` to that directory and restart Claude.
 
-5. **If worktree exists** (we're in it), analyze the issue:
-   - Parse the description and acceptance criteria
-   - Identify affected files/modules
-   - Create a TodoWrite plan for implementation
+   Then **STOP** and tell the user:
+   ```
+   Worktree created! To continue:
 
-6. **Load project context** by reading the project-specific CLAUDE.md:
-   - `core/CLAUDE.md` for core issues
-   - `helios/CLAUDE.md` for helios issues
-   - etc.
+   cd ~/worktrees/{project}-issue-$ARGUMENTS
+   claude
 
-7. **Present your implementation plan** to the user before starting work.
+   Then say "work on issue $ARGUMENTS" again.
+   ```
+
+3. **If already in worktree** - proceed with work:
+   - Fetch issue details: `gh issue view $ARGUMENTS --json title,body,labels`
+   - Load BRAIN context: `cat .claude/BRAIN/{PROJECT}/context.md`
+   - Load project CLAUDE.md if needed
+   - Create implementation plan with TodoWrite
+
+## Project Detection
+
+Extract project from:
+1. Issue label: `project:xxx`
+2. Title prefix: `[xxx]`
+3. Branch name: `{project}/issue-XX`
 
 ## Output Format
 
+### If creating worktree:
+```
+## Worktree Created for Issue #$ARGUMENTS
+
+**Path:** ~/worktrees/{project}-issue-$ARGUMENTS
+**Branch:** {project}/issue-$ARGUMENTS
+
+To start working:
+  cd ~/worktrees/{project}-issue-$ARGUMENTS
+  claude
+
+Then say "work on issue $ARGUMENTS" to continue.
+```
+
+### If in worktree (ready to work):
 ```
 ## Issue #$ARGUMENTS: [Title]
 
-**Project:** [project name]
-**Type:** [bug/feature/etc]
-**Priority:** [P0-P3]
+**Project:** [project]
+**Branch:** [current branch]
+**Worktree:** [current path]
 
 ### Summary
-[Brief summary of what needs to be done]
+[What needs to be done]
 
 ### Acceptance Criteria
 - [ ] Criterion 1
@@ -50,7 +72,13 @@ You are starting work on GitHub issue #$ARGUMENTS.
 ### Implementation Plan
 1. Step 1
 2. Step 2
-...
 
 Ready to proceed?
 ```
+
+## Key Rules
+
+- **NEVER work on main** for features/fixes
+- **ALWAYS create worktree first**
+- **PR back to main** when done using `/pr`
+- Worktrees live in `~/worktrees/`

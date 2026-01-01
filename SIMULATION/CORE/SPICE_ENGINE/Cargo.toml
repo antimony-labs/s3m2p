@@ -1,0 +1,17 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Cargo.toml | SIMULATION/CORE/SPICE_ENGINE/Cargo.toml
+# PURPOSE: SPICE circuit simulation engine crate manifest for DC and AC analysis
+# MODIFIED: 2025-12-09
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[package]
+name = "spice-engine"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+dna.workspace = true
+serde.workspace = true
+
+[lints]
+workspace = true

@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: color.rs | DNA/src/color.rs
+//! PURPOSE: Defines RGB and HSL color types with conversions (hex, rgba) and linear interpolation for visualizations
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 //! Color management and theme utilities
 //!
 //! Provides color primitives and conversion functions for:
@@ -326,6 +333,70 @@ pub mod themes {
     }
 }
 
+/// Site-wide theme palette for light/dark modes
+///
+/// Used by all too.foo projects (except HELIOS) for consistent theming.
+/// CSS variable names match: --bg, --surface, --text, --accent, --border
+#[derive(Clone, Copy, Debug)]
+pub struct ThemePalette {
+    /// Page background (#050508 dark, #F5F5F7 light)
+    pub bg: Rgb,
+    /// Cards, panels (#0a0a12 dark, #FFFFFF light)
+    pub surface: Rgb,
+    /// Primary text (#e0e0e0 dark, #1A1A2E light)
+    pub text: Rgb,
+    /// Muted text (#888888 dark, #666677 light)
+    pub text_muted: Rgb,
+    /// Primary accent (#00FFFF dark, #008B8B light)
+    pub accent: Rgb,
+    /// Border alpha value (0.15 dark, 0.2 light)
+    pub border_alpha: f32,
+}
+
+impl ThemePalette {
+    /// Dark mode palette (default)
+    pub fn dark() -> Self {
+        Self {
+            bg: Rgb::new(5, 5, 8),             // #050508
+            surface: Rgb::new(10, 10, 18),     // #0a0a12
+            text: Rgb::new(224, 224, 224),     // #e0e0e0
+            text_muted: Rgb::new(136, 136, 136), // #888888
+            accent: Rgb::new(0, 255, 255),     // #00FFFF (cyan)
+            border_alpha: 0.15,
+        }
+    }
+
+    /// Light mode palette
+    pub fn light() -> Self {
+        Self {
+            bg: Rgb::new(245, 245, 247),       // #F5F5F7
+            surface: Rgb::new(255, 255, 255),  // #FFFFFF
+            text: Rgb::new(26, 26, 46),        // #1A1A2E
+            text_muted: Rgb::new(102, 102, 119), // #666677
+            accent: Rgb::new(0, 139, 139),     // #008B8B (dark cyan)
+            border_alpha: 0.2,
+        }
+    }
+
+    /// Get palette by theme name ("light" or "dark")
+    pub fn from_name(name: &str) -> Self {
+        match name {
+            "light" => Self::light(),
+            _ => Self::dark(),
+        }
+    }
+
+    /// Get accent color with alpha as CSS rgba string
+    pub fn accent_rgba(&self, alpha: f32) -> String {
+        self.accent.to_rgba_string(alpha)
+    }
+
+    /// Get border color as CSS rgba string
+    pub fn border_rgba(&self) -> String {
+        self.accent.to_rgba_string(self.border_alpha)
+    }
+}
+
 /// Temperature to star color (for astronomy visualizations)
 /// Uses simplified black-body approximation
 pub fn temperature_to_color(kelvin: f32) -> Rgb {
@@ -460,5 +531,30 @@ mod tests {
         let mid = red.lerp(&blue, 0.5);
         // Should go through purple (around 300) not green (120)
         assert!(mid.h > 100.0 && mid.h < 140.0 || mid.h > 280.0);
+    }
+
+    #[test]
+    fn test_theme_palette() {
+        let dark = ThemePalette::dark();
+        let light = ThemePalette::light();
+
+        // Dark mode should have dark background
+        assert_eq!(dark.bg, Rgb::new(5, 5, 8));
+        assert_eq!(dark.accent, Rgb::new(0, 255, 255)); // Cyan
+
+        // Light mode should have light background
+        assert_eq!(light.bg, Rgb::new(245, 245, 247));
+        assert_eq!(light.accent, Rgb::new(0, 139, 139)); // Dark cyan
+
+        // from_name should work
+        let dark2 = ThemePalette::from_name("dark");
+        assert_eq!(dark2.bg, dark.bg);
+
+        let light2 = ThemePalette::from_name("light");
+        assert_eq!(light2.bg, light.bg);
+
+        // Unknown theme defaults to dark
+        let unknown = ThemePalette::from_name("unknown");
+        assert_eq!(unknown.bg, dark.bg);
     }
 }

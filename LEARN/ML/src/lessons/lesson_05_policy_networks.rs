@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: lesson_05_policy_networks.rs | ML/src/lessons/lesson_05_policy_networks.rs
+//! PURPOSE: Policy networks for decision-making in RL
+//! MODIFIED: 2025-11-26
+//! LAYER: LEARN → ML
+//! ═══════════════════════════════════════════════════════════════════════════════
 //! Lesson 05: Policy Networks
 //!
 //! A Policy Network directly maps states to actions (as probabilities).

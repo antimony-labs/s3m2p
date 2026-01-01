@@ -20,8 +20,9 @@ node_modules/
 Thumbs.db
 
 # Test results
-test-results/
-playwright-report/
+TESTS/results/
+TESTS/report/
+TESTS/logs/
 
 # Logs
 *.log

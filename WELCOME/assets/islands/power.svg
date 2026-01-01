@@ -1,0 +1,121 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="powerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFC107" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#FF9800" stop-opacity="0.2"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <style>
+    @keyframes flow { 0% { stroke-dashoffset: 20; } 100% { stroke-dashoffset: 0; } }
+    @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+    @keyframes spark { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+    @keyframes charge { 0% { height: 0; y: 110; } 100% { height: 30; y: 80; } }
+
+    .flow { stroke-dasharray: 5, 5; animation: flow 0.8s linear infinite; }
+    .pulse { animation: pulse 2s ease-in-out infinite; }
+    .spark { animation: spark 0.5s ease-in-out infinite; }
+  </style>
+
+  <!-- Background circuit traces -->
+  <g stroke="#FFC107" stroke-width="0.5" fill="none" opacity="0.15">
+    <path d="M20,50 L50,50 L50,30"/>
+    <path d="M180,50 L150,50 L150,30"/>
+    <path d="M20,150 L50,150 L50,170"/>
+    <path d="M180,150 L150,150 L150,170"/>
+  </g>
+
+  <!-- Main power line -->
+  <g stroke="#FFC107" stroke-width="2" fill="none" class="flow">
+    <path d="M20,100 L60,100"/>
+    <path d="M140,100 L180,100"/>
+  </g>
+
+  <!-- Input voltage indicator -->
+  <g filter="url(#glow)">
+    <text x="15" y="90" fill="#FFC107" font-family="monospace" font-size="8">Vin</text>
+    <text x="15" y="115" fill="#ffffff" font-family="monospace" font-size="7" opacity="0.7">12V</text>
+  </g>
+
+  <!-- Power converter block -->
+  <g filter="url(#glow)">
+    <rect x="60" y="70" width="80" height="60" rx="6" fill="url(#powerGrad)" stroke="#FFC107" stroke-width="2"/>
+
+    <!-- Internal components -->
+    <!-- Transformer symbol -->
+    <g transform="translate(80, 85)">
+      <path d="M0,0 Q5,-10 10,0 Q15,10 20,0 Q25,-10 30,0" fill="none" stroke="#ffffff" stroke-width="1.5"/>
+      <path d="M0,20 Q5,10 10,20 Q15,30 20,20 Q25,10 30,20" fill="none" stroke="#ffffff" stroke-width="1.5"/>
+      <line x1="15" y1="5" x2="15" y2="15" stroke="#ffffff" stroke-width="1"/>
+    </g>
+
+    <!-- Capacitor symbol -->
+    <g transform="translate(120, 90)">
+      <line x1="0" y1="0" x2="0" y2="20" stroke="#ffffff" stroke-width="2"/>
+      <line x1="5" y1="0" x2="5" y2="20" stroke="#ffffff" stroke-width="2"/>
+    </g>
+
+    <!-- Type label -->
+    <text x="100" y="122" fill="#FFC107" font-family="monospace" font-size="7" text-anchor="middle">DC-DC</text>
+  </g>
+
+  <!-- Output voltage indicator -->
+  <g filter="url(#glow)">
+    <text x="165" y="90" fill="#4CAF50" font-family="monospace" font-size="8">Vout</text>
+    <text x="165" y="115" fill="#ffffff" font-family="monospace" font-size="7" opacity="0.7">5V</text>
+  </g>
+
+  <!-- Ground symbols -->
+  <g stroke="#FFC107" stroke-width="1.5" fill="none">
+    <path d="M40,120 L40,140 M35,140 L45,140 M37,145 L43,145 M39,150 L41,150"/>
+    <path d="M160,120 L160,140 M155,140 L165,140 M157,145 L163,145 M159,150 L161,150"/>
+  </g>
+
+  <!-- Efficiency indicator -->
+  <g transform="translate(75, 145)">
+    <rect x="0" y="0" width="50" height="20" rx="3" fill="#1a1a2e" stroke="#FFC107" stroke-width="1"/>
+    <text x="25" y="9" fill="#FFC107" font-family="monospace" font-size="6" text-anchor="middle">EFF</text>
+    <text x="25" y="17" fill="#4CAF50" font-family="monospace" font-size="7" text-anchor="middle">95%</text>
+  </g>
+
+  <!-- Power meter bars -->
+  <g transform="translate(25, 25)">
+    <rect x="0" y="0" width="30" height="8" rx="2" fill="#1a1a2e" stroke="#FFC107" stroke-width="0.5"/>
+    <rect x="2" y="2" width="26" height="4" rx="1" fill="#FFC107" opacity="0.8"/>
+    <text x="15" y="18" fill="#FFC107" font-family="monospace" font-size="5" text-anchor="middle">PWR</text>
+  </g>
+
+  <!-- Lightning bolt (power symbol) -->
+  <g transform="translate(165, 20)" fill="#FFC107" class="pulse">
+    <polygon points="10,0 0,12 8,12 5,22 15,8 8,8"/>
+  </g>
+
+  <!-- Energy flow particles -->
+  <g fill="#FFC107" class="pulse">
+    <circle cx="45" cy="100" r="3"/>
+    <circle cx="155" cy="100" r="3" style="animation-delay: -0.5s"/>
+  </g>
+
+  <!-- Sparks -->
+  <g fill="#FFD700" class="spark">
+    <circle cx="100" cy="65" r="2"/>
+    <circle cx="90" cy="135" r="1.5" style="animation-delay: -0.3s"/>
+    <circle cx="110" cy="135" r="1.5" style="animation-delay: -0.6s"/>
+  </g>
+
+  <!-- Status LEDs -->
+  <g>
+    <circle cx="65" cy="75" r="3" fill="#4CAF50" class="pulse"/>
+    <circle cx="135" cy="75" r="3" fill="#4CAF50" class="pulse" style="animation-delay: -0.5s"/>
+  </g>
+
+  <!-- Wattage display -->
+  <text x="100" y="185" fill="#FFC107" font-family="monospace" font-size="8" text-anchor="middle" opacity="0.6">10W Max</text>
+</svg>

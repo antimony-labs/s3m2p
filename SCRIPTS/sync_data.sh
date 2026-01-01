@@ -1,4 +1,9 @@
 #!/bin/bash
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: sync_data.sh | SCRIPTS/sync_data.sh
+# PURPOSE: Syncs simulation data to remote server using rsync differential transfer
+# MODIFIED: 2025-11-26
+# ═══════════════════════════════════════════════════════════════════════════════
 set -e
 
 # Configuration

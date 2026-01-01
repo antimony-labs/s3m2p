@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: interaction.rs | DNA/src/interaction.rs
+//! PURPOSE: Defines InteractionResult enum and Interactable trait for entity-environment and entity-entity interaction effects
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 //! Interaction effects for entity-environment and entity-entity interactions
 //!
 //! Provides a unified system for handling interactions between:

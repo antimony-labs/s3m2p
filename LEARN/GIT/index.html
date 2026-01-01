@@ -1,0 +1,61 @@
+<!--
+═══════════════════════════════════════════════════════════════════════════════
+FILE: index.html | GIT/index.html
+PURPOSE: Git version control learning platform
+MODIFIED: 2025-12-30
+═══════════════════════════════════════════════════════════════════════════════
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Git | Version Control</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Rajdhani:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Universal Theme System -->
+    <link data-trunk rel="copy-file" href="../theme/learn-theme.css" />
+    <link data-trunk rel="copy-file" href="../theme/learn-theme.js" />
+    <link rel="stylesheet" href="learn-theme.css">
+    <script src="learn-theme.js"></script>
+
+    <!-- Git-specific accent colors (Git orange) -->
+    <style>
+        :root {
+            --accent: #F05032;
+            --accent-dim: rgba(240, 80, 50, 0.2);
+            --border: rgba(240, 80, 50, 0.15);
+            --accent-gradient-end: #ff6644;
+        }
+
+        :root[data-theme="light"] {
+            --accent: #D02010;
+            --accent-dim: rgba(208, 32, 16, 0.15);
+            --border: rgba(208, 32, 16, 0.2);
+        }
+    </style>
+
+    <!-- WASM Build -->
+    <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" />
+</head>
+<body>
+    <!-- Theme Toggle Button -->
+    <button id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle light/dark mode" style="position:fixed;top:1rem;right:1rem;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 12px;cursor:pointer;font-size:1rem;color:var(--text-muted);transition:border-color 0.2s,color 0.2s;">
+        <span class="icon-sun" style="display:none;">&#9788;</span>
+        <span class="icon-moon" style="display:none;">&#9790;</span>
+    </button>
+    <style>
+        :root[data-theme="dark"] .icon-sun { display: inline !important; }
+        :root[data-theme="light"] .icon-moon { display: inline !important; }
+        #theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+    </style>
+
+    <!-- App Container -->
+    <div id="app">
+        <div class="loading">Loading...</div>
+    </div>
+</body>
+</html>

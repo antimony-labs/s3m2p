@@ -1,67 +1,175 @@
 <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <filter id="glow-soft">
-        <feGaussianBlur stdDeviation="1" result="blur" />
-        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    <linearGradient id="metalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#CD7F32"/>
+      <stop offset="50%" stop-color="#B8860B"/>
+      <stop offset="100%" stop-color="#CD7F32"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
     </filter>
   </defs>
-  
+
   <style>
-    @keyframes rotate-gear {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    @keyframes gear-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
     }
-    @keyframes arm-piston {
-      0%, 100% { transform: translate(0, 0); }
-      50% { transform: translate(5px, 5px); }
+    @keyframes gear-spin-reverse {
+      from { transform: rotate(360deg); }
+      to { transform: rotate(0deg); }
     }
-    .gear-spin {
-      transform-origin: 100px 100px;
-      animation: rotate-gear 12s infinite linear;
+    @keyframes arm-reach {
+      0%, 100% { transform: rotate(-10deg); }
+      50% { transform: rotate(10deg); }
     }
-    .arm-move {
-        animation: arm-piston 3s infinite ease-in-out;
+    @keyframes claw-grab {
+      0%, 100% { transform: scaleX(1); }
+      50% { transform: scaleX(0.7); }
     }
+    @keyframes piston {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(5px); }
+    }
+    @keyframes spark {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 1; }
+    }
+    @keyframes conveyor {
+      0% { stroke-dashoffset: 0; }
+      100% { stroke-dashoffset: -20; }
+    }
+
+    .gear-main { transform-origin: 60px 80px; animation: gear-spin 4s linear infinite; }
+    .gear-small { transform-origin: 95px 65px; animation: gear-spin-reverse 3s linear infinite; }
+    .gear-large { transform-origin: 140px 100px; animation: gear-spin 6s linear infinite; }
+    .arm { transform-origin: 100px 130px; animation: arm-reach 3s ease-in-out infinite; }
+    .claw { transform-origin: center; animation: claw-grab 1.5s ease-in-out infinite; }
+    .piston { animation: piston 2s ease-in-out infinite; }
+    .spark { animation: spark 0.5s ease-in-out infinite; }
+    .conveyor { stroke-dasharray: 10, 10; animation: conveyor 1s linear infinite; }
   </style>
-  
-  <!-- Outer Gear Outline - Bronze/Gold -->
-  <circle cx="100" cy="100" r="80" fill="none" stroke="#CD7F32" stroke-width="0.5" stroke-opacity="0.2" stroke-dasharray="5,5"/>
-  
-  <g transform="translate(100, 100) scale(1.4) translate(-100, -100)">
-  <g filter="url(#glow-soft)">
-      <!-- Main Gear - Bronze/Copper -->
-      <g class="gear-spin">
-        <path d="M100 60 L105 50 H95 L100 60 Z" fill="#CD7F32" /> 
-        <circle cx="100" cy="100" r="35" fill="none" stroke="#CD7F32" stroke-width="2.5" />
-        
-        <!-- Teeth -->
-        <g stroke="#CD7F32" stroke-width="4" stroke-linecap="square">
-            <line x1="100" y1="60" x2="100" y2="52" />
-            <line x1="100" y1="140" x2="100" y2="148" />
-            <line x1="60" y1="100" x2="52" y2="100" />
-            <line x1="140" y1="100" x2="148" y2="100" />
-            
-            <line x1="128" y1="72" x2="134" y2="66" />
-            <line x1="72" y1="128" x2="66" y2="134" />
-            <line x1="72" y1="72" x2="66" y2="66" />
-            <line x1="128" y1="128" x2="134" y2="134" />
-        </g>
-        
-        <!-- Center Hub -->
-        <circle cx="100" cy="100" r="12" fill="#CD7F32" fill-opacity="0.2" />
-        <circle cx="100" cy="100" r="4" fill="#ffffff" />
-      </g>
-      
-      <!-- Mechanical Arm - Silver/White -->
-      <g class="arm-move">
-        <path d="M100 100 L130 130" stroke="#ffffff" stroke-width="3" stroke-linecap="round" />
-        <circle cx="130" cy="130" r="5" fill="#ffffff" />
-        <path d="M130 130 L150 120" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
-        
-        <!-- Claw -->
-        <path d="M150 120 L155 115" stroke="#ffffff" stroke-width="1.5" />
-        <path d="M150 120 L155 125" stroke="#ffffff" stroke-width="1.5" />
-      </g>
+
+  <!-- Background grid -->
+  <g stroke="#CD7F32" stroke-opacity="0.1" stroke-width="0.5">
+    <line x1="0" y1="50" x2="200" y2="50"/>
+    <line x1="0" y1="100" x2="200" y2="100"/>
+    <line x1="0" y1="150" x2="200" y2="150"/>
+    <line x1="50" y1="0" x2="50" y2="200"/>
+    <line x1="100" y1="0" x2="100" y2="200"/>
+    <line x1="150" y1="0" x2="150" y2="200"/>
   </g>
+
+  <!-- Conveyor belt -->
+  <g>
+    <rect x="20" y="165" width="160" height="15" rx="3" fill="none" stroke="#CD7F32" stroke-width="2" opacity="0.5"/>
+    <line x1="25" y1="172" x2="175" y2="172" stroke="#CD7F32" stroke-width="2" class="conveyor"/>
   </g>
+
+  <!-- Main gear -->
+  <g class="gear-main" filter="url(#glow)">
+    <circle cx="60" cy="80" r="28" fill="none" stroke="#CD7F32" stroke-width="3"/>
+    <circle cx="60" cy="80" r="18" fill="none" stroke="#CD7F32" stroke-width="2" opacity="0.6"/>
+    <circle cx="60" cy="80" r="8" fill="#CD7F32" opacity="0.8"/>
+    <!-- Gear teeth -->
+    <g stroke="#CD7F32" stroke-width="4" stroke-linecap="round">
+      <line x1="60" y1="48" x2="60" y2="55"/>
+      <line x1="60" y1="105" x2="60" y2="112"/>
+      <line x1="28" y1="80" x2="35" y2="80"/>
+      <line x1="85" y1="80" x2="92" y2="80"/>
+      <line x1="40" y1="60" x2="45" y2="65"/>
+      <line x1="75" y1="95" x2="80" y2="100"/>
+      <line x1="40" y1="100" x2="45" y2="95"/>
+      <line x1="75" y1="65" x2="80" y2="60"/>
+    </g>
+  </g>
+
+  <!-- Small gear (meshing) -->
+  <g class="gear-small" filter="url(#glow)">
+    <circle cx="95" cy="65" r="15" fill="none" stroke="#CD7F32" stroke-width="2" opacity="0.8"/>
+    <circle cx="95" cy="65" r="8" fill="none" stroke="#CD7F32" stroke-width="1.5" opacity="0.5"/>
+    <circle cx="95" cy="65" r="4" fill="#CD7F32" opacity="0.6"/>
+    <g stroke="#CD7F32" stroke-width="3" stroke-linecap="round" opacity="0.8">
+      <line x1="95" y1="48" x2="95" y2="52"/>
+      <line x1="95" y1="78" x2="95" y2="82"/>
+      <line x1="78" y1="65" x2="82" y2="65"/>
+      <line x1="108" y1="65" x2="112" y2="65"/>
+    </g>
+  </g>
+
+  <!-- Large gear -->
+  <g class="gear-large" filter="url(#glow)">
+    <circle cx="140" cy="100" r="35" fill="none" stroke="#CD7F32" stroke-width="2" opacity="0.6"/>
+    <circle cx="140" cy="100" r="22" fill="none" stroke="#CD7F32" stroke-width="1.5" opacity="0.4"/>
+    <circle cx="140" cy="100" r="10" fill="#CD7F32" opacity="0.5"/>
+    <g stroke="#CD7F32" stroke-width="4" stroke-linecap="round" opacity="0.6">
+      <line x1="140" y1="62" x2="140" y2="68"/>
+      <line x1="140" y1="132" x2="140" y2="138"/>
+      <line x1="102" y1="100" x2="108" y2="100"/>
+      <line x1="172" y1="100" x2="178" y2="100"/>
+      <line x1="115" y1="75" x2="120" y2="80"/>
+      <line x1="160" y1="120" x2="165" y2="125"/>
+      <line x1="115" y1="125" x2="120" y2="120"/>
+      <line x1="160" y1="80" x2="165" y2="75"/>
+    </g>
+  </g>
+
+  <!-- Robotic arm -->
+  <g class="arm" filter="url(#glow)">
+    <!-- Base -->
+    <rect x="90" y="145" width="20" height="15" rx="2" fill="#CD7F32" opacity="0.8"/>
+
+    <!-- Arm segment 1 -->
+    <path d="M100,145 L100,120" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+
+    <!-- Joint -->
+    <circle cx="100" cy="120" r="5" fill="#ffffff" opacity="0.9"/>
+
+    <!-- Arm segment 2 -->
+    <path d="M100,120 L130,100" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Claw -->
+    <g class="claw" transform="translate(130, 100)">
+      <circle cx="0" cy="0" r="4" fill="#ffffff" opacity="0.8"/>
+      <path d="M0,0 L8,-8 L12,-6" stroke="#ffffff" stroke-width="2" fill="none"/>
+      <path d="M0,0 L8,8 L12,6" stroke="#ffffff" stroke-width="2" fill="none"/>
+    </g>
+  </g>
+
+  <!-- Piston mechanism -->
+  <g class="piston" opacity="0.7">
+    <rect x="15" y="120" width="25" height="10" rx="2" fill="none" stroke="#CD7F32" stroke-width="1.5"/>
+    <line x1="40" y1="125" x2="55" y2="125" stroke="#CD7F32" stroke-width="2"/>
+    <circle cx="55" cy="125" r="3" fill="#CD7F32"/>
+  </g>
+
+  <!-- Sparks -->
+  <g fill="#FFD700" class="spark">
+    <circle cx="85" cy="72" r="2"/>
+  </g>
+  <g fill="#FFD700" class="spark" style="animation-delay: -0.25s">
+    <circle cx="115" cy="85" r="1.5"/>
+  </g>
+  <g fill="#FFD700" class="spark" style="animation-delay: -0.5s">
+    <circle cx="70" cy="58" r="1.5"/>
+  </g>
+
+  <!-- Status indicators -->
+  <g fill="#50C878">
+    <circle cx="20" cy="20" r="4" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;0.3;0.8" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="180" cy="20" r="4" opacity="0.6">
+      <animate attributeName="opacity" values="0.6;0.2;0.6" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <!-- Product on conveyor -->
+  <rect x="45" y="155" width="12" height="10" rx="1" fill="#CD7F32" opacity="0.6">
+    <animateTransform attributeName="transform" type="translate" values="0,0;100,0;0,0" dur="4s" repeatCount="indefinite"/>
+  </rect>
 </svg>

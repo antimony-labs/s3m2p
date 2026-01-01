@@ -1,40 +1,105 @@
+<!--
+═══════════════════════════════════════════════════════════════════════════════
+FILE: index.html | UBUNTU/index.html
+PURPOSE: Ubuntu learning platform - filesystem, permissions, administration
+MODIFIED: 2025-12-30
+═══════════════════════════════════════════════════════════════════════════════
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ubuntu TITLE_PLACEHOLDER Linux</title>
-    <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" />
+    <title>Ubuntu | Linux Learning</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Rajdhani:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Universal Theme System -->
+    <link data-trunk rel="copy-file" href="../theme/learn-theme.css" />
+    <link data-trunk rel="copy-file" href="../theme/learn-theme.js" />
+    <link rel="stylesheet" href="learn-theme.css?v=2">
+    <script src="learn-theme.js"></script>
+
+    <!-- Ubuntu-specific accent colors and terminal -->
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #050508 0%, #0a0a12 100%);
-            font-family: 'Monaco', 'Courier New', monospace;
-            color: #e0e0e0;
+        :root {
+            --accent: #e95420;
+            --accent-dim: rgba(233, 84, 32, 0.2);
+            --border: rgba(233, 84, 32, 0.15);
+            --accent-gradient-end: #ffaa44;
+
+            /* Ubuntu terminal colors */
+            --terminal-bg: #1a1a24;
+            --terminal-green: #44ff88;
+            --terminal-red: #ff6644;
         }
-        .container { text-align: center; padding: 2rem; max-width: 600px; }
-        h1 { font-size: 2.5rem; margin-bottom: 1rem; color: #00ffaa; text-shadow: 0 0 20px rgba(0, 255, 170, 0.5); }
-        .description { font-size: 1.2rem; margin-bottom: 2rem; color: #b0b0b0; line-height: 1.6; }
-        .status { font-size: 1.5rem; margin-bottom: 2rem; color: #ffaa00; font-weight: bold; }
-        .back-link {
-            display: inline-block; margin-top: 2rem; padding: 0.8rem 1.5rem;
-            background: rgba(0, 255, 170, 0.1); border: 1px solid rgba(0, 255, 170, 0.3);
-            color: #00ffaa; text-decoration: none; border-radius: 4px; transition: all 0.3s ease;
+
+        :root[data-theme="light"] {
+            --accent: #C44018;
+            --accent-dim: rgba(196, 64, 24, 0.12);
+            --accent-gradient-end: #E66100;
+            --terminal-bg: #F1F3F5;
         }
-        .back-link:hover { background: rgba(0, 255, 170, 0.2); border-color: #00ffaa; }
-        @media (max-width: 768px) { h1 { font-size: 1.8rem; } .description { font-size: 1rem; } }
     </style>
+
+    <!-- Partition calculator JavaScript -->
+    <script>
+        function calculatePartitions() {
+            const diskSize = parseInt(document.getElementById('disk-size').value) || 500;
+            const resultsEl = document.getElementById('calc-results');
+
+            if (diskSize < 50) {
+                resultsEl.innerHTML = '<p style="color:#ff6644;">Disk size must be at least 50 GB</p>';
+                return;
+            }
+
+            // Calculate recommended partitions
+            const efi = 0.512; // 512 MB for EFI
+            const swap = Math.min(Math.max(8, Math.ceil(diskSize * 0.02)), 32); // 2% of disk, 8-32 GB
+            const root = Math.min(Math.max(25, Math.ceil(diskSize * 0.1)), 100); // 10% of disk, 25-100 GB
+            const home = diskSize - efi - swap - root; // Rest for /home
+
+            const efiPct = (efi / diskSize * 100).toFixed(1);
+            const swapPct = (swap / diskSize * 100).toFixed(1);
+            const rootPct = (root / diskSize * 100).toFixed(1);
+            const homePct = (home / diskSize * 100).toFixed(1);
+
+            resultsEl.innerHTML =
+                '<div class="partition-bar">' +
+                '  <div class="partition-efi" style="width:' + efiPct + '%">EFI</div>' +
+                '  <div class="partition-root" style="width:' + rootPct + '%">/</div>' +
+                '  <div class="partition-swap" style="width:' + swapPct + '%">SWAP</div>' +
+                '  <div class="partition-home" style="width:' + homePct + '%">/home</div>' +
+                '</div>' +
+                '<p><span style="color:var(--partition-efi);">EFI System:</span> 512 MB (boot partition)</p>' +
+                '<p><span style="color:var(--partition-root);">/ (root):</span> ' + root + ' GB (system files)</p>' +
+                '<p><span style="color:var(--partition-swap);">swap:</span> ' + swap + ' GB (virtual memory)</p>' +
+                '<p><span style="color:var(--partition-home);">/home:</span> ' + home.toFixed(1) + ' GB (user files)</p>' +
+                '<hr style="border:none;border-top:1px solid var(--border);margin:12px 0;">' +
+                '<p style="color:var(--text-muted);font-size:12px;">Tip: Use ext4 for / and /home. EFI uses FAT32.</p>';
+        }
+    </script>
+
+    <!-- WASM Build -->
+    <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" />
 </head>
 <body>
-    <div class="container">
-        <h1>Ubuntu TITLE_PLACEHOLDER Linux</h1>
-        <p class="description">Linux system administration, shell scripting, server management, and DevOps fundamentals.</p>
-        <p class="status">Coming Soon</p>
-        <a href="https://too.foo" class="back-link">← Back to antimony-labs</a>
+    <!-- Theme Toggle Button -->
+    <button id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle light/dark mode" style="position:fixed;top:1rem;right:1rem;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 12px;cursor:pointer;font-size:1rem;color:var(--text-muted);transition:border-color 0.2s,color 0.2s;">
+        <span class="icon-sun" style="display:none;">&#9788;</span>
+        <span class="icon-moon" style="display:none;">&#9790;</span>
+    </button>
+    <style>
+        :root[data-theme="dark"] .icon-sun { display: inline !important; }
+        :root[data-theme="light"] .icon-moon { display: inline !important; }
+        #theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+    </style>
+
+    <!-- App Container -->
+    <div id="app">
+        <div class="loading">Loading...</div>
     </div>
 </body>
 </html>

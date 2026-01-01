@@ -1,3 +1,10 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: spatial.rs | DNA/src/spatial.rs
+//! PURPOSE: Defines SphericalPos for spherical coordinates and SpatialKey for cube-sphere spatial indexing with quadtree subdivision
+//! MODIFIED: 2025-12-09
+//! LAYER: DNA (foundation)
+//! ═══════════════════════════════════════════════════════════════════════════════
+
 use glam::Vec3;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -427,7 +434,7 @@ mod tests {
             "The loaded key should not be reported as missing"
         );
         assert!(
-            missing.len() > 0,
+            !missing.is_empty(),
             "Should report missing keys for the rest of the visible area"
         );
     }

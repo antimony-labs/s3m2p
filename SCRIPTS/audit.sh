@@ -1,4 +1,9 @@
 #!/bin/bash
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: audit.sh | SCRIPTS/audit.sh
+# PURPOSE: Runs security audits with cargo audit, cargo deny, and unsafe code scanner
+# MODIFIED: 2025-11-29
+# ═══════════════════════════════════════════════════════════════════════════════
 set -e
 
 echo "=== S3M2P Security Audit ==="

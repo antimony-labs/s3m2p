@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: render.rs | src/render.rs
+//! PURPOSE: DOM rendering and canvas visualization logic
+//! MODIFIED: 2025-11-29
+//! LAYER: LEARN → src
+//! ═══════════════════════════════════════════════════════════════════════════════
 // DOM rendering for lessons
 
 use crate::lessons::Lesson;
@@ -29,13 +35,13 @@ impl LessonRenderer {
             "Foundations",
             "Deep Learning",
             "Reinforcement Learning",
-            "Towards AGI",
+            "Advanced",
         ];
 
         let mut html = String::from(
             r#"
             <header class="hero">
-                <h1>Zero to AGI</h1>
+                <h1>ML Fundamentals</h1>
                 <p class="subtitle">Learn machine learning from scratch, implemented in Rust</p>
             </header>
         "#,
@@ -107,6 +113,30 @@ impl LessonRenderer {
             )
         };
 
+        // Demo controls for specific lessons
+        let demo_controls = if lesson.id == 1 {
+            // Linear Regression controls
+            r#"
+            <div class="demo-controls" id="demo-controls">
+                <div class="control-row">
+                    <label>Learning Rate: <span id="lr-value">0.100</span></label>
+                    <input type="range" id="lr-slider" min="0.001" max="1" step="0.01" value="0.1">
+                </div>
+                <div class="control-row">
+                    <label>Noise: <span id="noise-value">0.20</span></label>
+                    <input type="range" id="noise-slider" min="0" max="1" step="0.05" value="0.2">
+                </div>
+                <div class="control-buttons">
+                    <button id="reset-btn" class="demo-btn">🔄 Reset</button>
+                    <button id="pause-btn" class="demo-btn">⏸ Pause</button>
+                    <button id="step-btn" class="demo-btn">⏭ Step</button>
+                </div>
+            </div>
+            "#.to_string()
+        } else {
+            r#"<p class="canvas-hint">Coming soon: interactive visualization</p>"#.to_string()
+        };
+
         let html = format!(
             r#"
             <article class="lesson-view">
@@ -143,7 +173,7 @@ impl LessonRenderer {
                     <section class="visualization">
                         <h3>Interactive Demo</h3>
                         <canvas id="lesson-canvas" width="600" height="400"></canvas>
-                        <p class="canvas-hint">Coming soon: interactive visualization</p>
+                        {}
                     </section>
                 </div>
 
@@ -161,6 +191,7 @@ impl LessonRenderer {
             lesson.intuition,
             math_html,
             concepts_html,
+            demo_controls,
             if lesson.id > 0 {
                 format!(
                     r#"<button onclick="go_to_lesson({})" class="nav-btn">← Previous</button>"#,

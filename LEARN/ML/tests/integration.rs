@@ -1,3 +1,9 @@
+//! ═══════════════════════════════════════════════════════════════════════════════
+//! FILE: integration.rs | ML/tests/integration.rs
+//! PURPOSE: Integration tests for cross-module functionality
+//! MODIFIED: 2025-11-26
+//! LAYER: LEARN → ML
+//! ═══════════════════════════════════════════════════════════════════════════════
 //! Integration tests for Antimony Labs ML platform
 //!
 //! These tests verify that all lessons run correctly and produce valid output.

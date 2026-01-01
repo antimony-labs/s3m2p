@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Cargo.toml | ./Cargo.toml
+# PURPOSE: Workspace manifest defining all crates and shared dependencies for S3M2P monorepo
+# MODIFIED: 2025-12-09
+# ═══════════════════════════════════════════════════════════════════════════════
+
 [workspace]
 resolver = "2"
 members = [
@@ -6,24 +12,38 @@ members = [
     "DNA/SIMULATION_CLI",
     "DNA/STORAGE_SERVER",
     "DNA/CLAUDE_AUTOMATION",
+    "DNA/SECURITY_CLI",
+
+    # CORE - Domain-specific engines
+    "SIMULATION/CORE/SIMULATION_ENGINE",
+    "SIMULATION/CORE/SPICE_ENGINE",
+    "TOOLS/CORE/PLL_ENGINE",
+    "TOOLS/CORE/EXPORT_ENGINE",
+    "SIMULATION/CORE/WAVE_ENGINE",
+    "TOOLS/CORE/AUTOCRATE_ENGINE",
+    "TOOLS/CORE/CAD_ENGINE",
 
     # L1 Bubbles (deployed)
     "WELCOME",
     "HELIOS",
+    "HELIOS/server",
     "BLOG",
+    "ARCH",
 
     # Simulations (L2 under Simulations bubble)
-    "SIMULATIONS/CHLADNI",
-    "SIMULATIONS/POWERLAW",
+    "SIMULATION/CHLADNI",
 
     # Tools (L2 under Tools bubble)
-    "TOOLS/SENSORS",
     "TOOLS/AUTOCRATE",
+    "TOOLS/CAD",
     "TOOLS/CRM",
     "TOOLS/PLL",
     "TOOLS/POWER_CIRCUITS",
+    "TOOLS/SPICE",
 
     # Learn (L2 under Learn bubble)
+    "LEARN",
+    "LEARN/SENSORS",
     "LEARN/AI",
     "LEARN/UBUNTU",
     "LEARN/OPENCV",
@@ -31,6 +51,11 @@ members = [
     "LEARN/ESP32",
     "LEARN/SWARM_ROBOTICS",
     "LEARN/SLAM",
+    "LEARN/GIT",
+
+    # Learn CORE engines (shared crates)
+    "LEARN/learn_core",
+    "LEARN/learn_web",
 ]
 # Excluded - different build targets/dependencies
 exclude = ["HW/*"]
@@ -48,6 +73,8 @@ web-sys = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 dna = { path = "DNA" }
+learn_core = { path = "LEARN/learn_core" }
+learn_web = { path = "LEARN/learn_web" }
 
 # GPU compute (for CFD, FEA, Thermal)
 wgpu = "22.1"

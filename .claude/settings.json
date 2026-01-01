@@ -9,5 +9,18 @@
         "GITHUB_REPO": "S3M2P"
       }
     }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash(git commit:*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cargo check --workspace 2>&1 | head -30 || echo 'Validation failed - fix errors before committing'"
+          }
+        ]
+      }
+    ]
   }
 }

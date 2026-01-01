@@ -11,10 +11,46 @@ Deployed to **too.foo**
 | `cargo test --workspace` | Run all tests |
 | `trunk build HELIOS/index.html` | Build helios WASM |
 | `trunk build WELCOME/index.html` | Build WELCOME (too.foo) WASM |
-| `trunk serve HELIOS/index.html` | Dev server for helios |
+| `./SCRIPTS/dev-serve.sh <project>` | Dev server (auto-kills existing) |
 | `./SCRIPTS/deploy.sh welcome --publish` | Deploy too.foo (WELCOME) |
 | `./SCRIPTS/worktree.sh create <issue>` | Create worktree for issue |
 | `./SCRIPTS/audit.sh` | Security audit |
+
+## Dev Server Ports
+
+Each project has a dedicated port to allow multiple services to run simultaneously.
+Use `./SCRIPTS/dev-serve.sh <project>` to start - it auto-kills any existing process on that port.
+
+| Project | Port | URL | Description |
+|---------|------|-----|-------------|
+| welcome | 8080 | http://127.0.0.1:8080 | too.foo landing page |
+| helios | 8081 | http://127.0.0.1:8081 | Solar system |
+| chladni | 8082 | http://127.0.0.1:8082 | Chladni patterns |
+| autocrate | 8083 | http://127.0.0.1:8083 | Crate generator |
+| sensors | 8084 | http://127.0.0.1:8084 | Sensor test (LEARN) |
+| blog | 8085 | http://127.0.0.1:8085 | Blog platform |
+| learn | 8086 | http://127.0.0.1:8086 | Learning hub |
+| arch | 8087 | http://127.0.0.1:8087 | Architecture explorer |
+| pll | 8090 | http://127.0.0.1:8090 | PLL designer |
+| power | 8091 | http://127.0.0.1:8091 | Power circuits |
+| ai | 8100 | http://127.0.0.1:8100 | AI tutorials |
+| ubuntu | 8101 | http://127.0.0.1:8101 | Ubuntu tutorials |
+| opencv | 8102 | http://127.0.0.1:8102 | OpenCV tutorials |
+| arduino | 8103 | http://127.0.0.1:8103 | Arduino tutorials |
+| esp32 | 8104 | http://127.0.0.1:8104 | ESP32 tutorials |
+| swarm | 8105 | http://127.0.0.1:8105 | Swarm robotics |
+| slam | 8106 | http://127.0.0.1:8106 | SLAM tutorials |
+| git | 8107 | http://127.0.0.1:8107 | Git tutorials |
+
+## Agent Protocol
+
+### Handling New Tasks (Issue Paste)
+When the user pastes a GitHub issue description or URL:
+1.  **Extract Issue ID**: Identify the issue number (e.g., `#42` or from URL).
+2.  **Setup Worktree**: Execute `./SCRIPTS/worktree.sh create <issue_id>`.
+    *   *Note*: This script uses `gh` to fetch details and creates a worktree in `~/worktrees/`.
+3.  **Context Switch**: Instruct the user to `cd` into the new worktree path provided by the script output.
+4.  **Start Work**: Begin analyzing the codebase context *within that new worktree*.
 
 ## Directory Structure
 
@@ -24,9 +60,9 @@ S3M2P/
 ├── DNA/                    # Core algorithms + infrastructure
 ├── WELCOME/                # Landing page (too.foo)
 ├── HELIOS/                 # Solar system (helios.too.foo)
-├── SIMULATIONS/            # Simulations (e.g., chladni.too.foo)
-├── TOOLS/                  # User-facing tools (sensors.too.foo, etc.)
-├── LEARN/                  # Learning topics (ai.too.foo, etc.)
+├── SIMULATION/             # Simulations (e.g., chladni.too.foo)
+├── TOOLS/                  # User-facing tools (autocrate.too.foo, etc.)
+├── LEARN/                  # Learning tutorials (ai.too.foo, slam.too.foo, etc.)
 └── BLOG/                   # Blog platform (blog.too.foo)
 ```
 
@@ -38,31 +74,27 @@ DNA/
 ├── STORAGE_SERVER/         # Storage backend
 └── CLAUDE_AUTOMATION/      # GitHub automation
 
-SIMULATIONS/
+SIMULATION/
 └── CHLADNI/                # Chladni wave patterns (chladni.too.foo)
 
 TOOLS/
-├── SENSORS/                # Sensor test (sensors.too.foo)
 ├── AUTOCRATE/              # Shipping crate generator (autocrate.too.foo)
-└── CRM/                    # CRM (crm.too.foo)
+├── CRM/                    # CRM (crm.too.foo)
+├── PLL/                    # PLL designer (pll.too.foo)
+├── POWER_CIRCUITS/         # Power circuit designer (power.too.foo)
+├── CAD/                    # CAD tools
+└── SPICE/                  # SPICE simulation
 
 LEARN/
-└── AI/                     # AI tutorials (ai.too.foo)
-├── POWER_SUPPLY/           # Power circuit designer
-├── AMPLIFIERS/             # Amplifier designer
-├── EXPORT/                 # Gerber X2 writer (from scratch)
-├── DRC/                    # Design rule checker
-├── CLI/                    # sbl-ecad command
-└── WEB/                    # WASM editor → too.foo/ecad
-
-DNA/
-├── src/
-│   ├── lib.rs              # Core types
-│   ├── schema/             # DNA code schemas (TOML)
-│   ├── sim/                # Simulation algorithms
-│   ├── compute/            # GPU compute abstraction
-│   ├── responsive.rs       # Mobile-first rules
-│   └── export/             # STEP/Gerber serializers
+├── AI/                     # AI/ML tutorials (ai.too.foo)
+├── SLAM/                   # SLAM tutorials (slam.too.foo)
+├── ESP32/                  # ESP32 tutorials (esp32.too.foo)
+├── ARDUINO/                # Arduino tutorials (arduino.too.foo)
+├── UBUNTU/                 # Ubuntu tutorials (ubuntu.too.foo)
+├── OPENCV/                 # OpenCV tutorials (opencv.too.foo)
+├── SWARM_ROBOTICS/         # Swarm robotics (swarm.too.foo)
+├── SENSORS/                # Sensor demos (sensors.too.foo)
+└── ML/                     # ML fundamentals
 ```
 
 ### Philosophy: Build From Scratch
@@ -83,7 +115,7 @@ DNA/
 
 | Level | Case | Example | Rationale |
 |-------|------|---------|-----------|
-| Category folders (L1) | UPPERCASE | `BLOG/`, `LEARN/`, `SIM/` | Fixed landmarks |
+| Category folders (L1) | UPPERCASE | `BLOG/`, `LEARN/`, `SIMULATION/` | Fixed landmarks |
 | Project folders (L2) | UPPERCASE | `HELIOS/`, `AUTOCRATE/` | Fixed project names |
 | Config folders | lowercase | `src/`, `dist/`, `assets/` | Standard conventions |
 | Variable files | lowercase | `main.rs`, `index.html` | Content changes |
@@ -94,18 +126,18 @@ DNA/
 | Folder | Location | Purpose |
 |--------|----------|---------|
 | **DNA/** | `/DNA/` (root) | Shared foundation - simulation engine, algorithms |
-| **CORE/** | `/SIM/HELIOS/CORE/` | Project-specific Rust logic |
+| **CORE/** | Per-project (e.g., `/SIMULATION/CORE/`, `/TOOLS/CORE/`) | Project-specific Rust logic |
 
 DNA = genetic code shared by all | CORE = heart of each project
 
 ## Project Dependencies
 
 ```
-DNA <── SIM/HELIOS
-    <── SIM/TOOFOO
-    <── TOOLS/SIMULATION_CLI
-    <── TOOLS/STORAGE_SERVER
-    <── SW/* (some)
+DNA <── HELIOS
+    <── SIMULATION/CHLADNI
+    <── DNA/SIMULATION_CLI
+    <── DNA/STORAGE_SERVER
+    <── LEARN/* (some)
 ```
 
 ## Core Concepts
@@ -187,6 +219,7 @@ Use `/pr` command to:
 - Use `#[inline]` for small functions called per-entity
 - Wrap coordinates at world boundaries (toroidal topology)
 - Energy clamped to [0, 200], metabolism affects drain rate
+- **Zero Warnings Policy**: All code must compile with `cargo check --workspace` producing NO warnings. Fix unused variables, dead code, and deprecated calls immediately.
 
 ## Testing
 
