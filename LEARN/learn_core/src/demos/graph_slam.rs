@@ -250,7 +250,9 @@ impl GraphSlamDemo {
         self.optimization_iterations += 1;
 
         // Simple gradient descent optimization
-        let learning_rate = 0.1;
+        // Learning rate must be small because edge weights can be large
+        // (weight = 1/σ²). With σ=0.005, weight≈40000.
+        let learning_rate = 1e-5;
 
         // For each edge, adjust nodes to satisfy constraint
         for edge in &self.edges {

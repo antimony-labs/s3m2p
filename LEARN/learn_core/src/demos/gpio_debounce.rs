@@ -220,6 +220,14 @@ impl Demo for GpioDebounceDemo {
                 default: 0.5,
             },
             ParamMeta {
+                name: "sample_rate",
+                label: "Sample Rate (Hz)",
+                min: 100.0,
+                max: 10000.0,
+                step: 100.0,
+                default: 1000.0,
+            },
+            ParamMeta {
                 name: "debounce_window",
                 label: "Debounce Window (s)",
                 min: 0.005,
@@ -254,8 +262,8 @@ mod tests {
     #[test]
     fn test_debounce_filters_noise() {
         let mut demo = GpioDebounceDemo::default();
-        demo.bounce_severity = 0.8;
         demo.reset(42);
+        demo.set_param("bounce_severity", 0.8);
 
         // Run for several toggle cycles
         let dt = 0.001;

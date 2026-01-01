@@ -52,7 +52,7 @@ cmd_up() {
             local link=$'\e]8;;'"${url}"$'\e\\'"${url}"$'\e]8;;\e\\'
 
             if [[ -f "$path/Trunk.toml" ]] || [[ -f "$path/index.html" ]]; then
-                (cd "$path" && NO_COLOR=true trunk serve index.html --port "$port" > "$log" 2>&1) &
+                (cd "$path" && NO_COLOR=true trunk serve index.html --port "$port" --address 0.0.0.0 > "$log" 2>&1) &
                 pids+=($!)
                 printf "  %-13s %s %s\n" "$project" "$link" "✅"
             else
@@ -94,7 +94,7 @@ cmd_up() {
         echo "Dir: $REPO_ROOT/$dir"
         cd "$REPO_ROOT/$dir"
         # trunk reads NO_COLOR as a boolean env var; some environments set NO_COLOR=1 which breaks parsing.
-        NO_COLOR=true trunk serve index.html --port "$port" --open
+        NO_COLOR=true trunk serve index.html --port "$port" --address 0.0.0.0 --open
     fi
 }
 

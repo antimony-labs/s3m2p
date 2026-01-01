@@ -12,7 +12,6 @@ pub mod demo_runner;
 pub mod lessons;
 pub mod render;
 
-use demo_runner::GpioDebounceDemoRunner;
 use lessons::LESSONS;
 use render::LessonRenderer;
 
@@ -62,9 +61,10 @@ pub fn go_to_lesson(idx: usize) {
         if let Some(lesson) = LESSONS.get(idx) {
             let _ = renderer.render_lesson(lesson);
 
-            // Start canvas demo for all lessons
+            // Start the appropriate demo based on lesson id
             let closure = wasm_bindgen::closure::Closure::once_into_js(move || {
-                if let Err(e) = GpioDebounceDemoRunner::start("lesson-canvas", 42) {
+                let result = demo_runner::start_demo_for_lesson(idx, "lesson-canvas", 42);
+                if let Err(e) = result {
                     web_sys::console::error_1(&e);
                 }
             });

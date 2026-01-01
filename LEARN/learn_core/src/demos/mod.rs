@@ -12,6 +12,9 @@ pub mod particle_filter;
 pub mod ekf_slam;
 pub mod graph_slam;
 pub mod gpio_debounce;
+pub mod pwm_control;
+pub mod adc_reading;
+pub mod i2c_bus;
 pub mod fs_permissions;
 
 pub use linear_regression::LinearRegressionDemo;
@@ -21,4 +24,7 @@ pub use particle_filter::{ParticleFilterDemo, PFPhase, Particle, Measurement};
 pub use ekf_slam::{EkfSlamDemo, SlamLandmark};
 pub use graph_slam::{GraphSlamDemo, PoseNode, GraphEdge};
 pub use gpio_debounce::GpioDebounceDemo;
+pub use pwm_control::PwmControlDemo;
+pub use adc_reading::{AdcReadingDemo, AdcAttenuation};
+pub use i2c_bus::{I2cBusDemo, I2cPhase, I2cStage};
 pub use fs_permissions::FsPermissionsDemo;
