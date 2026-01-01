@@ -119,9 +119,6 @@ pub use physics::solvers::filters::{smooth_trajectory, EKF};
 pub mod pathfinding;
 pub use pathfinding::{astar, GridMap, Heuristic, PathResult};
 
-/// Export module (PDF, Gerber X2)
-pub mod export;
-
 /// CAD module (B-Rep solid modeling)
 pub mod cad;
 

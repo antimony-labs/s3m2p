@@ -79,8 +79,9 @@ pub use dna::autocrate::reports::{
     bom_to_csv, cut_list_to_csv, generate_bom, generate_cut_list, BomRow, CutListRow,
 };
 
-// Re-export STEP export (NX-importable assembly, inches)
-pub use dna::export::step::{export_step_ap242, StepExportOptions};
+// NOTE: STEP export has been moved to TOOLS/AUTOCRATE/src/step_converter.rs
+// The old export_step_ap242 function no longer exists in DNA.
+// Use StepWriter directly from dna::export::step::StepWriter for new code.
 
 /// Quick crate design with standard defaults
 ///
@@ -106,8 +107,11 @@ pub fn design_from_spec(spec: &CrateSpec) -> CrateDesign {
 }
 
 /// Export STEP (Part-21) assembly for the given design.
-pub fn export_step(design: &CrateDesign) -> String {
-    export_step_ap242(design, &StepExportOptions::default())
+///
+/// DEPRECATED: This function is no longer implemented in autocrate-engine.
+/// Use TOOLS/AUTOCRATE/src/step_converter.rs instead.
+pub fn export_step(_design: &CrateDesign) -> String {
+    "ERROR: export_step has been moved to TOOLS/AUTOCRATE/src/step_converter.rs".to_string()
 }
 
 /// Export BOM as CSV for the given design.
