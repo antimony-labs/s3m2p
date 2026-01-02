@@ -1,7 +1,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # FILE: Cargo.toml | AI/Cargo.toml
-# PURPOSE: Rust package manifest with dependencies and build configuration
-# MODIFIED: 2025-12-02
+# PURPOSE: AI/ML tutorial - neural networks, deep learning, transformers
+# MODIFIED: 2025-01-02
 # ═══════════════════════════════════════════════════════════════════════════════
 [package]
 name = "ai-learn"
@@ -15,7 +15,22 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 wasm-bindgen = "=0.2.93"
 console_error_panic_hook = "0.1"
-web-sys = { version = "0.3", features = ["console"] }
+js-sys = "0.3"
+web-sys = { version = "0.3", features = [
+    "console",
+    "Window",
+    "Document",
+    "Element",
+    "HtmlElement",
+    "HtmlCanvasElement",
+    "HtmlInputElement",
+    "HtmlSelectElement",
+    "CanvasRenderingContext2d",
+    "Performance",
+    "MouseEvent",
+] }
+learn_core = { path = "../learn_core" }
+learn_web = { path = "../learn_web" }
 
 [profile.release]
 opt-level = "z"
