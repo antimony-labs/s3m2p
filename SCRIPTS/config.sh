@@ -57,7 +57,7 @@ declare -A PROJECT_DIRS=(
     ["arch"]="ARCH"
     ["pll"]="TOOLS/PLL"
     ["power"]="COMING_SOON"
-    ["ai"]="COMING_SOON"
+    ["ai"]="LEARN/AI"
     ["ubuntu"]="LEARN/UBUNTU"
     ["opencv"]="COMING_SOON"
     ["arduino"]="COMING_SOON"
@@ -97,7 +97,6 @@ declare -A PAGES_PROJECTS=(
 # Static projects that don't need trunk build (deploy root dir directly)
 declare -A STATIC_PROJECTS=(
     ["coming_soon"]=1
-    ["ai"]=1
     ["arduino"]=1
     ["opencv"]=1
     ["swarm"]=1
