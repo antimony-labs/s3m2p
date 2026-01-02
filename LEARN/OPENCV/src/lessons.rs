@@ -1,6 +1,6 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: lessons.rs | OPENCV/src/lessons.rs
-//! PURPOSE: OpenCV/Computer Vision lesson definitions and curriculum structure
+//! PURPOSE: Computer Vision lesson definitions and curriculum structure
 //! MODIFIED: 2026-01-02
 //! LAYER: LEARN → OPENCV
 //! ═══════════════════════════════════════════════════════════════════════════════
@@ -19,7 +19,7 @@ pub enum DemoType {
     SideBySide,
 }
 
-/// A single OpenCV/Computer Vision lesson
+/// A single Computer Vision lesson
 pub struct Lesson {
     pub id: usize,
     pub title: &'static str,
@@ -35,24 +35,25 @@ pub struct Lesson {
 
 /// Phase names for grouping lessons
 pub static PHASES: &[&str] = &[
-    "The Big Picture",
-    "Filtering & Enhancement",
+    "Foundations",
+    "Image Filtering",
     "Feature Detection",
-    "Geometric Transforms",
-    "Real-World Applications",
+    "Geometry & Transforms",
+    "3D Vision",
+    "Applications",
 ];
 
-/// All OpenCV lessons organized in phases
+/// All Computer Vision lessons organized in phases
 pub static LESSONS: &[Lesson] = &[
     // ═══════════════════════════════════════════════════════════════════════════
-    // PHASE 1: THE BIG PICTURE (Theory)
+    // PHASE 1: FOUNDATIONS
     // ═══════════════════════════════════════════════════════════════════════════
     Lesson {
         id: 0,
         title: "What is Computer Vision?",
         subtitle: "Teaching Machines to See",
         icon: "👁️",
-        phase: "The Big Picture",
+        phase: "Foundations",
         demo_type: DemoType::Static,
         description: "Computer vision bridges the gap between pixels and understanding. Learn how machines interpret the visual world.",
         content: r#"
@@ -99,23 +100,25 @@ Computer vision powers:
 
 ---
 
-## The OpenCV Library
+## Course Overview
 
-**OpenCV** (Open Source Computer Vision Library) is the most widely used computer vision library. Created by Intel in 1999, it provides:
+This course covers computer vision from fundamentals to applications:
 
-- 2500+ optimized algorithms
-- Cross-platform (Windows, Linux, macOS, iOS, Android)
-- Bindings for Python, Java, C++
-- Real-time processing capabilities
+1. **Foundations** → Pixels, cameras, projection math
+2. **Filtering** → Convolution, edges, noise reduction
+3. **Features** → Corners, blobs, thresholding
+4. **Geometry** → Transforms, homography, contours
+5. **3D Vision** → Stereo, depth, epipolar geometry
+6. **Applications** → Tracking, face detection
 
-In this course, we'll implement key algorithms from scratch in Rust to understand them deeply, then apply them to real-time camera feeds.
+We'll implement key algorithms from scratch in Rust to understand them deeply, then apply them to real-time camera feeds.
 "#,
-        key_concepts: &["Pixels", "Feature Extraction", "Real-time Processing", "OpenCV"],
+        key_concepts: &["Pixels", "Feature Extraction", "Real-time Processing", "Pipeline"],
         concept_definitions: &[
             ("Pixels", "The smallest unit of a digital image, containing color/intensity values"),
             ("Feature Extraction", "The process of identifying meaningful patterns in image data"),
             ("Real-time Processing", "Processing video frames fast enough for live interaction (typically 30+ fps)"),
-            ("OpenCV", "Open Source Computer Vision Library - the most popular CV library"),
+            ("Pipeline", "A sequence of processing stages transforming raw images into decisions"),
         ],
     },
     Lesson {
@@ -123,7 +126,7 @@ In this course, we'll implement key algorithms from scratch in Rust to understan
         title: "Pixels & Color Spaces",
         subtitle: "The Digital Image",
         icon: "🎨",
-        phase: "The Big Picture",
+        phase: "Foundations",
         demo_type: DemoType::Canvas,
         description: "Understand how images are represented digitally. Explore RGB, grayscale, and HSV color spaces.",
         content: r#"
@@ -210,16 +213,237 @@ Different tasks need different representations:
             ("Color Space", "A system for representing colors mathematically"),
         ],
     },
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // PHASE 2: FILTERING & ENHANCEMENT
-    // ═══════════════════════════════════════════════════════════════════════════
     Lesson {
         id: 2,
+        title: "The Pinhole Camera Model",
+        subtitle: "How Cameras See",
+        icon: "📷",
+        phase: "Foundations",
+        demo_type: DemoType::Canvas,
+        description: "Understand the geometry of image formation. The pinhole model is the foundation of all camera math.",
+        content: r#"
+## Light and Image Formation
+
+A camera captures light from the 3D world onto a 2D sensor. But how does this projection work?
+
+The **pinhole camera** is the simplest model: light passes through a tiny hole and projects onto a plane behind it. No lens, just geometry.
+
+---
+
+## The Pinhole Model
+
+```
+    3D World              Pinhole         Image Plane
+        *                    |
+       /|\                   o                *
+      / | \                  |               /|\
+         |                                    |
+    ─────┼─────           ───┼───        ────┼────
+         |                   |                |
+         Z                   f
+```
+
+- **Pinhole (O)**: The camera center
+- **Image plane**: Where the image forms (at distance f)
+- **Focal length (f)**: Distance from pinhole to image plane
+
+---
+
+## The Projection Equation
+
+A 3D point P = (X, Y, Z) projects to image point p = (x, y):
+
+```
+x = f · (X / Z)
+y = f · (Y / Z)
+```
+
+This is **perspective projection**. Objects farther away (larger Z) appear smaller.
+
+---
+
+## Similar Triangles
+
+The math comes from similar triangles:
+
+```
+      X                    x
+   ───────  =  ───────
+      Z                    f
+
+Therefore: x = f · X / Z
+```
+
+This simple relationship is the foundation of all camera geometry!
+
+---
+
+## Focal Length
+
+**Focal length (f)** determines the field of view:
+- **Short f** (wide angle): Large FOV, more distortion
+- **Long f** (telephoto): Narrow FOV, less distortion
+
+In the pinhole model, f is the distance from the hole to the image plane. In real cameras with lenses, it's more complex but the projection math stays similar.
+
+---
+
+## Principal Point
+
+The **principal point** (cx, cy) is where the optical axis intersects the image plane — usually near the image center.
+
+With principal point offset:
+```
+x = f · (X / Z) + cx
+y = f · (Y / Z) + cy
+```
+
+---
+
+## Why This Matters
+
+The pinhole model:
+- Explains why cameras "see" the way they do
+- Is the basis for camera calibration
+- Enables 3D reconstruction from 2D images
+- Underlies augmented reality, SLAM, and robotics
+
+Next: We'll formalize this with the **camera matrix**.
+"#,
+        key_concepts: &["Pinhole", "Focal Length", "Projection", "Principal Point"],
+        concept_definitions: &[
+            ("Pinhole", "A theoretical camera model where light passes through a single point"),
+            ("Focal Length", "Distance from camera center to image plane, determines field of view"),
+            ("Projection", "The mapping of 3D world points to 2D image coordinates"),
+            ("Principal Point", "The image point where the optical axis intersects the sensor"),
+        ],
+    },
+    Lesson {
+        id: 3,
+        title: "Camera Matrix & Projection",
+        subtitle: "The Math of Seeing",
+        icon: "📐",
+        phase: "Foundations",
+        demo_type: DemoType::Canvas,
+        description: "Learn the camera intrinsic matrix K and the full projection equation P = K[R|t].",
+        content: r#"
+## Homogeneous Coordinates
+
+To handle projection with matrices, we use **homogeneous coordinates**:
+
+- 2D point (x, y) → [x, y, 1]ᵀ
+- 3D point (X, Y, Z) → [X, Y, Z, 1]ᵀ
+
+The extra coordinate allows us to represent projection as matrix multiplication.
+
+---
+
+## The Intrinsic Matrix K
+
+The **camera intrinsic matrix** K encodes internal camera parameters:
+
+```
+      ⎡ fx   0   cx ⎤
+  K = ⎢  0   fy  cy ⎥
+      ⎣  0    0   1 ⎦
+```
+
+Where:
+- **fx, fy**: Focal lengths in pixels (may differ for non-square pixels)
+- **cx, cy**: Principal point coordinates
+
+---
+
+## Projection with K
+
+A 3D point in camera coordinates [X, Y, Z]ᵀ projects to:
+
+```
+⎡ x ⎤       ⎡ fx·X + cx·Z ⎤
+⎢ y ⎥ = K · ⎢ fy·Y + cy·Z ⎥
+⎣ w ⎦       ⎣      Z      ⎦
+```
+
+Then normalize: (x/w, y/w) gives the 2D pixel location.
+
+---
+
+## Extrinsic Parameters
+
+**Extrinsic parameters** describe camera pose in the world:
+
+- **R**: 3×3 rotation matrix (camera orientation)
+- **t**: 3×1 translation vector (camera position)
+
+Together [R|t] transforms world coordinates to camera coordinates.
+
+---
+
+## The Full Projection
+
+From world point Pw to pixel p:
+
+```
+p = K · [R | t] · Pw
+
+⎡ x ⎤         ⎡ fx  0  cx ⎤ ⎡ r11 r12 r13 tx ⎤ ⎡ X ⎤
+⎢ y ⎥ = s ·  ⎢  0  fy cy ⎥ ⎢ r21 r22 r23 ty ⎥ ⎢ Y ⎥
+⎣ 1 ⎦         ⎣  0  0   1 ⎦ ⎣ r31 r32 r33 tz ⎦ ⎣ Z ⎦
+                                              ⎣ 1 ⎦
+```
+
+This 3×4 matrix **P = K[R|t]** is the **projection matrix**.
+
+---
+
+## Intrinsic vs Extrinsic
+
+| Property | Intrinsic (K) | Extrinsic [R\|t] |
+|----------|---------------|------------------|
+| Describes | Camera internals | Camera pose |
+| Changes when | Zoom, focus | Camera moves |
+| Parameters | fx, fy, cx, cy | 3 rotation + 3 translation |
+| Calibrate | Once per camera | Every frame (if moving) |
+
+---
+
+## Camera Calibration
+
+**Calibration** determines K (and lens distortion) by:
+1. Taking photos of a known pattern (checkerboard)
+2. Finding pattern corners in images
+3. Solving for K that makes projections match
+
+OpenCV's `calibrateCamera()` does this automatically.
+
+---
+
+## Why This Matters
+
+The projection matrix enables:
+- **3D reconstruction**: From 2D images
+- **Augmented reality**: Place virtual objects correctly
+- **Visual odometry**: Track camera motion
+- **Structure from Motion**: Build 3D models from photos
+"#,
+        key_concepts: &["Intrinsic Matrix", "Extrinsic Parameters", "Homogeneous Coordinates", "Projection Matrix"],
+        concept_definitions: &[
+            ("Intrinsic Matrix", "3×3 matrix K encoding focal length and principal point"),
+            ("Extrinsic Parameters", "Rotation R and translation t describing camera pose"),
+            ("Homogeneous Coordinates", "Extended coordinates allowing projection via matrix multiplication"),
+            ("Projection Matrix", "The 3×4 matrix P = K[R|t] mapping 3D to 2D"),
+        ],
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // PHASE 2: IMAGE FILTERING
+    // ═══════════════════════════════════════════════════════════════════════════
+    Lesson {
+        id: 4,
         title: "Convolution",
         subtitle: "The Foundation of Filtering",
         icon: "🔲",
-        phase: "Filtering & Enhancement",
+        phase: "Image Filtering",
         demo_type: DemoType::Canvas,
         description: "Learn how convolution kernels transform images. The mathematical foundation of all image filtering.",
         content: r#"
@@ -321,11 +545,11 @@ A 5×5 kernel: 25 operations → 10 operations per pixel!
         ],
     },
     Lesson {
-        id: 3,
+        id: 5,
         title: "Edge Detection",
         subtitle: "Finding Boundaries",
         icon: "📐",
-        phase: "Filtering & Enhancement",
+        phase: "Image Filtering",
         demo_type: DemoType::Camera,
         description: "Detect edges in real-time using the Canny algorithm. See boundaries emerge from your camera feed.",
         content: r#"
@@ -410,11 +634,11 @@ Try adjusting the sliders in the demo to see how thresholds affect detection!
         ],
     },
     Lesson {
-        id: 4,
+        id: 6,
         title: "Noise Reduction",
         subtitle: "Cleaning Up Images",
         icon: "✨",
-        phase: "Filtering & Enhancement",
+        phase: "Image Filtering",
         demo_type: DemoType::Camera,
         description: "Compare blur techniques in real-time. Gaussian, median, and bilateral filtering.",
         content: r#"
@@ -502,7 +726,7 @@ This means edges (where intensity changes sharply) are preserved, while flat reg
     // PHASE 3: FEATURE DETECTION
     // ═══════════════════════════════════════════════════════════════════════════
     Lesson {
-        id: 5,
+        id: 7,
         title: "Corner Detection",
         subtitle: "Finding Interest Points",
         icon: "🎯",
@@ -588,7 +812,7 @@ This gives clean, well-separated corner points.
         ],
     },
     Lesson {
-        id: 6,
+        id: 8,
         title: "Blob Detection",
         subtitle: "Finding Regions",
         icon: "⭕",
@@ -675,7 +899,7 @@ Circularity = 4π × Area / Perimeter²
         ],
     },
     Lesson {
-        id: 7,
+        id: 9,
         title: "Thresholding",
         subtitle: "Binary Decisions",
         icon: "🔳",
@@ -767,14 +991,14 @@ The idea: separate foreground and background into two distinct groups.
     },
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // PHASE 4: GEOMETRIC TRANSFORMS
+    // PHASE 4: GEOMETRY & TRANSFORMS
     // ═══════════════════════════════════════════════════════════════════════════
     Lesson {
-        id: 8,
+        id: 10,
         title: "Image Transformations",
         subtitle: "Rotate, Scale, Warp",
         icon: "🔄",
-        phase: "Geometric Transforms",
+        phase: "Geometry & Transforms",
         demo_type: DemoType::Canvas,
         description: "Apply geometric transformations to images. Affine and perspective warping.",
         content: r#"
@@ -834,15 +1058,7 @@ Used for:
 - **Panorama stitching** → Align overlapping images
 - **Augmented reality** → Place virtual objects
 
-Represented as a 3×3 matrix:
-
-```
-[x']   [h11  h12  h13] [x]
-[y'] = [h21  h22  h23] [y]
-[w']   [h31  h32  h33] [1]
-
-x_out = x'/w',  y_out = y'/w'
-```
+Represented as a 3×3 matrix (see next lesson for details).
 
 ---
 
@@ -863,20 +1079,123 @@ When transforming, output pixels may land between input pixels. Interpolation fi
 - **OCR preprocessing** → Deskew scanned documents
 - **Face alignment** → Normalize face positions
 "#,
-        key_concepts: &["Affine", "Perspective", "Homography", "Interpolation"],
+        key_concepts: &["Affine", "Perspective", "Interpolation", "Transformation Matrix"],
         concept_definitions: &[
             ("Affine", "Linear transformation preserving parallel lines"),
             ("Perspective", "Transformation simulating 3D viewpoint change"),
-            ("Homography", "A 3×3 matrix mapping points between two planes"),
             ("Interpolation", "Estimating pixel values between known samples"),
+            ("Transformation Matrix", "A matrix encoding how to map input to output coordinates"),
         ],
     },
     Lesson {
-        id: 9,
+        id: 11,
+        title: "Homography",
+        subtitle: "Plane-to-Plane Mapping",
+        icon: "🔷",
+        phase: "Geometry & Transforms",
+        demo_type: DemoType::Canvas,
+        description: "Understand the homography matrix. Map points between planes for AR, stitching, and rectification.",
+        content: r#"
+## What is a Homography?
+
+A **homography** is a transformation that maps points from one plane to another. It's represented by a 3×3 matrix H:
+
+```
+⎡ x' ⎤       ⎡ h11  h12  h13 ⎤ ⎡ x ⎤
+⎢ y' ⎥ = s · ⎢ h21  h22  h23 ⎥ ⎢ y ⎥
+⎣ 1  ⎦       ⎣ h31  h32  h33 ⎦ ⎣ 1 ⎦
+```
+
+After multiplication, normalize by dividing by the third coordinate.
+
+---
+
+## When Do Homographies Apply?
+
+Homographies perfectly relate two images when:
+1. The scene is **planar** (flat surface)
+2. The camera **only rotates** (no translation)
+
+In other cases, homography is an approximation.
+
+---
+
+## Degrees of Freedom
+
+A homography has **8 degrees of freedom** (9 elements, but scale doesn't matter):
+- 6 for affine (rotation, scale, shear, translation)
+- 2 additional for perspective
+
+Each point correspondence gives 2 equations, so we need **4 points** to compute H.
+
+---
+
+## Computing Homography
+
+Given 4+ point correspondences (p₁↔p₁', p₂↔p₂', ...):
+
+1. Set up the equation Ah = 0
+2. Solve using SVD (Singular Value Decomposition)
+3. With more than 4 points, use RANSAC to handle outliers
+
+OpenCV: `findHomography(srcPoints, dstPoints)`
+
+---
+
+## Direct Linear Transform (DLT)
+
+For each correspondence (x,y) ↔ (x',y'):
+
+```
+[-x  -y  -1   0   0   0   x·x'  y·x'  x'] [h11]
+[ 0   0   0  -x  -y  -1   x·y'  y·y'  y'] [h12]
+                                          [ ⋮ ]
+                                          [h33] = 0
+```
+
+Stack equations from all points, solve with SVD.
+
+---
+
+## Applications
+
+### Document Scanning
+Detect paper corners, compute H to rectify to rectangle.
+
+### Panorama Stitching
+Find matches between overlapping images, compute H to align them.
+
+### Augmented Reality
+Track a planar marker, compute H to overlay virtual objects.
+
+### Sports Analysis
+Map camera view to overhead field diagram.
+
+---
+
+## Homography vs Affine
+
+| Property | Affine | Homography |
+|----------|--------|------------|
+| Matrix size | 2×3 (6 DOF) | 3×3 (8 DOF) |
+| Parallel lines | Preserved | Not preserved |
+| Use case | Small rotations | Large perspective |
+| Points needed | 3 | 4 |
+"#,
+        key_concepts: &["Homography", "DLT", "Point Correspondence", "RANSAC"],
+        concept_definitions: &[
+            ("Homography", "A 3×3 matrix mapping points between two planes"),
+            ("DLT", "Direct Linear Transform - algorithm for computing homography from correspondences"),
+            ("Point Correspondence", "A pair of matching points in two images"),
+            ("RANSAC", "Random Sample Consensus - robust estimation ignoring outliers"),
+        ],
+    },
+    Lesson {
+        id: 12,
         title: "Contour Detection",
         subtitle: "Finding Shapes",
         icon: "📊",
-        phase: "Geometric Transforms",
+        phase: "Geometry & Transforms",
         demo_type: DemoType::Camera,
         description: "Find and analyze contours in real-time. Detect shapes and compute their properties.",
         content: r#"
@@ -966,14 +1285,259 @@ Two shapes with similar Hu moments are geometrically similar.
     },
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // PHASE 5: REAL-WORLD APPLICATIONS
+    // PHASE 5: 3D VISION
     // ═══════════════════════════════════════════════════════════════════════════
     Lesson {
-        id: 10,
+        id: 13,
+        title: "Stereo Vision & Depth",
+        subtitle: "Seeing in 3D",
+        icon: "👓",
+        phase: "3D Vision",
+        demo_type: DemoType::Canvas,
+        description: "Understand how two cameras enable depth perception. Disparity, triangulation, and depth maps.",
+        content: r#"
+## Why Stereo Vision?
+
+A single camera loses depth information — the 3D world is projected to 2D. But with **two cameras** (like human eyes), we can recover depth through **triangulation**.
+
+---
+
+## The Stereo Setup
+
+Two cameras separated by a **baseline** b, both looking at the same scene:
+
+```
+   Left Camera                Right Camera
+       O ←───── b ─────→ O
+        \                /
+         \              /
+          \    P       /
+           \   *      /
+            \  |     /
+             \ |    /
+              \|   /
+        ───────●──────
+              Z (depth)
+```
+
+The same 3D point P appears at different positions in each image.
+
+---
+
+## Disparity
+
+**Disparity** d is the difference in horizontal position between left and right images:
+
+```
+d = x_left - x_right
+```
+
+Key insight: **Disparity is inversely proportional to depth!**
+
+```
+Z = (f · b) / d
+```
+
+Where:
+- Z = depth
+- f = focal length
+- b = baseline
+- d = disparity
+
+---
+
+## Why Disparity Works
+
+Closer objects have larger disparity (they "shift" more between views). Far objects have small disparity.
+
+Try this: Close one eye, hold up a finger close to your face, then switch eyes. The finger jumps a lot. Now look at something far away and switch eyes — barely any jump.
+
+---
+
+## Stereo Matching
+
+The challenge: For each pixel in the left image, find its correspondence in the right image.
+
+Approaches:
+- **Block matching**: Compare small patches
+- **Semi-global matching (SGM)**: Add smoothness constraints
+- **Deep learning**: Train CNNs on stereo pairs
+
+---
+
+## Depth Map
+
+A **depth map** (or disparity map) is an image where pixel values represent depth:
+- **Bright** = close
+- **Dark** = far
+
+Applications:
+- 3D reconstruction
+- Obstacle avoidance
+- Bokeh effects (blur background)
+- AR occlusion
+
+---
+
+## Rectification
+
+Before stereo matching, images must be **rectified** so that:
+1. Corresponding points lie on the same horizontal line
+2. Epipolar lines are horizontal
+
+This simplifies matching to a 1D search along each row.
+
+---
+
+## Limitations
+
+- **Textureless regions**: Can't match uniform areas
+- **Occlusions**: One camera sees what the other can't
+- **Reflections**: Specular surfaces confuse matching
+- **Baseline tradeoff**: Larger b = better precision, but more occlusion
+"#,
+        key_concepts: &["Stereo", "Disparity", "Baseline", "Depth Map", "Triangulation"],
+        concept_definitions: &[
+            ("Stereo", "Using two cameras to perceive depth"),
+            ("Disparity", "Horizontal pixel difference between left and right images"),
+            ("Baseline", "Physical distance between the two cameras"),
+            ("Depth Map", "An image where pixel values represent distance"),
+            ("Triangulation", "Computing 3D position from two 2D observations"),
+        ],
+    },
+    Lesson {
+        id: 14,
+        title: "Epipolar Geometry",
+        subtitle: "The Geometry of Two Views",
+        icon: "📏",
+        phase: "3D Vision",
+        demo_type: DemoType::Canvas,
+        description: "Master the fundamental matrix and epipolar constraints. Essential for 3D reconstruction.",
+        content: r#"
+## Two-View Geometry
+
+When two cameras observe the same scene, there's a rich geometric relationship between them. **Epipolar geometry** describes these constraints.
+
+---
+
+## The Epipole
+
+The **epipole** is where the baseline (line connecting camera centers) intersects each image plane.
+
+- **e**: Epipole in left image (where you'd see the right camera)
+- **e'**: Epipole in right image (where you'd see the left camera)
+
+---
+
+## Epipolar Lines
+
+For a point p in the left image, its corresponding point p' in the right image must lie on a specific line — the **epipolar line** l'.
+
+```
+Left Image         Right Image
+    +                  +
+   /|\                /|\
+  / | \              / | \
+ /  p  \            / l' \  ← p' somewhere on this line
+/   |   \          /   |  \
+    e                  e'
+```
+
+This constrains stereo matching from a 2D search to a 1D search!
+
+---
+
+## The Fundamental Matrix
+
+The **fundamental matrix F** (3×3) encodes the epipolar constraint:
+
+```
+p'ᵀ · F · p = 0
+```
+
+For any corresponding points p and p', this equation holds.
+
+Given p, the epipolar line in the right image is:
+```
+l' = F · p
+```
+
+---
+
+## Properties of F
+
+- **Rank 2**: F is singular (det(F) = 0)
+- **7 DOF**: 9 elements, but scale-free and det=0 constraints
+- **Encodes**: Relative rotation and translation between cameras
+
+---
+
+## Computing F
+
+From point correspondences, use the **8-point algorithm**:
+
+1. Collect 8+ point pairs
+2. Set up linear equations from p'ᵀFp = 0
+3. Solve using SVD
+4. Enforce rank-2 constraint
+
+Use RANSAC to handle outliers.
+
+---
+
+## Essential Matrix
+
+If cameras are **calibrated** (K known), the **essential matrix E** is:
+
+```
+E = K'ᵀ · F · K
+```
+
+E encodes just the rotation and translation:
+```
+E = [t]ₓ · R
+```
+
+Where [t]ₓ is the skew-symmetric matrix of translation.
+
+---
+
+## Fundamental vs Essential
+
+| Matrix | Fundamental (F) | Essential (E) |
+|--------|-----------------|---------------|
+| Calibration | Not needed | Required |
+| Encodes | K, R, t combined | Just R, t |
+| DOF | 7 | 5 |
+| Coordinates | Pixels | Normalized |
+
+---
+
+## Applications
+
+- **Structure from Motion**: Reconstruct 3D from multiple images
+- **Visual SLAM**: Estimate camera motion
+- **Image rectification**: Align stereo pairs
+- **Outlier rejection**: Points violating epipolar constraint are mismatches
+"#,
+        key_concepts: &["Epipole", "Epipolar Line", "Fundamental Matrix", "Essential Matrix"],
+        concept_definitions: &[
+            ("Epipole", "Image point where the line between camera centers intersects"),
+            ("Epipolar Line", "Line in one image where a point's correspondence must lie"),
+            ("Fundamental Matrix", "3×3 matrix encoding the epipolar constraint between two views"),
+            ("Essential Matrix", "Fundamental matrix for calibrated cameras, encoding R and t"),
+        ],
+    },
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // PHASE 6: APPLICATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+    Lesson {
+        id: 15,
         title: "Color Tracking",
         subtitle: "Following Objects",
         icon: "🎯",
-        phase: "Real-World Applications",
+        phase: "Applications",
         demo_type: DemoType::Camera,
         description: "Track colored objects in real-time. Use HSV color space for robust detection.",
         content: r#"
@@ -1059,11 +1623,11 @@ Draw crosshairs or boxes to visualize tracking.
         ],
     },
     Lesson {
-        id: 11,
+        id: 16,
         title: "Face Detection",
         subtitle: "Finding Faces",
         icon: "👤",
-        phase: "Real-World Applications",
+        phase: "Applications",
         demo_type: DemoType::Camera,
         description: "Detect faces in real-time. Understand the classic Haar cascade approach.",
         content: r#"

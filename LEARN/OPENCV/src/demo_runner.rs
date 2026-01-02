@@ -328,16 +328,16 @@ fn process_frame() {
         Err(_) => return,
     };
 
-    // Process based on lesson
+    // Process based on lesson (new curriculum: 17 lessons across 6 phases)
     let processed = match lesson_id {
-        3 => image_processing::canny_edge(&image_data, low_thresh, high_thresh),
-        4 => image_processing::gaussian_blur(&image_data, blur_radius),
-        5 => image_processing::harris_corners(&image_data, low_thresh),
-        6 => image_processing::simple_blob_detection(&image_data),
-        7 => image_processing::threshold(&image_data, low_thresh as u8),
-        9 => image_processing::find_contours(&image_data, low_thresh as u8),
-        10 => image_processing::color_tracking(&image_data, low_thresh as u8, 20),
-        11 => image_processing::simple_face_detection(&image_data),
+        5 => image_processing::canny_edge(&image_data, low_thresh, high_thresh),      // Edge Detection
+        6 => image_processing::gaussian_blur(&image_data, blur_radius),               // Noise Reduction
+        7 => image_processing::harris_corners(&image_data, low_thresh),               // Corner Detection
+        8 => image_processing::simple_blob_detection(&image_data),                    // Blob Detection
+        9 => image_processing::threshold(&image_data, low_thresh as u8),              // Thresholding
+        12 => image_processing::find_contours(&image_data, low_thresh as u8),         // Contour Detection
+        15 => image_processing::color_tracking(&image_data, low_thresh as u8, 20),    // Color Tracking
+        16 => image_processing::simple_face_detection(&image_data),                   // Face Detection
         _ => image_processing::grayscale(&image_data),
     };
 
@@ -352,9 +352,14 @@ fn process_frame() {
 /// Render a static canvas demo
 fn render_canvas_demo(lesson_id: usize) {
     match lesson_id {
-        1 => render_color_space_demo(),
-        2 => render_convolution_demo(),
-        8 => render_transform_demo(),
+        1 => render_color_space_demo(),      // Pixels & Color Spaces
+        2 => render_pinhole_demo(),          // Pinhole Camera Model
+        3 => render_camera_matrix_demo(),    // Camera Matrix & Projection
+        4 => render_convolution_demo(),      // Convolution
+        10 => render_transform_demo(),       // Image Transformations
+        11 => render_homography_demo(),      // Homography
+        13 => render_stereo_demo(),          // Stereo Vision & Depth
+        14 => render_epipolar_demo(),        // Epipolar Geometry
         _ => render_placeholder_demo(lesson_id),
     }
 }
@@ -420,7 +425,203 @@ fn render_color_space_demo() {
     }
 }
 
-/// Lesson 2: Interactive convolution demo
+/// Lesson 2: Pinhole Camera Model demo
+fn render_pinhole_demo() {
+    if let Some(canvas) = get_canvas("demo-canvas") {
+        canvas.set_width(500);
+        canvas.set_height(300);
+
+        if let Some(ctx) = canvas
+            .get_context("2d")
+            .ok()
+            .flatten()
+            .map(|c| c.unchecked_into::<CanvasRenderingContext2d>())
+        {
+            ctx.set_fill_style(&JsValue::from_str("#0a0a12"));
+            ctx.fill_rect(0.0, 0.0, 500.0, 300.0);
+
+            // Draw 3D object (simple house shape)
+            ctx.set_stroke_style(&JsValue::from_str("#00CC88"));
+            ctx.set_line_width(2.0);
+            ctx.begin_path();
+            ctx.move_to(50.0, 180.0);
+            ctx.line_to(50.0, 120.0);
+            ctx.line_to(80.0, 90.0);
+            ctx.line_to(110.0, 120.0);
+            ctx.line_to(110.0, 180.0);
+            ctx.line_to(50.0, 180.0);
+            ctx.stroke();
+
+            ctx.set_fill_style(&JsValue::from_str("#fff"));
+            ctx.set_font("11px Inter, sans-serif");
+            ctx.set_text_align("center");
+            let _ = ctx.fill_text("3D Object", 80.0, 200.0);
+            let _ = ctx.fill_text("(X, Y, Z)", 80.0, 215.0);
+
+            // Draw pinhole
+            ctx.set_fill_style(&JsValue::from_str("#0099ff"));
+            ctx.begin_path();
+            let _ = ctx.arc(250.0, 150.0, 8.0, 0.0, std::f64::consts::PI * 2.0);
+            ctx.fill();
+            let _ = ctx.fill_text("Pinhole", 250.0, 180.0);
+            let _ = ctx.fill_text("(O)", 250.0, 195.0);
+
+            // Draw image plane
+            ctx.set_stroke_style(&JsValue::from_str("#CC6600"));
+            ctx.set_line_width(3.0);
+            ctx.begin_path();
+            ctx.move_to(400.0, 80.0);
+            ctx.line_to(400.0, 220.0);
+            ctx.stroke();
+
+            // Draw projected (inverted) house
+            ctx.set_stroke_style(&JsValue::from_str("#CC6600"));
+            ctx.set_line_width(2.0);
+            ctx.begin_path();
+            ctx.move_to(410.0, 120.0);
+            ctx.line_to(410.0, 160.0);
+            ctx.line_to(430.0, 180.0);
+            ctx.line_to(450.0, 160.0);
+            ctx.line_to(450.0, 120.0);
+            ctx.line_to(410.0, 120.0);
+            ctx.stroke();
+
+            ctx.set_fill_style(&JsValue::from_str("#fff"));
+            let _ = ctx.fill_text("Image", 430.0, 240.0);
+            let _ = ctx.fill_text("(x, y)", 430.0, 255.0);
+
+            // Draw rays
+            ctx.set_stroke_style(&JsValue::from_str("#666"));
+            ctx.set_line_width(1.0);
+            ctx.begin_path();
+            ctx.move_to(80.0, 90.0);
+            ctx.line_to(250.0, 150.0);
+            ctx.line_to(430.0, 180.0);
+            ctx.stroke();
+            ctx.begin_path();
+            ctx.move_to(80.0, 180.0);
+            ctx.line_to(250.0, 150.0);
+            ctx.line_to(430.0, 120.0);
+            ctx.stroke();
+
+            // Formula
+            ctx.set_fill_style(&JsValue::from_str("#0099ff"));
+            ctx.set_font("12px JetBrains Mono, monospace");
+            let _ = ctx.fill_text("x = f · X/Z    y = f · Y/Z", 250.0, 280.0);
+        }
+    }
+}
+
+/// Lesson 3: Camera Matrix demo
+fn render_camera_matrix_demo() {
+    if let Some(canvas) = get_canvas("demo-canvas") {
+        canvas.set_width(500);
+        canvas.set_height(320);
+
+        if let Some(ctx) = canvas
+            .get_context("2d")
+            .ok()
+            .flatten()
+            .map(|c| c.unchecked_into::<CanvasRenderingContext2d>())
+        {
+            ctx.set_fill_style(&JsValue::from_str("#0a0a12"));
+            ctx.fill_rect(0.0, 0.0, 500.0, 320.0);
+
+            // Title
+            ctx.set_fill_style(&JsValue::from_str("#fff"));
+            ctx.set_font("14px Inter, sans-serif");
+            ctx.set_text_align("center");
+            let _ = ctx.fill_text("The Camera Intrinsic Matrix K", 250.0, 25.0);
+
+            // Draw matrix K
+            ctx.set_font("16px JetBrains Mono, monospace");
+            ctx.set_fill_style(&JsValue::from_str("#0099ff"));
+            let _ = ctx.fill_text("K = ", 70.0, 90.0);
+
+            // Matrix brackets
+            ctx.set_stroke_style(&JsValue::from_str("#0099ff"));
+            ctx.set_line_width(2.0);
+            ctx.begin_path();
+            ctx.move_to(100.0, 50.0);
+            ctx.line_to(95.0, 50.0);
+            ctx.line_to(95.0, 130.0);
+            ctx.line_to(100.0, 130.0);
+            ctx.stroke();
+            ctx.begin_path();
+            ctx.move_to(230.0, 50.0);
+            ctx.line_to(235.0, 50.0);
+            ctx.line_to(235.0, 130.0);
+            ctx.line_to(230.0, 130.0);
+            ctx.stroke();
+
+            // Matrix elements
+            ctx.set_fill_style(&JsValue::from_str("#00CC88"));
+            ctx.set_font("14px JetBrains Mono, monospace");
+            ctx.set_text_align("center");
+            let _ = ctx.fill_text("fx", 120.0, 75.0);
+            let _ = ctx.fill_text("0", 165.0, 75.0);
+            let _ = ctx.fill_text("cx", 210.0, 75.0);
+            let _ = ctx.fill_text("0", 120.0, 95.0);
+            let _ = ctx.fill_text("fy", 165.0, 95.0);
+            let _ = ctx.fill_text("cy", 210.0, 95.0);
+            let _ = ctx.fill_text("0", 120.0, 115.0);
+            let _ = ctx.fill_text("0", 165.0, 115.0);
+            let _ = ctx.fill_text("1", 210.0, 115.0);
+
+            // Parameter descriptions
+            ctx.set_fill_style(&JsValue::from_str("#888"));
+            ctx.set_font("11px Inter, sans-serif");
+            ctx.set_text_align("left");
+            let _ = ctx.fill_text("fx, fy = focal lengths (pixels)", 280.0, 75.0);
+            let _ = ctx.fill_text("cx, cy = principal point", 280.0, 95.0);
+            let _ = ctx.fill_text("(image center offset)", 280.0, 110.0);
+
+            // Full projection equation
+            ctx.set_fill_style(&JsValue::from_str("#fff"));
+            ctx.set_font("12px Inter, sans-serif");
+            ctx.set_text_align("center");
+            let _ = ctx.fill_text("Full Projection: p = K · [R | t] · P", 250.0, 160.0);
+
+            // Draw diagram of projection
+            ctx.set_fill_style(&JsValue::from_str("#CC6600"));
+            let _ = ctx.fill_text("World Point", 80.0, 200.0);
+            ctx.set_fill_style(&JsValue::from_str("#0099ff"));
+            let _ = ctx.fill_text("[R|t]", 180.0, 200.0);
+            ctx.set_fill_style(&JsValue::from_str("#00CC88"));
+            let _ = ctx.fill_text("Camera Coords", 280.0, 200.0);
+            ctx.set_fill_style(&JsValue::from_str("#0099ff"));
+            let _ = ctx.fill_text("K", 370.0, 200.0);
+            ctx.set_fill_style(&JsValue::from_str("#CC6600"));
+            let _ = ctx.fill_text("Pixel", 430.0, 200.0);
+
+            // Arrows
+            ctx.set_stroke_style(&JsValue::from_str("#666"));
+            ctx.set_line_width(1.5);
+            for x in [140.0, 340.0, 400.0].iter() {
+                ctx.begin_path();
+                ctx.move_to(*x, 195.0);
+                ctx.line_to(*x + 20.0, 195.0);
+                ctx.move_to(*x + 15.0, 190.0);
+                ctx.line_to(*x + 20.0, 195.0);
+                ctx.line_to(*x + 15.0, 200.0);
+                ctx.stroke();
+            }
+
+            // Intrinsic vs Extrinsic
+            ctx.set_fill_style(&JsValue::from_str("#0099ff"));
+            ctx.set_font("11px Inter, sans-serif");
+            let _ = ctx.fill_text("K = Intrinsic (camera internals)", 150.0, 260.0);
+            let _ = ctx.fill_text("[R|t] = Extrinsic (camera pose)", 350.0, 260.0);
+
+            ctx.set_fill_style(&JsValue::from_str("#888"));
+            ctx.set_font("10px Inter, sans-serif");
+            let _ = ctx.fill_text("Calibrate once", 150.0, 280.0);
+            let _ = ctx.fill_text("Changes every frame", 350.0, 280.0);
+        }
+    }
+}
+
+/// Lesson 4: Interactive convolution demo
 fn render_convolution_demo() {
     if let Some(canvas) = get_canvas("demo-canvas") {
         canvas.set_width(500);
@@ -558,6 +759,314 @@ fn render_transform_demo() {
             ctx.set_fill_style(&JsValue::from_str("#888"));
             ctx.set_font("11px Inter, sans-serif");
             let _ = ctx.fill_text("Geometric transforms change position, rotation, and scale", 250.0, 280.0);
+        }
+    }
+}
+
+/// Lesson 11: Homography demo
+fn render_homography_demo() {
+    if let Some(canvas) = get_canvas("demo-canvas") {
+        canvas.set_width(500);
+        canvas.set_height(300);
+
+        if let Some(ctx) = canvas
+            .get_context("2d")
+            .ok()
+            .flatten()
+            .map(|c| c.unchecked_into::<CanvasRenderingContext2d>())
+        {
+            ctx.set_fill_style(&JsValue::from_str("#0a0a12"));
+            ctx.fill_rect(0.0, 0.0, 500.0, 300.0);
+
+            // Title
+            ctx.set_fill_style(&JsValue::from_str("#fff"));
+            ctx.set_font("14px Inter, sans-serif");
+            ctx.set_text_align("center");
+            let _ = ctx.fill_text("Homography: Plane-to-Plane Mapping", 250.0, 25.0);
+
+            // Draw source rectangle (tilted perspective)
+            ctx.set_stroke_style(&JsValue::from_str("#00CC88"));
+            ctx.set_line_width(2.0);
+            ctx.begin_path();
+            ctx.move_to(40.0, 80.0);
+            ctx.line_to(140.0, 60.0);
+            ctx.line_to(160.0, 180.0);
+            ctx.line_to(60.0, 200.0);
+            ctx.close_path();
+            ctx.stroke();
+
+            // Corner points on source
+            ctx.set_fill_style(&JsValue::from_str("#0099ff"));
+            for (x, y) in [(40.0, 80.0), (140.0, 60.0), (160.0, 180.0), (60.0, 200.0)] {
+                ctx.begin_path();
+                let _ = ctx.arc(x, y, 5.0, 0.0, std::f64::consts::PI * 2.0);
+                ctx.fill();
+            }
+
+            ctx.set_fill_style(&JsValue::from_str("#fff"));
+            ctx.set_font("11px Inter, sans-serif");
+            let _ = ctx.fill_text("Source", 100.0, 230.0);
+            let _ = ctx.fill_text("(photographed)", 100.0, 245.0);
+
+            // Arrow
+            ctx.set_stroke_style(&JsValue::from_str("#0099ff"));
+            ctx.set_line_width(2.0);
+            ctx.begin_path();
+            ctx.move_to(180.0, 140.0);
+            ctx.line_to(230.0, 140.0);
+            ctx.move_to(220.0, 130.0);
+            ctx.line_to(230.0, 140.0);
+            ctx.line_to(220.0, 150.0);
+            ctx.stroke();
+
+            // H matrix
+            ctx.set_fill_style(&JsValue::from_str("#0099ff"));
+            ctx.set_font("14px JetBrains Mono, monospace");
+            let _ = ctx.fill_text("H", 205.0, 120.0);
+
+            // Draw destination rectangle (rectified)
+            ctx.set_stroke_style(&JsValue::from_str("#CC6600"));
+            ctx.set_line_width(2.0);
+            ctx.begin_path();
+            ctx.move_to(280.0, 70.0);
+            ctx.line_to(400.0, 70.0);
+            ctx.line_to(400.0, 190.0);
+            ctx.line_to(280.0, 190.0);
+            ctx.close_path();
+            ctx.stroke();
+
+            // Corner points on destination
+            ctx.set_fill_style(&JsValue::from_str("#0099ff"));
+            for (x, y) in [(280.0, 70.0), (400.0, 70.0), (400.0, 190.0), (280.0, 190.0)] {
+                ctx.begin_path();
+                let _ = ctx.arc(x, y, 5.0, 0.0, std::f64::consts::PI * 2.0);
+                ctx.fill();
+            }
+
+            ctx.set_fill_style(&JsValue::from_str("#fff"));
+            ctx.set_font("11px Inter, sans-serif");
+            let _ = ctx.fill_text("Destination", 340.0, 230.0);
+            let _ = ctx.fill_text("(rectified)", 340.0, 245.0);
+
+            // Formula at bottom
+            ctx.set_fill_style(&JsValue::from_str("#888"));
+            ctx.set_font("11px JetBrains Mono, monospace");
+            let _ = ctx.fill_text("p' = H · p    (4 point pairs → solve for 3×3 matrix H)", 250.0, 280.0);
+        }
+    }
+}
+
+/// Lesson 13: Stereo Vision demo
+fn render_stereo_demo() {
+    if let Some(canvas) = get_canvas("demo-canvas") {
+        canvas.set_width(500);
+        canvas.set_height(320);
+
+        if let Some(ctx) = canvas
+            .get_context("2d")
+            .ok()
+            .flatten()
+            .map(|c| c.unchecked_into::<CanvasRenderingContext2d>())
+        {
+            ctx.set_fill_style(&JsValue::from_str("#0a0a12"));
+            ctx.fill_rect(0.0, 0.0, 500.0, 320.0);
+
+            // Title
+            ctx.set_fill_style(&JsValue::from_str("#fff"));
+            ctx.set_font("14px Inter, sans-serif");
+            ctx.set_text_align("center");
+            let _ = ctx.fill_text("Stereo Vision: Depth from Disparity", 250.0, 25.0);
+
+            // Draw two cameras
+            ctx.set_fill_style(&JsValue::from_str("#0099ff"));
+            ctx.begin_path();
+            ctx.move_to(100.0, 80.0);
+            ctx.line_to(80.0, 100.0);
+            ctx.line_to(120.0, 100.0);
+            ctx.close_path();
+            ctx.fill();
+            let _ = ctx.fill_text("Left", 100.0, 115.0);
+
+            ctx.begin_path();
+            ctx.move_to(300.0, 80.0);
+            ctx.line_to(280.0, 100.0);
+            ctx.line_to(320.0, 100.0);
+            ctx.close_path();
+            ctx.fill();
+            let _ = ctx.fill_text("Right", 300.0, 115.0);
+
+            // Baseline
+            ctx.set_stroke_style(&JsValue::from_str("#666"));
+            ctx.set_line_width(1.0);
+            ctx.begin_path();
+            ctx.move_to(120.0, 90.0);
+            ctx.line_to(280.0, 90.0);
+            ctx.stroke();
+            ctx.set_fill_style(&JsValue::from_str("#888"));
+            ctx.set_font("10px Inter, sans-serif");
+            let _ = ctx.fill_text("baseline (b)", 200.0, 85.0);
+
+            // 3D point
+            ctx.set_fill_style(&JsValue::from_str("#00CC88"));
+            ctx.begin_path();
+            let _ = ctx.arc(200.0, 200.0, 10.0, 0.0, std::f64::consts::PI * 2.0);
+            ctx.fill();
+            ctx.set_font("11px Inter, sans-serif");
+            let _ = ctx.fill_text("P", 200.0, 225.0);
+
+            // Rays from cameras to point
+            ctx.set_stroke_style(&JsValue::from_str("#666"));
+            ctx.set_line_width(1.0);
+            ctx.begin_path();
+            ctx.move_to(100.0, 100.0);
+            ctx.line_to(200.0, 200.0);
+            ctx.move_to(300.0, 100.0);
+            ctx.line_to(200.0, 200.0);
+            ctx.stroke();
+
+            // Disparity visualization
+            ctx.set_fill_style(&JsValue::from_str("#fff"));
+            ctx.set_font("12px Inter, sans-serif");
+            let _ = ctx.fill_text("Left Image", 100.0, 255.0);
+            let _ = ctx.fill_text("Right Image", 300.0, 255.0);
+
+            // Left image strip
+            ctx.set_stroke_style(&JsValue::from_str("#0099ff"));
+            ctx.set_line_width(2.0);
+            ctx.stroke_rect(40.0, 260.0, 120.0, 20.0);
+            ctx.set_fill_style(&JsValue::from_str("#00CC88"));
+            ctx.begin_path();
+            let _ = ctx.arc(110.0, 270.0, 6.0, 0.0, std::f64::consts::PI * 2.0);
+            ctx.fill();
+
+            // Right image strip
+            ctx.stroke_rect(240.0, 260.0, 120.0, 20.0);
+            ctx.set_fill_style(&JsValue::from_str("#00CC88"));
+            ctx.begin_path();
+            let _ = ctx.arc(280.0, 270.0, 6.0, 0.0, std::f64::consts::PI * 2.0);
+            ctx.fill();
+
+            // Disparity arrow
+            ctx.set_stroke_style(&JsValue::from_str("#CC6600"));
+            ctx.set_line_width(2.0);
+            ctx.begin_path();
+            ctx.move_to(110.0, 290.0);
+            ctx.line_to(280.0, 290.0);
+            ctx.stroke();
+            ctx.set_fill_style(&JsValue::from_str("#CC6600"));
+            ctx.set_font("11px Inter, sans-serif");
+            let _ = ctx.fill_text("disparity (d)", 195.0, 305.0);
+
+            // Formula
+            ctx.set_fill_style(&JsValue::from_str("#0099ff"));
+            ctx.set_font("12px JetBrains Mono, monospace");
+            let _ = ctx.fill_text("Z = f·b / d", 430.0, 200.0);
+            ctx.set_fill_style(&JsValue::from_str("#888"));
+            ctx.set_font("10px Inter, sans-serif");
+            let _ = ctx.fill_text("depth", 430.0, 215.0);
+        }
+    }
+}
+
+/// Lesson 14: Epipolar Geometry demo
+fn render_epipolar_demo() {
+    if let Some(canvas) = get_canvas("demo-canvas") {
+        canvas.set_width(500);
+        canvas.set_height(300);
+
+        if let Some(ctx) = canvas
+            .get_context("2d")
+            .ok()
+            .flatten()
+            .map(|c| c.unchecked_into::<CanvasRenderingContext2d>())
+        {
+            ctx.set_fill_style(&JsValue::from_str("#0a0a12"));
+            ctx.fill_rect(0.0, 0.0, 500.0, 300.0);
+
+            // Title
+            ctx.set_fill_style(&JsValue::from_str("#fff"));
+            ctx.set_font("14px Inter, sans-serif");
+            ctx.set_text_align("center");
+            let _ = ctx.fill_text("Epipolar Geometry", 250.0, 25.0);
+
+            // Left image frame
+            ctx.set_stroke_style(&JsValue::from_str("#0099ff"));
+            ctx.set_line_width(2.0);
+            ctx.stroke_rect(30.0, 50.0, 150.0, 120.0);
+            ctx.set_fill_style(&JsValue::from_str("#fff"));
+            ctx.set_font("11px Inter, sans-serif");
+            let _ = ctx.fill_text("Left Image", 105.0, 185.0);
+
+            // Point p in left image
+            ctx.set_fill_style(&JsValue::from_str("#00CC88"));
+            ctx.begin_path();
+            let _ = ctx.arc(100.0, 100.0, 6.0, 0.0, std::f64::consts::PI * 2.0);
+            ctx.fill();
+            ctx.set_font("10px Inter, sans-serif");
+            let _ = ctx.fill_text("p", 110.0, 100.0);
+
+            // Epipole in left image
+            ctx.set_fill_style(&JsValue::from_str("#CC6600"));
+            ctx.begin_path();
+            let _ = ctx.arc(160.0, 110.0, 5.0, 0.0, std::f64::consts::PI * 2.0);
+            ctx.fill();
+            let _ = ctx.fill_text("e", 168.0, 115.0);
+
+            // Right image frame
+            ctx.set_stroke_style(&JsValue::from_str("#0099ff"));
+            ctx.stroke_rect(320.0, 50.0, 150.0, 120.0);
+            ctx.set_fill_style(&JsValue::from_str("#fff"));
+            let _ = ctx.fill_text("Right Image", 395.0, 185.0);
+
+            // Epipolar line in right image
+            ctx.set_stroke_style(&JsValue::from_str("#00CC88"));
+            ctx.set_line_width(2.0);
+            ctx.begin_path();
+            ctx.move_to(330.0, 80.0);
+            ctx.line_to(460.0, 140.0);
+            ctx.stroke();
+
+            // Epipole in right image
+            ctx.set_fill_style(&JsValue::from_str("#CC6600"));
+            ctx.begin_path();
+            let _ = ctx.arc(330.0, 110.0, 5.0, 0.0, std::f64::consts::PI * 2.0);
+            ctx.fill();
+            ctx.set_font("10px Inter, sans-serif");
+            let _ = ctx.fill_text("e'", 315.0, 115.0);
+
+            // Point p' on epipolar line
+            ctx.set_fill_style(&JsValue::from_str("#00CC88"));
+            ctx.begin_path();
+            let _ = ctx.arc(400.0, 112.0, 6.0, 0.0, std::f64::consts::PI * 2.0);
+            ctx.fill();
+            let _ = ctx.fill_text("p'", 410.0, 108.0);
+
+            // Arrow between images
+            ctx.set_stroke_style(&JsValue::from_str("#666"));
+            ctx.set_line_width(1.5);
+            ctx.begin_path();
+            ctx.move_to(190.0, 110.0);
+            ctx.line_to(310.0, 110.0);
+            ctx.move_to(300.0, 105.0);
+            ctx.line_to(310.0, 110.0);
+            ctx.line_to(300.0, 115.0);
+            ctx.stroke();
+
+            // Label
+            ctx.set_fill_style(&JsValue::from_str("#0099ff"));
+            ctx.set_font("11px JetBrains Mono, monospace");
+            let _ = ctx.fill_text("l' = F·p", 250.0, 105.0);
+
+            // Explanation
+            ctx.set_fill_style(&JsValue::from_str("#888"));
+            ctx.set_font("11px Inter, sans-serif");
+            let _ = ctx.fill_text("Point p maps to epipolar line l' in other image", 250.0, 220.0);
+            let _ = ctx.fill_text("Corresponding point p' must lie on l'", 250.0, 240.0);
+
+            // Formula
+            ctx.set_fill_style(&JsValue::from_str("#0099ff"));
+            ctx.set_font("12px JetBrains Mono, monospace");
+            let _ = ctx.fill_text("p'ᵀ · F · p = 0", 250.0, 275.0);
         }
     }
 }
