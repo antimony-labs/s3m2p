@@ -108,11 +108,11 @@ pub fn start_sidebyside_demo(lesson_id: usize) {
     render_sidebyside_demo(lesson_id);
 }
 
-/// Set up demo controls based on lesson
+/// Set up demo controls based on lesson (new curriculum: 17 lessons)
 fn setup_demo_controls(lesson_id: usize) {
     let controls_html = match lesson_id {
-        // Edge Detection (Canny)
-        3 => {
+        // Edge Detection (Canny) - Lesson 5
+        5 => {
             r#"
             <div class="control-group">
                 <label>Low Threshold: <span id="low-val">50</span></label>
@@ -124,8 +124,8 @@ fn setup_demo_controls(lesson_id: usize) {
             </div>
             "#
         }
-        // Noise Reduction
-        4 => {
+        // Noise Reduction - Lesson 6
+        6 => {
             r#"
             <div class="control-group">
                 <label>Blur Radius: <span id="blur-val">2</span></label>
@@ -133,8 +133,8 @@ fn setup_demo_controls(lesson_id: usize) {
             </div>
             "#
         }
-        // Corner Detection
-        5 => {
+        // Corner Detection - Lesson 7
+        7 => {
             r#"
             <div class="control-group">
                 <label>Threshold: <span id="threshold-val">100</span></label>
@@ -142,8 +142,8 @@ fn setup_demo_controls(lesson_id: usize) {
             </div>
             "#
         }
-        // Thresholding
-        7 => {
+        // Thresholding - Lesson 9
+        9 => {
             r#"
             <div class="control-group">
                 <label>Threshold: <span id="threshold-val">128</span></label>
@@ -151,8 +151,8 @@ fn setup_demo_controls(lesson_id: usize) {
             </div>
             "#
         }
-        // Color Tracking
-        10 => {
+        // Color Tracking - Lesson 15
+        15 => {
             r#"
             <div class="control-group">
                 <label>Hue: <span id="hue-val">120</span></label>
@@ -175,11 +175,11 @@ fn setup_demo_controls(lesson_id: usize) {
     wire_slider_events(lesson_id);
 }
 
-/// Wire up slider change events
+/// Wire up slider change events (new curriculum: 17 lessons)
 fn wire_slider_events(lesson_id: usize) {
     match lesson_id {
-        3 => {
-            // Edge Detection sliders
+        5 => {
+            // Edge Detection sliders - Lesson 5
             wire_slider("low-threshold", "low-val", |val| {
                 STATE.with(|s| s.borrow_mut().low_threshold = val as f32);
             });
@@ -187,14 +187,14 @@ fn wire_slider_events(lesson_id: usize) {
                 STATE.with(|s| s.borrow_mut().high_threshold = val as f32);
             });
         }
-        4 => {
-            // Blur slider
+        6 => {
+            // Blur slider - Lesson 6
             wire_slider("blur-radius", "blur-val", |val| {
                 STATE.with(|s| s.borrow_mut().blur_radius = val as u32);
             });
         }
-        7 => {
-            // Threshold slider
+        9 => {
+            // Threshold slider - Lesson 9
             wire_slider("threshold", "threshold-val", |val| {
                 STATE.with(|s| s.borrow_mut().low_threshold = val as f32);
             });
