@@ -222,8 +222,8 @@ impl LessonRenderer {
         // Generate progress navigation bubbles
         let progress_nav = self.render_lesson_progress(lesson.id, LESSONS.len());
 
-        // Apply glossary tooltips to intuition text
-        let intuition_html = Self::apply_glossary(lesson.intuition);
+        // Convert intuition markdown to HTML, then apply glossary tooltips
+        let intuition_html = Self::apply_glossary(&convert_markdown_to_html(lesson.intuition));
 
         // Convert main content markdown to HTML
         let content_html = convert_markdown_to_html(lesson.content);
@@ -252,7 +252,7 @@ impl LessonRenderer {
                     <div class="going-deeper-content">{}</div>
                 </details>
                 "##,
-                lesson.going_deeper
+                convert_markdown_to_html(lesson.going_deeper)
             )
         } else {
             String::new()
@@ -267,7 +267,7 @@ impl LessonRenderer {
                     <div class="common-mistakes-content">{}</div>
                 </details>
                 "##,
-                lesson.common_mistakes
+                convert_markdown_to_html(lesson.common_mistakes)
             )
         } else {
             String::new()
@@ -381,13 +381,31 @@ impl LessonRenderer {
     }
 }
 
+/// Track list type for proper closing tags
+#[derive(Clone, Copy, PartialEq)]
+enum ListType {
+    None,
+    Unordered,
+    Ordered,
+}
+
 /// Simple markdown to HTML converter for lesson content
 fn convert_markdown_to_html(md: &str) -> String {
     let mut html = String::new();
     let mut in_code_block = false;
     let mut in_table = false;
-    let mut in_list = false;
+    let mut list_type = ListType::None;
     let mut code_lang;
+
+    // Helper to close current list
+    let close_list = |html: &mut String, list_type: &mut ListType| {
+        match *list_type {
+            ListType::Unordered => html.push_str("</ul>\n"),
+            ListType::Ordered => html.push_str("</ol>\n"),
+            ListType::None => {}
+        }
+        *list_type = ListType::None;
+    };
 
     for line in md.lines() {
         let trimmed = line.trim();
@@ -423,10 +441,7 @@ fn convert_markdown_to_html(md: &str) -> String {
 
         // Empty lines
         if trimmed.is_empty() {
-            if in_list {
-                html.push_str("</ul>\n");
-                in_list = false;
-            }
+            close_list(&mut html, &mut list_type);
             if in_table {
                 html.push_str("</table>\n");
                 in_table = false;
@@ -436,28 +451,33 @@ fn convert_markdown_to_html(md: &str) -> String {
 
         // Headers
         if trimmed.starts_with("## ") {
+            close_list(&mut html, &mut list_type);
             html.push_str(&format!("<h2>{}</h2>\n", format_inline(&trimmed[3..])));
             continue;
         }
         if trimmed.starts_with("### ") {
+            close_list(&mut html, &mut list_type);
             html.push_str(&format!("<h3>{}</h3>\n", format_inline(&trimmed[4..])));
             continue;
         }
 
         // Horizontal rule
         if trimmed == "---" {
+            close_list(&mut html, &mut list_type);
             html.push_str("<hr>\n");
             continue;
         }
 
         // Blockquotes
         if trimmed.starts_with("> ") {
+            close_list(&mut html, &mut list_type);
             html.push_str(&format!("<blockquote>{}</blockquote>\n", format_inline(&trimmed[2..])));
             continue;
         }
 
         // Tables
         if trimmed.starts_with('|') && trimmed.ends_with('|') {
+            close_list(&mut html, &mut list_type);
             // Skip separator rows
             if trimmed.contains("---") {
                 continue;
@@ -485,22 +505,33 @@ fn convert_markdown_to_html(md: &str) -> String {
             in_table = false;
         }
 
-        // Lists
+        // Unordered lists
         if trimmed.starts_with("- ") || trimmed.starts_with("* ") {
-            if !in_list {
+            // Close ordered list if switching types
+            if list_type == ListType::Ordered {
+                close_list(&mut html, &mut list_type);
+            }
+            if list_type == ListType::None {
                 html.push_str("<ul>\n");
-                in_list = true;
+                list_type = ListType::Unordered;
             }
             let content = &trimmed[2..];
             html.push_str(&format!("<li>{}</li>\n", format_inline(content)));
             continue;
         }
+
+        // Ordered lists
         if trimmed.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false)
-            && trimmed.contains(". ") {
+            && trimmed.contains(". ")
+        {
             if let Some(pos) = trimmed.find(". ") {
-                if !in_list {
+                // Close unordered list if switching types
+                if list_type == ListType::Unordered {
+                    close_list(&mut html, &mut list_type);
+                }
+                if list_type == ListType::None {
                     html.push_str("<ol>\n");
-                    in_list = true;
+                    list_type = ListType::Ordered;
                 }
                 let content = &trimmed[pos + 2..];
                 html.push_str(&format!("<li>{}</li>\n", format_inline(content)));
@@ -508,9 +539,14 @@ fn convert_markdown_to_html(md: &str) -> String {
             }
         }
 
-        if in_list && !trimmed.starts_with("- ") && !trimmed.starts_with("* ") {
-            html.push_str("</ul>\n");
-            in_list = false;
+        // Non-list content closes any open list
+        close_list(&mut html, &mut list_type);
+
+        // Pass through existing HTML tags without wrapping in <p>
+        if trimmed.starts_with('<') && !trimmed.starts_with("<!") {
+            html.push_str(trimmed);
+            html.push('\n');
+            continue;
         }
 
         // Regular paragraph
@@ -521,9 +557,7 @@ fn convert_markdown_to_html(md: &str) -> String {
     if in_code_block {
         html.push_str("</code></pre>\n");
     }
-    if in_list {
-        html.push_str("</ul>\n");
-    }
+    close_list(&mut html, &mut list_type);
     if in_table {
         html.push_str("</table>\n");
     }
