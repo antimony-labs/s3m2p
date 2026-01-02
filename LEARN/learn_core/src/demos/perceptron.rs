@@ -349,8 +349,8 @@ impl Demo for PerceptronDemo {
 
         if self.use_hidden_layer {
             // MLP training with backpropagation
-            let mut grad_hidden = vec![[0.0f32; 3]; 4];
-            let mut grad_output = vec![0.0f32; 5];
+            let mut grad_hidden = [[0.0f32; 3]; 4];
+            let mut grad_output = [0.0f32; 5];
 
             for _ in 0..batch_size {
                 let idx = self.rng.range_int(0, self.points.len() as i32) as usize;
@@ -391,13 +391,13 @@ impl Demo for PerceptronDemo {
 
             // Apply gradients
             let scale = self.learning_rate / batch_size as f32;
-            for h in 0..4 {
-                self.hidden_w[h][0] -= scale * grad_hidden[h][0];
-                self.hidden_w[h][1] -= scale * grad_hidden[h][1];
-                self.hidden_w[h][2] -= scale * grad_hidden[h][2];
+            for (h, grad_h) in grad_hidden.iter().enumerate() {
+                self.hidden_w[h][0] -= scale * grad_h[0];
+                self.hidden_w[h][1] -= scale * grad_h[1];
+                self.hidden_w[h][2] -= scale * grad_h[2];
             }
-            for i in 0..5 {
-                self.output_w[i] -= scale * grad_output[i];
+            for (i, &grad) in grad_output.iter().enumerate() {
+                self.output_w[i] -= scale * grad;
             }
         } else {
             // Simple perceptron training
@@ -426,7 +426,7 @@ impl Demo for PerceptronDemo {
         self.step_count += 1;
 
         // Update metrics every few steps
-        if self.step_count % 5 == 0 {
+        if self.step_count.is_multiple_of(5) {
             self.accuracy = self.compute_accuracy();
             let loss = self.compute_loss();
             self.loss_history.push(loss);

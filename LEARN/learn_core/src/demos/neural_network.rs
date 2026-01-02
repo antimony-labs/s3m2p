@@ -513,8 +513,8 @@ impl Demo for NeuralNetworkDemo {
                 let mut layer_deltas = Vec::with_capacity(self.layers[i].activations.len());
                 for j in 0..self.layers[i].activations.len() {
                     let mut sum = 0.0;
-                    for k in 0..next_layer.weights.len() {
-                        sum += next_layer.weights[k][j] * next_deltas[k];
+                    for (k, next_delta) in next_deltas.iter().enumerate() {
+                        sum += next_layer.weights[k][j] * next_delta;
                     }
                     let act_out = self.layers[i].activations[j];
                     let d_act = self.activation.derivative(self.layers[i].pre_activations[j], act_out);
@@ -537,10 +537,10 @@ impl Demo for NeuralNetworkDemo {
 
         // Apply gradients
         for (l, layer) in self.layers.iter_mut().enumerate() {
-            for j in 0..layer.weights.len() {
-                for k in 0..layer.weights[j].len() {
-                    let reg = self.regularization * layer.weights[j][k];
-                    layer.weights[j][k] -= self.learning_rate * (weight_grads[l][j][k] + reg);
+            for (j, weights_j) in layer.weights.iter_mut().enumerate() {
+                for (k, weight) in weights_j.iter_mut().enumerate() {
+                    let reg = self.regularization * *weight;
+                    *weight -= self.learning_rate * (weight_grads[l][j][k] + reg);
                 }
                 layer.biases[j] -= self.learning_rate * bias_grads[l][j];
             }
@@ -549,7 +549,7 @@ impl Demo for NeuralNetworkDemo {
         self.step_count += 1;
 
         // Update metrics periodically
-        if self.step_count % 10 == 0 {
+        if self.step_count.is_multiple_of(10) {
             self.accuracy = self.compute_accuracy();
             let loss = self.compute_loss();
             self.loss_history.push(loss);

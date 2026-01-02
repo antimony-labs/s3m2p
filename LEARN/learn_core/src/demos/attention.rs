@@ -175,10 +175,10 @@ impl AttentionDemo {
         for q in 0..n_tokens {
             // Compute dot products (unnormalized attention)
             let mut scores = vec![0.0; n_tokens];
-            for k in 0..n_tokens {
+            for (k, key) in self.keys.iter().enumerate().take(n_tokens) {
                 let mut dot = 0.0;
-                for i in 0..d {
-                    dot += self.queries[q][i] * self.keys[k][i];
+                for (i, &query_val) in self.queries[q].iter().enumerate().take(d) {
+                    dot += query_val * key[i];
                 }
                 scores[k] = dot / scale;
             }
@@ -188,8 +188,8 @@ impl AttentionDemo {
             let exp_scores: Vec<f32> = scores.iter().map(|&s| (s - max_score).exp()).collect();
             let sum_exp: f32 = exp_scores.iter().sum();
 
-            for k in 0..n_tokens {
-                self.attention_weights[q][k] = exp_scores[k] / sum_exp;
+            for (k, &exp_score) in exp_scores.iter().enumerate() {
+                self.attention_weights[q][k] = exp_score / sum_exp;
             }
         }
     }
