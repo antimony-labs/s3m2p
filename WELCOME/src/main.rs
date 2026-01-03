@@ -29,7 +29,7 @@ use shader::BackgroundEffect;
 mod bubbles;
 mod routing;
 use bubbles::{get_category, Bubble, BubbleAction, CategoryId, HOME_BUBBLES};
-use routing::{get_current_route, navigate_home, Route};
+use routing::{get_current_route, navigate_home, navigate_to, Route};
 
 mod arch_diagram;
 use arch_diagram::render_architecture_diagram;
@@ -992,15 +992,27 @@ fn handle_route_change(document: &Document) {
 
     // Toggle containers
     let arch_container = document.get_element_by_id("arch-container");
+    let about_container = document.get_element_by_id("about-container");
     let back_button = document.get_element_by_id("back-button");
 
+    // Handle arch-container visibility
     if let Some(container) = arch_container {
         if matches!(route, Route::Architecture) {
             container.set_attribute("style", "display: flex; position: fixed; inset: 0; background: rgba(5, 5, 8, 0.95); z-index: 5000; justify-content: center; align-items: center;").ok();
-            // Hide back button in arch view (or handle custom back)
-            if let Some(btn) = back_button {
-                btn.set_attribute("style", "display: flex; z-index: 5001;")
-                    .ok();
+            if let Some(btn) = back_button.as_ref() {
+                btn.set_attribute("style", "display: flex; z-index: 5001;").ok();
+            }
+        } else {
+            container.set_attribute("style", "display: none;").ok();
+        }
+    }
+
+    // Handle about-container visibility
+    if let Some(container) = about_container {
+        if matches!(route, Route::About) {
+            container.set_attribute("style", "display: flex;").ok();
+            if let Some(btn) = back_button.as_ref() {
+                btn.set_attribute("style", "display: flex; z-index: 5001;").ok();
             }
         } else {
             container.set_attribute("style", "display: none;").ok();
@@ -1011,6 +1023,7 @@ fn handle_route_change(document: &Document) {
         Route::Home => render_home(document),
         Route::Category(cat_id) => render_category(document, cat_id),
         Route::Architecture => render_architecture_diagram(document),
+        Route::About => render_about_page(document),
     }
 }
 
@@ -1033,17 +1046,9 @@ fn render_center_bubble(document: &Document) {
     img.set_attribute("src", "assets/islands/antimony.svg").ok();
     img.set_attribute("alt", "Antimony Architecture").ok();
 
-    // Click -> Navigate to Architecture
-    // Click -> Navigate to External Architecture Site
+    // Click -> Navigate to About page
     let on_click = Closure::wrap(Box::new(move || {
-        let window = web_sys::window().unwrap();
-        let hostname = window.location().hostname().unwrap_or_default();
-        let url = if hostname == "localhost" || hostname == "127.0.0.1" {
-            "http://localhost:8087"
-        } else {
-            "https://arch.too.foo"
-        };
-        window.location().set_href(url).ok();
+        navigate_to(Route::About);
     }) as Box<dyn FnMut()>);
     img.add_event_listener_with_callback("click", on_click.as_ref().unchecked_ref())
         .ok();
@@ -1054,6 +1059,77 @@ fn render_center_bubble(document: &Document) {
         center_core.insert_before(&img, Some(&text_container)).ok();
     } else {
         center_core.append_child(&img).ok();
+    }
+}
+
+/// Render the About Antimony Labs intro page
+fn render_about_page(document: &Document) {
+    let container = match document.get_element_by_id("about-container") {
+        Some(el) => el,
+        None => return,
+    };
+    container.set_inner_html("");
+
+    let panel = document.create_element("div").unwrap();
+    panel.set_attribute("class", "about-panel").ok();
+    panel.set_inner_html(
+        r##"
+        <button id="about-close">&times;</button>
+        <div class="about-logo">
+            <img src="assets/islands/antimony.svg" alt="Antimony Labs" />
+        </div>
+        <h1>Antimony Labs</h1>
+        <p class="tagline">Let AI design, humans build.</p>
+
+        <div class="about-sections">
+            <div class="about-section">
+                <h2>What We Build</h2>
+                <p>Open-source engineering tools, simulations, and manufacturing compilers - built in Rust/WASM/WebGPU.</p>
+            </div>
+
+            <div class="about-section">
+                <h2>The Vision</h2>
+                <p>A compiler for physical products - one unified system that outputs manufacturing-ready artifacts. From CAD to G-code, Gerber files to BOMs.</p>
+            </div>
+
+            <div class="about-section">
+                <h2>Explore</h2>
+                <ul class="about-links">
+                    <li><a href="#/tools">Tools</a> - Engineering applications</li>
+                    <li><a href="#/sims">Simulations</a> - Interactive physics demos</li>
+                    <li><a href="#/learn">Learn</a> - Tutorials on AI, robotics, embedded</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="about-cta">
+            <a href="#" class="back-home-btn">Back to Home</a>
+        </div>
+    "##,
+    );
+    container.append_child(&panel).ok();
+
+    // Close button handler
+    if let Some(close_btn) = document.get_element_by_id("about-close") {
+        let closure = Closure::wrap(Box::new(move |_: web_sys::Event| {
+            navigate_home();
+        }) as Box<dyn FnMut(_)>);
+        close_btn
+            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+            .ok();
+        closure.forget();
+    }
+
+    // Back home button handler
+    if let Some(back_btn) = document.query_selector(".back-home-btn").ok().flatten() {
+        let closure = Closure::wrap(Box::new(move |e: web_sys::Event| {
+            e.prevent_default();
+            navigate_home();
+        }) as Box<dyn FnMut(_)>);
+        back_btn
+            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+            .ok();
+        closure.forget();
     }
 }
 

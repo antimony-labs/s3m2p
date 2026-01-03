@@ -29,6 +29,9 @@ name = "ai-learn"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
+ "js-sys",
+ "learn_core",
+ "learn_web",
  "wasm-bindgen",
  "web-sys",
 ]
@@ -170,10 +173,14 @@ version = "0.1.0"
 dependencies = [
  "autocrate-engine",
  "console_error_panic_hook",
+ "dna",
+ "getrandom 0.2.16",
  "glam",
  "js-sys",
+ "rand",
  "serde",
  "serde-wasm-bindgen",
+ "serde_json",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -1798,7 +1805,9 @@ name = "opencv-learn"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
+ "js-sys",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "web-sys",
 ]
 

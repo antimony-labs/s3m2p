@@ -91,6 +91,7 @@ mod urls {
     pub const ESP32: &str = "http://localhost:8104";
     pub const SWARM: &str = "http://localhost:8105";
     pub const SLAM: &str = "http://localhost:8106";
+    pub const GIT: &str = "http://localhost:8107";
 
     pub const BLOG: &str = "http://localhost:8085";
     #[allow(dead_code)]
@@ -115,6 +116,7 @@ mod urls {
     pub const ESP32: &str = "https://esp32.too.foo";
     pub const SWARM: &str = "https://swarm.too.foo";
     pub const SLAM: &str = "https://slam.too.foo";
+    pub const GIT: &str = "https://git.too.foo";
 
     pub const BLOG: &str = "https://blog.too.foo";
     pub const GENERIC_404: &str = "https://404.too.foo";
@@ -305,6 +307,13 @@ pub const LEARN_BUBBLES: &[Bubble] = &[
         description: "Localization & Mapping",
         icon: "assets/islands/slam.svg",
         action: BubbleAction::DirectProject(SLAM), // was 404
+    },
+    Bubble {
+        id: "git",
+        label: "Git",
+        description: "Version Control Mastery",
+        icon: "assets/islands/git.svg",
+        action: BubbleAction::DirectProject(GIT),
     },
 ];
 

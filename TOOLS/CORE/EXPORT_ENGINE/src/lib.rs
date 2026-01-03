@@ -51,7 +51,10 @@ pub use dna::export::gerber::{
 pub use dna::export::pdf::{PdfDocument, PdfPage, TextAlign};
 
 // Re-export STEP export types from DNA
-pub use dna::export::step::{export_step_ap242, StepExportOptions};
+// NOTE: STEP export has been moved to TOOLS/AUTOCRATE/src/step_converter.rs
+// The old export_step_ap242 function no longer exists in DNA.
+// Use StepWriter directly from dna::export::step::StepWriter for new code.
+pub use dna::export::step::StepWriter;
 
 /// Export format enumeration
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

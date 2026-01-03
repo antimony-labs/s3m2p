@@ -9,9 +9,12 @@
 // AI-assisted content, rendered in Rust/WASM
 #![allow(unexpected_cfgs)]
 
-use pulldown_cmark::{Options, Parser, html};
+use pulldown_cmark::{html, Options, Parser};
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
+use std::rc::Rc;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::JsFuture;
 
 pub mod render;
 pub mod router;
@@ -163,11 +166,164 @@ pub fn parse_frontmatter(content: &str) -> Option<(PostMeta, String)> {
     Some((meta, body.to_string()))
 }
 
+/// Posts index structure
+#[derive(Deserialize)]
+struct PostsIndex {
+    posts: Vec<String>,
+}
+
+/// Fetch text content from a URL
+async fn fetch_text(url: &str) -> Result<String, JsValue> {
+    let window = web_sys::window().ok_or("No window")?;
+    let resp_value = JsFuture::from(window.fetch_with_str(url)).await?;
+    let resp: web_sys::Response = resp_value.dyn_into()?;
+    let text = JsFuture::from(resp.text()?).await?;
+    text.as_string().ok_or_else(|| "Not a string".into())
+}
+
+/// Load all posts from the posts directory
+async fn load_posts() -> Result<(BlogIndex, Vec<Post>), JsValue> {
+    // Fetch the posts index
+    let index_text = fetch_text("/posts/index.json").await?;
+    let posts_index: PostsIndex =
+        serde_json::from_str(&index_text).map_err(|e| e.to_string())?;
+
+    let mut all_posts: Vec<Post> = Vec::new();
+    let mut index = BlogIndex::new();
+
+    // Fetch each post
+    for filename in &posts_index.posts {
+        let url = format!("/posts/{}", filename);
+        match fetch_text(&url).await {
+            Ok(content) => {
+                if let Some((meta, body)) = parse_frontmatter(&content) {
+                    if !meta.draft {
+                        index.posts.push(meta.clone());
+                        all_posts.push(Post { meta, content: body });
+                    }
+                }
+            }
+            Err(e) => {
+                web_sys::console::warn_1(&format!("Failed to load {}: {:?}", filename, e).into());
+            }
+        }
+    }
+
+    // Sort by date descending
+    index.posts.sort_by(|a, b| b.date.cmp(&a.date));
+    all_posts.sort_by(|a, b| b.meta.date.cmp(&a.meta.date));
+
+    Ok((index, all_posts))
+}
+
+/// App state
+struct App {
+    index: BlogIndex,
+    posts: Vec<Post>,
+    renderer: render::BlogRenderer,
+    router: router::Router,
+}
+
+impl App {
+    fn render_current_route(&self) -> Result<(), JsValue> {
+        use router::Route;
+
+        match self.router.current() {
+            Route::Home => self.renderer.render_home(&self.index),
+            Route::Post(slug) => {
+                if let Some(post) = self.posts.iter().find(|p| p.meta.slug == *slug) {
+                    self.renderer.render_post(post)
+                } else {
+                    self.renderer.render_404()
+                }
+            }
+            Route::Tag(tag) => self.renderer.render_tag(tag, &self.index),
+            Route::Archive => self.renderer.render_home(&self.index), // TODO: archive page
+            Route::About => self.renderer.render_home(&self.index),   // TODO: about page
+            Route::NotFound => self.renderer.render_404(),
+        }
+    }
+}
+
+/// Initialize and run the blog
+async fn run() -> Result<(), JsValue> {
+    let (index, posts) = load_posts().await?;
+    let renderer = render::BlogRenderer::new("blog-root")?;
+    let router = router::Router::new()?;
+
+    let app = Rc::new(RefCell::new(App {
+        index,
+        posts,
+        renderer,
+        router,
+    }));
+
+    // Initial render
+    app.borrow().render_current_route()?;
+
+    // Handle popstate (back/forward)
+    let app_clone = app.clone();
+    let closure = Closure::wrap(Box::new(move |_: web_sys::PopStateEvent| {
+        let mut app = app_clone.borrow_mut();
+        if app.router.sync_from_url().is_ok() {
+            let _ = app.render_current_route();
+        }
+    }) as Box<dyn FnMut(_)>);
+
+    web_sys::window()
+        .ok_or("No window")?
+        .add_event_listener_with_callback("popstate", closure.as_ref().unchecked_ref())?;
+    closure.forget();
+
+    // Handle clicks on internal links
+    let app_clone = app.clone();
+    let click_closure = Closure::wrap(Box::new(move |e: web_sys::MouseEvent| {
+        if let Some(target) = e.target() {
+            if let Ok(el) = target.dyn_into::<web_sys::HtmlElement>() {
+                // Walk up to find anchor
+                let mut current: Option<web_sys::HtmlElement> = Some(el);
+                while let Some(node) = current {
+                    if node.tag_name() == "A" {
+                        if let Ok(anchor) = node.dyn_into::<web_sys::HtmlAnchorElement>() {
+                            let href = anchor.get_attribute("href").unwrap_or_default();
+                            // Only handle internal links
+                            if href.starts_with('/') && !href.starts_with("//") {
+                                e.prevent_default();
+                                let route = router::Route::from_path(&href);
+                                let mut app = app_clone.borrow_mut();
+                                if app.router.navigate(route).is_ok() {
+                                    let _ = app.render_current_route();
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    current = node.parent_element().and_then(|p| p.dyn_into().ok());
+                }
+            }
+        }
+    }) as Box<dyn FnMut(_)>);
+
+    web_sys::window()
+        .ok_or("No window")?
+        .document()
+        .ok_or("No document")?
+        .add_event_listener_with_callback("click", click_closure.as_ref().unchecked_ref())?;
+    click_closure.forget();
+
+    web_sys::console::log_1(&format!("Blog loaded: {} posts", app.borrow().posts.len()).into());
+    Ok(())
+}
+
 /// WASM entry point
 #[wasm_bindgen(start)]
 pub fn start() -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
-    web_sys::console::log_1(&"Blog engine initialized".into());
+    wasm_bindgen_futures::spawn_local(async {
+        if let Err(e) = run().await {
+            web_sys::console::error_1(&format!("Blog error: {:?}", e).into());
+        }
+    });
     Ok(())
 }
 
