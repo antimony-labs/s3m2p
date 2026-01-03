@@ -104,7 +104,7 @@ impl Default for I2cBusDemo {
             stage: I2cStage::Address,
             address: 0x3C,
             rw: false,
-            clock_khz: 100.0,
+            clock_khz: 10.0, // Lower default for better visibility (was 100.0)
             nak_chance: 0.0,
             stretch_chance: 0.0,
             current_byte: 0,
@@ -362,11 +362,15 @@ impl Demo for I2cBusDemo {
     }
  
     fn step(&mut self, dt: f32) {
-        let dt = dt.max(0.0);
-        self.time += dt;
- 
+        // Slow down time progression for better visibility (0.2x speed)
+        // This makes the I²C waveforms easier to observe
+        let time_scale = 0.2;
+        let scaled_dt = (dt * time_scale).max(0.0);
+        
+        self.time += scaled_dt;
+
         let interval = 1.0 / self.sample_rate.max(1.0);
-        self.sample_timer += dt;
+        self.sample_timer += scaled_dt;
  
         while self.sample_timer >= interval {
             self.sample_timer -= interval;
