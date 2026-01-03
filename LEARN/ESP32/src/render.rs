@@ -293,8 +293,8 @@ impl LessonRenderer {
                             <input type="range" id="i2c-rw-slider" min="0" max="1" step="1" value="0">
                         </div>
                         <div class="control-row">
-                            <label>Clock: <span id="i2c-clock-value">100</span> kHz (slowed)</label>
-                            <input type="range" id="i2c-clock-slider" min="10" max="400" step="10" value="100">
+                            <label>Clock: <span id="i2c-clock-value">10</span> kHz (slowed)</label>
+                            <input type="range" id="i2c-clock-slider" min="5" max="50" step="1" value="10">
                         </div>
                         <div class="control-row">
                             <label>NAK chance: <span id="i2c-nak-value">0.00</span></label>
