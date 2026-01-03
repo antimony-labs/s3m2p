@@ -59,6 +59,23 @@ declare -A PROJECT_ALIASES=(
     ["ml"]="ml"
     ["ML"]="ml"
     ["infra"]="infra"
+    ["ai"]="learn"
+    ["slam"]="learn"
+    ["opencv"]="learn"
+    ["arduino"]="learn"
+    ["git"]="learn"
+    ["swarm"]="learn"
+    ["sensors"]="learn"
+    ["spice"]="spice"
+    ["SPICE"]="spice"
+    ["crm"]="crm"
+    ["CRM"]="crm"
+    ["cad"]="cad"
+    ["CAD"]="cad"
+    ["power"]="power"
+    ["arch"]="arch"
+    ["ecad"]="ecad"
+    ["ECAD"]="ecad"
 )
 
 # Valid projects - UPPERCASE categories/projects
