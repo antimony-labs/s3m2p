@@ -68,6 +68,9 @@ pub fn navigate_to(route: Route) {
         None => return,
     };
 
+    // Scroll to top when navigating
+    let _ = window.scroll_to_with_x_and_y(0.0, 0.0);
+
     let location = window.location();
     let hash = route.to_hash();
     let _ = location.set_hash(&hash);
@@ -115,7 +118,21 @@ where
     on_route_change(route);
 
     // Setup listener for future changes
-    setup_routing(on_route_change)
+    let mut on_change = on_route_change.clone();
+    let closure = Closure::wrap(Box::new(move || {
+        // Scroll to top on route change
+        if let Some(window) = web_sys::window() {
+            let _ = window.scroll_to_with_x_and_y(0.0, 0.0);
+        }
+        let route = get_current_route();
+        on_change(route);
+    }) as Box<dyn FnMut()>);
+    
+    let window = web_sys::window().ok_or("No window")?;
+    window.add_event_listener_with_callback("hashchange", closure.as_ref().unchecked_ref())?;
+    closure.forget();
+
+    Ok(())
 }
 
 #[cfg(test)]
