@@ -1192,30 +1192,108 @@ Handle ADC2 limitation (blocked when Wi‑Fi active)."</pre>
             "I²C lets you connect many peripherals (IMUs, OLEDs, environmental sensors) using only two wires.",
         intuition: r#"
             <h3>The core idea</h3>
-            Two wires, many devices:
+            I²C (Inter-Integrated Circuit) is a two-wire bus protocol that lets you connect many devices to a microcontroller:
             <ul>
-              <li>SDA = data</li>
-              <li>SCL = clock</li>
+              <li><strong>SDA</strong> (Serial Data): Carries the actual data bits</li>
+              <li><strong>SCL</strong> (Serial Clock): Synchronizes data transfer</li>
             </ul>
-            Both are <strong>open-drain</strong> and need pull-ups.
+            Both lines are <strong>open-drain</strong> and require pull-up resistors (typically 2.2kΩ–10kΩ) to 3.3V.
 
+            <h3>Why Open-Drain?</h3>
+            Open-drain means devices can only pull the line LOW, never HIGH. The pull-up resistor pulls it HIGH when no device is pulling LOW.
+            This allows multiple devices to share the same bus safely:
+            <ul>
+              <li>Any device can pull the line LOW (wired-AND logic)</li>
+              <li>If one device pulls LOW, the whole bus goes LOW</li>
+              <li>All devices must release for the bus to go HIGH</li>
+              <li>No conflicts — devices can't fight over the bus</li>
+            </ul>
+
+            <h3>Addressing: How Devices Are Selected</h3>
+            Each I²C device has a unique 7-bit address (0x08 to 0x77). The master sends the address first:
+            <ul>
+              <li>7 address bits identify the device</li>
+              <li>1 R/W bit: 0 = write (master→slave), 1 = read (slave→master)</li>
+              <li>Combined into one 8-bit byte on the wire</li>
+            </ul>
+            Example: Address 0x3C (0b0111100) + Write (0) = byte 0x78 (0b01111000)
+
+            <h3>Protocol Flow</h3>
             <div class="mermaid">
             sequenceDiagram
                 participant Master
                 participant Slave
-                Master->>Slave: START + Address + W
+                Master->>Slave: START (SDA↓ while SCL high)
+                Master->>Slave: Address + R/W (8 bits, MSB first)
+                Slave-->>Master: ACK (SDA LOW on 9th clock)
+                Master->>Slave: Data Byte 1 (8 bits)
                 Slave-->>Master: ACK
-                Master->>Slave: DataByte
+                Master->>Slave: Data Byte 2 (8 bits)
                 Slave-->>Master: ACK
-                Master->>Slave: STOP
+                Master->>Slave: STOP (SDA↑ while SCL high)
             </div>
 
-            <h3>ESP‑WROOM‑32 notes</h3>
-            Many devkits default to GPIO21 (SDA) and GPIO22 (SCL), but ESP32 can route I²C to other pins too.
-            Keep everything at 3.3V logic unless you add proper level shifting.
+            <h3>ACK vs NACK</h3>
+            After every 8 data bits, there's a 9th clock cycle for acknowledgment:
+            <ul>
+              <li><strong>ACK</strong> (Acknowledge): Slave pulls SDA LOW → "I received the byte"</li>
+              <li><strong>NACK</strong> (Not Acknowledge): Slave leaves SDA HIGH → "Error" or "Stop sending"</li>
+            </ul>
+            NACK can mean:
+            <ul>
+              <li>No device at that address (device disconnected)</li>
+              <li>Device busy (can't accept more data)</li>
+              <li>Read complete (master sends NACK to signal "last byte")</li>
+            </ul>
+
+            <h3>Clock Stretching</h3>
+            Sometimes a slave needs more time to process data. It can hold SCL LOW (clock stretching):
+            <ul>
+              <li>Slave pulls SCL LOW after receiving a byte</li>
+              <li>Master waits (SCL is shared, so master sees it LOW)</li>
+              <li>Slave releases SCL when ready</li>
+              <li>Master continues the transaction</li>
+            </ul>
+            This allows slow devices (like EEPROMs) to work on fast buses.
+
+            <h3>Common I²C Devices</h3>
+            Many sensors and displays use I²C:
+            <ul>
+              <li><strong>Sensors</strong>: SHT31 (temp/humidity), BMP280 (pressure), MPU6050 (IMU), TCS34725 (color)</li>
+              <li><strong>Displays</strong>: SSD1306 OLED (0x3C), LCD backpacks</li>
+              <li><strong>Storage</strong>: EEPROMs (AT24C32, etc.)</li>
+              <li><strong>Real-time clocks</strong>: DS1307, DS3231</li>
+            </ul>
+
+            <h3>ESP‑WROOM‑32 Notes</h3>
+            <ul>
+              <li>Default pins: GPIO21 (SDA) and GPIO22 (SCL)</li>
+              <li>ESP32 can route I²C to other pins (software I²C)</li>
+              <li>Hardware I²C is faster and more reliable than software bit-banging</li>
+              <li>Keep everything at 3.3V logic unless you add proper level shifting</li>
+              <li>Internal pull-ups exist but are weak (~45kΩ); external 2.2kΩ–10kΩ recommended</li>
+            </ul>
+
+            <h3>Speed Limits</h3>
+            I²C has several speed modes:
+            <ul>
+              <li><strong>Standard mode</strong>: 100 kHz (most common)</li>
+              <li><strong>Fast mode</strong>: 400 kHz</li>
+              <li><strong>Fast mode plus</strong>: 1 MHz</li>
+            </ul>
+            Bus capacitance limits speed — longer wires = slower max speed. Keep wires short and use proper pull-ups.
+
+            <h3>Multi-Master</h3>
+            I²C supports multiple masters on the same bus:
+            <ul>
+              <li>Masters use arbitration: if two masters start simultaneously, the one sending LOW wins</li>
+              <li>The losing master backs off and retries later</li>
+              <li>Rare in embedded systems (usually one master, many slaves)</li>
+            </ul>
 
             <h3>Mini-lab</h3>
             Increase NAK chance and see how a transaction aborts. Add clock stretching and watch SCL LOW extend.
+            Try different addresses and observe how only the addressed device responds.
         "#,
         demo_explanation: r#"
             Top line is SCL, bottom is SDA. Watch for:
@@ -1226,15 +1304,42 @@ Handle ADC2 limitation (blocked when Wi‑Fi active)."</pre>
             </ul>
         "#,
         key_takeaways: &[
-            "I²C lines are open-drain and require pull-up resistors",
-            "Address is 7-bit; the R/W bit is appended on the wire",
-            "ACK is SDA LOW on the 9th clock; NACK is SDA HIGH",
-            "Clock stretching holds SCL LOW longer to delay the next edge",
+            "I²C uses two wires (SDA, SCL) with open-drain outputs requiring pull-up resistors",
+            "7-bit addresses (0x08–0x77) + 1 R/W bit = 8 bits on wire",
+            "START: SDA falls while SCL high; STOP: SDA rises while SCL high",
+            "ACK (SDA LOW) = success; NACK (SDA HIGH) = error or end of read",
+            "Clock stretching lets slow slaves pause the master by holding SCL LOW",
+            "Multiple devices share the bus; addressing selects which responds",
+            "Standard speed: 100 kHz; Fast: 400 kHz; bus capacitance limits max speed",
         ],
-        going_deeper:
-            "If you see unreliable I²C, check pull-up value, wiring length, and bus speed. \
-             A common first step is an address scan. If a device NACKs, verify its address and power. \
-             For multiple devices, avoid address conflicts (some sensors have address-select pins).",
+        going_deeper: r#"
+            <h4>Troubleshooting I²C Issues</h4>
+            <ul>
+              <li><strong>No response (NACK)</strong>: Check address, power, wiring, pull-ups</li>
+              <li><strong>Garbled data</strong>: Reduce bus speed, check for loose connections</li>
+              <li><strong>Bus stuck LOW</strong>: A device may be holding SDA/SCL LOW; power cycle</li>
+              <li><strong>Address conflicts</strong>: Some devices have address-select pins (A0, A1)</li>
+            </ul>
+
+            <h4>Address Scanning</h4>
+            Scan addresses 0x08–0x77: send START + address + R/W, check for ACK.
+            This identifies all devices on the bus — essential for debugging.
+
+            <h4>Pull-up Resistor Selection</h4>
+            <ul>
+              <li>Too weak (high resistance): Bus rises slowly, limits speed</li>
+              <li>Too strong (low resistance): High current when pulled LOW, wastes power</li>
+              <li>Sweet spot: 2.2kΩ–10kΩ for 3.3V (depends on bus capacitance)</li>
+              <li>Long wires need stronger pull-ups (lower resistance)</li>
+            </ul>
+
+            <h4>Reading vs Writing</h4>
+            <ul>
+              <li><strong>Write</strong>: Master sends data bytes, slave ACKs each</li>
+              <li><strong>Read</strong>: Master sends address+R, slave sends data, master ACKs (or NACKs last byte)</li>
+              <li>Some devices need register writes before reads (e.g., "read temperature register")</li>
+            </ul>
+        "#,
         math_details: r#"
 I²C frame (write, 7-bit address):
   START
