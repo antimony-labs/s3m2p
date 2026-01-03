@@ -1,0 +1,97 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <style>
+    @keyframes cursor-blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+    @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+    .cursor { animation: cursor-blink 0.8s step-end infinite; }
+    .pulse { animation: pulse 2s ease-in-out infinite; }
+  </style>
+
+  <!-- Terminal window -->
+  <g filter="url(#glow)">
+    <!-- Window frame -->
+    <rect x="25" y="25" width="150" height="150" rx="8" fill="#1a1a2e" stroke="#F05032" stroke-width="2"/>
+
+    <!-- Title bar -->
+    <rect x="25" y="25" width="150" height="20" rx="8" fill="#F05032"/>
+    <rect x="25" y="35" width="150" height="10" fill="#F05032"/>
+
+    <!-- Window buttons -->
+    <circle cx="40" cy="35" r="4" fill="#ff5f56"/>
+    <circle cx="55" cy="35" r="4" fill="#ffbd2e"/>
+    <circle cx="70" cy="35" r="4" fill="#27ca40"/>
+
+    <!-- Terminal title -->
+    <text x="120" y="39" fill="#ffffff" font-family="monospace" font-size="8" text-anchor="middle" opacity="0.8">git bash</text>
+  </g>
+
+  <!-- Terminal content -->
+  <g font-family="monospace" font-size="9">
+    <!-- Git status -->
+    <text x="35" y="60" fill="#27ca40">$</text>
+    <text x="45" y="60" fill="#F05032">git</text>
+    <text x="65" y="60" fill="#ffffff" opacity="0.8">status</text>
+
+    <text x="35" y="73" fill="#27ca40" opacity="0.8">On branch</text>
+    <text x="90" y="73" fill="#F05032">main</text>
+
+    <!-- Git log -->
+    <text x="35" y="88" fill="#27ca40">$</text>
+    <text x="45" y="88" fill="#F05032">git</text>
+    <text x="65" y="88" fill="#ffffff" opacity="0.8">log --oneline</text>
+
+    <text x="35" y="101" fill="#ffbd2e" opacity="0.7">a1b2c3d</text>
+    <text x="80" y="101" fill="#ffffff" opacity="0.6">feat: add</text>
+
+    <text x="35" y="114" fill="#ffbd2e" opacity="0.7">e4f5g6h</text>
+    <text x="80" y="114" fill="#ffffff" opacity="0.6">fix: bug</text>
+
+    <!-- Git push -->
+    <text x="35" y="129" fill="#27ca40">$</text>
+    <text x="45" y="129" fill="#F05032">git</text>
+    <text x="65" y="129" fill="#ffffff" opacity="0.8">push origin</text>
+
+    <text x="35" y="142" fill="#27ca40">$</text>
+
+    <!-- Blinking cursor -->
+    <rect x="45" y="134" width="8" height="12" fill="#27ca40" class="cursor"/>
+  </g>
+
+  <!-- Git branch diagram -->
+  <g transform="translate(158, 90)" opacity="0.5">
+    <!-- Main line -->
+    <line x1="0" y1="0" x2="0" y2="60" stroke="#F05032" stroke-width="2"/>
+    <!-- Branch -->
+    <line x1="0" y1="20" x2="15" y2="35" stroke="#27ca40" stroke-width="2"/>
+    <line x1="15" y1="35" x2="15" y2="50" stroke="#27ca40" stroke-width="2"/>
+    <line x1="15" y1="50" x2="0" y2="60" stroke="#27ca40" stroke-width="2"/>
+    <!-- Commits -->
+    <circle cx="0" cy="0" r="4" fill="#F05032"/>
+    <circle cx="0" cy="20" r="4" fill="#F05032"/>
+    <circle cx="15" cy="35" r="4" fill="#27ca40"/>
+    <circle cx="15" cy="50" r="4" fill="#27ca40"/>
+    <circle cx="0" cy="60" r="4" fill="#F05032"/>
+  </g>
+
+  <!-- Activity indicators -->
+  <g fill="#F05032" class="pulse">
+    <circle cx="30" cy="180" r="3"/>
+    <circle cx="40" cy="180" r="3" style="animation-delay: -0.3s"/>
+    <circle cx="50" cy="180" r="3" style="animation-delay: -0.6s"/>
+  </g>
+
+  <!-- Decorative circuit lines -->
+  <g stroke="#F05032" stroke-width="0.5" opacity="0.2">
+    <path d="M10,50 L20,50 L20,100" fill="none"/>
+    <path d="M190,50 L180,50 L180,100" fill="none"/>
+  </g>
+</svg>

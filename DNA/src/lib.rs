@@ -46,6 +46,10 @@ pub use spatial::*;
 // SHARED UTILITY MODULES (Used by too.foo, helios, future projects)
 // ============================================================================
 
+/// Export utilities (STEP, CAD formats)
+pub mod export;
+pub use export::*;
+
 /// Zone and exclusion area utilities
 pub mod zones;
 pub use zones::*;
@@ -64,6 +68,9 @@ pub use math::random::{
 /// Population statistics and metrics
 pub mod statistics;
 pub use statistics::*;
+
+/// Power law network effects simulation
+pub mod powerlaw;
 
 /// Color management and theme utilities
 pub mod color;
@@ -111,9 +118,6 @@ pub use physics::solvers::filters::{smooth_trajectory, EKF};
 /// A* and grid-based pathfinding
 pub mod pathfinding;
 pub use pathfinding::{astar, GridMap, Heuristic, PathResult};
-
-/// Export module (PDF, Gerber X2)
-pub mod export;
 
 /// CAD module (B-Rep solid modeling)
 pub mod cad;
