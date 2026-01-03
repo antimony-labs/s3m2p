@@ -16,6 +16,8 @@ pub mod pwm_control;
 pub mod adc_reading;
 pub mod i2c_bus;
 pub mod fs_permissions;
+pub mod swarm_world;
+pub mod boids;
 
 pub use linear_regression::LinearRegressionDemo;
 pub use complementary_filter::{ComplementaryFilterDemo, ImuReading, SensorHistory};
@@ -28,3 +30,5 @@ pub use pwm_control::PwmControlDemo;
 pub use adc_reading::{AdcReadingDemo, AdcAttenuation};
 pub use i2c_bus::{I2cBusDemo, I2cPhase, I2cStage};
 pub use fs_permissions::FsPermissionsDemo;
+pub use swarm_world::{SwarmWorld, Agent, Obstacle};
+pub use boids::BoidsDemo;

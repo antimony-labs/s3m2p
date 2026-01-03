@@ -2768,6 +2768,9 @@ name = "swarm-learn"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
+ "js-sys",
+ "learn_core",
+ "learn_web",
  "wasm-bindgen",
  "web-sys",
 ]
