@@ -18,6 +18,9 @@ pub mod gpio_debounce;
 pub mod pwm_control;
 pub mod adc_reading;
 pub mod i2c_bus;
+pub mod ohms_law_power;
+pub mod rc_time_constant;
+pub mod power_budget;
 
 // Ubuntu demos
 pub mod fs_permissions;
@@ -44,6 +47,9 @@ pub use gpio_debounce::GpioDebounceDemo;
 pub use pwm_control::PwmControlDemo;
 pub use adc_reading::{AdcReadingDemo, AdcAttenuation};
 pub use i2c_bus::{I2cBusDemo, I2cPhase, I2cStage};
+pub use ohms_law_power::OhmsLawPowerDemo;
+pub use rc_time_constant::RcTimeConstantDemo;
+pub use power_budget::PowerBudgetDemo;
 
 // Ubuntu exports
 pub use fs_permissions::FsPermissionsDemo;
