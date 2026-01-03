@@ -213,8 +213,8 @@ impl LessonRenderer {
                             <input type="range" id="duty-slider" min="0" max="100" step="1" value="50">
                         </div>
                         <div class="control-row">
-                            <label>Frequency: <span id="freq-value">500</span> Hz</label>
-                            <input type="range" id="freq-slider" min="10" max="2000" step="10" value="500">
+                            <label>Frequency: <span id="freq-value">10</span> Hz</label>
+                            <input type="range" id="freq-slider" min="1" max="100" step="1" value="10">
                         </div>
                         <div class="control-row">
                             <label>Resolution: <span id="res-value">8</span> bits</label>

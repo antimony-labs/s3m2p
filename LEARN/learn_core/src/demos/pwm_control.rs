@@ -63,7 +63,7 @@ impl Default for PwmControlDemo {
         let mut demo = Self {
             time: 0.0,
             duty: 0.5,
-            frequency: 500.0,
+            frequency: 10.0, // Lower default frequency for better visibility (was 500Hz)
             resolution_bits: 8,
             quantized_duty: 0.5,
             output_high: false,
@@ -139,11 +139,16 @@ impl Demo for PwmControlDemo {
     }
  
     fn step(&mut self, dt: f32) {
-        self.time += dt.max(0.0);
- 
+        // Slow down time progression for better visibility (0.1x speed)
+        // This makes the waveform easier to observe
+        let time_scale = 0.1;
+        let scaled_dt = dt * time_scale;
+        
+        self.time += scaled_dt.max(0.0);
+
         let sample_interval = 1.0 / self.sample_rate.max(1.0);
-        self.sample_timer += dt;
- 
+        self.sample_timer += scaled_dt;
+
         while self.sample_timer >= sample_interval {
             self.sample_timer -= sample_interval;
             self.sample_time += sample_interval;
