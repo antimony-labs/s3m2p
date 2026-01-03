@@ -297,6 +297,80 @@ impl CelestialCamera {
     // PROJECTION
     // ═════════════════════════════════════════════════════════════════════════════
 
+    /// Get view matrix for WebGL rendering (4x4 column-major)
+    /// Returns a 16-element array representing the view matrix
+    pub fn view_matrix(&self) -> [f32; 16] {
+        let (right, up) = self.camera_basis_vectors();
+        
+        let cos_elev = self.elevation.cos();
+        let sin_elev = self.elevation.sin();
+        let cos_az = self.azimuth.cos();
+        let sin_az = self.azimuth.sin();
+        let forward = DVec3::new(cos_elev * sin_az, -cos_elev * cos_az, sin_elev);
+
+        // Camera position is at target (we're looking at target from a distance)
+        // For orthographic projection, we don't need a camera position, just orientation
+        // The view matrix transforms world coordinates to camera space
+        
+        // Right, Up, Forward form the camera basis
+        // View matrix is the inverse of the camera-to-world transform
+        // Since it's orthonormal, inverse = transpose
+        
+        let rx = right.x as f32;
+        let ry = right.y as f32;
+        let rz = right.z as f32;
+        
+        let ux = up.x as f32;
+        let uy = up.y as f32;
+        let uz = up.z as f32;
+        
+        let fx = forward.x as f32;
+        let fy = forward.y as f32;
+        let fz = forward.z as f32;
+        
+        // Translation to move target to origin
+        let tx = self.target_position.x as f32;
+        let ty = self.target_position.y as f32;
+        let tz = self.target_position.z as f32;
+        
+        // Column-major 4x4 matrix
+        [
+            rx, ux, fx, 0.0,
+            ry, uy, fy, 0.0,
+            rz, uz, fz, 0.0,
+            -(rx * tx + ry * ty + rz * tz),
+            -(ux * tx + uy * ty + uz * tz),
+            -(fx * tx + fy * ty + fz * tz),
+            1.0,
+        ]
+    }
+
+    /// Get projection matrix for WebGL rendering (orthographic, 4x4 column-major)
+    /// Returns a 16-element array representing the orthographic projection matrix
+    pub fn projection_matrix(&self) -> [f32; 16] {
+        let half_height = self.scale / 2.0;
+        let half_width = half_height * self.aspect();
+        
+        let left = -half_width as f32;
+        let right = half_width as f32;
+        let bottom = -half_height as f32;
+        let top = half_height as f32;
+        let near = -10000.0; // Far clipping plane (AU)
+        let far = 10000.0;   // Near clipping plane (AU)
+        
+        // Orthographic projection matrix (column-major)
+        let tx = -(right + left) / (right - left);
+        let ty = -(top + bottom) / (top - bottom);
+        let tz = -(far + near) / (far - near);
+        
+        [
+            2.0 / (right - left), 0.0, 0.0, 0.0,
+            0.0, 2.0 / (top - bottom), 0.0, 0.0,
+            0.0, 0.0, -2.0 / (far - near), 0.0,
+            tx, ty, tz, 1.0,
+        ]
+    }
+
     /// Get camera basis vectors (right, up) in world space
     fn camera_basis_vectors(&self) -> (DVec3, DVec3) {
         // Camera looks from position toward target

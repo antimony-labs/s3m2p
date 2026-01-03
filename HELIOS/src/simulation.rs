@@ -36,6 +36,7 @@ pub const MAX_PLANETS: usize = 16;
 pub const MAX_MOONS: usize = 64;
 pub const MAX_MISSIONS: usize = 32;
 pub const MAX_ASTEROIDS: usize = 256;
+pub const MAX_OORT_PARTICLES: usize = 1000; // Reduced to avoid stack overflow
 pub const ORBIT_SEGMENTS: usize = 128;
 
 // ============================================================================
@@ -463,6 +464,24 @@ pub struct SimulationState {
     pub orbit_paths: [[f64; ORBIT_SEGMENTS * 3]; MAX_PLANETS],
     pub orbit_dirty: bool,
 
+    // === MOONS (SoA) ===
+    pub moon_count: usize,
+    pub moon_names: [&'static str; MAX_MOONS],
+    pub moon_parent_planet: [usize; MAX_MOONS], // Index into planet arrays
+    pub moon_orbits: [OrbitalElements; MAX_MOONS],
+    pub moon_radii_km: [f64; MAX_MOONS],
+    pub moon_colors: [&'static str; MAX_MOONS],
+    
+    // Pre-computed moon positions (updated each frame) - relative to parent planet
+    pub moon_x: [f64; MAX_MOONS],
+    pub moon_y: [f64; MAX_MOONS],
+    pub moon_z: [f64; MAX_MOONS],
+    
+    // World-space moon positions (planet position + moon offset)
+    pub moon_world_x: [f64; MAX_MOONS],
+    pub moon_world_y: [f64; MAX_MOONS],
+    pub moon_world_z: [f64; MAX_MOONS],
+
     // === MISSIONS (SoA) ===
     pub mission_count: usize,
     pub mission_names: [&'static str; MAX_MISSIONS],
@@ -500,6 +519,21 @@ pub struct SimulationState {
     // Base reference date for solar cycle (Solar Cycle 25 minimum: Dec 2019)
     pub solar_cycle_ref_jd: f64,
 
+    // === ASTEROID BELT ===
+    pub asteroid_count: usize,
+    pub asteroid_seeds: [u32; MAX_ASTEROIDS], // Random seeds for procedural generation
+    pub asteroid_angles: [f64; MAX_ASTEROIDS], // Current angular positions
+    pub asteroid_distances: [f64; MAX_ASTEROIDS], // Distances from Sun (AU)
+    pub asteroid_inclinations: [f64; MAX_ASTEROIDS], // Orbital inclinations
+    
+    // === OORT CLOUD ===
+    pub oort_count: usize,
+    pub oort_seeds: [u32; MAX_OORT_PARTICLES], // Random seeds
+    pub oort_distances: [f64; MAX_OORT_PARTICLES], // Distances from Sun (AU)
+    pub oort_theta: [f64; MAX_OORT_PARTICLES], // Spherical coordinates
+    pub oort_phi: [f64; MAX_OORT_PARTICLES],
+    pub oort_angles: [f64; MAX_OORT_PARTICLES], // Orbital angles
+
     // === SCRATCH BUFFERS (avoid allocation) ===
     scratch_visible: [bool; MAX_PLANETS],
 
@@ -531,6 +565,19 @@ impl SimulationState {
             orbit_paths: [[0.0; ORBIT_SEGMENTS * 3]; MAX_PLANETS],
             orbit_dirty: true,
 
+            moon_count: 0,
+            moon_names: [""; MAX_MOONS],
+            moon_parent_planet: [0; MAX_MOONS],
+            moon_orbits: [OrbitalElements::default(); MAX_MOONS],
+            moon_radii_km: [0.0; MAX_MOONS],
+            moon_colors: [""; MAX_MOONS],
+            moon_x: [0.0; MAX_MOONS],
+            moon_y: [0.0; MAX_MOONS],
+            moon_z: [0.0; MAX_MOONS],
+            moon_world_x: [0.0; MAX_MOONS],
+            moon_world_y: [0.0; MAX_MOONS],
+            moon_world_z: [0.0; MAX_MOONS],
+
             mission_count: 0,
             mission_names: [""; MAX_MISSIONS],
             mission_colors: [""; MAX_MISSIONS],
@@ -551,8 +598,22 @@ impl SimulationState {
             bow_shock_au: 230.0,
 
             // Solar Cycle 25 minimum was around December 2019 (JD 2458849)
-            solar_cycle_phase: 0.0,
+            // Start at 1% of solar cycle for immediate visual interest
+            solar_cycle_phase: 0.01,
             solar_cycle_ref_jd: 2458849.0,
+
+            asteroid_count: 0,
+            asteroid_seeds: [0u32; MAX_ASTEROIDS],
+            asteroid_angles: [0.0f64; MAX_ASTEROIDS],
+            asteroid_distances: [0.0f64; MAX_ASTEROIDS],
+            asteroid_inclinations: [0.0f64; MAX_ASTEROIDS],
+
+            oort_count: 0,
+            oort_seeds: [0u32; MAX_OORT_PARTICLES],
+            oort_distances: [0.0f64; MAX_OORT_PARTICLES],
+            oort_theta: [0.0f64; MAX_OORT_PARTICLES],
+            oort_phi: [0.0f64; MAX_OORT_PARTICLES],
+            oort_angles: [0.0f64; MAX_OORT_PARTICLES],
 
             scratch_visible: [false; MAX_PLANETS],
 
@@ -562,8 +623,146 @@ impl SimulationState {
         };
 
         state.init_solar_system();
+        state.init_moons();
+        state.init_asteroid_belt();
+        state.init_oort_cloud();
         state.init_missions();
         state
+    }
+
+    fn init_moons(&mut self) {
+        // Earth: Moon
+        self.add_moon(2, "Moon", 0.00257, 27.32, 0.0549, 5.145, "#C0C0C0"); // Earth index = 2
+        
+        // Mars: Phobos, Deimos
+        self.add_moon(3, "Phobos", 0.000011, 0.319, 0.0151, 1.08, "#888888"); // Mars index = 3
+        self.add_moon(3, "Deimos", 0.000006, 1.263, 0.0002, 1.79, "#666666");
+        
+        // Jupiter: Io, Europa, Ganymede, Callisto
+        self.add_moon(4, "Io", 0.000286, 1.769, 0.0041, 0.05, "#FFD700"); // Jupiter index = 4
+        self.add_moon(4, "Europa", 0.000245, 3.551, 0.009, 0.47, "#E6E6FA");
+        self.add_moon(4, "Ganymede", 0.000413, 7.155, 0.0013, 0.20, "#B0C4DE");
+        self.add_moon(4, "Callisto", 0.000378, 16.689, 0.0074, 0.192, "#708090");
+        
+        // Saturn: Titan, Rhea, Iapetus
+        self.add_moon(5, "Titan", 0.000404, 15.945, 0.0288, 0.33, "#FFA500"); // Saturn index = 5
+        self.add_moon(5, "Rhea", 0.000153, 4.518, 0.001, 0.35, "#D3D3D3");
+        self.add_moon(5, "Iapetus", 0.000146, 79.330, 0.0283, 15.47, "#A0A0A0");
+        
+        // Uranus: Miranda, Ariel, Umbriel, Titania, Oberon
+        self.add_moon(6, "Miranda", 0.000024, 1.413, 0.0013, 4.34, "#C0C0C0"); // Uranus index = 6
+        self.add_moon(6, "Ariel", 0.000059, 2.520, 0.0012, 0.04, "#E0E0E0");
+        self.add_moon(6, "Umbriel", 0.000059, 4.144, 0.0039, 0.13, "#808080");
+        self.add_moon(6, "Titania", 0.000123, 8.706, 0.0011, 0.08, "#A0A0A0");
+        self.add_moon(6, "Oberon", 0.000119, 13.463, 0.0014, 0.07, "#606060");
+        
+        // Neptune: Triton
+        self.add_moon(7, "Triton", 0.000212, 5.877, 0.000016, 157.345, "#4A90E2"); // Neptune index = 7
+    }
+
+    fn add_moon(
+        &mut self,
+        parent_planet_idx: usize,
+        name: &'static str,
+        radius_au: f64, // Moon orbital distance in AU (semi-major axis)
+        period_days: f64,
+        eccentricity: f64,
+        inclination_deg: f64,
+        color: &'static str,
+    ) {
+        // Safety checks
+        if self.moon_count >= MAX_MOONS {
+            return;
+        }
+        if parent_planet_idx >= self.planet_count || parent_planet_idx >= MAX_PLANETS {
+            return;
+        }
+        
+        let i = self.moon_count;
+        self.moon_names[i] = name;
+        self.moon_parent_planet[i] = parent_planet_idx;
+        
+        // Simplified circular orbit around parent planet
+        // Semi-major axis in AU (very small compared to planet orbits)
+        let a = radius_au;
+        
+        // Create orbital elements relative to parent planet
+        // For simplicity, assume circular orbits with small inclination
+        self.moon_orbits[i] = OrbitalElements::new(
+            a,
+            eccentricity,
+            inclination_deg,
+            0.0, // Longitude of ascending node
+            0.0, // Argument of perihelion
+            0.0, // Mean anomaly at epoch
+            period_days / 365.25, // Period in years
+        );
+        
+        // Moon physical radius (approximate - using a small fraction of orbital distance)
+        // Real moon radii are much smaller, but for visualization we use a scaled value
+        let moon_physical_radius_km = (radius_au * AU_KM * 0.01).max(100.0); // At least 100km
+        self.moon_radii_km[i] = moon_physical_radius_km;
+        self.moon_colors[i] = color;
+        
+        self.moon_count += 1;
+    }
+
+    fn init_asteroid_belt(&mut self) {
+        // Generate procedural asteroid belt between 2.1 and 3.3 AU
+        // Use a simple LCG for deterministic randomness
+        let mut seed: u32 = 12345;
+        let mut next_seed = || {
+            seed = seed.wrapping_mul(1103515245).wrapping_add(12345);
+            seed
+        };
+        
+        let count = MAX_ASTEROIDS.min(1000); // Limit to 1000 for performance
+        self.asteroid_count = count;
+        
+        for i in 0..count {
+            self.asteroid_seeds[i] = next_seed();
+            
+            // Distance: 2.1 to 3.3 AU with some clustering
+            let r = (next_seed() as f64 / u32::MAX as f64);
+            let r_squared = r * r; // Bias toward inner belt
+            self.asteroid_distances[i] = 2.1 + r_squared * 1.2;
+            
+            // Initial angle
+            self.asteroid_angles[i] = (next_seed() as f64 / u32::MAX as f64) * 2.0 * std::f64::consts::PI;
+            
+            // Small inclination (0-10 degrees)
+            self.asteroid_inclinations[i] = ((next_seed() as f64 / u32::MAX as f64) * 10.0).to_radians();
+        }
+    }
+
+    fn init_oort_cloud(&mut self) {
+        // Generate procedural Oort cloud from 2000 to 100000 AU
+        // Use spherical distribution with radial falloff
+        let mut seed: u32 = 54321;
+        let mut next_seed = || {
+            seed = seed.wrapping_mul(1103515245).wrapping_add(12345);
+            seed
+        };
+        
+        let count = MAX_OORT_PARTICLES.min(1000); // Limit for performance
+        self.oort_count = count;
+        
+        for i in 0..count {
+            self.oort_seeds[i] = next_seed();
+            
+            // Radial distribution: uniform in volume -> r^3 distribution
+            // Sample r^3 uniformly, then take cube root
+            let r3 = (next_seed() as f64 / u32::MAX as f64);
+            let r_cubed = 2000.0_f64.powi(3) + r3 * (100000.0_f64.powi(3) - 2000.0_f64.powi(3));
+            self.oort_distances[i] = r_cubed.cbrt();
+            
+            // Spherical angles
+            self.oort_theta[i] = (next_seed() as f64 / u32::MAX as f64) * std::f64::consts::PI; // 0 to PI
+            self.oort_phi[i] = (next_seed() as f64 / u32::MAX as f64) * 2.0 * std::f64::consts::PI; // 0 to 2PI
+            
+            // Initial orbital angle
+            self.oort_angles[i] = (next_seed() as f64 / u32::MAX as f64) * 2.0 * std::f64::consts::PI;
+        }
     }
 
     fn init_solar_system(&mut self) {
@@ -754,6 +953,46 @@ impl SimulationState {
             self.planet_x[i] = x;
             self.planet_y[i] = y;
             self.planet_z[i] = z;
+        }
+
+        // Update moon positions (relative to parent planet, then convert to world space)
+        for i in 0..self.moon_count.min(MAX_MOONS) {
+            let parent_idx = self.moon_parent_planet[i];
+            if parent_idx < self.planet_count && parent_idx < MAX_PLANETS {
+                // Moon position relative to parent planet
+                let (moon_rel_x, moon_rel_y, moon_rel_z) = self.moon_orbits[i].position_3d(self.julian_date);
+                self.moon_x[i] = moon_rel_x;
+                self.moon_y[i] = moon_rel_y;
+                self.moon_z[i] = moon_rel_z;
+                
+                // Convert to world space (add parent planet position)
+                self.moon_world_x[i] = self.planet_x[parent_idx] + moon_rel_x;
+                self.moon_world_y[i] = self.planet_y[parent_idx] + moon_rel_y;
+                self.moon_world_z[i] = self.planet_z[parent_idx] + moon_rel_z;
+            }
+        }
+
+        // Update asteroid belt positions (simple circular motion)
+        let asteroid_count = self.asteroid_count.min(MAX_ASTEROIDS);
+        for i in 0..asteroid_count {
+            // Simple angular motion: angle increases with time
+            // Period scales with distance (Kepler's law approximation)
+            let period_days = (self.asteroid_distances[i].powi(3) * 365.25).sqrt(); // Simplified
+            let angular_velocity = 2.0 * PI / period_days;
+            self.asteroid_angles[i] += angular_velocity * self.time_scale * dt;
+            self.asteroid_angles[i] %= 2.0 * PI;
+        }
+
+        // Update Oort cloud positions (very slow orbital motion)
+        let oort_count = self.oort_count.min(MAX_OORT_PARTICLES);
+        for i in 0..oort_count {
+            // Extremely slow orbital motion (periods of millions of years)
+            // For visualization, use a simplified angular motion
+            let period_years = (self.oort_distances[i].powi(3)).sqrt() * 1000.0; // Very rough approximation
+            let period_days = period_years * 365.25;
+            let angular_velocity = 2.0 * PI / period_days;
+            self.oort_angles[i] += angular_velocity * self.time_scale * dt;
+            self.oort_angles[i] %= 2.0 * PI;
         }
 
         // Update mission positions
@@ -996,16 +1235,31 @@ impl SimulationState {
 
             // Only zoom if not already focused on this planet
             if !already_focused {
-                // NASA Eyes style: planet fills ~60% of screen
-                // Calculate zoom so planet appears large and prominent
-                // We want the planet to be about 200-300 pixels in radius on screen
-                // zoom = AU per pixel, so smaller zoom = more zoomed in
-                let radius_au = self.planet_radii_km[idx] / AU_KM;
+                // Find the furthest moon for this planet to show planetary system
+                let mut max_moon_orbit_au = 0.0;
+                for i in 0..self.moon_count {
+                    if self.moon_parent_planet[i] == idx {
+                        let moon_orbit = self.moon_orbits[i].a;
+                        if moon_orbit > max_moon_orbit_au {
+                            max_moon_orbit_au = moon_orbit;
+                        }
+                    }
+                }
 
-                // Target: planet radius should be ~150 pixels on screen
-                // screen_radius = radius_au / zoom => zoom = radius_au / screen_radius
-                let target_screen_radius = 150.0; // pixels
-                let target_zoom = radius_au / target_screen_radius;
+                // If planet has moons, zoom to show them (furthest moon at ~40% of screen width)
+                // Otherwise, show planet detail
+                let target_zoom = if max_moon_orbit_au > 0.0 {
+                    // Zoom so furthest moon is visible within screen
+                    // moon_screen_pos = moon_orbit_au / zoom
+                    // We want moon at ~300 pixels from center (40% of 1920/2)
+                    let target_moon_screen_dist = (self.view.width * 0.35).min(350.0);
+                    max_moon_orbit_au / target_moon_screen_dist
+                } else {
+                    // No moons - show planet surface detail
+                    let radius_au = self.planet_radii_km[idx] / AU_KM;
+                    let target_screen_radius = 150.0;
+                    radius_au / target_screen_radius
+                };
 
                 // Clamp to reasonable bounds
                 self.zoom_to(target_zoom.max(0.00000001).min(0.01));

@@ -85,20 +85,52 @@ MODIFIED: 2025-12-02
             height: 100%;
         }
 
-        /* Planet Navigation Bar - Clickable planets at top */
-        #planet-nav {
+        /* Top Control Bar - All controls consolidated */
+        #top-control-bar {
             position: fixed;
-            top: 15px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: 0;
+            left: 0;
+            right: 0;
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
             gap: 8px;
-            padding: 8px 16px;
-            background: rgba(0, 0, 0, 0.6);
-            border-radius: 25px;
-            backdrop-filter: blur(8px);
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
             z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+        }
+
+        .control-group-label {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 4px;
+        }
+
+        /* Planet Navigation - Now in top bar */
+        #planet-nav {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        #planet-nav::-webkit-scrollbar {
+            display: none;
         }
 
         .planet-item {
@@ -216,16 +248,11 @@ MODIFIED: 2025-12-02
         }
 
 
-        /* View Presets - Left side */
+        /* View Presets - Now in top bar */
         #view-presets {
-            position: fixed;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
             display: flex;
-            flex-direction: column;
-            gap: 10px;
-            z-index: 100;
+            flex-direction: row;
+            gap: 4px;
         }
 
         .view-btn {
@@ -261,21 +288,13 @@ MODIFIED: 2025-12-02
             margin: 5px 0;
         }
 
-        /* Timeline Control - Bottom */
+        /* Timeline Control - Now in top bar */
         #timeline {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
             display: flex;
             align-items: center;
-            gap: 15px;
-            padding: 12px 20px;
-            background: rgba(0, 0, 0, 0.6);
-            border-radius: 30px;
-            backdrop-filter: blur(10px);
-            z-index: 100;
-            max-width: 95vw;
+            gap: 8px;
+            flex: 1;
+            min-width: 200px;
         }
 
         /* Large play/pause button */
@@ -441,19 +460,11 @@ MODIFIED: 2025-12-02
             font-size: 10px;
         }
 
-        /* Band Selector - Top right, mobile-first carousel */
+        /* Band Selector - Now in top bar */
         #band-selector {
-            position: fixed;
-            top: 15px;
-            right: 15px;
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
-            background: rgba(0, 0, 0, 0.6);
-            border-radius: 20px;
-            backdrop-filter: blur(8px);
-            z-index: 100;
+            gap: 4px;
             overflow-x: auto;
             scrollbar-width: none;
             -ms-overflow-style: none;
@@ -488,15 +499,11 @@ MODIFIED: 2025-12-02
             color: white;
         }
 
-        /* Filters Panel - Bottom right */
+        /* Filters Panel - Now in top bar */
         #filters-panel {
-            position: fixed;
-            bottom: 90px;
-            right: 15px;
             display: flex;
-            flex-direction: column;
-            gap: 8px;
-            z-index: 100;
+            flex-direction: row;
+            gap: 4px;
         }
 
         .filter-group {
@@ -581,106 +588,115 @@ MODIFIED: 2025-12-02
             z-index: 100;
         }
 
-        /* Mobile adjustments */
-        @media (max-width: 600px) {
-            #planet-nav {
-                top: 10px;
+        /* Mobile adjustments - simplified, cleaner UI */
+        @media (max-width: 768px) {
+            #top-control-bar {
+                padding: 6px 8px;
+                gap: 6px;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+            }
+
+            .control-group {
+                padding: 3px 6px;
                 gap: 4px;
-                padding: 6px 10px;
+                flex-shrink: 0;
+            }
+
+            .control-group-label {
+                display: none;
+            }
+
+            /* Hide non-essential controls on mobile */
+            #band-control,
+            #filters-control,
+            #quality-control,
+            #info-panel,
+            #keyboard-hint,
+            #perf-display,
+            #solar-indicator,
+            .time-control,
+            .planet-name {
+                display: none !important;
+            }
+
+            /* Keep only essential: view presets, planets, play/pause, speed */
+            #view-presets {
+                gap: 2px;
+            }
+
+            .view-btn {
+                width: 36px;
+                height: 36px;
+                font-size: 14px;
+            }
+
+            #planet-nav {
+                gap: 3px;
             }
 
             .planet-icon {
+                width: 22px !important;
+                height: 22px !important;
+            }
+
+            .planet-icon[data-planet="sun"] {
                 width: 24px !important;
                 height: 24px !important;
             }
 
-            .planet-icon[data-planet="sun"] {
-                width: 26px !important;
-                height: 26px !important;
-            }
-
-            .planet-icon[data-planet="jupiter"] {
-                width: 28px !important;
-                height: 28px !important;
-            }
-
+            .planet-icon[data-planet="jupiter"],
             .planet-icon[data-planet="saturn"] {
                 width: 26px !important;
                 height: 26px !important;
             }
 
             .planet-icon[data-planet="saturn"]::after {
-                width: 38px;
-                height: 8px;
+                width: 36px;
+                height: 7px;
             }
 
             #timeline {
-                bottom: 10px;
-                padding: 10px 15px;
-                gap: 10px;
+                min-width: auto;
+                gap: 4px;
             }
 
             #play-pause {
-                width: 44px;
-                height: 44px;
-                font-size: 18px;
-            }
-
-            .speed-btn {
-                width: 32px;
-                height: 32px;
-            }
-
-            .time-control {
-                min-width: 100px;
-            }
-
-            #info-panel {
-                display: none;
-            }
-
-            #view-presets {
-                left: 8px;
-            }
-
-            .view-btn {
-                width: 38px;
-                height: 38px;
+                width: 40px;
+                height: 40px;
                 font-size: 16px;
             }
 
-            /* Mobile UI adjustments */
-            #band-selector {
-                top: 10px;
-                right: 10px;
-                max-width: calc(100vw - 20px);
+            .speed-btn {
+                width: 30px;
+                height: 30px;
+                font-size: 14px;
             }
 
-            .band-btn {
-                padding: 4px 8px;
+            #speed-display {
                 font-size: 10px;
+                min-width: 60px;
             }
 
-            #filters-panel {
-                bottom: 80px;
-                right: 10px;
-                flex-direction: row;
-                flex-wrap: wrap;
-                max-width: calc(100vw - 20px);
+            #date-display {
+                font-size: 12px;
+                min-width: 40px;
+            }
+        }
+
+        /* Very small screens - even more minimal */
+        @media (max-width: 480px) {
+            #view-presets {
+                display: none;
             }
 
-            .filter-group {
-                padding: 6px 8px;
+            .speed-control {
+                display: none;
             }
 
-            .mag-slider {
-                width: 80px;
-            }
-
-            #perf-display {
-                bottom: 10px;
-                right: 10px;
-                font-size: 9px;
+            #play-pause {
+                width: 36px;
+                height: 36px;
             }
         }
 
@@ -707,8 +723,24 @@ MODIFIED: 2025-12-02
 <body>
     <canvas id="helios-canvas"></canvas>
 
-    <!-- Planet Navigation -->
-    <nav id="planet-nav">
+    <!-- Top Control Bar - All controls consolidated -->
+    <div id="top-control-bar">
+        <!-- View Presets -->
+        <div class="control-group">
+            <span class="control-group-label">View</span>
+            <div id="view-presets">
+                <button class="view-btn" id="view-inner" title="Inner Solar System">&#x2609;</button>
+                <button class="view-btn" id="view-outer" title="Outer Solar System">&#x2643;</button>
+                <button class="view-btn" id="view-heliosphere" title="Heliosphere">&#x25CF;</button>
+                <button class="view-btn" id="view-zoom-in" title="Zoom In">+</button>
+                <button class="view-btn" id="view-zoom-out" title="Zoom Out">&minus;</button>
+            </div>
+        </div>
+
+        <!-- Planet Navigation -->
+        <div class="control-group">
+            <span class="control-group-label">Objects</span>
+            <nav id="planet-nav">
         <div class="planet-item">
             <div class="planet-icon" data-planet="sun" id="nav-sun"></div>
             <span class="planet-name">Sun</span>
@@ -749,22 +781,11 @@ MODIFIED: 2025-12-02
             <div class="planet-icon" data-planet="heliosphere" id="nav-heliosphere"></div>
             <span class="planet-name">Helio</span>
         </div>
-    </nav>
+            </nav>
+        </div>
 
-    <!-- View Presets -->
-    <div id="view-presets">
-        <button class="view-btn" id="view-inner" title="Inner Solar System">&#x2609;</button>
-        <button class="view-btn" id="view-outer" title="Outer Solar System">&#x2643;</button>
-        <button class="view-btn" id="view-zoom-in" title="Zoom In">+</button>
-        <button class="view-btn" id="view-zoom-out" title="Zoom Out">&minus;</button>
-        <div class="view-separator"></div>
-        <button class="view-btn" id="view-tilt-up" title="Tilt Up (Edge-on)">&#x2191;</button>
-        <button class="view-btn" id="view-tilt-down" title="Tilt Down (Top-down)">&#x2193;</button>
-        <button class="view-btn" id="view-3d-reset" title="Reset 3D View">&#x25CE;</button>
-    </div>
-
-    <!-- Timeline Control -->
-    <div id="timeline">
+        <!-- Timeline Control -->
+        <div class="control-group" id="timeline">
         <button id="play-pause" title="Play/Pause">&#9654;</button>
 
         <div class="speed-control">
@@ -782,10 +803,12 @@ MODIFIED: 2025-12-02
             <div id="solar-icon"></div>
             <span id="cycle-display">Solar Max</span>
         </div>
-    </div>
+        </div>
 
-    <!-- Band Selector -->
-    <div id="band-selector">
+        <!-- Band Selector -->
+        <div class="control-group" id="band-control">
+            <span class="control-group-label">Band</span>
+            <div id="band-selector">
         <button class="band-btn active" data-band="optical">Optical</button>
         <button class="band-btn" data-band="uv">UV</button>
         <button class="band-btn" data-band="xray">X-ray</button>
@@ -793,10 +816,11 @@ MODIFIED: 2025-12-02
         <button class="band-btn" data-band="ir">IR</button>
         <button class="band-btn" data-band="radio">Radio</button>
         <button class="band-btn" data-band="cmb">CMB</button>
-    </div>
+            </div>
+        </div>
 
-    <!-- Filters Panel -->
-    <div id="filters-panel">
+        <!-- Filters Panel -->
+        <div class="control-group" id="filters-control">
         <div class="filter-group">
             <button class="filter-toggle active" id="filter-stars" title="Show Stars">★</button>
             <button class="filter-toggle active" id="filter-constellations" title="Show Constellations">☆</button>
@@ -806,6 +830,18 @@ MODIFIED: 2025-12-02
             <span class="mag-label">Mag</span>
             <input type="range" class="mag-slider" id="mag-slider" min="2" max="8" value="6" step="0.5">
             <span class="mag-label" id="mag-value">6.0</span>
+        </div>
+        </div>
+
+        <!-- Quality Toggle -->
+        <div class="control-group" id="quality-control">
+            <span class="control-group-label">Quality</span>
+            <select id="quality-select" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 4px 8px; font-size: 11px;">
+                <option value="auto">Auto</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+            </select>
         </div>
     </div>
 
