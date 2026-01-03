@@ -62,6 +62,7 @@ pub fn go_to_lesson(idx: usize) {
             let _ = renderer.render_lesson(lesson);
 
             // Start the appropriate demo based on lesson id
+            // Use a longer delay to ensure HTML is fully rendered
             let closure = wasm_bindgen::closure::Closure::once_into_js(move || {
                 let result = demo_runner::start_demo_for_lesson(idx, "lesson-canvas", 42);
                 if let Err(e) = result {
@@ -72,7 +73,7 @@ pub fn go_to_lesson(idx: usize) {
                 .unwrap()
                 .set_timeout_with_callback_and_timeout_and_arguments_0(
                     closure.as_ref().unchecked_ref(),
-                    50,
+                    200, // Increased delay to ensure HTML is rendered
                 );
         }
     }

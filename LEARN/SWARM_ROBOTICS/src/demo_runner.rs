@@ -37,6 +37,16 @@ pub fn stop_demo() {
     });
 }
 
+/// Trigger an immediate render (called from JS for instant feedback)
+#[wasm_bindgen]
+pub fn trigger_render() {
+    BOIDS_DEMO.with(|d| {
+        if let Some(runner) = d.borrow_mut().as_mut() {
+            runner.render();
+        }
+    });
+}
+
 /// Boids demo runner
 pub struct BoidsDemoRunner {
     demo: BoidsDemo,
@@ -96,35 +106,48 @@ impl BoidsDemoRunner {
         for param in BoidsDemo::params() {
             let param_name = param.name.to_string();
             let slider_id = format!("{}-slider", param_name);
+            let value_id = format!("{}-value", param_name);
+            
             if let Some(slider) = web_sys::window()
                 .and_then(|w| w.document())
                 .and_then(|d| d.get_element_by_id(&slider_id))
                 .and_then(|e| e.dyn_into::<HtmlInputElement>().ok())
             {
+                let param_name_clone = param_name.clone();
+                let value_id_clone = value_id.clone();
                 let closure = Closure::wrap(Box::new(move |_: web_sys::Event| {
                     if let Some(slider) = web_sys::window()
                         .and_then(|w| w.document())
-                        .and_then(|d| d.get_element_by_id(&format!("{}-slider", param_name)))
+                        .and_then(|d| d.get_element_by_id(&format!("{}-slider", param_name_clone)))
                         .and_then(|e| e.dyn_into::<HtmlInputElement>().ok())
                     {
                         if let Ok(value) = slider.value().parse::<f32>() {
-                            BOIDS_DEMO.with(|d| {
+                            let param_updated = BOIDS_DEMO.with(|d| {
                                 if let Some(runner) = d.borrow_mut().as_mut() {
-                                    runner.demo.set_param(&param_name, value);
+                                    runner.demo.set_param(&param_name_clone, value)
+                                } else {
+                                    false
                                 }
                             });
-                            // Update value display
-                            if let Some(value_el) = web_sys::window()
-                                .and_then(|w| w.document())
-                                .and_then(|d| d.get_element_by_id(&format!("{}-value", param_name)))
-                            {
-                                value_el.set_text_content(Some(&format!("{:.2}", value)));
+                            
+                            if param_updated {
+                                // Update value display
+                                if let Some(value_el) = web_sys::window()
+                                    .and_then(|w| w.document())
+                                    .and_then(|d| d.get_element_by_id(&value_id_clone))
+                                {
+                                    value_el.set_text_content(Some(&format!("{:.2}", value)));
+                                }
+                            } else {
+                                web_sys::console::warn_1(&format!("Failed to update parameter: {}", param_name_clone).into());
                             }
                         }
                     }
                 }) as Box<dyn FnMut(_)>);
                 slider.add_event_listener_with_callback("input", closure.as_ref().unchecked_ref())?;
                 closure.forget();
+            } else {
+                web_sys::console::warn_1(&format!("Slider not found: {}", slider_id).into());
             }
         }
 
