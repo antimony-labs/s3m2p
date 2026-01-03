@@ -90,6 +90,11 @@ pub fn start() -> Result<(), JsValue> {
 /// Navigate to lesson (called from JS)
 #[wasm_bindgen]
 pub fn go_to_lesson(idx: usize) {
+    // Scroll to top of page
+    if let Some(window) = web_sys::window() {
+        let _ = window.scroll_to_with_x_and_y(0.0, 0.0);
+    }
+
     // Stop any running demo
     demo_runner::stop_demo();
 
@@ -116,6 +121,11 @@ pub fn go_to_lesson(idx: usize) {
 /// Go back to home
 #[wasm_bindgen]
 pub fn go_home() {
+    // Scroll to top of page
+    if let Some(window) = web_sys::window() {
+        let _ = window.scroll_to_with_x_and_y(0.0, 0.0);
+    }
+
     // Stop any running demo
     demo_runner::stop_demo();
 
