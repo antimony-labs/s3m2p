@@ -87,8 +87,7 @@ mod urls {
     pub const AI: &str = "http://localhost:8100";
     pub const UBUNTU: &str = "http://localhost:8101";
     pub const OPENCV: &str = "http://localhost:8102";
-    pub const ARDUINO: &str = "http://localhost:8103";
-    pub const ESP32: &str = "http://localhost:8104";
+    pub const ELECTRONICS: &str = "http://localhost:8104"; // Electronics course (formerly ESP32)
     pub const SWARM: &str = "http://localhost:8105";
     pub const SLAM: &str = "http://localhost:8106";
 
@@ -111,8 +110,7 @@ mod urls {
     pub const AI: &str = "https://ai.too.foo"; // or 404.too.foo
     pub const UBUNTU: &str = "https://ubuntu.too.foo";
     pub const OPENCV: &str = "https://opencv.too.foo";
-    pub const ARDUINO: &str = "https://arduino.too.foo";
-    pub const ESP32: &str = "https://esp32.too.foo";
+    pub const ELECTRONICS: &str = "https://esp32.too.foo"; // Electronics course (formerly ESP32)
     pub const SWARM: &str = "https://swarm.too.foo";
     pub const SLAM: &str = "https://slam.too.foo";
 
@@ -279,18 +277,11 @@ pub const LEARN_BUBBLES: &[Bubble] = &[
         action: BubbleAction::DirectProject(OPENCV), // was 404
     },
     Bubble {
-        id: "arduino",
-        label: "Arduino",
-        description: "Embedded Systems",
-        icon: "assets/islands/arduino.svg",
-        action: BubbleAction::DirectProject(ARDUINO), // was 404
-    },
-    Bubble {
-        id: "esp32",
-        label: "ESP32",
-        description: "IoT Development",
-        icon: "assets/islands/esp32.svg",
-        action: BubbleAction::DirectProject(ESP32), // was 404
+        id: "electronics",
+        label: "Electronics",
+        description: "From Circuits to ESP32 Capstone",
+        icon: "assets/islands/esp32.svg", // Reuse ESP32 icon
+        action: BubbleAction::DirectProject(ELECTRONICS),
     },
     Bubble {
         id: "swarm",

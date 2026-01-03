@@ -10,7 +10,7 @@ MODIFIED: 2025-12-11
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESP32 | IoT Programming</title>
+    <title>Electronics | From Circuits to ESP32 Capstone</title>
     <script>
         // Theme Manager - Site-wide light/dark mode
         (function() {
@@ -45,12 +45,16 @@ MODIFIED: 2025-12-11
     <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Rajdhani:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const theme = window.getCurrentTheme() === 'light' ? 'default' : 'dark';
             mermaid.initialize({
                 startOnLoad: false,
-                theme: 'dark',
+                theme: theme,
                 securityLevel: 'loose',
             });
         });
@@ -58,10 +62,33 @@ MODIFIED: 2025-12-11
         // Global function for WASM to call after swapping lesson HTML
         window.runMermaid = function () {
             setTimeout(() => {
+                const theme = window.getCurrentTheme() === 'light' ? 'default' : 'dark';
+                mermaid.initialize({
+                    startOnLoad: false,
+                    theme: theme,
+                    securityLevel: 'loose',
+                });
                 mermaid.run({
                     querySelector: '.mermaid',
                 });
             }, 50);
+        };
+
+        // Global function for WASM to call for KaTeX rendering
+        window.renderKaTeX = function () {
+            setTimeout(() => {
+                if (window.renderMathInElement) {
+                    renderMathInElement(document.body, {
+                        delimiters: [
+                            {left: '$$', right: '$$', display: true},
+                            {left: '$', right: '$', display: false},
+                            {left: '\\[', right: '\\]', display: true},
+                            {left: '\\(', right: '\\)', display: false}
+                        ],
+                        throwOnError: false
+                    });
+                }
+            }, 100);
         };
     </script>
     <style>
@@ -514,7 +541,8 @@ MODIFIED: 2025-12-11
 
         /* Going Deeper & Details - Expandable sections */
         .going-deeper,
-        .math-details {
+        .math-details,
+        .implementation-guide {
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 8px;
@@ -522,19 +550,22 @@ MODIFIED: 2025-12-11
         }
 
         .going-deeper summary,
-        .math-details summary {
+        .math-details summary,
+        .implementation-guide summary {
             cursor: pointer;
             padding: 15px 20px;
             list-style: none;
         }
 
         .going-deeper summary::-webkit-details-marker,
-        .math-details summary::-webkit-details-marker {
+        .math-details summary::-webkit-details-marker,
+        .implementation-guide summary::-webkit-details-marker {
             display: none;
         }
 
         .going-deeper summary h3,
-        .math-details summary h3 {
+        .math-details summary h3,
+        .implementation-guide summary h3 {
             display: inline;
             font-family: 'Rajdhani', sans-serif;
             font-size: 1.1rem;
@@ -543,27 +574,59 @@ MODIFIED: 2025-12-11
         }
 
         .going-deeper summary h3::before,
-        .math-details summary h3::before {
+        .math-details summary h3::before,
+        .implementation-guide summary h3::before {
             content: "▶ ";
             font-size: 0.8rem;
             margin-right: 8px;
         }
 
         .going-deeper[open] summary h3::before,
-        .math-details[open] summary h3::before {
+        .math-details[open] summary h3::before,
+        .implementation-guide[open] summary h3::before {
             content: "▼ ";
         }
 
         .going-deeper[open] summary h3,
-        .math-details[open] summary h3 {
+        .math-details[open] summary h3,
+        .implementation-guide[open] summary h3 {
             color: var(--accent);
         }
 
         .going-deeper > p,
-        .math-details > pre {
+        .going-deeper-content,
+        .math-details > pre,
+        .impl-content {
             padding: 0 20px 20px 20px;
             color: var(--text-muted);
             line-height: 1.7;
+        }
+
+        .impl-content h4 {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.1rem;
+            color: var(--accent);
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .impl-content pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            margin: 10px 0;
+        }
+
+        .impl-content ol,
+        .impl-content ul {
+            margin: 10px 0 10px 20px;
+        }
+
+        .impl-content li {
+            margin: 5px 0;
         }
 
         .math-text {
@@ -574,6 +637,14 @@ MODIFIED: 2025-12-11
             background: rgba(0, 0, 0, 0.3);
             padding: 15px;
             border-radius: 6px;
+        }
+
+        /* Calculator widget */
+        .calculator-widget {
+            background: var(--surface);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
         }
 
         /* Technical term tooltips */
