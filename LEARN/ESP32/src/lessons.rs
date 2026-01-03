@@ -471,11 +471,12 @@ if power exceeds 0.25W (common resistor rating). Return Result with error messag
 
             <div class="mermaid">
             flowchart LR
-                Vin[V_in] --> R1[R1]
-                R1 --> Vout[V_out = Vin × R2/(R1+R2)]
-                Vout --> R2[R2]
-                R2 --> GND[GND]
+                Vin["V_in"] --> R1["R1"]
+                R1 --> Vout["V_out"]
+                Vout --> R2["R2"]
+                R2 --> GND["GND"]
             </div>
+            <p><em>V_out = V_in × (R2 / (R1 + R2))</em></p>
 
             <h3>Why It Matters</h3>
             Voltage dividers are used for:
@@ -658,10 +659,11 @@ Example:
 
             <div class="mermaid">
             flowchart LR
-                V[Voltage] -->|Charges| C[Capacitor]
-                C -->|Discharges| R[Resistor]
-                R -->|Time Constant| Tau[τ = R × C]
+                V["Voltage"] -->|Charges| C["Capacitor"]
+                C -->|Discharges| R["Resistor"]
+                R -->|Time Constant| Tau["τ"]
             </div>
+            <p><em>Time constant: τ = R × C</em></p>
 
             <h3>RC Time Constant</h3>
             When charging through a resistor: <strong>τ = R × C</strong>
@@ -1047,9 +1049,9 @@ polling and interrupt-driven modes."</pre>
 
             <div class="mermaid">
             flowchart LR
-                Counter[TimerCounter] --> Cmp{Counter&lt;Duty}
-                Cmp -->|yes| Hi[GPIO_HIGH]
-                Cmp -->|no| Lo[GPIO_LOW]
+                Counter["Timer Counter"] --> Cmp{"Counter &lt; Duty?"}
+                Cmp -->|yes| Hi["GPIO HIGH"]
+                Cmp -->|no| Lo["GPIO LOW"]
             </div>
 
             <h3>ESP‑WROOM‑32 note (LEDC)</h3>
