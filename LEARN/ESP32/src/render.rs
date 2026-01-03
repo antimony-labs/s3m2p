@@ -61,19 +61,38 @@ impl LessonRenderer {
             )
         };
 
-        // Group lessons by phase
-        let mut phases: std::collections::BTreeMap<&str, Vec<&Lesson>> = std::collections::BTreeMap::new();
+        // Group lessons by phase (preserve order)
+        let mut phases: std::collections::HashMap<&str, Vec<&Lesson>> = std::collections::HashMap::new();
+        let mut phase_order: Vec<&str> = Vec::new();
         for lesson in lessons {
+            if !phases.contains_key(lesson.phase) {
+                phase_order.push(lesson.phase);
+            }
             phases.entry(lesson.phase).or_insert_with(Vec::new).push(lesson);
         }
 
-        // Render each phase
-        for (phase_name, phase_lessons) in phases {
-            html.push_str(&format!(r#"<section class="phase"><h2>{}</h2><div class="lesson-grid">"#, phase_name));
-            for lesson in phase_lessons {
-                html.push_str(&card(lesson));
+        // Define correct phase order
+        let ordered_phases = [
+            "The Promise + Safety",
+            "DC Circuits",
+            "Components",
+            "Microcontrollers",
+            "ESP32 Deep Dive",
+            "Capstone",
+        ];
+
+        // Render phases in correct order
+        for phase_name in &ordered_phases {
+            if let Some(phase_lessons) = phases.get(phase_name) {
+                html.push_str(&format!(r#"<section class="phase"><h2>{}</h2><div class="lesson-grid">"#, phase_name));
+                // Sort lessons within phase by ID to ensure correct order
+                let mut sorted_lessons = phase_lessons.clone();
+                sorted_lessons.sort_by_key(|l| l.id);
+                for lesson in sorted_lessons {
+                    html.push_str(&card(lesson));
+                }
+                html.push_str(r#"</div></section>"#);
             }
-            html.push_str(r#"</div></section>"#);
         }
 
         html.push_str(
