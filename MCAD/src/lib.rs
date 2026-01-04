@@ -922,7 +922,7 @@ fn perform_boolean(operation: &str) -> Result<(), JsValue> {
 }
 
 fn toggle_mode() {
-    STATE.with(|state| {
+    let new_mode = STATE.with(|state| {
         let mut s = state.borrow_mut();
         s.mode = match s.mode {
             AppMode::View3D => {
@@ -936,7 +936,30 @@ fn toggle_mode() {
                 AppMode::View3D
             }
         };
+        s.mode
     });
+
+    // Update UI panels
+    if let Some(window) = web_sys::window() {
+        if let Some(document) = window.document() {
+            // Toggle sketch tools visibility
+            if let Some(sketch_tools) = document.get_element_by_id("sketch-tools") {
+                let sketch_tools: HtmlElement = sketch_tools.dyn_into().ok().unwrap();
+                sketch_tools.style().set_property("display",
+                    if new_mode == AppMode::Sketch2D { "block" } else { "none" }
+                ).ok();
+            }
+
+            // Toggle primitive tools visibility
+            if let Some(primitive_tools) = document.get_element_by_id("primitive-tools") {
+                let primitive_tools: HtmlElement = primitive_tools.dyn_into().ok().unwrap();
+                primitive_tools.style().set_property("display",
+                    if new_mode == AppMode::View3D { "block" } else { "none" }
+                ).ok();
+            }
+        }
+    }
+
     let _ = render();
 }
 
