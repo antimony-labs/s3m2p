@@ -1015,16 +1015,24 @@ fn extrude_current_sketch() -> Result<(), JsValue> {
 }
 
 fn handle_sketch_click(screen_x: f64, screen_y: f64) -> Result<(), JsValue> {
+    // Get actual canvas dimensions
+    let window = web_sys::window().ok_or("No window")?;
+    let document = window.document().ok_or("No document")?;
+    let canvas = document.get_element_by_id("viewport-canvas").ok_or("Canvas not found")?;
+    let canvas: HtmlCanvasElement = canvas.dyn_into()?;
+    let canvas_element: Element = canvas.into();
+    let rect = canvas_element.get_bounding_client_rect();
+    let css_width = rect.width();
+    let css_height = rect.height();
+
     // Convert screen coordinates to sketch coordinates
     let (sketch_x, sketch_y) = STATE.with(|state| {
         let s = state.borrow();
         let zoom = s.zoom_2d;
         let pan = s.pan_2d;
 
-        let canvas_width = 800.0;
-        let canvas_height = 600.0;
-        let cx = canvas_width / 2.0;
-        let cy = canvas_height / 2.0;
+        let cx = css_width / 2.0;
+        let cy = css_height / 2.0;
 
         let sx = ((screen_x - cx) / zoom as f64 - pan.x as f64) as f32;
         let sy = (-(screen_y - cy) / zoom as f64 - pan.y as f64) as f32;
@@ -1032,7 +1040,7 @@ fn handle_sketch_click(screen_x: f64, screen_y: f64) -> Result<(), JsValue> {
     });
 
     let pos = Point2::new(sketch_x, sketch_y);
-    web_sys::console::log_1(&format!("Click at sketch coords: ({}, {})", sketch_x, sketch_y).into());
+    web_sys::console::log_1(&format!("Click at screen ({}, {}) → sketch ({}, {})", screen_x, screen_y, sketch_x, sketch_y).into());
 
     STATE.with(|state| {
         let mut s = state.borrow_mut();
