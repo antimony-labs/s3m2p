@@ -20,7 +20,11 @@
 //! │   ├── primitives.rs  Solid generators (box, cylinder, sphere, cone)        │
 //! │   ├── mesh.rs        Mesh triangulation for export/rendering               │
 //! │   ├── intersect.rs   Geometric intersection algorithms                     │
-//! │   └── boolean.rs     Boolean operations (union, difference, intersection)  │
+//! │   ├── boolean.rs     Boolean operations (union, difference, intersection)  │
+//! │   ├── sketch.rs      2D parametric sketch (Point2, SketchEntity)           │
+//! │   ├── constraints.rs Sketch constraints (geometric, dimensional)           │
+//! │   ├── solver.rs      Constraint solver (Newton-Raphson)                    │
+//! │   └── extrude.rs     Sketch extrusion (2D → 3D Solid)                      │
 //! │                                                                             │
 //! └─────────────────────────────────────────────────────────────────────────────┘
 //!
@@ -35,10 +39,14 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod boolean;
+pub mod constraints;
+pub mod extrude;
 pub mod geometry;
 pub mod intersect;
 pub mod mesh;
 pub mod primitives;
+pub mod sketch;
+pub mod solver;
 pub mod topology;
 
 // Re-export commonly used types
@@ -56,3 +64,7 @@ pub use topology::{
 pub use mesh::{TriangleMesh, solid_to_mesh};
 pub use intersect::{Classification, plane_plane_intersect, ray_sphere_intersect, ray_cylinder_intersect, point_in_solid};
 pub use boolean::{BooleanOp, BooleanError, union, difference, intersection};
+pub use sketch::{Sketch, SketchPlane, Point2, SketchPoint, SketchPointId, SketchEntity, SketchEntityId, ConstraintId};
+pub use constraints::{Constraint, GeometricConstraint, DimensionalConstraint};
+pub use solver::{ConstraintSolver, SolverConfig, SolverResult};
+pub use extrude::{extrude_sketch, ExtrudeParams, ExtrudeError};

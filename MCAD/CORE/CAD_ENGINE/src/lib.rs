@@ -70,6 +70,12 @@ pub use dna::cad::primitives::{
 // Boolean operations
 pub use dna::cad::boolean::{BooleanOp, BooleanError, union, difference, intersection};
 
+// Sketcher
+pub use dna::cad::sketch::{Sketch, SketchPlane, Point2, SketchPoint, SketchPointId, SketchEntity, SketchEntityId, ConstraintId};
+pub use dna::cad::constraints::{Constraint, GeometricConstraint, DimensionalConstraint};
+pub use dna::cad::solver::{ConstraintSolver, SolverConfig, SolverResult};
+pub use dna::cad::extrude::{extrude_sketch, ExtrudeParams, ExtrudeError};
+
 // ─────────────────────────────────────────────────────────────────────────────────
 // HIGH-LEVEL API
 // ─────────────────────────────────────────────────────────────────────────────────

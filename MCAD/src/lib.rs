@@ -17,6 +17,9 @@ use web_sys::{
 use cad_engine::{
     is_manifold, make_box, make_cone, make_cylinder, make_sphere, surface_area, volume, Point3,
     Solid, solid_to_step, solid_to_stl, union, difference, intersection,
+    Sketch, SketchPlane, Point2, SketchEntity, SketchEntityId, SketchPointId,
+    Constraint, GeometricConstraint, DimensionalConstraint,
+    ConstraintSolver, ExtrudeParams, extrude_sketch,
 };
 
 // Global state for the current solid and view
@@ -24,13 +27,43 @@ thread_local! {
     static STATE: RefCell<AppState> = RefCell::new(AppState::default());
 }
 
+/// Application mode
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum AppMode {
+    View3D,
+    Sketch2D,
+}
+
+/// Sketch drawing tool
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum SketchTool {
+    Select,
+    Line,
+    Arc,
+    Circle,
+    Point,
+}
+
 struct AppState {
+    // 3D View mode
     solid: Option<Solid>,
     solid_a: Option<Solid>,  // For Boolean operations
     solid_b: Option<Solid>,  // For Boolean operations
     rotation_x: f32,
     rotation_y: f32,
     zoom: f32,
+
+    // Sketch mode
+    mode: AppMode,
+    current_sketch: Option<Sketch>,
+    sketch_tool: SketchTool,
+    temp_points: Vec<Point2>,  // For multi-click tools
+    sketch_constraints: Vec<Constraint>,  // Track constraints separately
+    selected_entities: Vec<SketchEntityId>,
+    pan_2d: Point2,
+    zoom_2d: f32,
+
+    // Interaction
     dragging: bool,
     last_mouse_x: i32,
     last_mouse_y: i32,
@@ -42,9 +75,19 @@ impl Default for AppState {
             solid: None,
             solid_a: None,
             solid_b: None,
-            rotation_x: 0.5,  // ~30 degrees
-            rotation_y: 0.75, // ~45 degrees
+            rotation_x: 0.5,
+            rotation_y: 0.75,
             zoom: 2.0,
+
+            mode: AppMode::View3D,
+            current_sketch: None,
+            sketch_tool: SketchTool::Line,
+            temp_points: Vec::new(),
+            sketch_constraints: Vec::new(),
+            selected_entities: Vec::new(),
+            pan_2d: Point2::new(0.0, 0.0),
+            zoom_2d: 1.0,
+
             dragging: false,
             last_mouse_x: 0,
             last_mouse_y: 0,
