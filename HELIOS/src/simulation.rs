@@ -13,6 +13,7 @@
 #![allow(clippy::manual_clamp)]
 
 use crate::cca_projection::{CelestialCamera, ObjectId, ScaleLevel};
+use crate::galactic_background::MilkyWayField;
 use crate::star_data::{Band, UniverseDataManager};
 use dna::world::stars::{create_bright_stars, StarDatabase};
 use glam::DVec3;
@@ -507,6 +508,9 @@ pub struct SimulationState {
     // Local star LOD manager (phase 1 - local DB only)
     pub star_mgr: UniverseDataManager,
 
+    // === MILKY WAY BACKGROUND ===
+    pub milky_way: MilkyWayField,
+
     // === HELIOSPHERE ===
     pub termination_shock_au: f64,
     pub heliopause_au: f64,
@@ -592,6 +596,7 @@ impl SimulationState {
             selected_object: ObjectId::Sun, // Default: focused on Sun
             stars: create_bright_stars(),   // ~35 brightest stars with 3D positions
             star_mgr: UniverseDataManager::new(4000), // hard cap on stars per frame (phase 1)
+            milky_way: MilkyWayField::new(42),       // Deterministic Milky Way background
 
             termination_shock_au: 94.0,
             heliopause_au: 121.0,

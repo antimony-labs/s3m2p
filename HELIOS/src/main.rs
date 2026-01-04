@@ -11,6 +11,7 @@
 #![allow(unexpected_cfgs)]
 
 mod cca_projection;
+mod galactic_background; // Milky Way background with galactic coordinates
 mod render;
 mod render_gl;
 mod simulation;
@@ -152,9 +153,9 @@ fn run() {
 
     log(&format!("Canvas: {}x{} @ {}x DPR", window_width, window_height, dpr));
 
-    // Use Canvas2D renderer - it has working heliosphere visualization with nested shells
-    // WebGL2 implementation needs more work to match the Canvas2D quality
-    let use_webgl = false;
+    // Use WebGL2 renderer for procedural Milky Way shader
+    // Canvas2D fallback available but lacks the dense star field shader
+    let use_webgl = true;
     let gl_ctx: Option<WebGl2RenderingContext> = if use_webgl {
         // Create context options object
         let context_options = js_sys::Object::new();

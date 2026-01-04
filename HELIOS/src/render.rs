@@ -15,6 +15,7 @@
 #![allow(clippy::unnecessary_min_or_max)]
 
 use crate::cca_projection::{ObjectId, ScaleLevel};
+use crate::galactic_background::GALACTIC_ECLIPTIC_ANGLE;
 use crate::simulation::{SimulationState, AU_KM, ORBIT_SEGMENTS, SOLAR_RADIUS_KM};
 use dna::world::cca::{Epoch, FrameId, TimeScale};
 use std::f64::consts::PI;
@@ -178,9 +179,281 @@ const GALACTIC_CENTER_LON: f64 = 266.4;
 const GALACTIC_CENTER_LAT: f64 = -5.5;
 
 fn draw_starfield(ctx: &CanvasRenderingContext2d, state: &SimulationState, time: f64) {
-    // DETERMINISTIC ONLY: All stars from database with true 3D positions
-    // No random procedural stars - pure dataset-driven rendering
+    // Draw Milky Way background first (farthest layer)
+    draw_milky_way_background(ctx, state, time);
+
+    // DETERMINISTIC: All named stars from database with true 3D positions
     draw_bright_stars(ctx, state, time);
+}
+
+/// Draw the Milky Way galaxy background with proper 60° tilt to the ecliptic
+fn draw_milky_way_background(ctx: &CanvasRenderingContext2d, state: &SimulationState, time: f64) {
+    let width = state.view.width;
+    let height = state.view.height;
+
+    // Stars are always visible - they're the background of space
+    // The Milky Way structure becomes more apparent at larger scales
+
+    // Draw subtle Milky Way band (diffuse glow along galactic plane)
+    draw_milky_way_band(ctx, state, time);
+
+    // Draw background stars from the Milky Way field
+    // Show all stars up to mag 8 (naked eye limit ~6, binoculars ~8)
+    let mag_limit = 8.0_f64;
+
+    // For background stars, we project them as directions on a celestial sphere
+    // at a fixed "sky dome" distance relative to current view scale
+    let sky_dome_distance = state.view.zoom * state.view.height * 2.0; // Scale with view
+
+    // Draw Milky Way field stars
+    for star in state.milky_way.stars() {
+        if star.magnitude > mag_limit as f32 {
+            continue;
+        }
+
+        // Get star direction (normalized)
+        let dir = star.position.normalize();
+
+        // Project as if on a sky dome at fixed distance
+        let sky_pos_x = dir.x * sky_dome_distance;
+        let sky_pos_y = dir.y * sky_dome_distance;
+        let sky_pos_z = dir.z * sky_dome_distance;
+
+        let (sx, sy, depth) = state.project_3d(sky_pos_x, sky_pos_y, sky_pos_z);
+
+        // Skip if off screen
+        if sx < -10.0 || sx > width + 10.0 || sy < -10.0 || sy > height + 10.0 {
+            continue;
+        }
+
+        // Skip if behind camera (use direction check instead)
+        if depth < -sky_dome_distance * 0.5 {
+            continue;
+        }
+
+        // Star size and brightness based on magnitude and galactic location
+        // Size from 0.5 (faint) to 2.5 (bright) pixels
+        let base_size = (8.0 - star.magnitude as f64).max(0.5).min(2.5);
+
+        // Stars in Milky Way band are slightly brighter/larger
+        let size = if star.in_milky_way_band {
+            base_size * 1.3
+        } else {
+            base_size
+        };
+
+        // Subtle twinkle effect
+        let twinkle = 0.95 + 0.05 * ((time * 0.8 + star.gal_lon * 10.0).sin());
+
+        // Alpha based on magnitude (fainter = less opaque)
+        // Brighter stars (mag 4-6) should be quite visible
+        let alpha = ((9.0 - star.magnitude as f64) / 5.0).clamp(0.2, 1.0) * twinkle;
+
+        // Draw the star
+        let color = format!(
+            "rgba({},{},{},{})",
+            star.color_rgb[0], star.color_rgb[1], star.color_rgb[2], alpha
+        );
+
+        ctx.set_fill_style(&JsValue::from_str(&color));
+        ctx.begin_path();
+        ctx.arc(sx, sy, size * 0.5, 0.0, 2.0 * PI).unwrap_or(());
+        ctx.fill();
+    }
+
+    // Draw reference stars (known bright stars for orientation)
+    for star in state.milky_way.reference_stars() {
+        // Get star direction (normalized)
+        let dir = star.position.normalize();
+
+        // Project as if on a sky dome at fixed distance
+        let sky_pos_x = dir.x * sky_dome_distance;
+        let sky_pos_y = dir.y * sky_dome_distance;
+        let sky_pos_z = dir.z * sky_dome_distance;
+
+        let (sx, sy, depth) = state.project_3d(sky_pos_x, sky_pos_y, sky_pos_z);
+
+        if sx < -50.0 || sx > width + 50.0 || sy < -50.0 || sy > height + 50.0 {
+            continue;
+        }
+
+        if depth < -sky_dome_distance * 0.5 {
+            continue;
+        }
+
+        // Size based on magnitude (brighter = larger)
+        let core_size = (3.0 - star.magnitude as f64).max(1.0).min(4.0);
+
+        // Subtle glow for bright reference stars
+        if star.magnitude < 2.0 {
+            let glow_radius = core_size * 2.0;
+            ctx.set_global_alpha(0.2);
+
+            if let Ok(gradient) = ctx.create_radial_gradient(sx, sy, 0.0, sx, sy, glow_radius) {
+                gradient
+                    .add_color_stop(0.0, &format!("rgba({},{},{},0.6)", star.color_rgb[0], star.color_rgb[1], star.color_rgb[2]))
+                    .ok();
+                gradient
+                    .add_color_stop(1.0, "rgba(255,255,255,0.0)")
+                    .ok();
+
+                ctx.set_fill_style(&gradient);
+                ctx.begin_path();
+                ctx.arc(sx, sy, glow_radius, 0.0, 2.0 * PI).unwrap_or(());
+                ctx.fill();
+            }
+        }
+
+        // Core point
+        let twinkle = 0.95 + 0.05 * ((time * 1.2 + star.gal_lon * 5.0).sin());
+        ctx.set_global_alpha(twinkle);
+
+        let color = format!(
+            "#{:02x}{:02x}{:02x}",
+            star.color_rgb[0], star.color_rgb[1], star.color_rgb[2]
+        );
+        ctx.set_fill_style(&JsValue::from_str(&color));
+        ctx.begin_path();
+        ctx.arc(sx, sy, core_size * 0.6, 0.0, 2.0 * PI).unwrap_or(());
+        ctx.fill();
+    }
+
+    ctx.set_global_alpha(1.0);
+}
+
+/// Draw the diffuse Milky Way band (the characteristic glow of the galaxy)
+fn draw_milky_way_band(ctx: &CanvasRenderingContext2d, state: &SimulationState, _time: f64) {
+    // The diffuse glow is subtle and better appreciated at larger scales
+    if state.view.zoom < 0.1 {
+        return;
+    }
+
+    let width = state.view.width;
+    let height = state.view.height;
+
+    // Sky dome distance for projection
+    let sky_dome_distance = state.view.zoom * state.view.height * 2.0;
+
+    // Sample points along the galactic plane and draw a diffuse band
+    // The galactic plane is tilted 60° from the ecliptic
+    let num_segments = 36;
+
+    ctx.set_global_alpha(0.08);
+
+    for i in 0..num_segments {
+        let gal_lon1 = (i as f64 / num_segments as f64) * 2.0 * PI;
+        let gal_lon2 = ((i + 1) as f64 / num_segments as f64) * 2.0 * PI;
+
+        // Draw a thick band around the galactic plane
+        // We draw multiple layers at different galactic latitudes
+        for lat_offset in [-0.15, -0.08, 0.0, 0.08, 0.15] {
+            let gal_lat = lat_offset; // radians, small offset from plane
+
+            // Convert galactic coords to HCI direction and scale to sky dome
+            let dir1 = crate::galactic_background::galactic_to_hci(gal_lon1, gal_lat, 1.0).normalize();
+            let dir2 = crate::galactic_background::galactic_to_hci(gal_lon2, gal_lat, 1.0).normalize();
+
+            let pos1_x = dir1.x * sky_dome_distance;
+            let pos1_y = dir1.y * sky_dome_distance;
+            let pos1_z = dir1.z * sky_dome_distance;
+            let pos2_x = dir2.x * sky_dome_distance;
+            let pos2_y = dir2.y * sky_dome_distance;
+            let pos2_z = dir2.z * sky_dome_distance;
+
+            let (sx1, sy1, d1) = state.project_3d(pos1_x, pos1_y, pos1_z);
+            let (sx2, sy2, d2) = state.project_3d(pos2_x, pos2_y, pos2_z);
+
+            // Skip segments behind camera
+            if d1 < -sky_dome_distance * 0.5 && d2 < -sky_dome_distance * 0.5 {
+                continue;
+            }
+
+            // Skip segments entirely off screen
+            if (sx1 < -100.0 && sx2 < -100.0) || (sx1 > width + 100.0 && sx2 > width + 100.0) {
+                continue;
+            }
+            if (sy1 < -100.0 && sy2 < -100.0) || (sy1 > height + 100.0 && sy2 > height + 100.0) {
+                continue;
+            }
+
+            // Brightness varies - brighter toward galactic center
+            let center_dist1 = gal_lon1.abs().min((2.0 * PI - gal_lon1.abs()).abs());
+            let center_dist2 = gal_lon2.abs().min((2.0 * PI - gal_lon2.abs()).abs());
+            let brightness1 = 1.0 - (center_dist1 / PI).min(1.0) * 0.6;
+            let brightness2 = 1.0 - (center_dist2 / PI).min(1.0) * 0.6;
+
+            // Latitude falloff
+            let lat_factor = 1.0 - (lat_offset.abs() / 0.2);
+
+            let alpha1 = 0.15 * brightness1 * lat_factor;
+            let alpha2 = 0.15 * brightness2 * lat_factor;
+
+            // Draw diffuse line segment
+            ctx.set_stroke_style(&JsValue::from_str(&format!(
+                "rgba(180, 180, 220, {})",
+                (alpha1 + alpha2) / 2.0
+            )));
+            ctx.set_line_width(15.0 * lat_factor);
+            ctx.begin_path();
+            ctx.move_to(sx1, sy1);
+            ctx.line_to(sx2, sy2);
+            ctx.stroke();
+        }
+    }
+
+    ctx.set_global_alpha(1.0);
+}
+
+/// Draw a label indicating the galactic plane angle
+fn draw_galactic_plane_indicator(ctx: &CanvasRenderingContext2d, state: &SimulationState) {
+    // Only show at heliosphere scale and beyond
+    if state.view.zoom < 0.8 {
+        return;
+    }
+
+    let x = 20.0;
+    let y = state.view.height - 80.0;
+
+    // Draw indicator text
+    ctx.set_font("400 10px 'Just Sans', sans-serif");
+    ctx.set_fill_style(&JsValue::from_str("rgba(180, 180, 220, 0.7)"));
+
+    let angle_deg = GALACTIC_ECLIPTIC_ANGLE * 180.0 / PI;
+    ctx.fill_text(
+        &format!("Galactic Plane: {:.1}° to Ecliptic", angle_deg),
+        x,
+        y,
+    )
+    .unwrap_or(());
+
+    // Draw a small diagram showing the tilt
+    let cx = x + 100.0;
+    let cy = y + 25.0;
+    let radius = 20.0;
+
+    // Ecliptic plane (horizontal line)
+    ctx.set_stroke_style(&JsValue::from_str("rgba(100, 150, 255, 0.5)"));
+    ctx.set_line_width(1.5);
+    ctx.begin_path();
+    ctx.move_to(cx - radius, cy);
+    ctx.line_to(cx + radius, cy);
+    ctx.stroke();
+
+    // Galactic plane (tilted line)
+    let tilt = GALACTIC_ECLIPTIC_ANGLE;
+    ctx.set_stroke_style(&JsValue::from_str("rgba(200, 180, 255, 0.6)"));
+    ctx.begin_path();
+    ctx.move_to(cx - radius * tilt.cos(), cy + radius * tilt.sin());
+    ctx.line_to(cx + radius * tilt.cos(), cy - radius * tilt.sin());
+    ctx.stroke();
+
+    // Labels
+    ctx.set_font("300 8px 'Just Sans', sans-serif");
+    ctx.set_fill_style(&JsValue::from_str("rgba(100, 150, 255, 0.7)"));
+    ctx.fill_text("Ecliptic", cx + radius + 5.0, cy + 3.0).unwrap_or(());
+
+    ctx.set_fill_style(&JsValue::from_str("rgba(200, 180, 255, 0.7)"));
+    ctx.fill_text("Galactic", cx + radius + 5.0, cy - 12.0).unwrap_or(());
 }
 
 /// Interpolate galactic plane latitude at given ecliptic longitude
@@ -3080,6 +3353,9 @@ fn draw_ui_overlay(ctx: &CanvasRenderingContext2d, state: &SimulationState) {
         ctx.fill_text(&format!("FPS: {:.0}", state.fps), 20.0, h - 20.0)
             .unwrap_or(());
     }
+
+    // Galactic plane indicator (bottom-left, at heliosphere scale)
+    draw_galactic_plane_indicator(ctx, state);
 
     // Controls hint (bottom)
     ctx.set_font("500 11px 'Just Sans', sans-serif");
