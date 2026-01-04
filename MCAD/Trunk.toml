@@ -1,0 +1,16 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Trunk.toml | MCAD/Trunk.toml
+# PURPOSE: Trunk build configuration for MCAD solid modeler WASM bundling
+# MODIFIED: 2026-01-04
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[build]
+target = "index.html"
+dist = "dist"
+
+[watch]
+ignore = ["dist"]
+
+[serve]
+address = "127.0.0.1"
+port = 8088

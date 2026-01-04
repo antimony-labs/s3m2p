@@ -1,0 +1,18 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Cargo.toml | MCAD/CORE/CAD_ENGINE/Cargo.toml
+# PURPOSE: Package manifest for CAD engine with DNA B-Rep dependencies
+# MODIFIED: 2026-01-04
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[package]
+name = "cad-engine"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+dna.workspace = true
+glam.workspace = true
+serde.workspace = true
+
+[lints]
+workspace = true

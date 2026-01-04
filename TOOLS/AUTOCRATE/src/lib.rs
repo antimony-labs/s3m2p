@@ -1,756 +1,594 @@
-//! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: lib.rs | TOOLS/AUTOCRATE/src/lib.rs
-//! PURPOSE: ASTM standard shipping crate generator WASM application entry point
-//! MODIFIED: 2025-12-09
-//! LAYER: TOOLS → AUTOCRATE
-//! ═══════════════════════════════════════════════════════════════════════════════
-
 // AutoCrate - ASTM Standard Shipping Crate Generator
 // Rust/WASM port of the original TypeScript application
 #![allow(unexpected_cfgs)]
 
-use std::cell::RefCell;
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{
-    Blob, CanvasRenderingContext2d, Document, Element, HtmlAnchorElement, HtmlCanvasElement,
-    HtmlElement, HtmlInputElement, HtmlSelectElement, MouseEvent, Url, WheelEvent,
-};
 
-pub use autocrate_engine::*;
+pub mod calculator;
+pub mod constants;
+pub mod geometry;
+pub mod render;
+pub mod assembly;
+pub mod generator;
+pub mod step_converter;
+pub mod manufacturing;
+pub mod export;
 
-thread_local! {
-    static STATE: RefCell<AppState> = RefCell::new(AppState::default());
+pub use constants::LumberSize;
+pub use geometry::*;
+pub use render::{WebGLRenderer, Canvas2DRenderer, ViewMode, Camera, ProjectionType};
+pub use assembly::{CrateAssembly, ComponentType};
+pub use generator::generate_crate;
+
+/// Product dimensions input (in inches)
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ProductDimensions {
+    pub length: f32,
+    pub width: f32,
+    pub height: f32,
+    pub weight: f32,
 }
 
-#[derive(Default)]
-struct AppState {
-    spec: CrateSpec,
-    design: Option<CrateDesign>,
-    rotation_x: f32,
-    rotation_y: f32,
-    zoom: f32,
-    dragging: bool,
-    last_mouse_x: i32,
-    last_mouse_y: i32,
-    selected_part_id: Option<String>,
+impl Default for ProductDimensions {
+    fn default() -> Self {
+        Self {
+            length: 120.0,
+            width: 120.0,
+            height: 120.0,
+            weight: 10000.0,
+        }
+    }
+}
+
+/// Clearances around product (in inches)
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Clearances {
+    pub side: f32,
+    pub end: f32,
+    pub top: f32,
+}
+
+/// Crate construction style per ASTM D6039
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CrateStyle {
+    /// Style A - Open frame crate (cleated frame only, no sheathing)
+    /// Heavy-duty, suitable for severe handling
+    A,
+    /// Style B - Sheathed/covered crate (cleated frame with plywood panels)
+    /// Light-duty, suitable for light-to-moderate handling
+    B,
+}
+
+impl Default for Clearances {
+    fn default() -> Self {
+        Self {
+            side: 2.0,
+            end: 2.0,
+            top: 3.0,
+        }
+    }
+}
+
+/// Complete crate specification
+#[derive(Clone, Debug)]
+pub struct CrateSpec {
+    pub product: ProductDimensions,
+    pub clearances: Clearances,
+    pub style: CrateStyle,
+    pub skid_count: u8,
+    pub skid_size: LumberSize,
+    pub floorboard_size: LumberSize,
+    pub cleat_size: LumberSize,
+}
+
+impl Default for CrateSpec {
+    fn default() -> Self {
+        Self {
+            product: ProductDimensions::default(),
+            clearances: Clearances::default(),
+            style: CrateStyle::B,
+            skid_count: 3,
+            skid_size: LumberSize::L4x4,
+            floorboard_size: LumberSize::L2x6,
+            cleat_size: LumberSize::L1x4,
+        }
+    }
+}
+
+impl Default for CrateStyle {
+    fn default() -> Self {
+        CrateStyle::B
+    }
+}
+
+/// Generated crate geometry
+#[derive(Clone, Debug)]
+pub struct CrateGeometry {
+    pub overall_length: f32,
+    pub overall_width: f32,
+    pub overall_height: f32,
+    pub base_height: f32,
+    pub skids: Vec<SkidGeometry>,
+    pub floorboards: Vec<BoardGeometry>,
+    pub panels: PanelSet,
+    pub cleats: Vec<CleatGeometry>,
+}
+
+use web_sys::{window, HtmlCanvasElement, MouseEvent, WheelEvent, Blob, Url, HtmlAnchorElement, HtmlInputElement, HtmlSelectElement};
+use wasm_bindgen::closure::Closure;
+use std::rc::Rc;
+use std::cell::RefCell;
+
+fn download_file(filename: &str, content: &str) -> Result<(), JsValue> {
+    let window = window().ok_or("no window")?;
+    let document = window.document().ok_or("no document")?;
+    let body = document.body().ok_or("no body")?;
+
+    let parts = js_sys::Array::of1(&JsValue::from_str(content));
+    let mut properties = web_sys::BlobPropertyBag::new();
+    properties.set_type("text/plain");
+    let blob = Blob::new_with_str_sequence_and_options(&parts, &properties)?;
+
+    let url = Url::create_object_url_with_blob(&blob)?;
+    let a = document.create_element("a")?.dyn_into::<HtmlAnchorElement>()?;
+    a.set_href(&url);
+    a.set_download(filename);
+    a.style().set_property("display", "none")?;
+    
+    body.append_child(&a)?;
+    a.click();
+    body.remove_child(&a)?;
+    Url::revoke_object_url(&url)?;
+
+    Ok(())
 }
 
 /// WASM entry point
 #[wasm_bindgen(start)]
 pub fn start() -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
-    web_sys::console::log_1(&"AutoCrate initialized (viewer + outputs)".into());
+    web_sys::console::log_1(&"AutoCrate 3D Visualization Demo".into());
 
-    init_ui()?;
-    Ok(())
-}
+    // Get canvas element
+    let document = window()
+        .ok_or("No window")?
+        .document()
+        .ok_or("No document")?;
 
-fn init_ui() -> Result<(), JsValue> {
-    let window = web_sys::window().ok_or("No window")?;
-    let document = window.document().ok_or("No document")?;
-
-    setup_viewport_events(&document)?;
-
-    // Export setViewAngle(view) to JS
-    let set_view_closure = Closure::wrap(Box::new(|view: String| {
-        set_view(&view);
-    }) as Box<dyn Fn(String)>);
-    js_sys::Reflect::set(
-        &window,
-        &JsValue::from_str("setViewAngle"),
-        set_view_closure.as_ref(),
-    )?;
-    set_view_closure.forget();
-
-    // Generate/update
-    if let Some(btn) = document.get_element_by_id("generate-btn") {
-        let btn: HtmlElement = btn.dyn_into()?;
-        let closure = Closure::wrap(Box::new(move || {
-            if let Err(e) = generate_and_render() {
-                web_sys::console::error_1(&format!("Generate failed: {:?}", e).into());
-            }
-        }) as Box<dyn FnMut()>);
-        btn.set_onclick(Some(closure.as_ref().unchecked_ref()));
-        closure.forget();
-    }
-
-    // Downloads
-    hook_download_button(&document, "download-step", DownloadKind::Step)?;
-    hook_download_button(&document, "download-bom", DownloadKind::Bom)?;
-    hook_download_button(&document, "download-cut", DownloadKind::CutList)?;
-
-    // View reports (read-only modal)
-    hook_view_button(&document, "view-bom", ViewKind::Bom)?;
-    hook_view_button(&document, "view-cut", ViewKind::CutList)?;
-    hook_modal_close(&document)?;
-
-    // Part select
-    if let Some(select) = document.get_element_by_id("part-select") {
-        let select: HtmlSelectElement = select.dyn_into()?;
-        let closure = Closure::wrap(Box::new(move || {
-            if let Err(e) = on_part_selected() {
-                web_sys::console::error_1(&format!("Part selection failed: {:?}", e).into());
-            }
-        }) as Box<dyn FnMut()>);
-        select.set_onchange(Some(closure.as_ref().unchecked_ref()));
-        closure.forget();
-    }
-
-    // Initial design
-    STATE.with(|s| {
-        let mut s = s.borrow_mut();
-        s.rotation_x = 0.5;
-        s.rotation_y = 0.75;
-        s.zoom = 1.0;
-    });
-    generate_and_render()?;
-
-    Ok(())
-}
-
-#[derive(Clone, Copy)]
-enum DownloadKind {
-    Step,
-    Bom,
-    CutList,
-}
-
-#[derive(Clone, Copy)]
-enum ViewKind {
-    Bom,
-    CutList,
-}
-
-fn hook_download_button(document: &Document, id: &str, kind: DownloadKind) -> Result<(), JsValue> {
-    let btn = document
-        .get_element_by_id(id)
-        .ok_or_else(|| format!("Button {id} not found"))?;
-    let btn: HtmlElement = btn.dyn_into()?;
-    let closure = Closure::wrap(Box::new(move || {
-        if let Err(e) = download_current(kind) {
-            web_sys::console::error_1(&format!("Download failed: {:?}", e).into());
-        }
-    }) as Box<dyn FnMut()>);
-    btn.set_onclick(Some(closure.as_ref().unchecked_ref()));
-    closure.forget();
-    Ok(())
-}
-
-fn hook_view_button(document: &Document, id: &str, kind: ViewKind) -> Result<(), JsValue> {
-    let btn = document
-        .get_element_by_id(id)
-        .ok_or_else(|| format!("Button {id} not found"))?;
-    let btn: HtmlElement = btn.dyn_into()?;
-    let closure = Closure::wrap(Box::new(move || {
-        if let Err(e) = open_report_modal(kind) {
-            web_sys::console::error_1(&format!("View report failed: {:?}", e).into());
-        }
-    }) as Box<dyn FnMut()>);
-    btn.set_onclick(Some(closure.as_ref().unchecked_ref()));
-    closure.forget();
-    Ok(())
-}
-
-fn hook_modal_close(document: &Document) -> Result<(), JsValue> {
-    // Close button
-    if let Some(btn) = document.get_element_by_id("report-modal-close") {
-        let btn: HtmlElement = btn.dyn_into()?;
-        let closure = Closure::wrap(Box::new(move || {
-            if let Err(e) = close_report_modal() {
-                web_sys::console::error_1(&format!("Close modal failed: {:?}", e).into());
-            }
-        }) as Box<dyn FnMut()>);
-        btn.set_onclick(Some(closure.as_ref().unchecked_ref()));
-        closure.forget();
-    }
-
-    // Backdrop click
-    if let Some(backdrop) = document.get_element_by_id("report-modal-backdrop") {
-        let backdrop: HtmlElement = backdrop.dyn_into()?;
-        let closure = Closure::wrap(Box::new(move || {
-            if let Err(e) = close_report_modal() {
-                web_sys::console::error_1(&format!("Close modal failed: {:?}", e).into());
-            }
-        }) as Box<dyn FnMut()>);
-        backdrop.set_onclick(Some(closure.as_ref().unchecked_ref()));
-        closure.forget();
-    }
-
-    Ok(())
-}
-
-fn read_f32(document: &Document, id: &str) -> Result<f32, JsValue> {
-    let input = document
-        .get_element_by_id(id)
-        .ok_or_else(|| format!("Input {id} not found"))?;
-    let input: HtmlInputElement = input.dyn_into()?;
-    let v = input
-        .value()
-        .parse::<f32>()
-        .map_err(|_| JsValue::from_str("Invalid number"))?;
-    Ok(v)
-}
-
-fn set_text(document: &Document, id: &str, text: &str) -> Result<(), JsValue> {
-    if let Some(elem) = document.get_element_by_id(id) {
-        let elem: HtmlElement = elem.dyn_into()?;
-        elem.set_inner_text(text);
-    }
-    Ok(())
-}
-
-fn generate_and_render() -> Result<(), JsValue> {
-    let window = web_sys::window().ok_or("No window")?;
-    let document = window.document().ok_or("No document")?;
-
-    // Update spec from inputs (minimal v1: product dims + weight)
-    let (l, w, h, wt) = (
-        read_f32(&document, "prod-length")?,
-        read_f32(&document, "prod-width")?,
-        read_f32(&document, "prod-height")?,
-        read_f32(&document, "prod-weight")?,
-    );
-
-    STATE.with(|state| {
-        let mut state = state.borrow_mut();
-        state.spec.product.length = l;
-        state.spec.product.width = w;
-        state.spec.product.height = h;
-        state.spec.product.weight = wt;
-        state.design = Some(design_from_spec(&state.spec));
-
-        if state.selected_part_id.is_none() {
-            if let Some(design) = state.design.as_ref() {
-                if let Some(first) = design.parts.first() {
-                    state.selected_part_id = Some(first.id.clone());
-                }
-            }
-        }
-    });
-
-    update_ui(&document)?;
-    render()?;
-    Ok(())
-}
-
-fn update_ui(document: &Document) -> Result<(), JsValue> {
-    STATE.with(|state| {
-        let state = state.borrow();
-        if let Some(design) = state.design.as_ref() {
-            let overall = format!(
-                "{:.2} x {:.2} x {:.2}",
-                design.geometry.overall_length, design.geometry.overall_width, design.geometry.overall_height
-            );
-            set_text(document, "overall-dims", &overall).ok();
-            set_text(document, "parts-count", &design.parts.len().to_string()).ok();
-
-            // Populate part select
-            if let Some(elem) = document.get_element_by_id("part-select") {
-                if let Ok(select) = elem.dyn_into::<HtmlSelectElement>() {
-                    // Clear options
-                    select.set_inner_html("");
-
-                    let mut parts: Vec<&CratePart> = design.parts.iter().collect();
-                    parts.sort_by(|a, b| a.id.cmp(&b.id));
-
-                    for part in parts {
-                        let opt = document.create_element("option").ok();
-                        if let Some(opt) = opt {
-                            opt.set_attribute("value", &part.id).ok();
-                            opt.set_inner_html(&format!("{} — {}", part.id, part.name));
-                            select.append_child(&opt).ok();
-                        }
-                    }
-
-                    if let Some(sel) = state.selected_part_id.as_ref() {
-                        select.set_value(sel);
-                    }
-                }
-            }
-
-            update_selected_part_details(document).ok();
-        }
-    });
-
-    Ok(())
-}
-
-fn open_report_modal(kind: ViewKind) -> Result<(), JsValue> {
-    let window = web_sys::window().ok_or("No window")?;
-    let document = window.document().ok_or("No document")?;
-
-    let (title, body) = STATE.with(|state| -> Result<(String, String), JsValue> {
-        let state = state.borrow();
-        let design = state
-            .design
-            .as_ref()
-            .ok_or_else(|| JsValue::from_str("No design"))?;
-
-        match kind {
-            ViewKind::Bom => Ok(("BOM (CSV)".to_string(), export_bom_csv(design))),
-            ViewKind::CutList => Ok(("Cut List (CSV)".to_string(), export_cut_list_csv(design))),
-        }
-    })?;
-
-    // Fill content
-    set_text(&document, "report-modal-title", &title)?;
-    if let Some(elem) = document.get_element_by_id("report-modal-body") {
-        let elem: HtmlElement = elem.dyn_into()?;
-        elem.set_inner_text(&body);
-    }
-
-    // Show modal
-    let modal = document
-        .get_element_by_id("report-modal")
-        .ok_or("report-modal not found")?;
-    let modal: HtmlElement = modal.dyn_into()?;
-    modal.set_hidden(false);
-    Ok(())
-}
-
-fn close_report_modal() -> Result<(), JsValue> {
-    let window = web_sys::window().ok_or("No window")?;
-    let document = window.document().ok_or("No document")?;
-    let modal = document
-        .get_element_by_id("report-modal")
-        .ok_or("report-modal not found")?;
-    let modal: HtmlElement = modal.dyn_into()?;
-    modal.set_hidden(true);
-    Ok(())
-}
-
-fn on_part_selected() -> Result<(), JsValue> {
-    let window = web_sys::window().ok_or("No window")?;
-    let document = window.document().ok_or("No document")?;
-    let select = document
-        .get_element_by_id("part-select")
-        .ok_or("part-select not found")?;
-    let select: HtmlSelectElement = select.dyn_into()?;
-    let value = select.value();
-
-    STATE.with(|state| state.borrow_mut().selected_part_id = Some(value));
-    update_selected_part_details(&document)?;
-    render()?;
-    Ok(())
-}
-
-fn update_selected_part_details(document: &Document) -> Result<(), JsValue> {
-    STATE.with(|state| {
-        let state = state.borrow();
-        let Some(design) = state.design.as_ref() else { return; };
-        let Some(sel) = state.selected_part_id.as_ref() else { return; };
-        let Some(part) = design.parts.iter().find(|p| &p.id == sel) else { return; };
-
-        let size = part.bounds.size();
-        let details = format!(
-            "id: {id}\nname: {name}\ncategory: {cat:?}\n\nbounds (in):\n  min: ({minx:.2}, {miny:.2}, {minz:.2})\n  max: ({maxx:.2}, {maxy:.2}, {maxz:.2})\n  size: ({sx:.2}, {sy:.2}, {sz:.2})\n\nmetadata:\n  {meta}\n",
-            id = part.id,
-            name = part.name,
-            cat = part.category,
-            minx = part.bounds.min.x,
-            miny = part.bounds.min.y,
-            minz = part.bounds.min.z,
-            maxx = part.bounds.max.x,
-            maxy = part.bounds.max.y,
-            maxz = part.bounds.max.z,
-            sx = size.x,
-            sy = size.y,
-            sz = size.z,
-            meta = part.metadata.clone().unwrap_or_else(|| "-".to_string()),
-        );
-
-        if let Some(elem) = document.get_element_by_id("part-details") {
-            if let Ok(elem) = elem.dyn_into::<HtmlElement>() {
-                elem.set_inner_text(&details);
-            }
-        }
-    });
-    Ok(())
-}
-
-fn set_view(view: &str) {
-    use std::f32::consts::PI;
-    STATE.with(|state| {
-        let mut state = state.borrow_mut();
-        match view {
-            "front" => {
-                state.rotation_x = 0.0;
-                state.rotation_y = 0.0;
-            }
-            "top" => {
-                state.rotation_x = PI / 2.0;
-                state.rotation_y = 0.0;
-            }
-            "right" => {
-                state.rotation_x = 0.0;
-                state.rotation_y = PI / 2.0;
-            }
-            _ => {
-                state.rotation_x = 0.5;
-                state.rotation_y = 0.75;
-            }
-        }
-    });
-    let _ = render();
-}
-
-fn setup_viewport_events(document: &Document) -> Result<(), JsValue> {
     let canvas = document
-        .get_element_by_id("viewport-canvas")
-        .ok_or("viewport-canvas not found")?;
-    let canvas: HtmlCanvasElement = canvas.dyn_into()?;
+        .get_element_by_id("canvas")
+        .ok_or("No canvas element")?
+        .dyn_into::<HtmlCanvasElement>()?;
 
-    // Mouse down
+    // Set canvas size
+    let width = window().unwrap().inner_width()?.as_f64().unwrap_or(800.0) as u32;
+    let height = window().unwrap().inner_height()?.as_f64().unwrap_or(600.0) as u32;
+    canvas.set_width(width);
+    canvas.set_height(height);
+
+    // Initialize WebGL renderer
+    let mut renderer = render::WebGLRenderer::new(canvas.clone())
+        .map_err(|e| JsValue::from_str(&e))?;
+
+    renderer.init_shaders()
+        .map_err(|e| JsValue::from_str(&e))?;
+
+    web_sys::console::log_1(&"WebGL renderer initialized!".into());
+
+    // Set up camera (looking at a crate)
     {
-        let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
-            STATE.with(|state| {
-                let mut state = state.borrow_mut();
-                state.dragging = true;
-                state.last_mouse_x = event.client_x();
-                state.last_mouse_y = event.client_y();
-            });
-        }) as Box<dyn FnMut(MouseEvent)>);
-        canvas.set_onmousedown(Some(closure.as_ref().unchecked_ref()));
-        closure.forget();
+        let camera = renderer.camera_mut();
+        camera.distance = 150.0;
+        camera.azimuth = std::f32::consts::PI / 4.0;  // 45 degrees
+        camera.elevation = std::f32::consts::PI / 6.0; // 30 degrees
+        camera.target = glam::Vec3::new(0.0, 0.0, 20.0);
     }
 
-    // Mouse up
-    {
-        let closure = Closure::wrap(Box::new(move |_: MouseEvent| {
-            STATE.with(|state| state.borrow_mut().dragging = false);
-        }) as Box<dyn FnMut(MouseEvent)>);
-        canvas.set_onmouseup(Some(closure.as_ref().unchecked_ref()));
-        closure.forget();
-    }
+    // UI Elements
+    let input_length = document.get_element_by_id("length").unwrap().dyn_into::<HtmlInputElement>()?;
+    let input_width = document.get_element_by_id("width").unwrap().dyn_into::<HtmlInputElement>()?;
+    let input_height = document.get_element_by_id("height").unwrap().dyn_into::<HtmlInputElement>()?;
+    let input_weight = document.get_element_by_id("weight").unwrap().dyn_into::<HtmlInputElement>()?;
+    let input_style = document.get_element_by_id("style").unwrap().dyn_into::<HtmlSelectElement>()?;
+    let btn_generate = document.get_element_by_id("generate").unwrap();
+    let btn_export = document.get_element_by_id("export-step").unwrap();
+    let btn_export_cut_list = document.get_element_by_id("export-cut-list").unwrap();
+    let btn_export_bom = document.get_element_by_id("export-bom").unwrap();
+    let btn_export_nailing = document.get_element_by_id("export-nailing").unwrap();
+    let btn_export_json = document.get_element_by_id("export-json").unwrap();
+    let btn_export_gcode = document.get_element_by_id("export-gcode").unwrap();
+    let btn_view3d = document.get_element_by_id("view-3d").unwrap();
+    let btn_view2d = document.get_element_by_id("view-2d").unwrap();
 
-    // Mouse leave
-    {
-        let closure = Closure::wrap(Box::new(move |_: MouseEvent| {
-            STATE.with(|state| state.borrow_mut().dragging = false);
-        }) as Box<dyn FnMut(MouseEvent)>);
-        canvas.set_onmouseleave(Some(closure.as_ref().unchecked_ref()));
-        closure.forget();
-    }
+    // Shared State
+    let assembly = Rc::new(RefCell::new(CrateAssembly::default()));
+    let mesh_buffers_rc = Rc::new(RefCell::new(Vec::new()));
+    let colors_rc = Rc::new(RefCell::new(Vec::new()));
+    let manufacturing_data = Rc::new(RefCell::new(None::<manufacturing::ManufacturingData>));
+    let spec_rc = Rc::new(RefCell::new(CrateSpec::default()));
 
-    // Mouse move (rotate)
-    {
-        let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
-            STATE.with(|state| {
-                let mut state = state.borrow_mut();
-                if state.dragging {
-                    let dx = event.client_x() - state.last_mouse_x;
-                    let dy = event.client_y() - state.last_mouse_y;
-                    state.rotation_y += dx as f32 * 0.01;
-                    state.rotation_x += dy as f32 * 0.01;
-                    state.last_mouse_x = event.client_x();
-                    state.last_mouse_y = event.client_y();
+    // Renderer must be wrapped to be shared among event listeners
+    let renderer = Rc::new(RefCell::new(renderer));
+
+    // Function to regenerate crate and update render buffers
+    let update_scene = {
+        let assembly = assembly.clone();
+        let mesh_buffers_rc = mesh_buffers_rc.clone();
+        let colors_rc = colors_rc.clone();
+        let renderer = renderer.clone();
+        let manufacturing_data = manufacturing_data.clone();
+        let spec_rc = spec_rc.clone();
+        let input_length = input_length.clone();
+        let input_width = input_width.clone();
+        let input_height = input_height.clone();
+        let input_weight = input_weight.clone();
+        let input_style = input_style.clone();
+
+        Closure::wrap(Box::new(move || {
+            web_sys::console::log_1(&"Generating crate...".into());
+            
+            // Parse inputs
+            let length = input_length.value_as_number() as f32;
+            let width = input_width.value_as_number() as f32;
+            let height = input_height.value_as_number() as f32;
+            let weight = input_weight.value_as_number() as f32;
+            let style = match input_style.value().as_str() {
+                "A" => CrateStyle::A,
+                _ => CrateStyle::B,
+            };
+
+            // Update spec
+            let mut spec = CrateSpec::default();
+            spec.product.length = length;
+            spec.product.width = width;
+            spec.product.height = height;
+            spec.product.weight = weight;
+            spec.style = style;
+
+            // Generate assembly
+            let new_assembly = generator::generate_crate(&spec, style);
+            *assembly.borrow_mut() = new_assembly;
+
+            // Generate manufacturing data
+            let mfg_data = manufacturing::generate_manufacturing_data(&assembly.borrow(), weight);
+            *manufacturing_data.borrow_mut() = Some(mfg_data);
+            *spec_rc.borrow_mut() = spec.clone();
+
+            // Update camera orthographic size based on dimensions
+            let max_dim = length.max(width).max(height);
+            renderer.borrow_mut().camera_mut().orthographic_size = max_dim * 1.5;
+
+            // Update WebGL buffers
+            let gl = renderer.borrow().gl.clone();
+            let result = process_assembly_for_rendering(&gl, &assembly.borrow());
+            
+            if let Ok((new_bufs, new_colors)) = result {
+                *mesh_buffers_rc.borrow_mut() = new_bufs;
+                *colors_rc.borrow_mut() = new_colors;
+                
+                // Render immediately
+                let r = renderer.borrow();
+                r.begin_frame();
+                for (i, buf) in mesh_buffers_rc.borrow().iter().enumerate() {
+                    r.draw_mesh(buf, colors_rc.borrow()[i]);
                 }
-            });
-            let _ = render();
-        }) as Box<dyn FnMut(MouseEvent)>);
-        canvas.set_onmousemove(Some(closure.as_ref().unchecked_ref()));
+                r.end_frame();
+                
+                web_sys::console::log_1(&"Crate generated and rendered.".into());
+            } else {
+                web_sys::console::error_1(&"Failed to process assembly for rendering".into());
+            }
+        }) as Box<dyn FnMut()>)
+    };
+
+    // Initial generation
+    update_scene.as_ref().unchecked_ref::<js_sys::Function>().call0(&JsValue::NULL).unwrap();
+
+    // Bind Generate Button
+    btn_generate.add_event_listener_with_callback("click", update_scene.as_ref().unchecked_ref())?;
+    update_scene.forget(); // Keep alive
+
+    // Bind Export STEP Button
+    {
+        let assembly = assembly.clone();
+        let closure = Closure::wrap(Box::new(move || {
+            web_sys::console::log_1(&"Exporting STEP file...".into());
+            let step_writer = step_converter::convert_assembly_to_step(&assembly.borrow());
+            let step_content = step_writer.to_string();
+            let _ = download_file("crate.step", &step_content);
+        }) as Box<dyn FnMut()>);
+        btn_export.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
         closure.forget();
     }
 
-    // Wheel (zoom)
+    // Bind Export Cut List Button
     {
+        let manufacturing_data = manufacturing_data.clone();
+        let closure = Closure::wrap(Box::new(move || {
+            if let Some(mfg) = manufacturing_data.borrow().as_ref() {
+                let csv = export::csv::export_cut_list_csv(&mfg.cut_list);
+                let _ = download_file("autocrate_cut_list.csv", &csv);
+                web_sys::console::log_1(&"Cut list exported".into());
+            } else {
+                web_sys::console::warn_1(&"No manufacturing data - generate crate first".into());
+            }
+        }) as Box<dyn FnMut()>);
+        btn_export_cut_list.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+
+    // Bind Export BOM Button
+    {
+        let manufacturing_data = manufacturing_data.clone();
+        let closure = Closure::wrap(Box::new(move || {
+            if let Some(mfg) = manufacturing_data.borrow().as_ref() {
+                let csv = export::csv::export_bom_csv(&mfg.bom);
+                let _ = download_file("autocrate_bom.csv", &csv);
+                web_sys::console::log_1(&"BOM exported".into());
+            } else {
+                web_sys::console::warn_1(&"No manufacturing data - generate crate first".into());
+            }
+        }) as Box<dyn FnMut()>);
+        btn_export_bom.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+
+    // Bind Export Nailing Coordinates Button
+    {
+        let manufacturing_data = manufacturing_data.clone();
+        let closure = Closure::wrap(Box::new(move || {
+            if let Some(mfg) = manufacturing_data.borrow().as_ref() {
+                let csv = export::csv::export_nailing_csv(&mfg.nailing_coords);
+                let _ = download_file("autocrate_nailing_coords.csv", &csv);
+                web_sys::console::log_1(&"Nailing coordinates exported".into());
+            } else {
+                web_sys::console::warn_1(&"No manufacturing data - generate crate first".into());
+            }
+        }) as Box<dyn FnMut()>);
+        btn_export_nailing.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+
+    // Bind Export JSON Button
+    {
+        let assembly = assembly.clone();
+        let spec_rc = spec_rc.clone();
+        let manufacturing_data = manufacturing_data.clone();
+        let closure = Closure::wrap(Box::new(move || {
+            if let Some(mfg) = manufacturing_data.borrow().as_ref() {
+                let json = export::json::export_assembly_json(
+                    &assembly.borrow(),
+                    &spec_rc.borrow(),
+                    mfg
+                );
+                let _ = download_file("autocrate_assembly.json", &json);
+                web_sys::console::log_1(&"Assembly JSON exported".into());
+            } else {
+                web_sys::console::warn_1(&"No manufacturing data - generate crate first".into());
+            }
+        }) as Box<dyn FnMut()>);
+        btn_export_json.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+
+    // Bind Export G-code Button
+    {
+        let manufacturing_data = manufacturing_data.clone();
+        let closure = Closure::wrap(Box::new(move || {
+            if let Some(mfg) = manufacturing_data.borrow().as_ref() {
+                let gcode = export::gcode::export_cnc_gcode(&mfg.cnc_program, export::gcode::GcodeUnits::Imperial);
+                let _ = download_file("autocrate_cnc.gcode", &gcode);
+                web_sys::console::log_1(&"CNC G-code exported".into());
+            } else {
+                web_sys::console::warn_1(&"No manufacturing data - generate crate first".into());
+            }
+        }) as Box<dyn FnMut()>);
+        btn_export_gcode.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+
+    // Bind View Toggle Buttons
+    {
+        let renderer = renderer.clone();
+        let mesh_buffers_rc = mesh_buffers_rc.clone();
+        let colors_rc = colors_rc.clone();
+        let btn_view3d_clone = btn_view3d.clone();
+        let btn_view2d_clone = btn_view2d.clone();
+
+        let closure = Closure::wrap(Box::new(move || {
+            let mut r = renderer.borrow_mut();
+            r.camera_mut().projection_type = ProjectionType::Perspective;
+            // Reset to perspective defaults
+            r.camera_mut().azimuth = std::f32::consts::PI / 4.0;
+            r.camera_mut().elevation = std::f32::consts::PI / 6.0;
+            
+            // Update UI classes
+            let _ = btn_view3d_clone.class_list().add_1("active");
+            let _ = btn_view2d_clone.class_list().remove_1("active");
+
+            // Re-render
+            r.begin_frame();
+            let bufs = mesh_buffers_rc.borrow();
+            let cols = colors_rc.borrow();
+            for (i, buf) in bufs.iter().enumerate() {
+                r.draw_mesh(buf, cols[i]);
+            }
+            r.end_frame();
+        }) as Box<dyn FnMut()>);
+        btn_view3d.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+
+    {
+        let renderer = renderer.clone();
+        let mesh_buffers_rc = mesh_buffers_rc.clone();
+        let colors_rc = colors_rc.clone();
+        let btn_view3d_clone = btn_view3d.clone();
+        let btn_view2d_clone = btn_view2d.clone();
+
+        let closure = Closure::wrap(Box::new(move || {
+            let mut r = renderer.borrow_mut();
+            r.camera_mut().projection_type = ProjectionType::Orthographic;
+            // Set to Top View
+            r.camera_mut().azimuth = 0.0;
+            r.camera_mut().elevation = std::f32::consts::PI / 2.0 - 0.01; // Almost 90 degrees (gimbal lock avoidance)
+            r.camera_mut().target = glam::Vec3::ZERO;
+
+            // Update UI classes
+            let _ = btn_view2d_clone.class_list().add_1("active");
+            let _ = btn_view3d_clone.class_list().remove_1("active");
+
+            // Re-render
+            r.begin_frame();
+            let bufs = mesh_buffers_rc.borrow();
+            let cols = colors_rc.borrow();
+            for (i, buf) in bufs.iter().enumerate() {
+                r.draw_mesh(buf, cols[i]);
+            }
+            r.end_frame();
+        }) as Box<dyn FnMut()>);
+        btn_view2d.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+
+    // Bind Mouse Events (Orbit Controls)
+    // Mouse down handler
+    {
+        let renderer = renderer.clone();
+        let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
+            let mut r = renderer.borrow_mut();
+            r.is_dragging = true;
+            r.last_mouse_x = event.client_x() as f32;
+            r.last_mouse_y = event.client_y() as f32;
+        }) as Box<dyn FnMut(_)>);
+        canvas.add_event_listener_with_callback("mousedown", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+
+    // Mouse move handler (orbit camera)
+    {
+        let renderer = renderer.clone();
+        let mesh_buffers_rc = mesh_buffers_rc.clone();
+        let colors_rc = colors_rc.clone();
+
+        let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
+            let mut r = renderer.borrow_mut();
+            if r.is_dragging {
+                let dx = event.client_x() as f32 - r.last_mouse_x;
+                let dy = event.client_y() as f32 - r.last_mouse_y;
+
+                if r.camera().projection_type == ProjectionType::Perspective {
+                    // Orbit camera
+                    let sensitivity = 0.005;
+                    r.camera_mut().orbit(dx * sensitivity, -dy * sensitivity);
+                } else {
+                    // Pan camera in 2D
+                    r.camera_mut().pan(-dx, dy);
+                }
+
+                r.last_mouse_x = event.client_x() as f32;
+                r.last_mouse_y = event.client_y() as f32;
+
+                // Re-render
+                r.begin_frame();
+                let bufs = mesh_buffers_rc.borrow();
+                let cols = colors_rc.borrow();
+                for (i, buf) in bufs.iter().enumerate() {
+                    r.draw_mesh(buf, cols[i]);
+                }
+                r.end_frame();
+            }
+        }) as Box<dyn FnMut(_)>);
+        canvas.add_event_listener_with_callback("mousemove", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+
+    // Mouse up handler
+    {
+        let renderer = renderer.clone();
+        let closure = Closure::wrap(Box::new(move |_event: MouseEvent| {
+            renderer.borrow_mut().is_dragging = false;
+        }) as Box<dyn FnMut(_)>);
+        canvas.add_event_listener_with_callback("mouseup", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+
+    // Wheel handler (zoom)
+    {
+        let renderer = renderer.clone();
+        let mesh_buffers_rc = mesh_buffers_rc.clone();
+        let colors_rc = colors_rc.clone();
+
         let closure = Closure::wrap(Box::new(move |event: WheelEvent| {
             event.prevent_default();
-            STATE.with(|state| {
-                let mut state = state.borrow_mut();
-                let delta = event.delta_y() as f32 * 0.001;
-                state.zoom = (state.zoom - delta).clamp(0.35, 6.0);
-            });
-            let _ = render();
-        }) as Box<dyn FnMut(WheelEvent)>);
-        canvas.set_onwheel(Some(closure.as_ref().unchecked_ref()));
+            let mut r = renderer.borrow_mut();
+
+            // Zoom camera
+            let delta = event.delta_y() as f32 * 0.1;
+            
+            if r.camera().projection_type == ProjectionType::Perspective {
+                r.camera_mut().zoom(delta);
+            } else {
+                // Adjust orthographic size
+                r.camera_mut().orthographic_size = (r.camera().orthographic_size + delta).max(10.0).min(1000.0);
+            }
+
+            // Re-render
+            r.begin_frame();
+            let bufs = mesh_buffers_rc.borrow();
+            let cols = colors_rc.borrow();
+            for (i, buf) in bufs.iter().enumerate() {
+                r.draw_mesh(buf, cols[i]);
+            }
+            r.end_frame();
+        }) as Box<dyn FnMut(_)>);
+        canvas.add_event_listener_with_callback("wheel", closure.as_ref().unchecked_ref())?;
         closure.forget();
     }
 
+    web_sys::console::log_1(&"Interactive controls enabled! Drag to orbit, scroll to zoom".into());
+
     Ok(())
 }
 
-fn render() -> Result<(), JsValue> {
-    let window = web_sys::window().ok_or("No window")?;
-    let document = window.document().ok_or("No document")?;
+fn process_assembly_for_rendering(gl: &web_sys::WebGl2RenderingContext, assembly: &CrateAssembly) -> Result<(Vec<render::MeshBuffer>, Vec<glam::Vec3>), JsValue> {
+    let mut mesh_buffers = Vec::new();
+    let mut colors = Vec::new();
 
-    let canvas = document
-        .get_element_by_id("viewport-canvas")
-        .ok_or("viewport-canvas not found")?;
-    let canvas: HtmlCanvasElement = canvas.dyn_into()?;
-
-    let dpr = window.device_pixel_ratio();
-
-    let canvas_element: Element = canvas.clone().into();
-    let rect = canvas_element.get_bounding_client_rect();
-    let css_width = rect.width();
-    let css_height = rect.height();
-
-    let target_width = (css_width * dpr) as u32;
-    let target_height = (css_height * dpr) as u32;
-
-    if (canvas.width() as i32 - target_width as i32).abs() > 2
-        || (canvas.height() as i32 - target_height as i32).abs() > 2
-    {
-        canvas.set_width(target_width);
-        canvas.set_height(target_height);
-    }
-
-    let ctx = canvas
-        .get_context("2d")?
-        .ok_or("No 2D context")?
-        .dyn_into::<CanvasRenderingContext2d>()?;
-
-    ctx.set_transform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0)?;
-    ctx.scale(dpr, dpr)?;
-
-    // Clear
-    ctx.set_fill_style(&JsValue::from_str("#0a0a12"));
-    ctx.fill_rect(0.0, 0.0, css_width, css_height);
-
-    // Draw
-    STATE.with(|state| {
-        let state = state.borrow();
-        if let Some(design) = state.design.as_ref() {
-            draw_design(
-                &ctx,
-                design,
-                css_width,
-                css_height,
-                state.rotation_x,
-                state.rotation_y,
-                state.zoom,
-                state.selected_part_id.as_deref(),
-            )
-            .ok();
+    for node in &assembly.nodes {
+        if node.id == assembly.root_id {
+            continue; // Skip root node, it's just a container
         }
-    });
 
-    Ok(())
-}
+        // Create mesh in local space
+        let mesh = render::Mesh::create_box(
+            node.bounds.min.to_vec3(),
+            node.bounds.max.to_vec3(),
+        );
 
-fn compute_bbox(parts: &[CratePart]) -> Option<BoundingBox> {
-    if parts.is_empty() {
-        return None;
-    }
-    let mut min = parts[0].bounds.min;
-    let mut max = parts[0].bounds.max;
-    for p in parts.iter().skip(1) {
-        min.x = min.x.min(p.bounds.min.x);
-        min.y = min.y.min(p.bounds.min.y);
-        min.z = min.z.min(p.bounds.min.z);
-        max.x = max.x.max(p.bounds.max.x);
-        max.y = max.y.max(p.bounds.max.y);
-        max.z = max.z.max(p.bounds.max.z);
-    }
-    Some(BoundingBox::new(min, max))
-}
+        // Create transform matrix
+        let transform = glam::Mat4::from_rotation_translation(
+            node.transform.rotation,
+            node.transform.translation.to_vec3(),
+        );
 
-fn draw_design(
-    ctx: &CanvasRenderingContext2d,
-    design: &CrateDesign,
-    width: f64,
-    height: f64,
-    rot_x: f32,
-    rot_y: f32,
-    zoom: f32,
-    selected: Option<&str>,
-) -> Result<(), JsValue> {
-    let cx = width / 2.0;
-    let cy = height / 2.0;
+        // Apply transform to mesh
+        let transformed_mesh = mesh.transformed(&transform);
 
-    let mut parts: Vec<&CratePart> = design.parts.iter().collect();
-    parts.sort_by(|a, b| a.id.cmp(&b.id));
-
-    let bbox = compute_bbox(&design.parts).ok_or("No parts")?;
-    let center = Point3::new(
-        (bbox.min.x + bbox.max.x) * 0.5,
-        (bbox.min.y + bbox.max.y) * 0.5,
-        (bbox.min.z + bbox.max.z) * 0.5,
-    );
-    let size = bbox.size();
-    let max_dim = size.x.max(size.y).max(size.z).max(1.0);
-    let base_scale = 0.42 * (height.min(width) / max_dim as f64);
-    let scale = base_scale * zoom as f64;
-
-    let (sin_x, cos_x) = rot_x.sin_cos();
-    let (sin_y, cos_y) = rot_y.sin_cos();
-
-    let project = |p: &Point3| -> (f64, f64) {
-        let x = p.x - center.x;
-        let y = p.y - center.y;
-        let z = p.z - center.z;
-
-        // Rotate around Y
-        let x1 = x * cos_y - z * sin_y;
-        let z1 = x * sin_y + z * cos_y;
-
-        // Rotate around X
-        let y1 = y * cos_x - z1 * sin_x;
-
-        let px = cx + (x1 as f64) * scale;
-        let py = cy - (y1 as f64) * scale;
-        (px, py)
-    };
-
-    let edges: [(usize, usize); 12] = [
-        (0, 1),
-        (1, 2),
-        (2, 3),
-        (3, 0),
-        (4, 5),
-        (5, 6),
-        (6, 7),
-        (7, 4),
-        (0, 4),
-        (1, 5),
-        (2, 6),
-        (3, 7),
-    ];
-
-    for part in parts {
-        let b = &part.bounds;
-        let corners = [
-            Point3::new(b.min.x, b.min.y, b.min.z),
-            Point3::new(b.max.x, b.min.y, b.min.z),
-            Point3::new(b.max.x, b.max.y, b.min.z),
-            Point3::new(b.min.x, b.max.y, b.min.z),
-            Point3::new(b.min.x, b.min.y, b.max.z),
-            Point3::new(b.max.x, b.min.y, b.max.z),
-            Point3::new(b.max.x, b.max.y, b.max.z),
-            Point3::new(b.min.x, b.max.y, b.max.z),
-        ];
-
-        let stroke = match part.category {
-            PartCategory::Lumber => "#ff6b35",
-            PartCategory::Plywood => "#4aa3ff",
-            PartCategory::Hardware => "#44ff88",
-            PartCategory::Decal => "#c77dff",
+        let color = match &node.component_type {
+            ComponentType::Skid { .. } => glam::Vec3::new(0.65, 0.45, 0.30),    // Darker brown
+            ComponentType::Floorboard { .. } => glam::Vec3::new(0.85, 0.75, 0.60), // Lighter tan
+            ComponentType::Cleat { .. } => glam::Vec3::new(0.75, 0.60, 0.45),   // Medium brown
+            ComponentType::Panel { .. } => glam::Vec3::new(0.80, 0.70, 0.55),   // Light wood tone
+            ComponentType::Nail { .. } => glam::Vec3::new(0.60, 0.65, 0.70),    // Galvanized steel
+            _ => glam::Vec3::new(0.5, 0.5, 0.5), // Default for unknown
         };
 
-        let is_selected = selected.map(|s| s == part.id).unwrap_or(false);
-        ctx.set_stroke_style(&JsValue::from_str(if is_selected { "#ffffff" } else { stroke }));
-        ctx.set_line_width(if is_selected { 2.25 } else { 1.25 });
-
-        for (a, b) in edges {
-            let (x1, y1) = project(&corners[a]);
-            let (x2, y2) = project(&corners[b]);
-            ctx.begin_path();
-            ctx.move_to(x1, y1);
-            ctx.line_to(x2, y2);
-            ctx.stroke();
-        }
+        mesh_buffers.push(render::MeshBuffer::from_mesh(gl, &transformed_mesh)?);
+        colors.push(color);
     }
 
-    // Axis indicator (reusing CAD idea)
-    draw_axis_indicator(ctx, height, sin_x, cos_x, sin_y, cos_y)?;
-
-    Ok(())
-}
-
-fn draw_axis_indicator(
-    ctx: &CanvasRenderingContext2d,
-    height: f64,
-    sin_x: f32,
-    cos_x: f32,
-    sin_y: f32,
-    cos_y: f32,
-) -> Result<(), JsValue> {
-    let origin_x = 55.0;
-    let origin_y = height - 55.0;
-    let axis_len = 32.0;
-
-    let project_axis = |ax: f32, ay: f32, az: f32| -> (f64, f64) {
-        let x1 = ax * cos_y - az * sin_y;
-        let y1 = ay * cos_x - (ax * sin_y + az * cos_y) * sin_x;
-        (x1 as f64 * axis_len, -y1 as f64 * axis_len)
-    };
-
-    // X
-    let (dx, dy) = project_axis(1.0, 0.0, 0.0);
-    ctx.set_stroke_style(&JsValue::from_str("#ff4444"));
-    ctx.set_line_width(2.0);
-    ctx.begin_path();
-    ctx.move_to(origin_x, origin_y);
-    ctx.line_to(origin_x + dx, origin_y + dy);
-    ctx.stroke();
-    ctx.set_fill_style(&JsValue::from_str("#ff4444"));
-    ctx.set_font("10px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace");
-    ctx.fill_text("X", origin_x + dx + 6.0, origin_y + dy)?;
-
-    // Y
-    let (dx, dy) = project_axis(0.0, 1.0, 0.0);
-    ctx.set_stroke_style(&JsValue::from_str("#44ff44"));
-    ctx.begin_path();
-    ctx.move_to(origin_x, origin_y);
-    ctx.line_to(origin_x + dx, origin_y + dy);
-    ctx.stroke();
-    ctx.set_fill_style(&JsValue::from_str("#44ff44"));
-    ctx.fill_text("Y", origin_x + dx + 6.0, origin_y + dy)?;
-
-    // Z
-    let (dx, dy) = project_axis(0.0, 0.0, 1.0);
-    ctx.set_stroke_style(&JsValue::from_str("#4444ff"));
-    ctx.begin_path();
-    ctx.move_to(origin_x, origin_y);
-    ctx.line_to(origin_x + dx, origin_y + dy);
-    ctx.stroke();
-    ctx.set_fill_style(&JsValue::from_str("#4444ff"));
-    ctx.fill_text("Z", origin_x + dx + 6.0, origin_y + dy)?;
-
-    Ok(())
-}
-
-fn download_current(kind: DownloadKind) -> Result<(), JsValue> {
-    let window = web_sys::window().ok_or("No window")?;
-    let document = window.document().ok_or("No document")?;
-
-    let (filename, contents, _mime) = STATE.with(
-        |state| -> Result<(String, String, &'static str), JsValue> {
-        let state = state.borrow();
-        let design = state
-            .design
-            .as_ref()
-            .ok_or_else(|| JsValue::from_str("No design"))?;
-        let l = state.spec.product.length;
-        let w = state.spec.product.width;
-        let h = state.spec.product.height;
-
-        let suffix = format!("{:.0}x{:.0}x{:.0}", l, w, h);
-
-        match kind {
-            DownloadKind::Step => Ok((
-                format!("autocrate_{suffix}.step"),
-                export_step(design),
-                "application/step",
-            )),
-            DownloadKind::Bom => Ok((
-                format!("autocrate_{suffix}_bom.csv"),
-                export_bom_csv(design),
-                "text/csv",
-            )),
-            DownloadKind::CutList => Ok((
-                format!("autocrate_{suffix}_cut_list.csv"),
-                export_cut_list_csv(design),
-                "text/csv",
-            )),
-        }
-    },
-    )?;
-
-    let array = js_sys::Array::new();
-    array.push(&JsValue::from_str(&contents));
-    let blob = Blob::new_with_str_sequence(&array)?;
-
-    let url = Url::create_object_url_with_blob(&blob)?;
-
-    let a = document.create_element("a")?;
-    let a: HtmlAnchorElement = a.dyn_into()?;
-    a.set_href(&url);
-    a.set_download(&filename);
-    a.click();
-
-    Url::revoke_object_url(&url)?;
-    Ok(())
+    Ok((mesh_buffers, colors))
 }

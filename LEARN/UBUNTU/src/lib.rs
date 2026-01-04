@@ -102,6 +102,11 @@ pub fn go_to_lesson(idx: usize) {
 /// Go back to home
 #[wasm_bindgen]
 pub fn go_home() {
+    // Scroll to top of page
+    if let Some(window) = web_sys::window() {
+        let _ = window.scroll_to_with_x_and_y(0.0, 0.0);
+    }
+
     demo_runner::stop_demo();
 
     if let Ok(renderer) = LessonRenderer::new("app") {

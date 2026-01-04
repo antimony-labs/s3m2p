@@ -12,6 +12,7 @@
 
 mod cca_projection;
 mod render;
+mod render_gl;
 mod simulation;
 mod star_data; // local star manager (phase 1)
 mod streaming; // tile streaming (phase 2)
@@ -23,6 +24,7 @@ mod solar_wind;
 
 #[cfg(target_arch = "wasm32")]
 use simulation::{DragMode, SimulationState};
+use cca_projection::ObjectId;
 
 #[cfg(target_arch = "wasm32")]
 use std::cell::RefCell;
@@ -34,8 +36,8 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
 use web_sys::{
-    window, CanvasRenderingContext2d, HtmlCanvasElement, HtmlInputElement, InputEvent,
-    KeyboardEvent, MouseEvent, TouchEvent, WheelEvent,
+    window, CanvasRenderingContext2d, HtmlCanvasElement, HtmlElement, HtmlInputElement, HtmlSelectElement,
+    InputEvent, KeyboardEvent, MouseEvent, TouchEvent, WheelEvent, WebGl2RenderingContext,
 };
 
 #[cfg(target_arch = "wasm32")]
@@ -133,34 +135,86 @@ fn run() {
         }
     };
 
-    // Set canvas size
-    let window_width = window.inner_width().unwrap().as_f64().unwrap() as u32;
-    let window_height = window.inner_height().unwrap().as_f64().unwrap() as u32;
-    canvas.set_width(window_width);
-    canvas.set_height(window_height);
+    // Set canvas size with device pixel ratio for crisp text rendering
+    let dpr = window.device_pixel_ratio().max(1.0);
+    let window_width = window.inner_width().unwrap().as_f64().unwrap();
+    let window_height = window.inner_height().unwrap().as_f64().unwrap();
 
-    log(&format!("Canvas: {}x{}", window_width, window_height));
+    // Set canvas buffer size scaled by DPR for crisp rendering
+    canvas.set_width((window_width * dpr) as u32);
+    canvas.set_height((window_height * dpr) as u32);
 
-    // Get 2D context
-    let ctx = match canvas.get_context("2d") {
-        Ok(Some(ctx)) => match ctx.dyn_into::<CanvasRenderingContext2d>() {
-            Ok(c) => c,
-            Err(_) => {
+    // Set CSS display size to fill window
+    let canvas_element: &HtmlElement = canvas.unchecked_ref();
+    let style = canvas_element.style();
+    let _ = style.set_property("width", &format!("{}px", window_width));
+    let _ = style.set_property("height", &format!("{}px", window_height));
+
+    log(&format!("Canvas: {}x{} @ {}x DPR", window_width, window_height, dpr));
+
+    // Use Canvas2D renderer - it has working heliosphere visualization with nested shells
+    // WebGL2 implementation needs more work to match the Canvas2D quality
+    let use_webgl = false;
+    let gl_ctx: Option<WebGl2RenderingContext> = if use_webgl {
+        // Create context options object
+        let context_options = js_sys::Object::new();
+        let _ = js_sys::Reflect::set(&context_options, &"antialias".into(), &true.into());
+        let _ = js_sys::Reflect::set(&context_options, &"alpha".into(), &false.into());
+        let _ = js_sys::Reflect::set(&context_options, &"depth".into(), &true.into());
+        let _ = js_sys::Reflect::set(&context_options, &"stencil".into(), &false.into());
+        let _ = js_sys::Reflect::set(&context_options, &"premultipliedAlpha".into(), &false.into());
+        let _ = js_sys::Reflect::set(&context_options, &"preserveDrawingBuffer".into(), &false.into());
+        let _ = js_sys::Reflect::set(&context_options, &"powerPreference".into(), &"high-performance".into());
+        let _ = js_sys::Reflect::set(&context_options, &"failIfMajorPerformanceCaveat".into(), &false.into());
+
+        match canvas.get_context_with_context_options("webgl2", &context_options.into()) {
+            Ok(Some(ctx)) => match ctx.dyn_into::<WebGl2RenderingContext>() {
+                Ok(gl) => {
+                    log("Using WebGL2 renderer");
+                    Some(gl)
+                }
+                Err(_) => {
+                    log("Failed to cast to WebGL2 context, falling back to Canvas2D");
+                    None
+                }
+            },
+            _ => {
+                log("WebGL2 not supported, falling back to Canvas2D");
+                None
+            }
+        }
+    } else {
+        None
+    };
+
+    let canvas2d_ctx: Option<CanvasRenderingContext2d> = if gl_ctx.is_none() {
+        match canvas.get_context("2d") {
+            Ok(Some(ctx)) => match ctx.dyn_into::<CanvasRenderingContext2d>() {
+                Ok(c) => {
+                    // Scale context by DPR for crisp rendering
+                    let _ = c.scale(dpr, dpr);
+                    log("Using Canvas2D renderer");
+                    Some(c)
+                }
+                Err(_) => {
+                    log("Failed to get 2D context");
+                    return;
+                }
+            },
+            _ => {
                 log("Failed to get 2D context");
                 return;
             }
-        },
-        _ => {
-            log("Failed to get 2D context");
-            return;
         }
+    } else {
+        None
     };
 
-    // Initialize simulation state
+    // Initialize simulation state (use CSS/logical dimensions, not scaled buffer)
     let state = Rc::new(RefCell::new(SimulationState::new()));
     state
         .borrow_mut()
-        .set_viewport(window_width as f64, window_height as f64);
+        .set_viewport(window_width, window_height);
     state.borrow_mut().view_heliosphere(); // Start with heliosphere view - shows pulsating solar cycle
 
     // Time tracking
@@ -184,12 +238,160 @@ fn run() {
             event.prevent_default();
             let Ok(mut s) = state.try_borrow_mut() else { return };
             s.view_heliosphere();
-            s.view.tilt = 0.4; // Reset tilt
+            s.view.tilt = 0.7; // Reset tilt to ~40 degrees
             s.view.rotation = 0.0; // Reset rotation
             s.orbit_dirty = true;
         }) as Box<dyn FnMut(_)>);
         canvas
             .add_event_listener_with_callback("dblclick", closure.as_ref().unchecked_ref())
+            .unwrap();
+        closure.forget();
+    }
+
+    // Mouse click - Select planet or object
+    {
+        let state = state.clone();
+        let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
+            // Only process left clicks and only if we didn't drag much (click vs drag)
+            if event.button() != 0 {
+                return;
+            }
+            
+            let Ok(mut s) = state.try_borrow_mut() else { return };
+            
+            // Check if it was a drag or a click
+            let dx = event.client_x() as f64 - s.view.drag_start_x;
+            let dy = event.client_y() as f64 - s.view.drag_start_y;
+            let dist = (dx * dx + dy * dy).sqrt();
+            
+            if dist > 5.0 {
+                return; // It was a drag, not a click
+            }
+            
+            // Hit test
+            let x = event.client_x() as f64;
+            let y = event.client_y() as f64;
+            
+            if let Some(object_id) = s.hit_test(x, y) {
+                // Set as selected object (camera will track it)
+                s.selected_object = object_id;
+                
+                // Update camera target immediately
+                s.sync_camera();
+                
+                // Auto-zoom to appropriate level for the object
+                // This gives the "see very clearly" behavior
+                match object_id {
+                    ObjectId::Sun => {
+                        s.focus_on_sun();
+                    }
+                    ObjectId::Planet(idx) => {
+                        // Zoom in to see the planet clearly
+                        // Calculate appropriate zoom based on planet radius
+                        // We want planet to take up ~1/4 of screen height
+                        let radius_km = s.planet_radii_km[idx];
+                        let radius_au = radius_km / crate::simulation::AU_KM;
+                        
+                        // Current height in AU = height_px * zoom (AU/px)
+                        // Target: radius_au * 2 * 4 = height_au_visible
+                        // So target_zoom = height_au_visible / height_px
+                        // target_zoom = (radius_au * 8.0) / s.view.height;
+                        
+                        // Zooming in too much can be disorienting, so clamp it
+                        // let target_zoom = (radius_au * 10.0 / s.view.height).max(0.000001);
+                        
+                        // Use a fixed "close up" zoom that's good for seeing moons too
+                        // Planet scale is usually around 0.00001 - 0.0001
+                        let target_zoom = 0.00002; // Very close zoom
+                        
+                        s.set_zoom(target_zoom);
+                        s.view.tilt = std::f64::consts::PI * 0.2; // Slight tilt to see orbit
+                    }
+                    _ => {}
+                }
+            }
+        }) as Box<dyn FnMut(_)>);
+        canvas
+            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+            .unwrap();
+        closure.forget();
+    }
+
+    // Mouse click - Select planet or object
+    {
+        let state = state.clone();
+        let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
+            // Only process left clicks and only if we didn't drag much (click vs drag)
+            if event.button() != 0 {
+                return;
+            }
+            
+            let Ok(mut s) = state.try_borrow_mut() else { return };
+            
+            // Check if it was a drag or a click
+            let dx = event.client_x() as f64 - s.view.drag_start_x;
+            let dy = event.client_y() as f64 - s.view.drag_start_y;
+            let dist = (dx * dx + dy * dy).sqrt();
+            
+            if dist > 5.0 {
+                return; // It was a drag, not a click
+            }
+            
+            // Hit test
+            let x = event.client_x() as f64;
+            let y = event.client_y() as f64;
+            
+            if let Some(object_id) = s.hit_test(x, y) {
+                // Set as selected object (camera will track it)
+                s.selected_object = object_id;
+                
+                // Update camera target immediately
+                s.sync_camera();
+                
+                // Auto-zoom to appropriate level for the object
+                // This gives the "see very clearly" behavior
+                match object_id {
+                    ObjectId::Sun => {
+                        s.focus_on_sun();
+                    }
+                    ObjectId::Planet(idx) => {
+                        // Zoom in to see the planet clearly
+                        // Calculate appropriate zoom based on planet radius
+                        // We want planet to take up ~1/3 of screen height for a clear view
+                        let radius_km = s.planet_radii_km[idx];
+                        let radius_au = radius_km / crate::simulation::AU_KM;
+                        
+                        // Target zoom: (AU visible vertically)
+                        // If planet radius is r_au, and we want it to be 1/3 of screen:
+                        // visible_au = r_au * 2 * 3 = r_au * 6
+                        // Scale (AU visible) = r_au * 6
+                        let target_scale = radius_au * 6.0;
+                        
+                        // We need to set the camera scale (AU visible), which corresponds to 
+                        // the 'zoom' parameter in the 2D view structure via inverse relation roughly
+                        // But simulation state has set_zoom method.
+                        
+                        // Apply reasonable clamp to avoid floating point issues
+                        let target_scale = target_scale.max(0.000001);
+                        
+                        // Update camera directly
+                        s.camera.scale = target_scale;
+                        s.camera.scale_level = crate::cca_projection::ScaleLevel::from_scale(target_scale);
+                        
+                        // Set specific angle to see the planet well
+                        s.camera.set_angles(0.0, std::f64::consts::PI * 0.2); // Side/top view
+                        
+                        // Also update legacy 2D view zoom for compatibility if needed
+                        // (Though we should be moving to camera.scale)
+                        s.view.zoom = 1.0 / target_scale; // Rough approximation if needed
+                        s.view.tilt = std::f64::consts::PI * 0.2;
+                    }
+                    _ => {}
+                }
+            }
+        }) as Box<dyn FnMut(_)>);
+        canvas
+            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
         closure.forget();
     }
@@ -204,29 +406,23 @@ fn run() {
             s.view.drag_start_x = event.client_x() as f64;
             s.view.drag_start_y = event.client_y() as f64;
 
-            // In Sun-centered heliosphere mode we want primary (left) click
-            // to directly control the spherical camera (orbit), not pan.
-            if s.is_sun_centered_heliosphere() {
-                // Always orbit around the Sun with left click in heliosphere view
+            // Improved Input Scheme:
+            // Left Click = Orbit (Rotate around target)
+            // Right/Middle Click = Pan (Move target)
+            // This is standard for 3D object viewers
+            
+            let is_pan = event.button() == 2 || event.button() == 1; // Right or Middle
+            
+            if is_pan {
+                // Pan mode - move camera position
+                s.view.drag_mode = DragMode::Pan;
+                s.view.last_center_x = s.view.center_x;
+                s.view.last_center_y = s.view.center_y;
+            } else {
+                // Orbit mode - rotate camera around target
                 s.view.drag_mode = DragMode::Orbit;
                 s.view.last_tilt = s.view.tilt;
                 s.view.last_rotation = s.view.rotation;
-            } else {
-                // Legacy behavior outside heliosphere view:
-                // Button 0 = left (pan), 1 = middle (orbit), 2 = right (orbit)
-                let is_orbit = event.button() == 2 || event.button() == 1;
-
-                if is_orbit {
-                    // Orbit mode - rotate camera around Sun
-                    s.view.drag_mode = DragMode::Orbit;
-                    s.view.last_tilt = s.view.tilt;
-                    s.view.last_rotation = s.view.rotation;
-                } else {
-                    // Pan mode - move camera position
-                    s.view.drag_mode = DragMode::Pan;
-                    s.view.last_center_x = s.view.center_x;
-                    s.view.last_center_y = s.view.center_y;
-                }
             }
         }) as Box<dyn FnMut(_)>);
         canvas
@@ -708,6 +904,21 @@ fn run() {
         closure.forget();
     }
 
+    // Heliosphere view button (in top bar)
+    {
+        let state = state.clone();
+        let closure = Closure::wrap(Box::new(move |_: MouseEvent| {
+            if let Ok(mut s) = state.try_borrow_mut() {
+                s.view_heliosphere();
+            }
+        }) as Box<dyn FnMut(_)>);
+        if let Some(el) = document.get_element_by_id("view-heliosphere") {
+            el.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+                .unwrap();
+        }
+        closure.forget();
+    }
+
     // === 3D VIEW CONTROLS ===
 
     // Tilt up (towards edge-on view)
@@ -902,13 +1113,95 @@ fn run() {
     let play_pause_btn = Rc::new(play_pause_btn);
     let solar_icon = Rc::new(solar_icon);
 
+    // Initialize renderer (WebGL2 or Canvas2D fallback)
+    let gl_renderer = if let Some(gl) = gl_ctx {
+        match render_gl::RendererGl::new(gl) {
+            Ok(r) => Some(Rc::new(RefCell::new(r))),
+            Err(e) => {
+                log(&format!("Failed to create WebGL renderer: {}, falling back to Canvas2D", e));
+                None
+            }
+        }
+    } else {
+        None
+    };
+
+    let canvas2d_ctx_rc = canvas2d_ctx.map(|c| Rc::new(c));
+    let canvas = Rc::new(canvas);
+
+    // Quality selector (after renderer is initialized)
+    {
+        let gl_renderer_quality = gl_renderer.clone();
+        let quality_select_id = "quality-select".to_string();
+        let closure = Closure::wrap(Box::new(move |_: web_sys::Event| {
+            if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
+                if let Some(select_el) = doc.get_element_by_id(&quality_select_id) {
+                    if let Ok(select) = select_el.dyn_into::<HtmlSelectElement>() {
+                        let value = select.value();
+                        if let Some(ref renderer) = gl_renderer_quality {
+                            let quality = match value.as_str() {
+                                "low" => render_gl::RenderQuality::Low,
+                                "medium" => render_gl::RenderQuality::Medium,
+                                "high" => render_gl::RenderQuality::High,
+                                _ => render_gl::RenderQuality::Medium, // Auto defaults to medium
+                            };
+                            renderer.borrow_mut().set_quality(quality);
+                        }
+                    }
+                }
+            }
+        }) as Box<dyn FnMut(_)>);
+        // Get element via window to avoid moving document
+        if let Some(window) = web_sys::window() {
+            if let Some(doc) = window.document() {
+                if let Some(el) = doc.get_element_by_id("quality-select") {
+                    el.add_event_listener_with_callback("change", closure.as_ref().unchecked_ref())
+                        .unwrap();
+                }
+            }
+        }
+        closure.forget();
+    }
+
     // === ANIMATION LOOP ===
 
     let f: Rc<RefCell<Option<Closure<dyn FnMut()>>>> = Rc::new(RefCell::new(None));
     let g = f.clone();
 
-    let ctx = Rc::new(ctx);
-    let canvas = Rc::new(canvas);
+    // Clone renderer references for animation loop
+    let gl_renderer_loop = gl_renderer.clone();
+    let canvas2d_ctx_loop = canvas2d_ctx_rc.clone();
+
+    // Quality selector (after renderer is initialized)
+    {
+        let gl_renderer_quality = gl_renderer.clone();
+        let closure = Closure::wrap(Box::new(move |_: web_sys::Event| {
+            if let Some(select_el) = document.get_element_by_id("quality-select") {
+                if let Ok(select) = select_el.dyn_into::<HtmlSelectElement>() {
+                    let value = select.value();
+                    if let Some(ref renderer) = gl_renderer_quality {
+                        let quality = match value.as_str() {
+                            "low" => render_gl::RenderQuality::Low,
+                            "medium" => render_gl::RenderQuality::Medium,
+                            "high" => render_gl::RenderQuality::High,
+                            _ => render_gl::RenderQuality::Medium, // Auto defaults to medium
+                        };
+                        renderer.borrow_mut().set_quality(quality);
+                    }
+                }
+            }
+        }) as Box<dyn FnMut(_)>);
+        // Get element via window to avoid moving document
+        if let Some(window) = web_sys::window() {
+            if let Some(doc) = window.document() {
+                if let Some(el) = doc.get_element_by_id("quality-select") {
+                    el.add_event_listener_with_callback("change", closure.as_ref().unchecked_ref())
+                        .unwrap();
+                }
+            }
+        }
+        closure.forget();
+    }
 
     // Clone UI elements for animation loop
     let time_slider_loop = time_slider.clone();
@@ -942,22 +1235,40 @@ fn run() {
             s.fps = if avg_dt > 0.0 { 1.0 / avg_dt } else { 60.0 };
         }
 
-        // Handle resize
-        let current_width = canvas.client_width() as u32;
-        let current_height = canvas.client_height() as u32;
-        if current_width != canvas.width() || current_height != canvas.height() {
-            if current_width > 0 && current_height > 0 {
-                canvas.set_width(current_width);
-                canvas.set_height(current_height);
-                s.set_viewport(current_width as f64, current_height as f64);
+        // Handle resize (using CSS/logical dimensions)
+        let dpr = window_clone.device_pixel_ratio().max(1.0);
+        let current_css_width = canvas.client_width() as f64;
+        let current_css_height = canvas.client_height() as f64;
+        let expected_buffer_width = (current_css_width * dpr) as u32;
+        let expected_buffer_height = (current_css_height * dpr) as u32;
+
+        if expected_buffer_width != canvas.width() || expected_buffer_height != canvas.height() {
+            if current_css_width > 0.0 && current_css_height > 0.0 {
+                // Update buffer size
+                canvas.set_width(expected_buffer_width);
+                canvas.set_height(expected_buffer_height);
+                // Update CSS display size
+                let canvas_el: &HtmlElement = canvas.unchecked_ref();
+                let style = canvas_el.style();
+                let _ = style.set_property("width", &format!("{}px", current_css_width));
+                let _ = style.set_property("height", &format!("{}px", current_css_height));
+                // Re-scale context after resize
+                if let Some(ref ctx) = canvas2d_ctx_loop {
+                    let _ = ctx.set_transform(dpr, 0.0, 0.0, dpr, 0.0, 0.0);
+                }
+                s.set_viewport(current_css_width, current_css_height);
             }
         }
 
         // Update simulation
         s.update(dt);
 
-        // Render
-        render::render(&ctx, &s, time);
+        // Render (WebGL2 or Canvas2D fallback)
+        if let Some(ref gl_renderer) = gl_renderer_loop {
+            gl_renderer.borrow_mut().render(&s, time);
+        } else if let Some(ref ctx) = canvas2d_ctx_loop {
+            render::render(ctx, &s, time);
+        }
 
         // Update UI elements (every 10 frames to reduce DOM updates)
         if s.frame_count % 10 == 0 {

@@ -5,7 +5,7 @@
 //! LAYER: LEARN → ESP32
 //! ═══════════════════════════════════════════════════════════════════════════════
 
-use crate::lessons::{Lesson, GLOSSARY};
+use crate::lessons::{Lesson, GLOSSARY, DemoType};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element};
@@ -34,14 +34,15 @@ impl LessonRenderer {
         let mut html = String::from(
             r#"
             <header class="hero">
-                <h1>ESP32</h1>
-                <p class="subtitle">ESP‑WROOM‑32 • Learn by doing (demos + labs)</p>
+                <h1>Electronics</h1>
+                <p class="subtitle">From Basic Circuits to ESP32 Capstone • Learn by doing</p>
             </header>
             <section class="phase">
                 <h2>Learning Path</h2>
                 <p class="phase-intro">
-                    The same 4 building blocks show up in almost every real ESP32 project:
-                    <strong>clean inputs</strong> → <strong>PWM outputs</strong> → <strong>analog sensing</strong> → <strong>I²C peripherals</strong>.
+                    Start with <strong>basic electronics</strong> (Ohm's Law, components), master <strong>microcontroller fundamentals</strong> \
+                    (GPIO, PWM, ADC, I²C), dive into <strong>ESP32 specifics</strong> (deep sleep, Wi‑Fi), and finally build a \
+                    <strong>battery-powered environmental monitor</strong> that runs for months.
                 </p>
             </section>
         "#,
@@ -60,31 +61,39 @@ impl LessonRenderer {
             )
         };
 
-        let find = |id: usize| lessons.iter().find(|l| l.id == id);
-
-        html.push_str(r#"<section class="phase"><h2>Phase 1 — Digital I/O</h2><div class="lesson-grid">"#);
-        if let Some(l) = find(0) {
-            html.push_str(&card(l));
+        // Group lessons by phase (preserve order)
+        let mut phases: std::collections::HashMap<&str, Vec<&Lesson>> = std::collections::HashMap::new();
+        let mut phase_order: Vec<&str> = Vec::new();
+        for lesson in lessons {
+            if !phases.contains_key(lesson.phase) {
+                phase_order.push(lesson.phase);
+            }
+            phases.entry(lesson.phase).or_insert_with(Vec::new).push(lesson);
         }
-        html.push_str(r#"</div></section>"#);
 
-        html.push_str(r#"<section class="phase"><h2>Phase 2 — Timers & PWM (LEDC)</h2><div class="lesson-grid">"#);
-        if let Some(l) = find(1) {
-            html.push_str(&card(l));
-        }
-        html.push_str(r#"</div></section>"#);
+        // Define correct phase order
+        let ordered_phases = [
+            "The Promise + Safety",
+            "DC Circuits",
+            "Components",
+            "Microcontrollers",
+            "ESP32 Deep Dive",
+            "Capstone",
+        ];
 
-        html.push_str(r#"<section class="phase"><h2>Phase 3 — Analog (ADC)</h2><div class="lesson-grid">"#);
-        if let Some(l) = find(2) {
-            html.push_str(&card(l));
+        // Render phases in correct order
+        for phase_name in &ordered_phases {
+            if let Some(phase_lessons) = phases.get(phase_name) {
+                html.push_str(&format!(r#"<section class="phase"><h2>{}</h2><div class="lesson-grid">"#, phase_name));
+                // Sort lessons within phase by ID to ensure correct order
+                let mut sorted_lessons = phase_lessons.clone();
+                sorted_lessons.sort_by_key(|l| l.id);
+                for lesson in sorted_lessons {
+                    html.push_str(&card(lesson));
+                }
+                html.push_str(r#"</div></section>"#);
+            }
         }
-        html.push_str(r#"</div></section>"#);
-
-        html.push_str(r#"<section class="phase"><h2>Phase 4 — Buses (I²C)</h2><div class="lesson-grid">"#);
-        if let Some(l) = find(3) {
-            html.push_str(&card(l));
-        }
-        html.push_str(r#"</div></section>"#);
 
         html.push_str(
             r#"
@@ -155,9 +164,10 @@ impl LessonRenderer {
             .collect::<Vec<_>>()
             .join("");
 
-        // Demo controls for each lesson (0=Debounce, 1=PWM, 2=ADC, 3=I2C)
-        let demo_controls = match lesson.id {
-            0 => {
+        // Demo controls for each lesson - match by demo_type and lesson ID
+        let demo_controls = match (lesson.demo_type, lesson.id) {
+            (DemoType::Canvas, 8) => {
+                // GPIO Debounce (lesson 8)
                 r#"
                 <div class="demo-controls" id="demo-controls">
                     <div class="control-group">
@@ -192,7 +202,8 @@ impl LessonRenderer {
                 </div>
                 "#.to_string()
             }
-            1 => {
+            (DemoType::Canvas, 9) => {
+                // PWM Control (lesson 9)
                 r#"
                 <div class="demo-controls" id="demo-controls">
                     <div class="control-group">
@@ -202,8 +213,8 @@ impl LessonRenderer {
                             <input type="range" id="duty-slider" min="0" max="100" step="1" value="50">
                         </div>
                         <div class="control-row">
-                            <label>Frequency: <span id="freq-value">500</span> Hz</label>
-                            <input type="range" id="freq-slider" min="10" max="2000" step="10" value="500">
+                            <label>Frequency: <span id="freq-value">10</span> Hz</label>
+                            <input type="range" id="freq-slider" min="1" max="100" step="1" value="10">
                         </div>
                         <div class="control-row">
                             <label>Resolution: <span id="res-value">8</span> bits</label>
@@ -227,7 +238,8 @@ impl LessonRenderer {
                 </div>
                 "#.to_string()
             }
-            2 => {
+            (DemoType::Canvas, 10) => {
+                // ADC Reading (lesson 10)
                 r#"
                 <div class="demo-controls" id="demo-controls">
                     <div class="control-group">
@@ -266,7 +278,8 @@ impl LessonRenderer {
                 </div>
                 "#.to_string()
             }
-            3 => {
+            (DemoType::Canvas, 11) => {
+                // I²C Communication (lesson 11)
                 r#"
                 <div class="demo-controls" id="demo-controls">
                     <div class="control-group">
@@ -280,8 +293,8 @@ impl LessonRenderer {
                             <input type="range" id="i2c-rw-slider" min="0" max="1" step="1" value="0">
                         </div>
                         <div class="control-row">
-                            <label>Clock: <span id="i2c-clock-value">100</span> kHz (slowed)</label>
-                            <input type="range" id="i2c-clock-slider" min="10" max="400" step="10" value="100">
+                            <label>Clock: <span id="i2c-clock-value">10</span> kHz (slowed)</label>
+                            <input type="range" id="i2c-clock-slider" min="5" max="50" step="1" value="10">
                         </div>
                         <div class="control-row">
                             <label>NAK chance: <span id="i2c-nak-value">0.00</span></label>
@@ -305,10 +318,136 @@ impl LessonRenderer {
                 </div>
                 "#.to_string()
             }
+            (DemoType::Canvas, 2) => {
+                // Ohm's Law + Power (lesson 2) - placeholder for new demo
+                r#"
+                <div class="demo-controls" id="demo-controls">
+                    <div class="control-group">
+                        <h4>Ohm's Law Calculator</h4>
+                        <div class="control-row">
+                            <label>Voltage: <span id="voltage-value">3.3</span> V</label>
+                            <input type="range" id="voltage-slider" min="0" max="12" step="0.1" value="3.3">
+                        </div>
+                        <div class="control-row">
+                            <label>Resistance: <span id="resistance-value">1000</span> Ω</label>
+                            <input type="range" id="resistance-slider" min="10" max="10000" step="10" value="1000">
+                        </div>
+                        <div class="control-buttons">
+                            <button id="reset-btn" class="demo-btn">🔄 Reset</button>
+                            <button id="pause-btn" class="demo-btn">⏸ Pause</button>
+                        </div>
+                    </div>
+                </div>
+                "#.to_string()
+            }
+            (DemoType::Canvas, 5) => {
+                // RC Time Constant (lesson 5) - placeholder for new demo
+                r#"
+                <div class="demo-controls" id="demo-controls">
+                    <div class="control-group">
+                        <h4>RC Parameters</h4>
+                        <div class="control-row">
+                            <label>Resistance: <span id="rc-r-value">10000</span> Ω</label>
+                            <input type="range" id="rc-r-slider" min="1000" max="100000" step="1000" value="10000">
+                        </div>
+                        <div class="control-row">
+                            <label>Capacitance: <span id="rc-c-value">100</span> µF</label>
+                            <input type="range" id="rc-c-slider" min="1" max="1000" step="1" value="100">
+                        </div>
+                        <div class="control-buttons">
+                            <button id="reset-btn" class="demo-btn">🔄 Reset</button>
+                            <button id="pause-btn" class="demo-btn">⏸ Pause</button>
+                        </div>
+                    </div>
+                </div>
+                "#.to_string()
+            }
+            (DemoType::Canvas, 19) => {
+                // Power Budget (lesson 19) - placeholder for new demo
+                r#"
+                <div class="demo-controls" id="demo-controls">
+                    <div class="control-group">
+                        <h4>Power Budget</h4>
+                        <div class="control-row">
+                            <label>Active Current: <span id="active-current-value">80</span> mA</label>
+                            <input type="range" id="active-current-slider" min="10" max="200" step="5" value="80">
+                        </div>
+                        <div class="control-row">
+                            <label>Active Time: <span id="active-time-value">3</span> s</label>
+                            <input type="range" id="active-time-slider" min="0.5" max="10" step="0.5" value="3">
+                        </div>
+                        <div class="control-row">
+                            <label>Sleep Current: <span id="sleep-current-value">10</span> µA</label>
+                            <input type="range" id="sleep-current-slider" min="1" max="100" step="1" value="10">
+                        </div>
+                        <div class="control-row">
+                            <label>Sleep Time: <span id="sleep-time-value">297</span> s</label>
+                            <input type="range" id="sleep-time-slider" min="10" max="600" step="1" value="297">
+                        </div>
+                        <div class="control-buttons">
+                            <button id="reset-btn" class="demo-btn">🔄 Reset</button>
+                            <button id="pause-btn" class="demo-btn">⏸ Pause</button>
+                        </div>
+                    </div>
+                </div>
+                "#.to_string()
+            }
+            (DemoType::Calculator, _) => {
+                // Calculator-style demo (voltage divider, etc.)
+                r#"
+                <div class="demo-controls" id="demo-controls">
+                    <div class="control-group">
+                        <h4>Calculator</h4>
+                        <p>Use the interactive calculator above to explore different values.</p>
+                    </div>
+                </div>
+                "#.to_string()
+            }
+            (DemoType::Static, _) => {
+                // No demo controls for static lessons
+                String::new()
+            }
             _ => String::new(),
         };
 
+        // Canvas visibility based on demo_type
+        let canvas_html = match lesson.demo_type {
+            DemoType::Canvas => r#"
+                    <section class="visualization">
+                        <h3>🎮 Try It Yourself</h3>
+                        <canvas id="lesson-canvas" width="800" height="450"></canvas>
+                        <div class="demo-explanation">
+                            <p>{demo_explanation}</p>
+                        </div>
+                        {controls}
+                    </section>
+            "#,
+            DemoType::Calculator => r#"
+                    <section class="visualization">
+                        <h3>🧮 Interactive Calculator</h3>
+                        <div class="calculator-widget">
+                            <p>Use the calculator below to explore different values.</p>
+                            <div class="demo-explanation">
+                                <p>{demo_explanation}</p>
+                            </div>
+                            {controls}
+                        </div>
+                    </section>
+            "#,
+            DemoType::Static => r#"
+                    <section class="visualization">
+                        <div class="demo-explanation">
+                            <p>{demo_explanation}</p>
+                        </div>
+                    </section>
+            "#,
+        };
+
         let intuition_html = Self::apply_glossary(lesson.intuition);
+
+        let canvas_html_filled = canvas_html
+            .replace("{demo_explanation}", lesson.demo_explanation)
+            .replace("{controls}", &demo_controls);
 
         let html = format!(
             r#"
@@ -337,15 +476,8 @@ impl LessonRenderer {
                         <div class="intuition-text">{intuition}</div>
                     </section>
 
-                    <!-- 3. Interactive Demo -->
-                    <section class="visualization">
-                        <h3>🎮 Try It Yourself</h3>
-                        <canvas id="lesson-canvas" width="800" height="450"></canvas>
-                        <div class="demo-explanation">
-                            <p>{demo_explanation}</p>
-                        </div>
-                        {controls}
-                    </section>
+                    <!-- 3. Interactive Demo (conditional) -->
+                    {canvas_html_filled}
 
                     <!-- 4. Key Takeaways -->
                     <section class="takeaways">
@@ -356,13 +488,19 @@ impl LessonRenderer {
                     <!-- 5. Going Deeper -->
                     <details class="going-deeper">
                         <summary><h3>🔬 Going Deeper</h3></summary>
-                        <p>{going_deeper}</p>
+                        <div class="going-deeper-content">{going_deeper}</div>
                     </details>
 
-                    <!-- 6. Details -->
+                    <!-- 6. Math Details -->
                     <details class="math-details">
                         <summary><h3>📐 Timing / Details</h3></summary>
                         <pre class="math-text">{math_details}</pre>
+                    </details>
+
+                    <!-- 7. Implementation Guide -->
+                    <details class="implementation-guide">
+                        <summary><h3>💻 Implementation Guide</h3></summary>
+                        <div class="impl-content">{implementation}</div>
                     </details>
                 </div>
 
@@ -377,11 +515,11 @@ impl LessonRenderer {
             subtitle = lesson.subtitle,
             why_it_matters = lesson.why_it_matters,
             intuition = intuition_html,
-            demo_explanation = lesson.demo_explanation,
-            controls = demo_controls,
+            canvas_html_filled = canvas_html_filled,
             takeaways = takeaways_html,
             going_deeper = lesson.going_deeper,
             math_details = lesson.math_details,
+            implementation = lesson.implementation,
             prev_btn = if lesson.id > 0 {
                 format!(
                     r#"<button onclick="go_to_lesson({})" class="nav-btn">← Previous</button>"#,
@@ -390,7 +528,7 @@ impl LessonRenderer {
             } else {
                 String::from(r#"<span></span>"#)
             },
-            next_btn = if lesson.id < 3 {
+            next_btn = if lesson.id < 20 {
                 format!(
                     r#"<button onclick="go_to_lesson({})" class="nav-btn">Next →</button>"#,
                     lesson.id + 1
@@ -406,6 +544,12 @@ impl LessonRenderer {
         if let Some(window) = web_sys::window() {
             if let Ok(run_mermaid) = js_sys::Reflect::get(&window, &"runMermaid".into()) {
                 if let Ok(func) = run_mermaid.dyn_into::<js_sys::Function>() {
+                    let _ = func.call0(&JsValue::NULL);
+                }
+            }
+            // Trigger KaTeX rendering (if present)
+            if let Ok(render_katex) = js_sys::Reflect::get(&window, &"renderKaTeX".into()) {
+                if let Ok(func) = render_katex.dyn_into::<js_sys::Function>() {
                     let _ = func.call0(&JsValue::NULL);
                 }
             }

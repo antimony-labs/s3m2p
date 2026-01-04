@@ -34,8 +34,33 @@ version = "0.3"
 features = [
     # Canvas
     "HtmlCanvasElement",
+    "HtmlElement",
+    "CssStyleDeclaration",
     "CanvasRenderingContext2d",
     "CanvasGradient",
+    # WebGL2
+    "WebGl2RenderingContext",
+    "WebGlProgram",
+    "WebGlShader",
+    "WebGlBuffer",
+    "WebGlVertexArrayObject",
+    "WebGlTexture",
+    "WebGlUniformLocation",
+    "WebGlFramebuffer",
+    "WebGlRenderbuffer",
+    "WebGlQuery",
+    "WebGlSync",
+    "WebGlSampler",
+    "WebGlTransformFeedback",
+    "WebGlActiveInfo",
+    "WebGlShaderPrecisionFormat",
+    "OesVertexArrayObject",
+    "OesTextureFloat",
+    "OesTextureFloatLinear",
+    "OesTextureHalfFloat",
+    "OesTextureHalfFloatLinear",
+    "ExtColorBufferFloat",
+    "ExtTextureFilterAnisotropic",
     # Window/Document
     "Document",
     "Element",
@@ -46,6 +71,7 @@ features = [
     # Form elements
     "HtmlInputElement",
     "HtmlButtonElement",
+    "HtmlSelectElement",
     "InputEvent",
     "EventTarget",
     # Events

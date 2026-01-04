@@ -17,7 +17,14 @@
 //! │   cad/                                                                      │
 //! │   ├── geometry.rs    3D geometry primitives (Point3, Vector3, Plane, etc.) │
 //! │   ├── topology.rs    B-Rep topology (Vertex, Edge, Face, Shell, Solid)     │
-//! │   └── primitives.rs  Solid generators (box, cylinder, sphere, cone)        │
+//! │   ├── primitives.rs  Solid generators (box, cylinder, sphere, cone)        │
+//! │   ├── mesh.rs        Mesh triangulation for export/rendering               │
+//! │   ├── intersect.rs   Geometric intersection algorithms                     │
+//! │   ├── boolean.rs     Boolean operations (union, difference, intersection)  │
+//! │   ├── sketch.rs      2D parametric sketch (Point2, SketchEntity)           │
+//! │   ├── constraints.rs Sketch constraints (geometric, dimensional)           │
+//! │   ├── solver.rs      Constraint solver (Newton-Raphson)                    │
+//! │   └── extrude.rs     Sketch extrusion (2D → 3D Solid)                      │
 //! │                                                                             │
 //! └─────────────────────────────────────────────────────────────────────────────┘
 //!
@@ -27,12 +34,19 @@
 //! USED BY:
 //!   • CORE/CAD_ENGINE   → High-level CAD operations
 //!   • TOOLS/AUTOCRATE   → Shipping crate geometry
-//!   • Future: MCAD apps → Solid modeling
+//!   • MCAD              → Professional CAD application
 //!
 //! ═══════════════════════════════════════════════════════════════════════════════
 
+pub mod boolean;
+pub mod constraints;
+pub mod extrude;
 pub mod geometry;
+pub mod intersect;
+pub mod mesh;
 pub mod primitives;
+pub mod sketch;
+pub mod solver;
 pub mod topology;
 
 // Re-export commonly used types
@@ -47,3 +61,10 @@ pub use topology::{
     CurveType, Edge, EdgeId, Face, FaceId, FaceOrientation, Loop, Shell, ShellId, Solid,
     SurfaceType, Vertex, VertexId,
 };
+pub use mesh::{TriangleMesh, solid_to_mesh};
+pub use intersect::{Classification, plane_plane_intersect, ray_sphere_intersect, ray_cylinder_intersect, point_in_solid};
+pub use boolean::{BooleanOp, BooleanError, union, difference, intersection};
+pub use sketch::{Sketch, SketchPlane, Point2, SketchPoint, SketchPointId, SketchEntity, SketchEntityId, ConstraintId};
+pub use constraints::{Constraint, GeometricConstraint, DimensionalConstraint};
+pub use solver::{ConstraintSolver, SolverConfig, SolverResult};
+pub use extrude::{extrude_sketch, ExtrudeParams, ExtrudeError};

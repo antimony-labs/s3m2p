@@ -1,11 +1,11 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: render.rs | UBUNTU/src/render.rs
-//! PURPOSE: DOM rendering for Ubuntu lessons
-//! MODIFIED: 2025-12-30
-//! LAYER: LEARN → UBUNTU
+//! FILE: render.rs | GIT/src/render.rs
+//! PURPOSE: DOM rendering for Git lessons with SLAM-style layout
+//! MODIFIED: 2026-01-01
+//! LAYER: LEARN → GIT
 //! ═══════════════════════════════════════════════════════════════════════════════
 
-use crate::lessons::{DemoType, Lesson, LESSONS, PHASES};
+use crate::lessons::{Lesson, GLOSSARY, LESSONS, PHASES};
 use wasm_bindgen::prelude::*;
 use web_sys::{Document, Element};
 
@@ -29,13 +29,36 @@ impl LessonRenderer {
         Ok(Self { document, root })
     }
 
+    /// Apply glossary tooltips - wrap technical terms with tooltip spans
+    fn apply_glossary(text: &str) -> String {
+        let mut result = text.to_string();
+        for term in GLOSSARY {
+            // Case-insensitive search and replace (first occurrence only)
+            let pattern = term.word;
+            if let Some(pos) = result.to_lowercase().find(&pattern.to_lowercase()) {
+                let original = &result[pos..pos + pattern.len()];
+                let tooltip = format!(
+                    r#"<span class="term" data-tooltip="{}">{}</span>"#,
+                    term.short, original
+                );
+                result = format!(
+                    "{}{}{}",
+                    &result[..pos],
+                    tooltip,
+                    &result[pos + pattern.len()..]
+                );
+            }
+        }
+        result
+    }
+
     pub fn render_home(&self, _lessons: &[Lesson]) -> Result<(), JsValue> {
         let mut html = String::from(
             r##"
             <header class="hero">
                 <h1>Git Version Control</h1>
-                <p class="subtitle">From Basics to Mastery - The Essential Developer Tool</p>
-                <p class="lesson-count">6 Lessons - 4 Phases - Beginner to Advanced</p>
+                <p class="subtitle">From History to Mastery - The Complete Guide</p>
+                <p class="lesson-count">18 Lessons · 7 Phases · Beginner to Advanced</p>
             </header>
         "##,
         );
@@ -48,15 +71,15 @@ impl LessonRenderer {
                 continue;
             }
 
-            // Determine phase icon
+            // Determine phase icon based on Git phases
             let phase_icon = match *phase {
-                "The Story of Linux" => "📖",
-                "Getting Started" => "🚀",
-                "Filesystem Fundamentals" => "📁",
-                "System Administration" => "⚙️",
-                "Networking" => "🌐",
-                "Developer Workflow" => "💻",
-                "Maintenance" => "🔧",
+                "Origins & Philosophy" => "📜",
+                "Foundations" => "🎯",
+                "Branching & Merging" => "🌿",
+                "Collaboration" => "🤝",
+                "Advanced Workflows" => "⚡",
+                "Best Practices" => "✨",
+                "Software Engineering" => "🏗️",
                 _ => "📚",
             };
 
@@ -70,21 +93,15 @@ impl LessonRenderer {
             ));
 
             for lesson in phase_lessons {
-                let demo_badge = match lesson.demo_type {
-                    DemoType::Diagram => r##"<span class="badge badge-calc">Diagram</span>"##,
-                    DemoType::Static => r##"<span class="badge badge-static">Theory</span>"##,
-                };
-
                 html.push_str(&format!(
                     r##"
                     <div class="lesson-card" onclick="go_to_lesson({})">
                         <span class="lesson-icon">{}</span>
                         <h3>{}</h3>
                         <p class="lesson-subtitle">{}</p>
-                        {}
                     </div>
                 "##,
-                    lesson.id, lesson.icon, lesson.title, lesson.subtitle, demo_badge
+                    lesson.id, lesson.icon, lesson.title, lesson.subtitle
                 ));
             }
 
@@ -96,31 +113,31 @@ impl LessonRenderer {
             );
         }
 
-        // Cheat sheet download and resources section
+        // Resources section
         html.push_str(
             r##"
             <section class="resources">
                 <h2>Resources</h2>
                 <div class="resource-grid">
-                    <a href="#cheatsheet" class="resource-card" onclick="window.print(); return false;">
-                        <span class="resource-icon">📄</span>
-                        <h3>Cheat Sheet</h3>
-                        <p>Print-friendly command reference</p>
-                    </a>
-                    <a href="https://help.ubuntu.com/" target="_blank" class="resource-card">
+                    <a href="https://git-scm.com/doc" target="_blank" class="resource-card">
                         <span class="resource-icon">📚</span>
                         <h3>Official Docs</h3>
-                        <p>Ubuntu documentation</p>
+                        <p>Git reference documentation</p>
                     </a>
-                    <a href="https://ubuntu.com/tutorials/command-line-for-beginners" target="_blank" class="resource-card">
-                        <span class="resource-icon">🎓</span>
-                        <h3>CLI Tutorial</h3>
-                        <p>Ubuntu command line guide</p>
+                    <a href="https://github.com" target="_blank" class="resource-card">
+                        <span class="resource-icon">🐙</span>
+                        <h3>GitHub</h3>
+                        <p>World's largest code host</p>
+                    </a>
+                    <a href="https://learngitbranching.js.org/" target="_blank" class="resource-card">
+                        <span class="resource-icon">🎮</span>
+                        <h3>Learn Git Branching</h3>
+                        <p>Interactive branching tutorial</p>
                     </a>
                 </div>
             </section>
             <footer>
-                <a href="https://too.foo">Back to too.foo</a>
+                <a href="https://too.foo">← back to too.foo</a>
             </footer>
         "##,
         );
@@ -174,16 +191,22 @@ impl LessonRenderer {
     }
 
     pub fn render_lesson(&self, lesson: &Lesson) -> Result<(), JsValue> {
+        // Build key takeaways list
+        let takeaways_html: String = lesson
+            .key_takeaways
+            .iter()
+            .map(|t| format!(r#"<li class="takeaway-item">{}</li>"#, t))
+            .collect::<Vec<_>>()
+            .join("");
+
         // Render concepts with tooltips if definitions exist
         let concepts_html: String = if lesson.concept_definitions.is_empty() {
-            // Fallback: render without tooltips
             lesson.key_concepts
                 .iter()
                 .map(|c| format!(r##"<span class="concept">{}</span>"##, c))
                 .collect::<Vec<_>>()
                 .join("")
         } else {
-            // Render with tooltips from definitions
             lesson.concept_definitions
                 .iter()
                 .map(|(term, def)| {
@@ -199,27 +222,62 @@ impl LessonRenderer {
         // Generate progress navigation bubbles
         let progress_nav = self.render_lesson_progress(lesson.id, LESSONS.len());
 
-        // Determine demo section based on lesson type
-        let demo_section = match lesson.demo_type {
-            DemoType::Diagram => {
-                String::from(r##"
-                <section class="diagram-section">
-                    <h3>Visual Diagram</h3>
-                    <canvas id="git-diagram" width="600" height="400"></canvas>
-                </section>
-                "##)
-            }
-            DemoType::Static => String::new(),
+        // Convert intuition markdown to HTML, then apply glossary tooltips
+        let intuition_html = Self::apply_glossary(&convert_markdown_to_html(lesson.intuition));
+
+        // Convert main content markdown to HTML
+        let content_html = convert_markdown_to_html(lesson.content);
+
+        // Convert dos_and_donts markdown to HTML
+        let dos_donts_html = if !lesson.dos_and_donts.is_empty() {
+            format!(
+                r##"
+                <details class="dos-donts">
+                    <summary><h3>✅ Dos & Don'ts</h3></summary>
+                    <div class="dos-donts-content">{}</div>
+                </details>
+                "##,
+                convert_markdown_to_html(lesson.dos_and_donts)
+            )
+        } else {
+            String::new()
         };
 
-        // Convert content markdown to simple HTML
-        let content_html = convert_markdown_to_html(lesson.content);
+        // Going deeper section
+        let going_deeper_html = if !lesson.going_deeper.is_empty() {
+            format!(
+                r##"
+                <details class="going-deeper">
+                    <summary><h3>🔬 Going Deeper</h3></summary>
+                    <div class="going-deeper-content">{}</div>
+                </details>
+                "##,
+                convert_markdown_to_html(lesson.going_deeper)
+            )
+        } else {
+            String::new()
+        };
+
+        // Common mistakes section
+        let common_mistakes_html = if !lesson.common_mistakes.is_empty() {
+            format!(
+                r##"
+                <details class="common-mistakes">
+                    <summary><h3>⚠️ Common Mistakes</h3></summary>
+                    <div class="common-mistakes-content">{}</div>
+                </details>
+                "##,
+                convert_markdown_to_html(lesson.common_mistakes)
+            )
+        } else {
+            String::new()
+        };
 
         let total_lessons = LESSONS.len();
 
         let prev_button = if lesson.id > 0 {
             format!(
-                r##"<button onclick="go_to_lesson({})" class="nav-btn">Previous</button>"##,
+                r##"<button onclick="go_to_lesson({})" class="nav-btn">← Previous</button>"##,
                 lesson.id - 1
             )
         } else {
@@ -228,7 +286,7 @@ impl LessonRenderer {
 
         let next_button = if lesson.id < total_lessons - 1 {
             format!(
-                r##"<button onclick="go_to_lesson({})" class="nav-btn">Next</button>"##,
+                r##"<button onclick="go_to_lesson({})" class="nav-btn">Next →</button>"##,
                 lesson.id + 1
             )
         } else {
@@ -239,57 +297,83 @@ impl LessonRenderer {
             r##"
             <article class="lesson-view">
                 <nav class="lesson-nav">
-                    <button onclick="go_home()" class="back-btn">All Lessons</button>
-                    <span class="lesson-progress">{} / {}</span>
+                    <button onclick="go_home()" class="back-btn">← All Lessons</button>
+                    <span class="lesson-progress">{current} / {total}</span>
                 </nav>
 
-                {}
+                {progress_nav}
 
                 <header class="lesson-header">
-                    <span class="lesson-icon-large">{}</span>
+                    <span class="lesson-icon-large">{icon}</span>
                     <div>
-                        <span class="phase-badge">{}</span>
-                        <h1>{}</h1>
-                        <p class="subtitle">{}</p>
+                        <span class="phase-badge">{phase}</span>
+                        <h1>{title}</h1>
+                        <p class="subtitle">{subtitle}</p>
                     </div>
                 </header>
 
                 <div class="lesson-content">
-                    <section class="description">
-                        <p class="lead">{}</p>
+                    <!-- 1. Why It Matters (Hook) -->
+                    <section class="why-it-matters">
+                        <p class="hook">{why_it_matters}</p>
                     </section>
 
+                    <!-- 2. Key Concepts -->
                     <section class="concepts">
                         <h3>Key Concepts</h3>
-                        <div class="concept-list">{}</div>
+                        <div class="concept-list">{concepts}</div>
                     </section>
 
+                    <!-- 3. Intuition (Plain language explanation) -->
+                    <section class="intuition">
+                        <h3>💡 The Idea</h3>
+                        <div class="intuition-text">{intuition}</div>
+                    </section>
+
+                    <!-- 4. Main Content -->
                     <section class="main-content">
-                        {}
+                        {content}
                     </section>
 
-                    {}
+                    <!-- 5. Key Takeaways -->
+                    <section class="takeaways">
+                        <h3>📝 Key Takeaways</h3>
+                        <ul class="takeaway-list">{takeaways}</ul>
+                    </section>
+
+                    <!-- 6. Dos & Don'ts (Collapsible) -->
+                    {dos_donts}
+
+                    <!-- 7. Going Deeper (Collapsible) -->
+                    {going_deeper}
+
+                    <!-- 8. Common Mistakes (Collapsible) -->
+                    {common_mistakes}
                 </div>
 
                 <nav class="lesson-footer">
-                    {}
-                    {}
+                    {prev_btn}
+                    {next_btn}
                 </nav>
             </article>
         "##,
-            lesson.id + 1,
-            total_lessons,
-            progress_nav,
-            lesson.icon,
-            lesson.phase,
-            lesson.title,
-            lesson.subtitle,
-            lesson.description,
-            concepts_html,
-            content_html,
-            demo_section,
-            prev_button,
-            next_button,
+            current = lesson.id + 1,
+            total = total_lessons,
+            progress_nav = progress_nav,
+            icon = lesson.icon,
+            phase = lesson.phase,
+            title = lesson.title,
+            subtitle = lesson.subtitle,
+            why_it_matters = lesson.why_it_matters,
+            concepts = concepts_html,
+            intuition = intuition_html,
+            content = content_html,
+            takeaways = takeaways_html,
+            dos_donts = dos_donts_html,
+            going_deeper = going_deeper_html,
+            common_mistakes = common_mistakes_html,
+            prev_btn = prev_button,
+            next_btn = next_button,
         );
 
         self.root.set_inner_html(&html);
@@ -297,13 +381,31 @@ impl LessonRenderer {
     }
 }
 
+/// Track list type for proper closing tags
+#[derive(Clone, Copy, PartialEq)]
+enum ListType {
+    None,
+    Unordered,
+    Ordered,
+}
+
 /// Simple markdown to HTML converter for lesson content
 fn convert_markdown_to_html(md: &str) -> String {
     let mut html = String::new();
     let mut in_code_block = false;
     let mut in_table = false;
-    let mut in_list = false;
+    let mut list_type = ListType::None;
     let mut code_lang;
+
+    // Helper to close current list
+    let close_list = |html: &mut String, list_type: &mut ListType| {
+        match *list_type {
+            ListType::Unordered => html.push_str("</ul>\n"),
+            ListType::Ordered => html.push_str("</ol>\n"),
+            ListType::None => {}
+        }
+        *list_type = ListType::None;
+    };
 
     for line in md.lines() {
         let trimmed = line.trim();
@@ -339,10 +441,7 @@ fn convert_markdown_to_html(md: &str) -> String {
 
         // Empty lines
         if trimmed.is_empty() {
-            if in_list {
-                html.push_str("</ul>\n");
-                in_list = false;
-            }
+            close_list(&mut html, &mut list_type);
             if in_table {
                 html.push_str("</table>\n");
                 in_table = false;
@@ -352,28 +451,33 @@ fn convert_markdown_to_html(md: &str) -> String {
 
         // Headers
         if trimmed.starts_with("## ") {
+            close_list(&mut html, &mut list_type);
             html.push_str(&format!("<h2>{}</h2>\n", format_inline(&trimmed[3..])));
             continue;
         }
         if trimmed.starts_with("### ") {
+            close_list(&mut html, &mut list_type);
             html.push_str(&format!("<h3>{}</h3>\n", format_inline(&trimmed[4..])));
             continue;
         }
 
         // Horizontal rule
         if trimmed == "---" {
+            close_list(&mut html, &mut list_type);
             html.push_str("<hr>\n");
             continue;
         }
 
         // Blockquotes
         if trimmed.starts_with("> ") {
+            close_list(&mut html, &mut list_type);
             html.push_str(&format!("<blockquote>{}</blockquote>\n", format_inline(&trimmed[2..])));
             continue;
         }
 
         // Tables
         if trimmed.starts_with('|') && trimmed.ends_with('|') {
+            close_list(&mut html, &mut list_type);
             // Skip separator rows
             if trimmed.contains("---") {
                 continue;
@@ -401,22 +505,33 @@ fn convert_markdown_to_html(md: &str) -> String {
             in_table = false;
         }
 
-        // Lists
+        // Unordered lists
         if trimmed.starts_with("- ") || trimmed.starts_with("* ") {
-            if !in_list {
+            // Close ordered list if switching types
+            if list_type == ListType::Ordered {
+                close_list(&mut html, &mut list_type);
+            }
+            if list_type == ListType::None {
                 html.push_str("<ul>\n");
-                in_list = true;
+                list_type = ListType::Unordered;
             }
             let content = &trimmed[2..];
             html.push_str(&format!("<li>{}</li>\n", format_inline(content)));
             continue;
         }
+
+        // Ordered lists
         if trimmed.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false)
-            && trimmed.contains(". ") {
+            && trimmed.contains(". ")
+        {
             if let Some(pos) = trimmed.find(". ") {
-                if !in_list {
+                // Close unordered list if switching types
+                if list_type == ListType::Unordered {
+                    close_list(&mut html, &mut list_type);
+                }
+                if list_type == ListType::None {
                     html.push_str("<ol>\n");
-                    in_list = true;
+                    list_type = ListType::Ordered;
                 }
                 let content = &trimmed[pos + 2..];
                 html.push_str(&format!("<li>{}</li>\n", format_inline(content)));
@@ -424,9 +539,14 @@ fn convert_markdown_to_html(md: &str) -> String {
             }
         }
 
-        if in_list && !trimmed.starts_with("- ") && !trimmed.starts_with("* ") {
-            html.push_str("</ul>\n");
-            in_list = false;
+        // Non-list content closes any open list
+        close_list(&mut html, &mut list_type);
+
+        // Pass through existing HTML tags without wrapping in <p>
+        if trimmed.starts_with('<') && !trimmed.starts_with("<!") {
+            html.push_str(trimmed);
+            html.push('\n');
+            continue;
         }
 
         // Regular paragraph
@@ -437,9 +557,7 @@ fn convert_markdown_to_html(md: &str) -> String {
     if in_code_block {
         html.push_str("</code></pre>\n");
     }
-    if in_list {
-        html.push_str("</ul>\n");
-    }
+    close_list(&mut html, &mut list_type);
     if in_table {
         html.push_str("</table>\n");
     }

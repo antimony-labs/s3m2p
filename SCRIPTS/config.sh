@@ -39,8 +39,9 @@ declare -A PROJECT_PORTS=(
     ["esp32"]="8104"
     ["swarm"]="8105"
     ["slam"]="8106"
-    ["coming_soon"]="8107"
-    ["crm"]="8108"
+    ["git"]="8107"
+    ["coming_soon"]="8109"
+    ["mcad"]="8088"
 
 )
 
@@ -56,15 +57,16 @@ declare -A PROJECT_DIRS=(
     ["arch"]="ARCH"
     ["pll"]="TOOLS/PLL"
     ["power"]="COMING_SOON"
-    ["ai"]="COMING_SOON"
+    ["ai"]="LEARN/AI"
     ["ubuntu"]="LEARN/UBUNTU"
-    ["opencv"]="COMING_SOON"
+    ["opencv"]="LEARN/OPENCV"
     ["arduino"]="COMING_SOON"
     ["esp32"]="LEARN/ESP32"
-    ["swarm"]="COMING_SOON"
+    ["swarm"]="LEARN/SWARM_ROBOTICS"
     ["slam"]="LEARN/SLAM"
+    ["git"]="LEARN/GIT"
     ["coming_soon"]="COMING_SOON"
-    ["crm"]="COMING_SOON"
+    ["mcad"]="MCAD"
 
 )
 
@@ -76,8 +78,8 @@ declare -A PAGES_PROJECTS=(
     ["chladni"]="chladni-too-foo"
     ["sensors"]="sensors-too-foo"
     ["autocrate"]="autocrate-too-foo"
-    ["crm"]="crm-too-foo"
     ["pll"]="pll-too-foo"
+    ["mcad"]="mcad-too-foo"
     ["coming_soon"]="coming-soon-too-foo"
 
     ["ai"]="ai-too-foo"
@@ -87,6 +89,7 @@ declare -A PAGES_PROJECTS=(
     ["opencv"]="opencv-too-foo"
     ["swarm"]="swarm-too-foo"
     ["slam"]="slam-too-foo"
+    ["git"]="git-too-foo"
     ["power"]="power-too-foo"
     ["arch"]="arch-too-foo"
 )
@@ -94,13 +97,9 @@ declare -A PAGES_PROJECTS=(
 # Static projects that don't need trunk build (deploy root dir directly)
 declare -A STATIC_PROJECTS=(
     ["coming_soon"]=1
-    ["ai"]=1
     ["arduino"]=1
-    ["opencv"]=1
-    ["swarm"]=1
     ["sensors"]=1
     ["power"]=1
-    ["crm"]=1
 )
 
 # Export for sub-shells

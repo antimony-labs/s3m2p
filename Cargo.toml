@@ -21,7 +21,7 @@ members = [
     "TOOLS/CORE/EXPORT_ENGINE",
     "SIMULATION/CORE/WAVE_ENGINE",
     "TOOLS/CORE/AUTOCRATE_ENGINE",
-    "TOOLS/CORE/CAD_ENGINE",
+    "MCAD/CORE/CAD_ENGINE",
 
     # L1 Bubbles (deployed)
     "WELCOME",
@@ -29,14 +29,13 @@ members = [
     "HELIOS/server",
     "BLOG",
     "ARCH",
+    "MCAD",
 
     # Simulations (L2 under Simulations bubble)
     "SIMULATION/CHLADNI",
 
     # Tools (L2 under Tools bubble)
     "TOOLS/AUTOCRATE",
-    "TOOLS/CAD",
-    "TOOLS/CRM",
     "TOOLS/PLL",
     "TOOLS/POWER_CIRCUITS",
     "TOOLS/SPICE",
