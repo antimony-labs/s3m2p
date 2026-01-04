@@ -48,6 +48,8 @@ pub enum BubbleAction {
     DirectProject(&'static str),
     /// Navigate to a category page - e.g., Tools → /#/tools
     Category(CategoryId),
+    /// Navigate to personal profile page
+    Profile,
 }
 
 /// A single bubble in the navigation
@@ -175,13 +177,13 @@ pub const HOME_BUBBLES: &[Bubble] = &[
         icon: "assets/islands/tools.svg",
         action: BubbleAction::Category(CategoryId::Tools),
     },
-    // 7. About Me (Left) - LinkedIn profile
+    // 7. About Me (Left) - Personal profile page
     Bubble {
         id: "about",
         label: "About Me",
-        description: "LinkedIn Profile",
+        description: "Profile & Journey",
         icon: "assets/islands/about.svg",
-        action: BubbleAction::External("https://www.linkedin.com/in/shivambdj/"),
+        action: BubbleAction::Profile,
     },
 ];
 

@@ -329,26 +329,48 @@ MODIFIED: 2025-12-09
         }
 
         /* ============================================
-           CURVED TEXT LABELS (Issue #46)
-           Always visible, wraps around bottom of bubble
+           BUBBLE LABELS (Issue #77)
+           Straight text labels below each bubble
            ============================================ */
-        .bubble-text-arc {
+        .bubble-label-container {
             position: absolute;
+            transform: translateX(-50%);
             pointer-events: none;
-            overflow: visible;
             z-index: 90;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            white-space: nowrap;
         }
 
-        .bubble-text-arc text {
+        .bubble-label-text {
             font-family: 'Rajdhani', sans-serif;
+            font-size: 0.9rem;
             font-weight: 600;
-            fill: var(--text-muted);
+            color: var(--text);
             text-transform: uppercase;
             letter-spacing: 1px;
+            text-shadow: 0 1px 3px var(--shadow);
         }
 
-        .bubble-text-arc textPath {
-            /* Inherits from text element */
+        .bubble-desc-text {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 400;
+            color: var(--text-dim);
+            margin-top: 2px;
+            text-shadow: 0 1px 2px var(--shadow);
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 600px) {
+            .bubble-label-text {
+                font-size: 0.75rem;
+            }
+            .bubble-desc-text {
+                font-size: 0.65rem;
+            }
         }
 
         /* Hide the old hover-only label since we now have always-visible curved text */
@@ -1044,6 +1066,654 @@ MODIFIED: 2025-12-09
                 bottom: -30px;
             }
         }
+
+        /* ============================================
+           PROFILE PAGE STYLES
+           ============================================ */
+        #profile-container {
+            position: fixed;
+            inset: 0;
+            background: var(--overlay);
+            backdrop-filter: blur(12px);
+            z-index: 5000;
+            display: none;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            padding-top: max(20px, env(safe-area-inset-top));
+            overflow-y: auto;
+        }
+
+        .profile-panel {
+            position: relative;
+            background: var(--surface);
+            border: 1px solid var(--glow);
+            max-width: 700px;
+            width: 100%;
+            padding: 40px 32px;
+            box-shadow: 0 0 60px var(--accent-faint);
+            margin: auto;
+            /* Base font size scales with viewport width */
+            font-size: clamp(14px, 1.5vw, 18px);
+        }
+
+        /* High DPI screens need larger base font */
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+            .profile-panel {
+                font-size: clamp(16px, 1.8vw, 20px);
+            }
+        }
+
+        #profile-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: none;
+            border: none;
+            color: var(--accent);
+            font-size: 1.8rem;
+            cursor: pointer;
+            padding: 8px;
+            line-height: 1;
+            transition: transform 0.2s ease;
+        }
+
+        #profile-close:hover {
+            transform: scale(1.2);
+        }
+
+        .profile-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .profile-header h1 {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 2.4em;
+            font-weight: 700;
+            color: var(--accent);
+            margin: 0 0 0.3em 0;
+            letter-spacing: 1px;
+        }
+
+        .profile-header .title {
+            font-size: 1.2em;
+            color: var(--text);
+            margin: 0;
+            font-weight: 500;
+        }
+
+        .profile-header .location {
+            font-size: 0.9em;
+            color: var(--text-dim);
+            margin: 0.5em 0 0 0;
+        }
+
+        /* About Section */
+        .profile-about {
+            margin-bottom: 24px;
+            padding: 16px;
+            background: var(--accent-faint);
+            border-left: 3px solid var(--accent);
+        }
+
+        .profile-about p {
+            font-size: 1em;
+            color: var(--text);
+            line-height: 1.7;
+            margin: 0 0 0.6em 0;
+        }
+
+        .profile-about p:last-child {
+            margin-bottom: 0;
+        }
+
+        .profile-about .clients-line {
+            font-size: 0.95em;
+            color: var(--text-muted);
+        }
+
+        .profile-about .highlight {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        /* Impact Metrics Grid */
+        .impact-metrics {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .metric-card {
+            background: var(--accent-faint);
+            border: 1px solid var(--border-dim);
+            padding: 14px 10px;
+            text-align: center;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .metric-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 15px var(--accent-faint);
+        }
+
+        .metric-context {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.7em;
+            color: var(--text-faint);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: block;
+            margin-bottom: 0.3em;
+        }
+
+        .metric-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.6em;
+            font-weight: 600;
+            color: var(--accent);
+            display: block;
+            margin: 0.2em 0;
+        }
+
+        .metric-label {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: block;
+        }
+
+        /* Featured Work */
+        .featured-section {
+            margin-bottom: 24px;
+        }
+
+        .featured-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .featured-card {
+            padding: 14px;
+            background: var(--surface);
+            border: 1px solid var(--border-dim);
+            transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+            cursor: pointer;
+        }
+
+        .featured-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 15px var(--accent-faint);
+            transform: translateX(4px);
+        }
+
+        .featured-name {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.15em;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.5em;
+        }
+
+        .featured-desc {
+            font-size: 0.95em;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 0.6em;
+        }
+
+        .featured-desc a {
+            color: var(--accent);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+
+        .featured-desc a:hover {
+            border-bottom-color: var(--accent);
+        }
+
+        .featured-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .featured-tags span {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            padding: 3px 10px;
+            background: var(--accent-faint);
+            border: 1px solid var(--border-dim);
+            color: var(--text-dim);
+        }
+
+        /* Timeline */
+        .timeline-section {
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 1em;
+            padding-bottom: 0.4em;
+            border-bottom: 1px solid var(--border-dim);
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 5px;
+            top: 8px;
+            bottom: 8px;
+            width: 2px;
+            background: var(--border-dim);
+        }
+
+        .timeline-entry {
+            position: relative;
+            margin-bottom: 16px;
+            padding-left: 8px;
+        }
+
+        .timeline-entry:last-child {
+            margin-bottom: 0;
+        }
+
+        .timeline-entry::before {
+            content: '';
+            position: absolute;
+            left: -19px;
+            top: 6px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent);
+            border: 2px solid var(--bg);
+            box-shadow: 0 0 8px var(--glow);
+        }
+
+        .timeline-period {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85em;
+            color: var(--accent);
+            margin-bottom: 0.3em;
+        }
+
+        .timeline-role {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.2em;
+        }
+
+        .timeline-company {
+            font-size: 0.9em;
+            color: var(--text-muted);
+            margin-bottom: 0.4em;
+        }
+
+        .timeline-location {
+            color: var(--text-faint);
+        }
+
+        .timeline-desc {
+            font-size: 0.9em;
+            color: var(--text-dim);
+            line-height: 1.6;
+            margin-bottom: 0.3em;
+        }
+
+        .timeline-clients {
+            font-size: 0.8em;
+            color: var(--text-faint);
+            font-style: italic;
+        }
+
+        .timeline-company a,
+        .timeline-desc a,
+        .timeline-clients a {
+            color: var(--accent);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+
+        .timeline-company a:hover,
+        .timeline-desc a:hover,
+        .timeline-clients a:hover {
+            border-bottom-color: var(--accent);
+        }
+
+        /* Education */
+        .education-section {
+            margin-bottom: 24px;
+        }
+
+        .education-entry {
+            margin-bottom: 12px;
+            padding-left: 12px;
+            border-left: 2px solid var(--border-dim);
+        }
+
+        .education-entry:last-child {
+            margin-bottom: 0;
+        }
+
+        .edu-degree {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.05em;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .edu-school {
+            font-size: 0.95em;
+            color: var(--accent);
+            margin-bottom: 0.4em;
+        }
+
+        .edu-detail {
+            font-size: 0.85em;
+            color: var(--text-dim);
+            line-height: 1.6;
+        }
+
+        .edu-school a,
+        .edu-detail a {
+            color: var(--accent);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+
+        .edu-school a:hover,
+        .edu-detail a:hover {
+            border-bottom-color: var(--accent);
+        }
+
+        /* Skills */
+        .skills-section {
+            margin-bottom: 24px;
+        }
+
+        .skills-categories {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .skill-category {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .skill-cat-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85em;
+            color: var(--accent);
+            min-width: 90px;
+            padding-top: 0.3em;
+        }
+
+        .skill-cat-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .skill-cat-tags span {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8em;
+            padding: 0.3em 0.7em;
+            background: var(--accent-faint);
+            border: 1px solid var(--border-dim);
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .skill-cat-tags span:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .skills-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .skill-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            padding: 4px 10px;
+            background: var(--accent-faint);
+            border: 1px solid var(--border-dim);
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .skill-tag:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* Social Links */
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-dim);
+        }
+
+        .social-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85em;
+            color: var(--text-dim);
+            text-decoration: none;
+            padding: 0.5em 1em;
+            border: 1px solid var(--border-dim);
+            transition: all 0.2s;
+        }
+
+        .social-link:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+            background: var(--accent-faint);
+        }
+
+        .social-link svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        /* Profile Mobile */
+        @media (max-width: 600px) {
+            .profile-panel {
+                padding: 24px 16px;
+            }
+
+            .profile-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .impact-metrics {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .metric-value {
+                font-size: 1rem;
+            }
+
+            .social-links {
+                flex-wrap: wrap;
+            }
+
+            .social-link {
+                font-size: 0.7rem;
+                padding: 5px 10px;
+            }
+        }
+
+        /* ============================================
+           CASE STUDY MODAL
+           ============================================ */
+        #case-study-container {
+            position: fixed;
+            inset: 0;
+            background: var(--overlay);
+            backdrop-filter: blur(12px);
+            z-index: 6000;
+            display: none;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            padding-top: max(20px, env(safe-area-inset-top));
+            overflow-y: auto;
+        }
+
+        .case-study-panel {
+            position: relative;
+            background: var(--surface);
+            border: 1px solid var(--glow);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px 32px;
+            box-shadow: 0 0 60px var(--accent-faint);
+            margin: auto;
+            font-size: clamp(14px, 1.5vw, 18px);
+        }
+
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+            .case-study-panel {
+                font-size: clamp(16px, 1.8vw, 20px);
+            }
+        }
+
+        #case-study-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: none;
+            border: none;
+            color: var(--accent);
+            font-size: 1.8rem;
+            cursor: pointer;
+            padding: 8px;
+            line-height: 1;
+            transition: transform 0.2s ease;
+        }
+
+        #case-study-close:hover {
+            transform: scale(1.2);
+        }
+
+        .case-study-header h1 {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 2em;
+            font-weight: 700;
+            color: var(--accent);
+            margin: 0 0 0.3em 0;
+        }
+
+        .case-study-meta {
+            font-size: 0.85em;
+            color: var(--text-dim);
+            margin-bottom: 1.5em;
+        }
+
+        .case-study-section {
+            margin-bottom: 1.5em;
+        }
+
+        .case-study-section h2 {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: var(--accent);
+            margin: 0 0 0.5em 0;
+        }
+
+        .case-study-section p {
+            font-size: 0.95em;
+            color: var(--text-muted);
+            line-height: 1.7;
+            margin-bottom: 0.8em;
+        }
+
+        .case-study-section a,
+        .case-study-meta a {
+            color: var(--accent);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+
+        .case-study-section a:hover,
+        .case-study-meta a:hover {
+            border-bottom-color: var(--accent);
+        }
+
+        .case-study-section ul {
+            margin-left: 1.5em;
+            margin-bottom: 0.8em;
+        }
+
+        .case-study-section li {
+            font-size: 0.9em;
+            color: var(--text-dim);
+            line-height: 1.6;
+            margin-bottom: 0.4em;
+        }
+
+        .case-study-highlight {
+            background: var(--accent-faint);
+            border-left: 3px solid var(--accent);
+            padding: 1em;
+            margin: 1em 0;
+        }
+
+        .case-study-highlight strong {
+            color: var(--accent);
+            font-size: 1.1em;
+        }
+
+        .case-study-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 1em;
+        }
+
+        .case-study-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75em;
+            padding: 0.4em 0.8em;
+            background: var(--accent-faint);
+            border: 1px solid var(--border-dim);
+            color: var(--text-muted);
+        }
     </style>
 </head>
 
@@ -1389,6 +2059,14 @@ MODIFIED: 2025-12-09
     <!-- About Page Container -->
     <div id="about-container"
         style="display: none; position: fixed; inset: 0; background: var(--overlay); backdrop-filter: blur(12px); z-index: 5000; justify-content: center; align-items: center;">
+    </div>
+
+    <!-- Profile Page Container -->
+    <div id="profile-container">
+    </div>
+
+    <!-- Case Study Container -->
+    <div id="case-study-container">
     </div>
 
     <!-- JS Helper for Rust -->
