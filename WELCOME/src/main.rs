@@ -1222,7 +1222,7 @@ fn render_profile_page(document: &Document) {
             <div class="education-entry">
                 <div class="edu-degree">M.S. Mechatronics & Robotics</div>
                 <div class="edu-school"><a href="https://www.nyu.edu" target="_blank">New York University</a></div>
-                <div class="edu-detail">Research: <a href="https://colmap.github.io" target="_blank">COLMAP</a>-based visual relocalization, swarm robotics. Founded Self-Driving VIP team — 1st Novel Design, 3rd overall at <a href="https://www.igvc.org" target="_blank">26th IGVC</a>.</div>
+                <div class="edu-detail">Research: <a href="https://colmap.github.io" target="_blank">COLMAP</a>-based visual relocalization, swarm robotics. Founded Self-Driving VIP team — 1st Novel Design, 3rd overall at <a href="https://en.wikipedia.org/wiki/Intelligent_Ground_Vehicle_Competition" target="_blank">26th IGVC</a>.</div>
             </div>
             <div class="education-entry">
                 <div class="edu-degree">B.Tech Electronics</div>
