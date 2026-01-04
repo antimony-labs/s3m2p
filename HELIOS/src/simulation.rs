@@ -1371,7 +1371,10 @@ impl SimulationState {
 
         // Zoom so that the full heliosphere (including bow shock) is visible,
         // while preserving AU/pixel semantics.
-        self.zoom_to(1.2); // Shows full heliosphere including bow shock
+        //
+        // NOTE: Keep this within the Heliosphere scale bucket so that
+        // heliosphere-specific input behavior (Sun-centered orbit) stays active.
+        self.zoom_to(0.85); // Shows full heliosphere including bow shock
     }
 
     /// View to nearby stars scale (~5 light-years, Alpha Centauri visible)

@@ -237,7 +237,9 @@ fn run() {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
             event.prevent_default();
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             s.view_heliosphere();
             s.view.tilt = 0.7; // Reset tilt to ~40 degrees
             s.view.rotation = 0.0; // Reset rotation
@@ -402,7 +404,9 @@ fn run() {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
             event.prevent_default();
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
 
             s.view.drag_start_x = event.client_x() as f64;
             s.view.drag_start_y = event.client_y() as f64;
@@ -475,7 +479,9 @@ fn run() {
     {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             let dx = event.client_x() as f64 - s.view.drag_start_x;
             let dy = event.client_y() as f64 - s.view.drag_start_y;
 
@@ -517,7 +523,9 @@ fn run() {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |event: WheelEvent| {
             event.prevent_default();
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
 
             // Zoom towards mouse position
             let mouse_x = event.client_x() as f64;
@@ -544,7 +552,9 @@ fn run() {
         let closure = Closure::wrap(Box::new(move |event: TouchEvent| {
             event.prevent_default();
             let touches = event.touches();
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
 
             if touches.length() == 2 {
                 // Two fingers: pinch-to-zoom
@@ -583,7 +593,9 @@ fn run() {
     {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |_: TouchEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             s.view.drag_mode = DragMode::None;
             s.view.pinching = false;
         }) as Box<dyn FnMut(_)>);
@@ -599,7 +611,9 @@ fn run() {
         let closure = Closure::wrap(Box::new(move |event: TouchEvent| {
             event.prevent_default();
             let touches = event.touches();
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
 
             if s.view.pinching && touches.length() == 2 {
                 // Two-finger gesture
@@ -658,7 +672,9 @@ fn run() {
     {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             match event.key().as_str() {
                 " " => s.toggle_pause(),
                 "1" => s.focus_on_planet(0), // Mercury
@@ -734,7 +750,9 @@ fn run() {
     if let Some(slider) = time_slider.clone() {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |_: InputEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             let days_offset: f64 = slider.value().parse().unwrap_or(0.0);
             s.julian_date = simulation::J2000_EPOCH + 8766.0 + days_offset;
         }) as Box<dyn FnMut(_)>);
@@ -764,7 +782,9 @@ fn run() {
     {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |_: MouseEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             let ts = s.time_scale / 2.0;
             s.set_time_scale(ts);
         }) as Box<dyn FnMut(_)>);
@@ -779,7 +799,9 @@ fn run() {
     {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |_: MouseEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             let ts = s.time_scale * 2.0;
             s.set_time_scale(ts);
         }) as Box<dyn FnMut(_)>);
@@ -926,7 +948,9 @@ fn run() {
     {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |_: MouseEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             let new_tilt = s.view.tilt + 0.15;
             s.view.set_tilt(new_tilt);
             s.mark_orbits_dirty();
@@ -942,7 +966,9 @@ fn run() {
     {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |_: MouseEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             let new_tilt = s.view.tilt - 0.15;
             s.view.set_tilt(new_tilt);
             s.mark_orbits_dirty();
@@ -958,7 +984,9 @@ fn run() {
     {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |_: MouseEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             s.view.tilt = 0.5; // Default ~30 degrees
             s.view.rotation = 0.0;
             s.mark_orbits_dirty();
@@ -989,7 +1017,9 @@ fn run() {
         let band_id_str = band_id.to_string();
         let all_band_ids = vec!["optical", "uv", "xray", "gamma", "ir", "radio", "cmb"];
         let closure = Closure::wrap(Box::new(move |_: MouseEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             s.star_mgr.set_current_band(band);
 
             // Update active button styling
@@ -1057,7 +1087,9 @@ fn run() {
         let state = state.clone();
         let slider_clone = slider.clone();
         let closure = Closure::wrap(Box::new(move |_: InputEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             let mag_limit: f64 = slider_clone.value().parse().unwrap_or(6.0);
             s.star_mgr.set_magnitude_limit(mag_limit);
 

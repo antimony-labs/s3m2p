@@ -583,8 +583,9 @@ fn draw_bright_stars(ctx: &CanvasRenderingContext2d, state: &SimulationState, ti
             continue;
         }
 
-        // Skip if behind camera
-        if depth < 0.0 {
+        // Depth convention: positive = closer, negative = farther (behind target).
+        // Stars are a background layer, so skip anything "in front" of the target.
+        if depth > 0.0 {
             continue;
         }
 
@@ -611,14 +612,24 @@ fn draw_bright_stars(ctx: &CanvasRenderingContext2d, state: &SimulationState, ti
 
             if let Ok(gradient) = ctx.create_radial_gradient(sx, sy, 0.0, sx, sy, glow_radius) {
                 gradient
-                    .add_color_stop(0.0, &format!("rgba({},{},{},0.8)", inst.color_rgb[0], inst.color_rgb[1], inst.color_rgb[2]))
+                    .add_color_stop(
+                        0.0,
+                        &format!(
+                            "rgba({},{},{},0.8)",
+                            inst.color_rgb[0], inst.color_rgb[1], inst.color_rgb[2]
+                        ),
+                    )
                     .ok();
                 gradient
-                    .add_color_stop(0.6, &format!("rgba({},{},{},0.2)", inst.color_rgb[0], inst.color_rgb[1], inst.color_rgb[2]))
+                    .add_color_stop(
+                        0.6,
+                        &format!(
+                            "rgba({},{},{},0.2)",
+                            inst.color_rgb[0], inst.color_rgb[1], inst.color_rgb[2]
+                        ),
+                    )
                     .ok();
-                gradient
-                    .add_color_stop(1.0, "rgba(255,255,255,0.0)")
-                    .ok();
+                gradient.add_color_stop(1.0, "rgba(255,255,255,0.0)").ok();
 
                 ctx.set_fill_style(&gradient);
                 ctx.begin_path();
@@ -631,15 +642,17 @@ fn draw_bright_stars(ctx: &CanvasRenderingContext2d, state: &SimulationState, ti
         ctx.set_global_alpha(base_alpha);
         ctx.set_fill_style(&JsValue::from_str(&color));
         ctx.begin_path();
-        ctx.arc(sx, sy, core_size * 0.5, 0.0, 2.0 * PI).unwrap_or(());
+        ctx.arc(sx, sy, core_size * 0.5, 0.0, 2.0 * PI)
+            .unwrap_or(());
         ctx.fill();
 
         // Draw star name at heliosphere scale (only for fully visible stars)
         if visibility > 0.9 && state.view.zoom > 0.8 && inst.magnitude < 0.5 && inst.name.is_some()
         {
             ctx.set_font("500 10px 'Just Sans', sans-serif");
-            ctx.set_fill_style(&JsValue::from_str("rgba(200, 200, 255, 0.6)"));
-            ctx.fill_text(&inst.name.as_ref().unwrap(), sx + core_size + 3.0, sy + 3.0)
+            let label_color = JsValue::from_str("rgba(200, 200, 255, 0.6)");
+            ctx.set_fill_style(label_color.as_ref());
+            ctx.fill_text(inst.name.as_ref().unwrap(), sx + core_size + 3.0, sy + 3.0)
                 .unwrap_or(());
         }
     }
@@ -749,12 +762,19 @@ fn draw_dashed_line(
 // The heliosphere has a comet-like shape:
 // - "Nose" faces the direction of motion (toward solar apex, ~255° ecliptic longitude)
 // - "Tail" (heliotail) extends in the opposite direction, possibly 1000+ AU
-// The heliosphere direction in our coordinate system: Sun moves toward -X direction
-// (We orient the view so the interstellar "wind" comes from the right, tail goes left)
+//
+// Visualization convention:
+// - Interstellar "wind" flows from screen-right toward screen-left.
+// - At default camera azimuth=0, this corresponds to +X → -X in world coords.
+// - Therefore the heliosphere "nose" is on +X and the heliotail trails to -X.
 
-const HELIO_NOSE_DIRECTION: f64 = std::f64::consts::PI; // Nose points in -X direction
+const HELIO_NOSE_DIRECTION: f64 = 0.0; // Nose points in +X direction
 
-fn draw_heliosphere_boundaries(ctx: &CanvasRenderingContext2d, state: &SimulationState, _time: f64) {
+fn draw_heliosphere_boundaries(
+    ctx: &CanvasRenderingContext2d,
+    state: &SimulationState,
+    _time: f64,
+) {
     let view = &state.view;
 
     // Only draw if zoomed out enough
@@ -3456,8 +3476,8 @@ fn draw_stars_3d(ctx: &CanvasRenderingContext2d, state: &SimulationState, time: 
             continue;
         }
 
-        // Skip if behind camera
-        if depth < 0.0 {
+        // Depth convention: positive = closer, negative = farther (behind target).
+        if depth > 0.0 {
             continue;
         }
 
