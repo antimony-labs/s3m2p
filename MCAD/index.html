@@ -178,6 +178,12 @@ MODIFIED: 2025-12-09
             background: rgba(255, 107, 53, 0.05);
         }
 
+        .tool-btn.active {
+            border-color: #ff6b35;
+            color: #ff6b35;
+            background: rgba(255, 107, 53, 0.15);
+        }
+
         .info-text {
             margin-top: 1.25rem;
             font-size: 0.75rem;
@@ -327,16 +333,27 @@ MODIFIED: 2025-12-09
             <div class="panel-left">
                 <div id="sketch-tools" style="display: none;">
                     <h2>Drawing Tools</h2>
-                    <button onclick="setSketchTool('line')" class="export-btn">Line</button>
-                    <button onclick="setSketchTool('circle')" class="export-btn">Circle</button>
-                    <button onclick="setSketchTool('point')" class="export-btn">Point</button>
+                    <button id="tool-select" onclick="setSketchTool('select')" class="export-btn tool-btn">Select</button>
+                    <button id="tool-line" onclick="setSketchTool('line')" class="export-btn tool-btn active">Line</button>
+                    <button id="tool-circle" onclick="setSketchTool('circle')" class="export-btn tool-btn">Circle</button>
+                    <button id="tool-point" onclick="setSketchTool('point')" class="export-btn tool-btn">Point</button>
+
+                    <h2 style="margin-top: 1.5rem;">Constraints</h2>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+                        <button onclick="applyConstraint('horizontal')" class="export-btn" title="Horizontal">H</button>
+                        <button onclick="applyConstraint('vertical')" class="export-btn" title="Vertical">V</button>
+                        <button onclick="applyConstraint('perpendicular')" class="export-btn" title="Perpendicular">⊥</button>
+                    </div>
+                    <button onclick="solveSketch()" class="export-btn" style="margin-top: 0.5rem;">
+                        Solve Constraints
+                    </button>
 
                     <h2 style="margin-top: 1.5rem;">Operations</h2>
                     <button onclick="extrudeSketch()" class="export-btn" style="background: rgba(255, 107, 53, 0.2);">
                         Extrude → 3D
                     </button>
                     <p class="info-text" style="margin-top: 0.5rem; font-size: 0.7rem;">
-                        Click to draw entities. Click Extrude to create 3D solid.
+                        Draw entities, apply constraints, then extrude to 3D.
                     </p>
                 </div>
 
@@ -544,6 +561,34 @@ MODIFIED: 2025-12-09
 
         // Initialize on load
         setTimeout(updatePanelVisibility, 100);
+
+        // Wrapper for setSketchTool that also updates UI
+        const originalSetSketchTool = window.setSketchTool;
+        window.setSketchTool = function(tool) {
+            if (originalSetSketchTool) originalSetSketchTool(tool);
+            // Update active button
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById('tool-' + tool);
+            if (activeBtn) activeBtn.classList.add('active');
+        };
+
+        // Constraint application
+        function applyConstraint(type) {
+            if (window.applySketchConstraint) {
+                window.applySketchConstraint(type);
+            } else {
+                console.log('applySketchConstraint not available yet');
+            }
+        }
+
+        // Solve constraints
+        function solveSketch() {
+            if (window.solveSketchConstraints) {
+                window.solveSketchConstraints();
+            } else {
+                console.log('solveSketchConstraints not available yet');
+            }
+        }
     </script>
 </body>
 

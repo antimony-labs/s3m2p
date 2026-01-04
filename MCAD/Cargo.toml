@@ -36,6 +36,7 @@ features = [
     "Window",
     "MouseEvent",
     "WheelEvent",
+    "KeyboardEvent",
     "CssStyleDeclaration",
     "DomRect",
     "Blob",

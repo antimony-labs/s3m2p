@@ -60,6 +60,9 @@ struct AppState {
     temp_points: Vec<Point2>,  // For multi-click tools
     sketch_constraints: Vec<Constraint>,  // Track constraints separately
     selected_entities: Vec<SketchEntityId>,
+    hover_entity: Option<SketchEntityId>,  // Entity under cursor
+    hover_point: Option<SketchPointId>,    // Point under cursor
+    mouse_pos: Option<Point2>,             // Current mouse position in sketch coords
     pan_2d: Point2,
     zoom_2d: f32,
 
@@ -85,6 +88,9 @@ impl Default for AppState {
             temp_points: Vec::new(),
             sketch_constraints: Vec::new(),
             selected_entities: Vec::new(),
+            hover_entity: None,
+            hover_point: None,
+            mouse_pos: None,
             pan_2d: Point2::new(0.0, 0.0),
             zoom_2d: 1.0,
 
@@ -230,6 +236,32 @@ fn init_ui() -> Result<(), JsValue> {
     )?;
     extrude_closure.forget();
 
+    // Export constraint application to JS
+    let constraint_closure = Closure::wrap(Box::new(|constraint_type: String| {
+        if let Err(e) = apply_sketch_constraint(&constraint_type) {
+            web_sys::console::error_1(&format!("Constraint failed: {:?}", e).into());
+        }
+    }) as Box<dyn Fn(String)>);
+    js_sys::Reflect::set(
+        &window,
+        &JsValue::from_str("applySketchConstraint"),
+        constraint_closure.as_ref(),
+    )?;
+    constraint_closure.forget();
+
+    // Export solve function to JS
+    let solve_closure = Closure::wrap(Box::new(|| {
+        if let Err(e) = solve_current_sketch() {
+            web_sys::console::error_1(&format!("Solve failed: {:?}", e).into());
+        }
+    }) as Box<dyn Fn()>);
+    js_sys::Reflect::set(
+        &window,
+        &JsValue::from_str("solveSketchConstraints"),
+        solve_closure.as_ref(),
+    )?;
+    solve_closure.forget();
+
     // Create initial solid
     create_solid()?;
 
@@ -302,10 +334,13 @@ fn setup_viewport_events(document: &Document) -> Result<(), JsValue> {
 
     // Mouse move
     {
+        let canvas_clone = canvas.clone();
         let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
             STATE.with(|state| {
                 let mut state = state.borrow_mut();
-                if state.dragging {
+
+                if state.mode == AppMode::View3D && state.dragging {
+                    // 3D view rotation
                     let dx = event.client_x() - state.last_mouse_x;
                     let dy = event.client_y() - state.last_mouse_y;
                     state.rotation_y += dx as f32 * 0.01;
@@ -314,6 +349,43 @@ fn setup_viewport_events(document: &Document) -> Result<(), JsValue> {
                     state.last_mouse_y = event.client_y();
                     drop(state);
                     let _ = render();
+                } else if state.mode == AppMode::Sketch2D {
+                    // Sketch mode - update hover state and mouse position
+                    let rect = canvas_clone.get_bounding_client_rect();
+                    let screen_x = event.client_x() as f64 - rect.left();
+                    let screen_y = event.client_y() as f64 - rect.top();
+                    let css_width = rect.width();
+                    let css_height = rect.height();
+
+                    // Convert to sketch coords
+                    let cx = css_width / 2.0;
+                    let cy = css_height / 2.0;
+                    let zoom = state.zoom_2d;
+                    let pan = state.pan_2d;
+                    let sx = ((screen_x - cx) / zoom as f64 - pan.x as f64) as f32;
+                    let sy = (-(screen_y - cy) / zoom as f64 - pan.y as f64) as f32;
+                    let pos = Point2::new(sx, sy);
+
+                    state.mouse_pos = Some(pos);
+
+                    // Update hover state
+                    let new_hover = if let Some(ref sketch) = state.current_sketch {
+                        find_entity_at_point(sketch, pos, 10.0)
+                    } else {
+                        None
+                    };
+
+                    let hover_changed = state.hover_entity != new_hover;
+                    state.hover_entity = new_hover;
+
+                    // Need redraw if: hover changed OR we're in drawing mode (for rubber-band)
+                    let is_drawing = !state.temp_points.is_empty();
+                    let needs_redraw = hover_changed || is_drawing;
+
+                    drop(state);
+                    if needs_redraw {
+                        let _ = render();
+                    }
                 }
             });
         }) as Box<dyn FnMut(MouseEvent)>);
@@ -327,13 +399,92 @@ fn setup_viewport_events(document: &Document) -> Result<(), JsValue> {
             event.prevent_default();
             STATE.with(|state| {
                 let mut state = state.borrow_mut();
-                let delta = event.delta_y() as f32 * 0.001;
-                state.zoom = (state.zoom - delta).clamp(0.5, 10.0);
+                if state.mode == AppMode::View3D {
+                    // 3D view zoom
+                    let delta = event.delta_y() as f32 * 0.001;
+                    state.zoom = (state.zoom - delta).clamp(0.5, 10.0);
+                } else {
+                    // 2D sketch zoom
+                    let delta = event.delta_y() as f32 * 0.001;
+                    state.zoom_2d = (state.zoom_2d - delta).clamp(0.25, 5.0);
+                }
                 drop(state);
                 let _ = render();
             });
         }) as Box<dyn FnMut(WheelEvent)>);
         canvas.set_onwheel(Some(closure.as_ref().unchecked_ref()));
+        closure.forget();
+    }
+
+    // Keyboard shortcuts
+    {
+        let closure = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
+            STATE.with(|state| {
+                let mut s = state.borrow_mut();
+
+                // Only handle if in sketch mode
+                if s.mode != AppMode::Sketch2D {
+                    return;
+                }
+
+                let key = event.key();
+                match key.as_str() {
+                    "l" | "L" => {
+                        s.sketch_tool = SketchTool::Line;
+                        s.temp_points.clear();
+                        web_sys::console::log_1(&"Tool: Line".into());
+                    }
+                    "c" | "C" => {
+                        s.sketch_tool = SketchTool::Circle;
+                        s.temp_points.clear();
+                        web_sys::console::log_1(&"Tool: Circle".into());
+                    }
+                    "p" | "P" => {
+                        s.sketch_tool = SketchTool::Point;
+                        s.temp_points.clear();
+                        web_sys::console::log_1(&"Tool: Point".into());
+                    }
+                    "s" | "S" => {
+                        s.sketch_tool = SketchTool::Select;
+                        s.temp_points.clear();
+                        web_sys::console::log_1(&"Tool: Select".into());
+                    }
+                    "Escape" => {
+                        s.temp_points.clear();
+                        s.selected_entities.clear();
+                        web_sys::console::log_1(&"Cancelled / cleared selection".into());
+                    }
+                    "Delete" | "Backspace" => {
+                        // Delete selected entities
+                        if !s.selected_entities.is_empty() {
+                            let to_delete = s.selected_entities.clone();
+                            s.selected_entities.clear();
+
+                            if let Some(sketch) = s.current_sketch.as_mut() {
+                                sketch.entities.retain(|e| {
+                                    let id = match e {
+                                        SketchEntity::Line { id, .. } => *id,
+                                        SketchEntity::Circle { id, .. } => *id,
+                                        SketchEntity::Arc { id, .. } => *id,
+                                        SketchEntity::Point { id, .. } => *id,
+                                    };
+                                    !to_delete.contains(&id)
+                                });
+                                web_sys::console::log_1(&format!("Deleted {} entities", to_delete.len()).into());
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+                drop(s);
+                let _ = render();
+            });
+        }) as Box<dyn FnMut(web_sys::KeyboardEvent)>);
+
+        // Attach to document for global keyboard handling
+        let window = web_sys::window().ok_or("No window")?;
+        let document = window.document().ok_or("No document")?;
+        document.set_onkeydown(Some(closure.as_ref().unchecked_ref()));
         closure.forget();
     }
 
@@ -527,6 +678,10 @@ fn render() -> Result<(), JsValue> {
                         css_height,
                         state.pan_2d,
                         state.zoom_2d,
+                        &state.selected_entities,
+                        state.hover_entity,
+                        state.mouse_pos,
+                        &state.sketch_constraints,
                     )
                     .ok();
                 }
@@ -618,6 +773,10 @@ fn draw_sketch_2d(
     height: f64,
     pan: Point2,
     zoom: f32,
+    selected: &[SketchEntityId],
+    hover: Option<SketchEntityId>,
+    mouse_pos: Option<Point2>,
+    constraints: &[Constraint],
 ) -> Result<(), JsValue> {
     let cx = width / 2.0;
     let cy = height / 2.0;
@@ -668,11 +827,29 @@ fn draw_sketch_2d(
     ctx.line_to(width, cy);
     ctx.stroke();
 
-    // Draw sketch entities
-    ctx.set_stroke_style(&JsValue::from_str("#ff6b35"));
-    ctx.set_line_width(2.0);
-
+    // Draw sketch entities with selection/hover highlighting
     for entity in &sketch.entities {
+        let entity_id = match entity {
+            SketchEntity::Line { id, .. } => *id,
+            SketchEntity::Circle { id, .. } => *id,
+            SketchEntity::Arc { id, .. } => *id,
+            SketchEntity::Point { id, .. } => *id,
+        };
+
+        // Determine color based on state
+        let is_selected = selected.contains(&entity_id);
+        let is_hovered = hover == Some(entity_id);
+        let color = if is_selected {
+            "#ffdd00"  // Yellow for selected
+        } else if is_hovered {
+            "#00ddff"  // Cyan for hover
+        } else {
+            "#ff6b35"  // Default orange
+        };
+
+        ctx.set_stroke_style(&JsValue::from_str(color));
+        ctx.set_line_width(if is_selected || is_hovered { 3.0 } else { 2.0 });
+
         match entity {
             SketchEntity::Line { start, end, .. } => {
                 if let (Some(p1), Some(p2)) = (sketch.point(*start), sketch.point(*end)) {
@@ -686,10 +863,10 @@ fn draw_sketch_2d(
             }
             SketchEntity::Circle { center, radius, .. } => {
                 if let Some(c) = sketch.point(*center) {
-                    let (cx, cy) = to_screen(c.position);
+                    let (scx, scy) = to_screen(c.position);
                     let r = *radius as f64 * zoom as f64;
                     ctx.begin_path();
-                    ctx.arc(cx, cy, r, 0.0, 2.0 * std::f64::consts::PI)?;
+                    ctx.arc(scx, scy, r, 0.0, 2.0 * std::f64::consts::PI)?;
                     ctx.stroke();
                 }
             }
@@ -714,15 +891,88 @@ fn draw_sketch_2d(
 
         match tool {
             SketchTool::Line if temp_points.len() == 1 => {
-                // Show preview line from first point to cursor (would need mouse pos)
+                // Draw first point marker
                 let (x1, y1) = to_screen(temp_points[0]);
+                ctx.set_fill_style(&JsValue::from_str("#ff6b35"));
                 ctx.begin_path();
-                ctx.arc(x1, y1, 4.0, 0.0, 2.0 * std::f64::consts::PI)?;
+                ctx.arc(x1, y1, 6.0, 0.0, 2.0 * std::f64::consts::PI)?;
                 ctx.fill();
+
+                // If we have mouse position, draw preview line
+                if let Some(mp) = mouse_pos {
+                    let (x2, y2) = to_screen(mp);
+                    ctx.begin_path();
+                    ctx.move_to(x1, y1);
+                    ctx.line_to(x2, y2);
+                    ctx.stroke();
+                }
+            }
+            SketchTool::Circle if temp_points.len() == 1 => {
+                // Draw center marker
+                let (cx, cy) = to_screen(temp_points[0]);
+                ctx.set_fill_style(&JsValue::from_str("#ff6b35"));
+                ctx.begin_path();
+                ctx.arc(cx, cy, 6.0, 0.0, 2.0 * std::f64::consts::PI)?;
+                ctx.fill();
+
+                // If we have mouse position, draw preview circle
+                if let Some(mp) = mouse_pos {
+                    let (mx, my) = to_screen(mp);
+                    let radius = ((mx - cx).powi(2) + (my - cy).powi(2)).sqrt();
+                    ctx.begin_path();
+                    ctx.arc(cx, cy, radius, 0.0, 2.0 * std::f64::consts::PI)?;
+                    ctx.stroke();
+                }
             }
             _ => {}
         }
         ctx.set_line_dash(&js_sys::Array::new())?;  // Reset dash
+    }
+
+    // Draw constraint indicators
+    ctx.set_fill_style(&JsValue::from_str("#00ff88"));
+    ctx.set_font("bold 12px monospace");
+    for constraint in constraints {
+        match constraint {
+            Constraint::Geometric(GeometricConstraint::Horizontal { line }) => {
+                // Find the line entity and get its midpoint
+                if let Some(entity) = sketch.entities.iter().find(|e| {
+                    matches!(e, SketchEntity::Line { id, .. } if id == line)
+                }) {
+                    if let SketchEntity::Line { start, end, .. } = entity {
+                        if let (Some(p1), Some(p2)) = (sketch.point(*start), sketch.point(*end)) {
+                            let mid = Point2::new(
+                                (p1.position.x + p2.position.x) / 2.0,
+                                (p1.position.y + p2.position.y) / 2.0,
+                            );
+                            let (sx, sy) = to_screen(mid);
+                            ctx.fill_text("H", sx - 5.0, sy - 10.0)?;
+                        }
+                    }
+                }
+            }
+            Constraint::Geometric(GeometricConstraint::Vertical { line }) => {
+                if let Some(entity) = sketch.entities.iter().find(|e| {
+                    matches!(e, SketchEntity::Line { id, .. } if id == line)
+                }) {
+                    if let SketchEntity::Line { start, end, .. } = entity {
+                        if let (Some(p1), Some(p2)) = (sketch.point(*start), sketch.point(*end)) {
+                            let mid = Point2::new(
+                                (p1.position.x + p2.position.x) / 2.0,
+                                (p1.position.y + p2.position.y) / 2.0,
+                            );
+                            let (sx, sy) = to_screen(mid);
+                            ctx.fill_text("V", sx + 10.0, sy)?;
+                        }
+                    }
+                }
+            }
+            Constraint::Geometric(GeometricConstraint::Perpendicular { .. }) => {
+                // Draw ⊥ symbol at intersection (simplified - just at first line midpoint)
+                ctx.fill_text("⊥", 20.0, height - 20.0)?;
+            }
+            _ => {}
+        }
     }
 
     Ok(())
@@ -1039,8 +1289,24 @@ fn handle_sketch_click(screen_x: f64, screen_y: f64) -> Result<(), JsValue> {
         (sx, sy)
     });
 
-    let pos = Point2::new(sketch_x, sketch_y);
-    web_sys::console::log_1(&format!("Click at screen ({}, {}) → sketch ({}, {})", screen_x, screen_y, sketch_x, sketch_y).into());
+    let raw_pos = Point2::new(sketch_x, sketch_y);
+
+    // Apply snapping (needs read-only access first)
+    let (snapped_pos, _snapped_to_point) = STATE.with(|state| {
+        let s = state.borrow();
+        if let Some(ref sketch) = s.current_sketch {
+            snap_position(sketch, raw_pos, 15.0, 50.0)  // 15px point tolerance, 50mm grid
+        } else {
+            (raw_pos, None)
+        }
+    });
+
+    web_sys::console::log_1(&format!(
+        "Click: raw ({:.1}, {:.1}) → snapped ({:.1}, {:.1})",
+        sketch_x, sketch_y, snapped_pos.x, snapped_pos.y
+    ).into());
+
+    let pos = snapped_pos;
 
     STATE.with(|state| {
         let mut s = state.borrow_mut();
@@ -1064,11 +1330,11 @@ fn handle_sketch_click(screen_x: f64, screen_y: f64) -> Result<(), JsValue> {
                         });
 
                         s.temp_points.clear();
-                        web_sys::console::log_1(&"Line created".into());
+                        web_sys::console::log_1(&format!("Line created: ({:.1},{:.1}) → ({:.1},{:.1})", p1.x, p1.y, pos.x, pos.y).into());
                     } else {
-                        // First click - store point
+                        // First click - store snapped point
                         s.temp_points.push(pos);
-                        web_sys::console::log_1(&"Line: first point placed".into());
+                        web_sys::console::log_1(&format!("Line: first point at ({:.1}, {:.1})", pos.x, pos.y).into());
                     }
                 }
                 SketchTool::Circle => {
@@ -1085,19 +1351,265 @@ fn handle_sketch_click(screen_x: f64, screen_y: f64) -> Result<(), JsValue> {
                         });
 
                         s.temp_points.clear();
-                        web_sys::console::log_1(&format!("Circle created with radius {}", radius).into());
+                        web_sys::console::log_1(&format!("Circle created: center ({:.1},{:.1}), radius {:.1}", center.x, center.y, radius).into());
                     } else {
                         // First click - center
                         s.temp_points.push(pos);
-                        web_sys::console::log_1(&"Circle: center placed".into());
+                        web_sys::console::log_1(&format!("Circle: center at ({:.1}, {:.1})", pos.x, pos.y).into());
                     }
                 }
                 SketchTool::Point => {
                     sketch.add_point(pos);
-                    web_sys::console::log_1(&format!("Point created at ({}, {})", sketch_x, sketch_y).into());
+                    web_sys::console::log_1(&format!("Point created at ({:.1}, {:.1})", pos.x, pos.y).into());
                 }
-                _ => {}
+                SketchTool::Select => {
+                    // Find entity at click position
+                    if let Some(entity_id) = find_entity_at_point(sketch, pos, 10.0) {
+                        // Toggle selection
+                        if let Some(idx) = s.selected_entities.iter().position(|&id| id == entity_id) {
+                            s.selected_entities.remove(idx);
+                            web_sys::console::log_1(&format!("Deselected entity {:?}", entity_id).into());
+                        } else {
+                            s.selected_entities.push(entity_id);
+                            web_sys::console::log_1(&format!("Selected entity {:?}", entity_id).into());
+                        }
+                    } else {
+                        // Clicked on empty space - clear selection
+                        s.selected_entities.clear();
+                        web_sys::console::log_1(&"Selection cleared".into());
+                    }
+                }
+                SketchTool::Arc => {
+                    // TODO: Implement arc tool
+                }
             }
+        }
+
+        drop(s);
+        render()?;
+        Ok(())
+    })
+}
+
+/// Find the closest entity to a point within tolerance
+fn find_entity_at_point(sketch: &Sketch, pos: Point2, tolerance: f32) -> Option<SketchEntityId> {
+    let mut best_id: Option<SketchEntityId> = None;
+    let mut best_dist = tolerance;
+
+    for entity in &sketch.entities {
+        let dist = match entity {
+            SketchEntity::Line { id, start, end } => {
+                if let (Some(p1), Some(p2)) = (sketch.point(*start), sketch.point(*end)) {
+                    point_to_segment_distance(pos, p1.position, p2.position)
+                } else {
+                    f32::MAX
+                }
+            }
+            SketchEntity::Circle { id, center, radius } => {
+                if let Some(c) = sketch.point(*center) {
+                    let dist_to_center = pos.distance(&c.position);
+                    (dist_to_center - *radius).abs()
+                } else {
+                    f32::MAX
+                }
+            }
+            SketchEntity::Arc { id, center, radius, .. } => {
+                if let Some(c) = sketch.point(*center) {
+                    let dist_to_center = pos.distance(&c.position);
+                    (dist_to_center - *radius).abs()
+                } else {
+                    f32::MAX
+                }
+            }
+            SketchEntity::Point { id, point } => {
+                if let Some(p) = sketch.point(*point) {
+                    pos.distance(&p.position)
+                } else {
+                    f32::MAX
+                }
+            }
+        };
+
+        if dist < best_dist {
+            best_dist = dist;
+            best_id = Some(match entity {
+                SketchEntity::Line { id, .. } => *id,
+                SketchEntity::Circle { id, .. } => *id,
+                SketchEntity::Arc { id, .. } => *id,
+                SketchEntity::Point { id, .. } => *id,
+            });
+        }
+    }
+
+    best_id
+}
+
+/// Find the closest point to a position within tolerance
+fn find_point_at_position(sketch: &Sketch, pos: Point2, tolerance: f32) -> Option<SketchPointId> {
+    let mut best_id: Option<SketchPointId> = None;
+    let mut best_dist = tolerance;
+
+    for point in &sketch.points {
+        let dist = pos.distance(&point.position);
+        if dist < best_dist {
+            best_dist = dist;
+            best_id = Some(point.id);
+        }
+    }
+
+    best_id
+}
+
+/// Snap position to grid
+fn snap_to_grid(pos: Point2, grid_size: f32) -> Point2 {
+    Point2::new(
+        (pos.x / grid_size).round() * grid_size,
+        (pos.y / grid_size).round() * grid_size,
+    )
+}
+
+/// Snap to existing point if close enough, otherwise snap to grid
+fn snap_position(sketch: &Sketch, pos: Point2, point_tolerance: f32, grid_size: f32) -> (Point2, Option<SketchPointId>) {
+    // Priority 1: Snap to existing points
+    if let Some(point_id) = find_point_at_position(sketch, pos, point_tolerance) {
+        if let Some(point) = sketch.point(point_id) {
+            return (point.position, Some(point_id));
+        }
+    }
+
+    // Priority 2: Snap to grid
+    (snap_to_grid(pos, grid_size), None)
+}
+
+/// Calculate distance from point to line segment
+fn point_to_segment_distance(p: Point2, a: Point2, b: Point2) -> f32 {
+    let ab = Point2::new(b.x - a.x, b.y - a.y);
+    let ap = Point2::new(p.x - a.x, p.y - a.y);
+
+    let ab_len_sq = ab.x * ab.x + ab.y * ab.y;
+    if ab_len_sq < 1e-10 {
+        return ap.x.hypot(ap.y);
+    }
+
+    // Project p onto ab, clamping to segment
+    let t = ((ap.x * ab.x + ap.y * ab.y) / ab_len_sq).clamp(0.0, 1.0);
+    let closest = Point2::new(a.x + t * ab.x, a.y + t * ab.y);
+
+    p.distance(&closest)
+}
+
+/// Apply a constraint to the currently selected entities
+fn apply_sketch_constraint(constraint_type: &str) -> Result<(), JsValue> {
+    STATE.with(|state| {
+        let mut s = state.borrow_mut();
+
+        if s.selected_entities.is_empty() {
+            web_sys::console::warn_1(&"No entities selected - select an entity first".into());
+            return Err(JsValue::from_str("No entities selected"));
+        }
+
+        let sketch = s.current_sketch.as_ref()
+            .ok_or_else(|| JsValue::from_str("No active sketch"))?;
+
+        // Get the first selected entity
+        let entity_id = s.selected_entities[0];
+
+        // Find the entity and create appropriate constraint
+        let constraint = match constraint_type {
+            "horizontal" => {
+                // Horizontal constraint only applies to lines
+                if let Some(entity) = sketch.entities.iter().find(|e| {
+                    matches!(e, SketchEntity::Line { id, .. } if *id == entity_id)
+                }) {
+                    if let SketchEntity::Line { start, end, .. } = entity {
+                        Some(Constraint::Geometric(GeometricConstraint::Horizontal {
+                            line: entity_id,
+                        }))
+                    } else {
+                        None
+                    }
+                } else {
+                    web_sys::console::warn_1(&"Horizontal constraint requires a line".into());
+                    None
+                }
+            }
+            "vertical" => {
+                if let Some(entity) = sketch.entities.iter().find(|e| {
+                    matches!(e, SketchEntity::Line { id, .. } if *id == entity_id)
+                }) {
+                    if let SketchEntity::Line { .. } = entity {
+                        Some(Constraint::Geometric(GeometricConstraint::Vertical {
+                            line: entity_id,
+                        }))
+                    } else {
+                        None
+                    }
+                } else {
+                    web_sys::console::warn_1(&"Vertical constraint requires a line".into());
+                    None
+                }
+            }
+            "perpendicular" => {
+                if s.selected_entities.len() < 2 {
+                    web_sys::console::warn_1(&"Perpendicular constraint requires 2 lines".into());
+                    None
+                } else {
+                    let line1 = s.selected_entities[0];
+                    let line2 = s.selected_entities[1];
+                    Some(Constraint::Geometric(GeometricConstraint::Perpendicular {
+                        line1,
+                        line2,
+                    }))
+                }
+            }
+            _ => {
+                web_sys::console::warn_1(&format!("Unknown constraint type: {}", constraint_type).into());
+                None
+            }
+        };
+
+        if let Some(c) = constraint {
+            s.sketch_constraints.push(c);
+            web_sys::console::log_1(&format!("Applied {} constraint", constraint_type).into());
+        }
+
+        drop(s);
+        render()?;
+        Ok(())
+    })
+}
+
+/// Solve all constraints on the current sketch
+fn solve_current_sketch() -> Result<(), JsValue> {
+    STATE.with(|state| {
+        let mut s = state.borrow_mut();
+
+        if s.sketch_constraints.is_empty() {
+            web_sys::console::log_1(&"No constraints to solve".into());
+            return Ok(());
+        }
+
+        // Clone constraints before getting mutable sketch reference
+        let constraints: Vec<Constraint> = s.sketch_constraints.clone();
+
+        let sketch = s.current_sketch.as_mut()
+            .ok_or_else(|| JsValue::from_str("No active sketch"))?;
+
+        web_sys::console::log_1(&format!("Solving {} constraints...", constraints.len()).into());
+
+        let solver = ConstraintSolver::default();
+        let result = solver.solve(sketch, &constraints);
+
+        if result.converged {
+            web_sys::console::log_1(&format!(
+                "Solver converged in {} iterations (error: {:.6})",
+                result.iterations, result.final_error
+            ).into());
+        } else {
+            web_sys::console::warn_1(&format!(
+                "Solver did not converge after {} iterations (error: {:.6})",
+                result.iterations, result.final_error
+            ).into());
         }
 
         drop(s);
