@@ -31,22 +31,27 @@ in vec3 a_color;
 uniform mat4 u_matrix;
 uniform float u_point_scale;
 out vec3 v_color;
+out float v_size;
 void main() {
     gl_Position = u_matrix * vec4(a_position, 0.0, 1.0);
-    gl_PointSize = max(1.0, a_size * u_point_scale);
+    // Clamp point size to reasonable range (1-8 pixels)
+    gl_PointSize = clamp(a_size * u_point_scale, 1.0, 8.0);
     v_color = a_color;
+    v_size = gl_PointSize;
 }
 "#;
 
 const POINT_FRAG: &str = r#"#version 300 es
 precision highp float;
 in vec3 v_color;
+in float v_size;
 out vec4 fragColor;
 void main() {
     float d = length(gl_PointCoord - 0.5);
     if (d > 0.5) discard;
-    float alpha = 1.0 - smoothstep(0.3, 0.5, d);
-    fragColor = vec4(v_color, alpha);
+    // Crisp points for small sizes, slight softness for larger
+    float alpha = v_size < 3.0 ? 1.0 : (1.0 - smoothstep(0.4, 0.5, d));
+    fragColor = vec4(v_color, alpha * 0.9);
 }
 "#;
 
@@ -94,12 +99,12 @@ void main() {
     float d = length(v_uv);
     if (d > 1.0) discard;
 
-    // Soft edge
-    float alpha = 1.0 - smoothstep(0.8, 1.0, d);
+    // Sharp edge with subtle anti-aliasing
+    float alpha = 1.0 - smoothstep(0.95, 1.0, d);
 
-    // Glow effect
-    float glow = exp(-d * 2.0) * u_glow;
-    vec3 color = u_color + vec3(glow);
+    // Subtle glow effect (mostly for sun)
+    float glow = exp(-d * 3.0) * u_glow;
+    vec3 color = u_color + vec3(glow * 0.5);
 
     fragColor = vec4(color, alpha);
 }
@@ -700,28 +705,63 @@ impl RendererGl {
 
             let cos_tilt = state.view.tilt.cos();
 
+            // Orbit colors per planet
+            let orbit_colors: [(f32, f32, f32); 8] = [
+                (0.5, 0.5, 0.4),   // Mercury
+                (0.6, 0.5, 0.4),   // Venus
+                (0.3, 0.5, 0.7),   // Earth
+                (0.6, 0.4, 0.3),   // Mars
+                (0.5, 0.45, 0.35), // Jupiter
+                (0.55, 0.5, 0.4),  // Saturn
+                (0.4, 0.5, 0.55),  // Uranus
+                (0.35, 0.4, 0.6),  // Neptune
+            ];
+
             for i in 0..state.planet_count {
                 let orbit = &state.planet_orbits[i];
-                self.orbit_buffer.clear();
+                let (base_r, base_g, base_b) = orbit_colors.get(i).copied().unwrap_or((0.4, 0.4, 0.5));
 
-                for j in 0..=ORBIT_SEGMENTS {
-                    let angle = (j as f64 / ORBIT_SEGMENTS as f64) * 2.0 * std::f64::consts::PI;
+                // Draw BACK half first (dimmer) - from PI to 2*PI
+                self.orbit_buffer.clear();
+                for j in 0..=ORBIT_SEGMENTS / 2 {
+                    let angle = std::f64::consts::PI + (j as f64 / (ORBIT_SEGMENTS / 2) as f64) * std::f64::consts::PI;
                     let r = orbit.a * (1.0 - orbit.e * orbit.e) / (1.0 + orbit.e * angle.cos());
                     let x = r * angle.cos();
-                    let y = r * angle.sin() * cos_tilt;
+                    let z = r * angle.sin();
+                    let y = z * cos_tilt;
                     self.orbit_buffer.push(x as f32);
                     self.orbit_buffer.push(y as f32);
                 }
-
                 unsafe {
                     let arr = Float32Array::view(&self.orbit_buffer);
                     gl.buffer_data_with_array_buffer_view(
                         WebGl2RenderingContext::ARRAY_BUFFER, &arr, WebGl2RenderingContext::DYNAMIC_DRAW
                     );
                 }
+                // Back half is dimmer (0.15 alpha)
+                gl.uniform4f(self.line_u_color.as_ref(), base_r * 0.5, base_g * 0.5, base_b * 0.5, 0.25);
+                gl.draw_arrays(WebGl2RenderingContext::LINE_STRIP, 0, (ORBIT_SEGMENTS / 2 + 1) as i32);
 
-                gl.uniform4f(self.line_u_color.as_ref(), 0.3, 0.4, 0.5, 0.4);
-                gl.draw_arrays(WebGl2RenderingContext::LINE_STRIP, 0, (ORBIT_SEGMENTS + 1) as i32);
+                // Draw FRONT half (brighter) - from 0 to PI
+                self.orbit_buffer.clear();
+                for j in 0..=ORBIT_SEGMENTS / 2 {
+                    let angle = (j as f64 / (ORBIT_SEGMENTS / 2) as f64) * std::f64::consts::PI;
+                    let r = orbit.a * (1.0 - orbit.e * orbit.e) / (1.0 + orbit.e * angle.cos());
+                    let x = r * angle.cos();
+                    let z = r * angle.sin();
+                    let y = z * cos_tilt;
+                    self.orbit_buffer.push(x as f32);
+                    self.orbit_buffer.push(y as f32);
+                }
+                unsafe {
+                    let arr = Float32Array::view(&self.orbit_buffer);
+                    gl.buffer_data_with_array_buffer_view(
+                        WebGl2RenderingContext::ARRAY_BUFFER, &arr, WebGl2RenderingContext::DYNAMIC_DRAW
+                    );
+                }
+                // Front half is brighter (0.5 alpha)
+                gl.uniform4f(self.line_u_color.as_ref(), base_r, base_g, base_b, 0.5);
+                gl.draw_arrays(WebGl2RenderingContext::LINE_STRIP, 0, (ORBIT_SEGMENTS / 2 + 1) as i32);
             }
 
             gl.bind_vertex_array(None);
@@ -739,12 +779,13 @@ impl RendererGl {
             // Sun at origin with pulsating size
             let base_radius = 0.00465; // Solar radius in AU
             let pulse = 1.0 + 0.05 * (time * 0.5).sin() as f32;
-            let radius = (base_radius as f32 * pulse).max(state.view.zoom as f32 * 5.0);
+            // Much smaller minimum - just visible as a dot
+            let radius = (base_radius as f32 * pulse).max(state.view.zoom as f32 * 0.5);
 
             gl.uniform2f(self.circle_u_center.as_ref(), 0.0, 0.0);
             gl.uniform1f(self.circle_u_radius.as_ref(), radius);
             gl.uniform3f(self.circle_u_color.as_ref(), 1.0, 0.9, 0.3);
-            gl.uniform1f(self.circle_u_glow.as_ref(), 0.8);
+            gl.uniform1f(self.circle_u_glow.as_ref(), 0.3); // Subtle glow
 
             gl.draw_arrays(WebGl2RenderingContext::TRIANGLES, 0, 6);
             gl.bind_vertex_array(None);
@@ -763,10 +804,11 @@ impl RendererGl {
                 let x = state.planet_x[i] as f32;
                 let y = (state.planet_y[i] * state.view.tilt.cos()) as f32;
 
-                // Planet radius (ensure minimum visibility)
+                // Planet radius - keep small but visible
+                // Min radius in world units = zoom * 0.3 (much smaller than before)
                 let au_km = 149597870.7;
                 let radius_au = (state.planet_radii_km[i] / au_km) as f32;
-                let min_radius = (state.view.zoom * 3.0) as f32;
+                let min_radius = (state.view.zoom * 0.3) as f32;
                 let radius = radius_au.max(min_radius);
 
                 let (r, g, b) = parse_color(state.planet_colors[i]);
@@ -774,7 +816,7 @@ impl RendererGl {
                 gl.uniform2f(self.circle_u_center.as_ref(), x, y);
                 gl.uniform1f(self.circle_u_radius.as_ref(), radius);
                 gl.uniform3f(self.circle_u_color.as_ref(), r, g, b);
-                gl.uniform1f(self.circle_u_glow.as_ref(), 0.1);
+                gl.uniform1f(self.circle_u_glow.as_ref(), 0.0); // No glow - crisp planets
 
                 gl.draw_arrays(WebGl2RenderingContext::TRIANGLES, 0, 6);
             }
@@ -799,7 +841,8 @@ impl RendererGl {
                 let mx = state.moon_world_x[i] as f32;
                 let my = (state.moon_world_y[i] * state.view.tilt.cos()) as f32;
 
-                let radius = (state.view.zoom * 2.0) as f32;
+                // Moons are tiny - much smaller than planets
+                let radius = (state.view.zoom * 0.15) as f32;
 
                 gl.uniform2f(self.circle_u_center.as_ref(), mx, my);
                 gl.uniform1f(self.circle_u_radius.as_ref(), radius);
@@ -816,18 +859,38 @@ impl RendererGl {
     fn render_asteroid_belt(&mut self, state: &SimulationState, matrix: &[f32; 16]) {
         let gl = &self.gl;
 
+        // Only render when zoomed in enough to see the belt
+        if state.view.zoom > 0.5 { return; }
+
         self.point_buffer.clear();
         let cos_tilt = state.view.tilt.cos() as f32;
 
-        for i in 0..state.asteroid_count {
+        // Sample subset for performance
+        let step = if state.view.zoom > 0.05 { 4 } else if state.view.zoom > 0.01 { 2 } else { 1 };
+
+        for i in (0..state.asteroid_count).step_by(step) {
             let r = state.asteroid_distances[i] as f32;
             let angle = state.asteroid_angles[i] as f32;
             let incl = state.asteroid_inclinations[i] as f32;
 
+            // 3D position
             let x = r * angle.cos();
-            let y = r * angle.sin() * cos_tilt * incl.cos();
+            let z = r * angle.sin();
+            let y_offset = r * incl.sin() * 0.1; // Small vertical scatter
 
-            self.point_buffer.extend_from_slice(&[x, y, 1.5, 0.6, 0.5, 0.4]);
+            // Project to 2D with tilt
+            let y = z * cos_tilt + y_offset;
+
+            // Tiny fixed size - asteroids should be 1-2 pixel dots
+            let size = 1.0 + ((i as f32 * 1.618).fract() * 1.5);
+
+            // Brownish-gray color with slight variation
+            let v = (i as f32 * 0.7182).fract();
+            let r_col = 0.5 + v * 0.2;
+            let g_col = 0.45 + v * 0.15;
+            let b_col = 0.35 + v * 0.1;
+
+            self.point_buffer.extend_from_slice(&[x, y, size, r_col, g_col, b_col]);
         }
 
         if self.point_buffer.is_empty() { return; }
@@ -845,7 +908,8 @@ impl RendererGl {
             }
 
             gl.uniform_matrix4fv_with_f32_array(self.point_u_matrix.as_ref(), false, matrix);
-            gl.uniform1f(self.point_u_point_scale.as_ref(), 1.0 / state.view.zoom as f32);
+            // Fixed small point scale - asteroids are tiny!
+            gl.uniform1f(self.point_u_point_scale.as_ref(), 1.0);
 
             gl.draw_arrays(WebGl2RenderingContext::POINTS, 0, (self.point_buffer.len() / 6) as i32);
             gl.bind_vertex_array(None);

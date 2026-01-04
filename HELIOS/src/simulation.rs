@@ -545,12 +545,12 @@ pub struct SimulationState {
 
 impl SimulationState {
     pub fn new() -> Self {
-        // Default: 25% solar cycle per second = ~2.75 years/sec = ~1004.5 days/sec
-        // This means one full solar cycle takes 4 seconds - nice pulsation speed
-        let quarter_solar_cycle_per_sec = SOLAR_CYCLE_DAYS / 4.0; // ~1004.5 days/sec
+        // Default: 1% solar cycle per second = ~0.11 years/sec = ~40.18 days/sec
+        // This means one full solar cycle takes 100 seconds - slow enough to observe
+        let one_percent_solar_cycle_per_sec = SOLAR_CYCLE_DAYS / 100.0; // ~40.18 days/sec
         let mut state = Self {
             julian_date: J2000_EPOCH + 8766.0,       // ~2024
-            time_scale: quarter_solar_cycle_per_sec, // 25% solar cycle per second
+            time_scale: one_percent_solar_cycle_per_sec, // 1% solar cycle per second
             paused: false,
 
             planet_count: 0,
@@ -1067,6 +1067,51 @@ impl SimulationState {
         2000.0 + (self.julian_date - J2000_EPOCH) / 365.25
     }
 
+    /// Hit test against planets and Sun
+    pub fn hit_test(&self, screen_x: f64, screen_y: f64) -> Option<ObjectId> {
+        // Check planets (closest to camera first)
+        // We'll reuse the logic from render: project and check distance
+        let mut best_hit = None;
+        let mut min_depth = f64::INFINITY; // Smaller depth = closer
+
+        // Check Sun first
+        let (sx, sy, depth) = self.project_3d(0.0, 0.0, 0.0);
+        if depth < min_depth {
+            let dx = screen_x - sx;
+            let dy = screen_y - sy;
+            let dist = (dx * dx + dy * dy).sqrt();
+            let sun_radius_px = (SOLAR_RADIUS_KM / AU_KM / self.view.zoom).max(20.0); // Hit area larger than visual
+            if dist < sun_radius_px {
+                best_hit = Some(ObjectId::Sun);
+                min_depth = depth;
+            }
+        }
+
+        // Check planets
+        for i in 0..self.planet_count {
+            let (sx, sy, depth) = self.project_3d(self.planet_x[i], self.planet_y[i], self.planet_z[i]);
+            
+            // Only check if closer than current hit
+            if depth < min_depth {
+                let dx = screen_x - sx;
+                let dy = screen_y - sy;
+                let dist = (dx * dx + dy * dy).sqrt();
+                
+                // Calculate visual radius for hit testing
+                let radius_au = self.planet_radii_km[i] / AU_KM;
+                let visual_radius = (radius_au / self.view.zoom).max(4.0).min(500.0);
+                let hit_radius = visual_radius.max(15.0); // Minimum 15px hit target
+                
+                if dist < hit_radius {
+                    best_hit = Some(ObjectId::Planet(i));
+                    min_depth = depth;
+                }
+            }
+        }
+
+        best_hit
+    }
+
     fn interpolate_mission(&self, idx: usize) -> (f64, f64) {
         let count = self.mission_waypoint_counts[idx];
         if count == 0 {
@@ -1124,6 +1169,13 @@ impl SimulationState {
     /// Mark orbits for rebuild (call on zoom change)
     pub fn mark_orbits_dirty(&mut self) {
         self.orbit_dirty = true;
+    }
+
+    /// Set zoom level directly (updates view and camera)
+    pub fn set_zoom(&mut self, zoom: f64) {
+        self.view.zoom = zoom;
+        self.mark_orbits_dirty();
+        self.sync_camera();
     }
 
     // === VIEW CONTROL ===
@@ -1449,7 +1501,7 @@ impl SimulationState {
 
     /// Reset 3D view to default
     pub fn reset_3d_view(&mut self) {
-        self.view.tilt = 0.4;
+        self.view.tilt = 0.7; // ~40 degrees for better 3D perspective
         self.view.rotation = 0.0;
         self.mark_orbits_dirty();
     }

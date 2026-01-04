@@ -14,6 +14,7 @@
 #![allow(clippy::needless_range_loop)]
 #![allow(clippy::unnecessary_min_or_max)]
 
+use crate::cca_projection::{ObjectId, ScaleLevel};
 use crate::simulation::{SimulationState, AU_KM, ORBIT_SEGMENTS, SOLAR_RADIUS_KM};
 use dna::world::cca::{Epoch, FrameId, TimeScale};
 use std::f64::consts::PI;
@@ -761,86 +762,93 @@ fn draw_comet_boundary(
 
     // Parse colors for alpha manipulation
     let (base_r, base_g, base_b, base_a) = parse_rgba(stroke_color);
-    let (fill_r, fill_g, fill_b, fill_a) = parse_rgba(fill_color);
+    let (fill_r, fill_g, fill_b, _fill_a) = parse_rgba(fill_color);
 
-    let points_per_line = 64; // More points for smoother curves
+    let points_per_line = 96; // High resolution for smooth curves
 
-    // Draw multiple layers of soft glow (outer to inner)
-    // This creates a diffuse, nebula-like appearance
-    let glow_layers = 4;
-    for layer in (0..glow_layers).rev() {
-        let layer_scale = 1.0 + (layer as f64) * 0.08; // Each layer slightly larger
-        let layer_alpha = fill_a * (0.15 / (layer as f64 + 1.0)); // Decreasing opacity
-        let layer_blur = line_width * (layer as f64 + 1.0) * 3.0; // Increasing blur/width
+    // ========================================================================
+    // WIREFRAME MESH HELIOSPHERE - Creates a 3D grid structure
+    // ========================================================================
 
-        // Draw the boundary shape as a filled path with soft edges
+    // Number of latitude and longitude lines for the wireframe
+    let num_latitude_lines = 16;  // Lines from pole to pole
+    let num_longitude_lines = 24; // Lines around the equator
+
+    // Draw LATITUDE CIRCLES (horizontal rings at different heights)
+    for lat_idx in 0..num_latitude_lines {
+        // Latitude from -π/2 to +π/2 (pole to pole)
+        let lat = -PI / 2.0 + PI * (lat_idx as f64 + 0.5) / num_latitude_lines as f64;
+
         ctx.begin_path();
+        let mut first_point = true;
+
         for i in 0..=points_per_line {
             let lon = 2.0 * PI * (i as f64 / points_per_line as f64);
-            let (x, y, z) = heliosphere_point(
-                radius_au * layer_scale,
-                0.0, // Equatorial slice
-                lon,
-                nose_factor,
-                tail_factor,
-            );
-            let (sx, sy, _) = project(x, y, z);
+            let (x, y, z) = heliosphere_point(radius_au, lat, lon, nose_factor, tail_factor);
+            let (sx, sy, depth) = project(x, y, z);
 
-            if i == 0 {
+            if first_point {
                 ctx.move_to(sx, sy);
+                first_point = false;
             } else {
                 ctx.line_to(sx, sy);
             }
-        }
-        ctx.close_path();
 
-        // Soft glow stroke
-        ctx.set_stroke_style(&JsValue::from_str(&format!(
-            "rgba({}, {}, {}, {})",
-            fill_r, fill_g, fill_b, layer_alpha
-        )));
-        ctx.set_line_width(layer_blur);
-        ctx.stroke();
+            // Draw segments with depth-based opacity (back is dimmer)
+            if i > 0 && i % 4 == 0 {
+                let depth_norm = (depth / (radius_au * tail_factor * 2.0) + 0.5).clamp(0.0, 1.0);
+                // Front (depth_norm near 1) is brighter, back (near 0) is dimmer
+                let alpha = base_a * (0.15 + 0.45 * depth_norm);
+
+                ctx.set_stroke_style(&JsValue::from_str(&format!(
+                    "rgba({}, {}, {}, {})",
+                    base_r, base_g, base_b, alpha
+                )));
+                ctx.set_line_width(line_width * 0.6);
+                ctx.stroke();
+                ctx.begin_path();
+                ctx.move_to(sx, sy);
+            }
+        }
     }
 
-    // Draw subtle interior fill with gradient-like effect
-    // Multiple concentric rings with decreasing opacity
-    let fill_rings = 6;
-    for ring in 0..fill_rings {
-        let ring_scale = 1.0 - (ring as f64) * 0.12;
-        if ring_scale <= 0.3 {
-            break;
-        }
+    // Draw LONGITUDE LINES (vertical meridians from pole to pole)
+    for lon_idx in 0..num_longitude_lines {
+        let lon = 2.0 * PI * (lon_idx as f64 / num_longitude_lines as f64);
 
         ctx.begin_path();
-        for i in 0..=points_per_line {
-            let lon = 2.0 * PI * (i as f64 / points_per_line as f64);
-            let (x, y, z) = heliosphere_point(
-                radius_au * ring_scale,
-                0.0,
-                lon,
-                nose_factor,
-                tail_factor,
-            );
-            let (sx, sy, _) = project(x, y, z);
+        let mut first_point = true;
 
-            if i == 0 {
+        for lat_idx in 0..=points_per_line {
+            let lat = -PI / 2.0 + PI * (lat_idx as f64 / points_per_line as f64);
+            let (x, y, z) = heliosphere_point(radius_au, lat, lon, nose_factor, tail_factor);
+            let (sx, sy, depth) = project(x, y, z);
+
+            if first_point {
                 ctx.move_to(sx, sy);
+                first_point = false;
             } else {
                 ctx.line_to(sx, sy);
             }
-        }
-        ctx.close_path();
 
-        let ring_alpha = fill_a * 0.03 * (1.0 - ring as f64 / fill_rings as f64);
-        ctx.set_fill_style(&JsValue::from_str(&format!(
-            "rgba({}, {}, {}, {})",
-            fill_r, fill_g, fill_b, ring_alpha
-        )));
-        ctx.fill();
+            // Draw segments with depth-based opacity
+            if lat_idx > 0 && lat_idx % 4 == 0 {
+                let depth_norm = (depth / (radius_au * tail_factor * 2.0) + 0.5).clamp(0.0, 1.0);
+                let alpha = base_a * (0.15 + 0.45 * depth_norm);
+
+                ctx.set_stroke_style(&JsValue::from_str(&format!(
+                    "rgba({}, {}, {}, {})",
+                    base_r, base_g, base_b, alpha
+                )));
+                ctx.set_line_width(line_width * 0.6);
+                ctx.stroke();
+                ctx.begin_path();
+                ctx.move_to(sx, sy);
+            }
+        }
     }
 
-    // Draw the main boundary line - thin and subtle
+    // Draw EQUATORIAL LINE (main boundary) - brighter and thicker
     ctx.begin_path();
     for i in 0..=points_per_line {
         let lon = 2.0 * PI * (i as f64 / points_per_line as f64);
@@ -856,44 +864,31 @@ fn draw_comet_boundary(
     ctx.close_path();
     ctx.set_stroke_style(&JsValue::from_str(&format!(
         "rgba({}, {}, {}, {})",
-        base_r, base_g, base_b, base_a * 0.6
+        base_r, base_g, base_b, base_a * 0.8
     )));
-    ctx.set_line_width(line_width * 0.8);
+    ctx.set_line_width(line_width * 1.2);
     ctx.stroke();
 
-    // Add subtle latitude bands for depth (just 2-3, not a full grid)
-    let lat_bands = [0.3, -0.3]; // Two subtle bands above/below equator
-    for &lat_offset in &lat_bands {
-        let lat = lat_offset * PI / 2.0;
+    // Add subtle outer glow for visibility
+    ctx.begin_path();
+    for i in 0..=points_per_line {
+        let lon = 2.0 * PI * (i as f64 / points_per_line as f64);
+        let (x, y, z) = heliosphere_point(radius_au, 0.0, lon, nose_factor, tail_factor);
+        let (sx, sy, _) = project(x, y, z);
 
-        ctx.begin_path();
-        for i in 0..=points_per_line {
-            let lon = 2.0 * PI * (i as f64 / points_per_line as f64);
-            let (x, y, z) = heliosphere_point(radius_au, lat, lon, nose_factor, tail_factor);
-            let (sx, sy, depth) = project(x, y, z);
-
-            // Depth-based opacity
-            let depth_factor = (depth / (radius_au * 2.0) + 0.5).clamp(0.2, 1.0);
-
-            if i == 0 {
-                ctx.move_to(sx, sy);
-            } else {
-                ctx.line_to(sx, sy);
-            }
-
-            // Only draw visible portion (front half)
-            if i > 0 && i % 8 == 0 {
-                ctx.set_stroke_style(&JsValue::from_str(&format!(
-                    "rgba({}, {}, {}, {})",
-                    base_r, base_g, base_b, base_a * 0.2 * depth_factor
-                )));
-                ctx.set_line_width(line_width * 0.4);
-                ctx.stroke();
-                ctx.begin_path();
-                ctx.move_to(sx, sy);
-            }
+        if i == 0 {
+            ctx.move_to(sx, sy);
+        } else {
+            ctx.line_to(sx, sy);
         }
     }
+    ctx.close_path();
+    ctx.set_stroke_style(&JsValue::from_str(&format!(
+        "rgba({}, {}, {}, {})",
+        fill_r, fill_g, fill_b, 0.15
+    )));
+    ctx.set_line_width(line_width * 4.0);
+    ctx.stroke();
 }
 
 /// Calculate a point on the heliosphere surface
@@ -1596,8 +1591,9 @@ fn draw_planets(ctx: &CanvasRenderingContext2d, state: &SimulationState, time: f
         planets_with_depth.push((p, sx, sy, depth, base_radius));
     }
 
-    // Sort by depth (furthest first = smallest depth first for back-to-front rendering)
-    planets_with_depth.sort_by(|a, b| a.3.partial_cmp(&b.3).unwrap_or(std::cmp::Ordering::Equal));
+    // Sort by depth (furthest first = largest depth first for back-to-front rendering)
+    // We want Descending sort (Largest Z -> Smallest Z) because Z increases with distance
+    planets_with_depth.sort_by(|a, b| b.3.partial_cmp(&a.3).unwrap_or(std::cmp::Ordering::Equal));
 
     // Calculate depth range for perspective effects
     let (min_depth, max_depth) = if !planets_with_depth.is_empty() {
@@ -1673,6 +1669,11 @@ fn draw_planets(ctx: &CanvasRenderingContext2d, state: &SimulationState, time: f
 fn draw_moons(ctx: &CanvasRenderingContext2d, state: &SimulationState, time: f64) {
     let view = &state.view;
     
+    // Draw moon orbits if we are focused on a planet
+    if let ObjectId::Planet(focus_idx) = state.selected_object {
+        draw_moon_orbits(ctx, state, focus_idx);
+    }
+
     for i in 0..state.moon_count {
         let parent_idx = state.moon_parent_planet[i];
         if parent_idx >= state.planet_count {
@@ -1680,16 +1681,13 @@ fn draw_moons(ctx: &CanvasRenderingContext2d, state: &SimulationState, time: f64
         }
         
         // Use world-space moon position
-        let (sx, sy, depth) = state.project_3d(
+        let (sx, sy, _depth) = state.project_3d(
             state.moon_world_x[i],
             state.moon_world_y[i],
             state.moon_world_z[i],
         );
         
-        // Skip if behind camera
-        if depth < 0.0 {
-            continue;
-        }
+        // Don't cull by depth - negative depth just means in front of target plane
         
         // Moon radius in pixels
         let radius_km = state.moon_radii_km[i];
@@ -1717,6 +1715,88 @@ fn draw_moons(ctx: &CanvasRenderingContext2d, state: &SimulationState, time: f64
             ctx.set_text_align("center");
             let _ = ctx.fill_text(state.moon_names[i], sx, sy - base_radius - 8.0);
         }
+    }
+}
+
+fn draw_moon_orbits(ctx: &CanvasRenderingContext2d, state: &SimulationState, planet_idx: usize) {
+    // Only draw for the selected planet
+    
+    ctx.set_line_width(1.0);
+    
+    for i in 0..state.moon_count {
+        if state.moon_parent_planet[i] != planet_idx {
+            continue;
+        }
+        
+        let color = state.moon_colors[i];
+        ctx.set_stroke_style(&JsValue::from_str(&format!("{}40", color))); // 25% opacity
+        
+        ctx.begin_path();
+        
+        // Draw orbit ellipse (approximate by sampling points)
+        let segments = 64;
+        let orbit = &state.moon_orbits[i];
+        
+        // We need to calculate points relative to the planet, then project to world
+        for j in 0..=segments {
+            let angle = 2.0 * std::f64::consts::PI * (j as f64 / segments as f64);
+            // We can cheat a bit and use the orbit parameters directly
+            // Or use the orbital elements helper if we want to be precise about inclination etc.
+            
+            // Re-use the orbit calculation logic roughly
+            // Ideally we'd expose a method on OrbitalElements to get position at mean anomaly
+            // But for now, let's just draw a circle in the orbital plane
+            
+            // Simplified: Draw the actual path based on current orbital elements
+            // We'll just sweep Mean Anomaly from 0 to 2PI
+            // Note: This assumes the orbit is static (no precession over the orbit draw)
+            
+            // This is computationally expensive if we do full solve_kepler for every point
+            // But for < 100 moons it's fine.
+            
+            // Optimization: Assume circular orbit for drawing
+            // Most major moons have low eccentricity
+            
+            // Get position relative to parent
+            // We can't easily call orbit.position_from_anomaly without exposing it or duplicating
+            // Let's assume circular/elliptical in the plane defined by inclination
+            
+            // Actually, we can just use the orbit.position_3d with a fake time? 
+            // No, position_3d takes Julian Date which includes mean motion.
+            // We want to sweep the orbit.
+            
+            // Let's implement a simple orbit path helper in simulation or just do the transform here
+            // x = r * (cos(Ω) cos(ω+ν) - sin(Ω) sin(ω+ν) cos(i))
+            // y = r * (sin(Ω) cos(ω+ν) + cos(Ω) sin(ω+ν) cos(i))
+            // z = r * (sin(i) sin(ω+ν))
+            
+            // For major moons, simplified circular inclined orbit is usually enough for visual
+            let r = orbit.a; // Semi-major axis (AU)
+            let inc = orbit.i; // Inclination (radians)
+            let node = orbit.omega; // Longitude of ascending node (radians)
+            
+            // For drawing, we sweep theta (argument of latitude approx)
+            let theta = angle; 
+            
+            let x_rel = r * (node.cos() * theta.cos() - node.sin() * theta.sin() * inc.cos());
+            let y_rel = r * (node.sin() * theta.cos() + node.cos() * theta.sin() * inc.cos());
+            let z_rel = r * (inc.sin() * theta.sin());
+            
+            // Add parent position
+            let world_x = state.planet_x[planet_idx] + x_rel;
+            let world_y = state.planet_y[planet_idx] + y_rel;
+            let world_z = state.planet_z[planet_idx] + z_rel;
+            
+            let (sx, sy, _depth) = state.project_3d(world_x, world_y, world_z);
+            
+            if j == 0 {
+                ctx.move_to(sx, sy);
+            } else {
+                ctx.line_to(sx, sy);
+            }
+        }
+        
+        ctx.stroke();
     }
 }
 
@@ -1787,12 +1867,9 @@ fn draw_oort_cloud(ctx: &CanvasRenderingContext2d, state: &SimulationState, _tim
         let y = distance * theta.sin() * phi.sin() + distance * 0.01 * angle.sin();
         let z = distance * theta.cos();
         
-        let (sx, sy, depth) = state.project_3d(x, y, z);
+        let (sx, sy, _depth) = state.project_3d(x, y, z);
         
-        // Skip if behind camera
-        if depth < 0.0 {
-            continue;
-        }
+        // Don't cull by depth - negative depth just means in front of target plane
         
         // Screen visibility check
         if sx < -2.0 || sx > view.width + 2.0 || sy < -2.0 || sy > view.height + 2.0 {
@@ -1875,7 +1952,8 @@ fn draw_ecliptic_height_indicator(
     ctx.fill();
 
     // Optional: show Z value label for significant inclinations
-    if z.abs() > 0.1 {
+    // Disabled to reduce clutter unless explicitly debugging
+    if false && z.abs() > 0.1 {
         ctx.set_font("400 9px 'Just Sans', sans-serif");
         ctx.set_fill_style(&JsValue::from_str(&format!("{}80", color)));
         let z_label = if z > 0.0 {
@@ -1987,18 +2065,36 @@ fn draw_earth(ctx: &CanvasRenderingContext2d, cx: f64, cy: f64, radius: f64, tim
 
     ctx.restore();
 
-    // Atmosphere glow
+    // Atmosphere glow - more pronounced
     let atmo = ctx
-        .create_radial_gradient(cx, cy, radius * 0.95, cx, cy, radius * 1.15)
+        .create_radial_gradient(cx, cy, radius * 0.9, cx, cy, radius * 1.3)
         .unwrap();
-    atmo.add_color_stop(0.0, "rgba(100, 180, 255, 0)").unwrap();
-    atmo.add_color_stop(0.5, "rgba(100, 180, 255, 0.15)")
-        .unwrap();
-    atmo.add_color_stop(1.0, "rgba(100, 180, 255, 0)").unwrap();
+    atmo.add_color_stop(0.0, "rgba(135, 206, 235, 0.0)").unwrap();
+    atmo.add_color_stop(0.4, "rgba(135, 206, 235, 0.1)").unwrap();
+    atmo.add_color_stop(0.7, "rgba(135, 206, 235, 0.25)").unwrap();
+    atmo.add_color_stop(1.0, "rgba(135, 206, 235, 0.0)").unwrap();
+    
     ctx.set_fill_style(&atmo);
     ctx.begin_path();
-    ctx.arc(cx, cy, radius * 1.15, 0.0, 2.0 * PI).unwrap_or(());
+    ctx.arc(cx, cy, radius * 1.3, 0.0, 2.0 * PI).unwrap_or(());
     ctx.fill();
+    
+    // Day/Night terminator (shadow)
+    ctx.save();
+    ctx.begin_path();
+    ctx.arc(cx, cy, radius + 1.0, 0.0, 2.0 * PI).unwrap_or(());
+    ctx.clip();
+    
+    // Shadow gradient (offset to simulate light direction)
+    let shadow = ctx.create_linear_gradient(cx - radius, cy, cx + radius, cy);
+    shadow.add_color_stop(0.0, "rgba(0,0,0,0.85)").unwrap(); // Night side
+    shadow.add_color_stop(0.4, "rgba(0,0,0,0.5)").unwrap();
+    shadow.add_color_stop(0.6, "rgba(0,0,0,0.1)").unwrap();
+    shadow.add_color_stop(1.0, "rgba(0,0,0,0.0)").unwrap(); // Day side
+    
+    ctx.set_fill_style(&shadow);
+    ctx.fill_rect(cx - radius * 1.5, cy - radius * 1.5, radius * 3.0, radius * 3.0);
+    ctx.restore();
 }
 
 /// Draw a blob-shaped continent

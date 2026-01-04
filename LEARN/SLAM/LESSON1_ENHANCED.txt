@@ -1,0 +1,146 @@
+// Enhanced Lesson 1 - Template for proper math and implementation
+
+math_details: r#"
+<h4>Core Equation</h4>
+<p>The complementary filter combines two estimates with complementary weights:</p>
+
+$$\theta_{n} = \alpha \cdot (\theta_{n-1} + \omega \cdot \Delta t) + (1 - \alpha) \cdot \theta_{accel}$$
+
+<p><strong>Where:</strong></p>
+<ul>
+<li>$\theta_{n}$ = Current angle estimate (what we're solving for)</li>
+<li>$\theta_{n-1}$ = Previous angle estimate</li>
+<li>$\omega$ = Gyroscope angular velocity (rad/s or deg/s)</li>
+<li>$\Delta t$ = Time step (e.g., 0.001s for 1000Hz)</li>
+<li>$\theta_{accel}$ = Angle from accelerometer: $\arctan2(a_y, a_z)$</li>
+<li>$\alpha$ = Trust factor (typically 0.96-0.99)</li>
+</ul>
+
+<h4>Error Calculation</h4>
+<p>The <strong>error</strong> is the difference between your estimate and ground truth:</p>
+
+$$e_n = \theta_{true} - \theta_{estimated}$$
+
+<p>In the demo, we calculate:</p>
+<ul>
+<li><strong>Gyro Error:</strong> $|$Ground Truth - Gyro Integration$|$</li>
+<li><strong>Accel Error:</strong> $|$Ground Truth - Accelerometer Reading$|$</li>
+<li><strong>Filter Error:</strong> $|$Ground Truth - Fused Estimate$|$</li>
+</ul>
+
+<h4>Why α ≈ 0.98 Works</h4>
+<p>The cutoff frequency is:</p>
+
+$$f_c = \frac{\alpha}{2\pi \Delta t (1-\alpha)}$$
+
+<p>For $\alpha = 0.98$ at 100Hz ($\Delta t = 0.01s$):</p>
+$$f_c = \frac{0.98}{2\pi \times 0.01 \times 0.02} \approx 0.78 \text{ Hz}$$
+
+<p>This means:</p>
+<ul>
+<li>Changes faster than 0.78Hz (vibration, quick tilts) → Trust gyro</li>
+<li>Changes slower than 0.78Hz (drift, gravity) → Trust accelerometer</li>
+</ul>
+
+<h4>From Scratch Implementation</h4>
+<pre>
+struct ComplementaryFilter {
+    angle: f32,      // Current estimate
+    alpha: f32,      // Trust factor (0.96-0.99)
+}
+
+impl ComplementaryFilter {
+    fn update(&mut self, gyro: f32, accel_angle: f32, dt: f32) -> f32 {
+        // Prediction from gyro
+        let gyro_prediction = self.angle + gyro * dt;
+
+        // Fusion
+        self.angle = self.alpha * gyro_prediction + (1.0 - self.alpha) * accel_angle;
+
+        self.angle
+    }
+}
+</pre>
+"#,
+
+implementation: r#"
+<h4>Hardware: IMU Sensors</h4>
+
+<p><strong>Popular IMUs:</strong></p>
+<ul>
+<li><strong>MPU6050</strong> - $2, I2C, 6-axis (gyro + accel), perfect for learning</li>
+<li><strong>BMI088</strong> - High-performance racing drones (DJI FPV)</li>
+<li><strong>ICM-42688-P</strong> - Modern flight controllers</li>
+</ul>
+
+<h4>Reading MPU6050 with Rust</h4>
+<pre>
+// LLM Prompt:
+"Write Rust code using linux-embedded-hal to read MPU6050
+gyroscope and accelerometer data over I2C at 100Hz.
+Include calibration for gyro bias."
+
+// Expected output structure:
+struct ImuData {
+    gyro_x: f32,  // deg/s
+    gyro_y: f32,
+    gyro_z: f32,
+    accel_x: f32, // g-force
+    accel_y: f32,
+    accel_z: f32,
+}
+</pre>
+
+<h4>Calculate Accel Angle</h4>
+<p>For pitch (rotation around Y-axis):</p>
+<pre>
+let theta_accel = accel_y.atan2((accel_x.powi(2) + accel_z.powi(2)).sqrt());
+</pre>
+
+<p><strong>Why this formula?</strong> When tilted, gravity ($\vec{g}$) projects onto sensor axes.
+The ratio gives the angle. We use both X and Z to handle 360° without singularities.</p>
+
+<h4>Complete Loop (100Hz)</h4>
+<pre>
+// LLM Prompt:
+"Create a Rust real-time loop that:
+1. Reads MPU6050 at 100Hz using a timer interrupt
+2. Applies complementary filter (alpha=0.98)
+3. Logs angle estimate, gyro angle, accel angle, and error to CSV
+4. Runs for 60 seconds
+
+Target: Raspberry Pi 4 with linux-embedded-hal"
+</pre>
+
+<h4>Tuning Alpha</h4>
+<p><strong>Procedure:</strong></p>
+<ol>
+<li>Mount IMU rigidly on a platform</li>
+<li>Collect 30s of data while manually tilting</li>
+<li>Plot gyro-only, accel-only, and fused estimates</li>
+<li>Measure RMS error for α ∈ [0.90, 0.95, 0.98, 0.99]</li>
+<li>Choose α with lowest error for your application</li>
+</ol>
+
+<pre>
+// LLM Prompt:
+"Write Python script to analyze IMU log file (CSV format: time, gyro, accel, fused, truth).
+Calculate RMS error for each method. Plot all four on the same graph with error shading."
+</pre>
+
+<h4>Real-World Challenge: Vibration</h4>
+<p>On a drone, motors cause 100-200Hz vibration. This looks like rotation to the gyro!</p>
+
+<p><strong>Solutions:</strong></p>
+<ul>
+<li>Mechanical: Soft-mount the flight controller (o-rings, foam)</li>
+<li>Software: Add a notch filter before the complementary filter</li>
+<li>Advanced: Dynamic notch filter that tracks motor RPM</li>
+</ul>
+
+<pre>
+// LLM Prompt:
+"Implement a biquad notch filter in Rust for 150Hz with Q=10.
+Apply it to gyro readings before complementary filter."
+</pre>
+"#,
