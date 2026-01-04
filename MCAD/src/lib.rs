@@ -20,6 +20,9 @@ use cad_engine::{
     Sketch, SketchPlane, Point2, SketchEntity, SketchEntityId, SketchPointId,
     Constraint, GeometricConstraint, DimensionalConstraint,
     ConstraintSolver, ExtrudeParams, extrude_sketch,
+    circumcenter,
+    RevolveParams, RevolveAxis, revolve_sketch,
+    linear_pattern, circular_pattern, Vector3,
 };
 
 // Global state for the current solid and view
@@ -40,8 +43,38 @@ enum SketchTool {
     Select,
     Line,
     Arc,
+    Rectangle,
     Circle,
     Point,
+}
+
+fn next_entity_id(sketch: &Sketch) -> SketchEntityId {
+    let next = sketch
+        .entities
+        .iter()
+        .map(|e| e.id().0)
+        .max()
+        .unwrap_or(0)
+        .saturating_add(1);
+    SketchEntityId(next)
+}
+
+fn normalize_angle(mut a: f32) -> f32 {
+    let two_pi = 2.0 * PI;
+    a = a % two_pi;
+    if a < 0.0 {
+        a += two_pi;
+    }
+    a
+}
+
+fn angle_in_ccw_sweep(start: f32, end: f32, mid: f32) -> bool {
+    // All normalized to [0, 2pi)
+    if start <= end {
+        mid >= start && mid <= end
+    } else {
+        mid >= start || mid <= end
+    }
 }
 
 struct AppState {
@@ -49,6 +82,7 @@ struct AppState {
     solid: Option<Solid>,
     solid_a: Option<Solid>,  // For Boolean operations
     solid_b: Option<Solid>,  // For Boolean operations
+    pattern_instances: Option<Vec<Solid>>,
     rotation_x: f32,
     rotation_y: f32,
     zoom: f32,
@@ -78,6 +112,7 @@ impl Default for AppState {
             solid: None,
             solid_a: None,
             solid_b: None,
+            pattern_instances: None,
             rotation_x: 0.5,
             rotation_y: 0.75,
             zoom: 2.0,
@@ -235,6 +270,56 @@ fn init_ui() -> Result<(), JsValue> {
         extrude_closure.as_ref(),
     )?;
     extrude_closure.forget();
+
+    // Export revolve function to JS
+    let revolve_closure = Closure::wrap(Box::new(|| {
+        if let Err(e) = revolve_current_sketch() {
+            web_sys::console::error_1(&format!("Revolve failed: {:?}", e).into());
+        }
+    }) as Box<dyn Fn()>);
+    js_sys::Reflect::set(
+        &window,
+        &JsValue::from_str("revolveSketch"),
+        revolve_closure.as_ref(),
+    )?;
+    revolve_closure.forget();
+
+    // Export pattern functions to JS
+    let linear_pattern_closure = Closure::wrap(Box::new(|| {
+        if let Err(e) = apply_linear_pattern() {
+            web_sys::console::error_1(&format!("Linear pattern failed: {:?}", e).into());
+        }
+    }) as Box<dyn Fn()>);
+    js_sys::Reflect::set(
+        &window,
+        &JsValue::from_str("applyLinearPattern"),
+        linear_pattern_closure.as_ref(),
+    )?;
+    linear_pattern_closure.forget();
+
+    let circular_pattern_closure = Closure::wrap(Box::new(|| {
+        if let Err(e) = apply_circular_pattern() {
+            web_sys::console::error_1(&format!("Circular pattern failed: {:?}", e).into());
+        }
+    }) as Box<dyn Fn()>);
+    js_sys::Reflect::set(
+        &window,
+        &JsValue::from_str("applyCircularPattern"),
+        circular_pattern_closure.as_ref(),
+    )?;
+    circular_pattern_closure.forget();
+
+    let clear_pattern_closure = Closure::wrap(Box::new(|| {
+        if let Err(e) = clear_pattern() {
+            web_sys::console::error_1(&format!("Clear pattern failed: {:?}", e).into());
+        }
+    }) as Box<dyn Fn()>);
+    js_sys::Reflect::set(
+        &window,
+        &JsValue::from_str("clearPattern"),
+        clear_pattern_closure.as_ref(),
+    )?;
+    clear_pattern_closure.forget();
 
     // Export constraint application to JS
     let constraint_closure = Closure::wrap(Box::new(|constraint_type: String| {
@@ -433,6 +518,16 @@ fn setup_viewport_events(document: &Document) -> Result<(), JsValue> {
                         s.sketch_tool = SketchTool::Line;
                         s.temp_points.clear();
                         web_sys::console::log_1(&"Tool: Line".into());
+                    }
+                    "a" | "A" => {
+                        s.sketch_tool = SketchTool::Arc;
+                        s.temp_points.clear();
+                        web_sys::console::log_1(&"Tool: Arc".into());
+                    }
+                    "r" | "R" => {
+                        s.sketch_tool = SketchTool::Rectangle;
+                        s.temp_points.clear();
+                        web_sys::console::log_1(&"Tool: Rectangle".into());
                     }
                     "c" | "C" => {
                         s.sketch_tool = SketchTool::Circle;
@@ -654,7 +749,20 @@ fn render() -> Result<(), JsValue> {
         let state = state.borrow();
         match state.mode {
             AppMode::View3D => {
-                if let Some(ref solid) = state.solid {
+                if let Some(ref solids) = state.pattern_instances {
+                    for solid in solids {
+                        draw_wireframe(
+                            &ctx,
+                            solid,
+                            css_width,
+                            css_height,
+                            state.rotation_x,
+                            state.rotation_y,
+                            state.zoom,
+                        )
+                        .ok();
+                    }
+                } else if let Some(ref solid) = state.solid {
                     draw_wireframe(
                         &ctx,
                         solid,
@@ -870,6 +978,30 @@ fn draw_sketch_2d(
                     ctx.stroke();
                 }
             }
+            SketchEntity::Arc {
+                center,
+                start,
+                end,
+                radius,
+                ccw,
+                ..
+            } => {
+                if let (Some(c), Some(p1), Some(p2)) =
+                    (sketch.point(*center), sketch.point(*start), sketch.point(*end))
+                {
+                    let (scx, scy) = to_screen(c.position);
+                    let r = *radius as f64 * zoom as f64;
+
+                    let v1 = Point2::new(p1.position.x - c.position.x, p1.position.y - c.position.y);
+                    let v2 = Point2::new(p2.position.x - c.position.x, p2.position.y - c.position.y);
+                    let a1 = -(v1.y.atan2(v1.x)) as f64;
+                    let a2 = -(v2.y.atan2(v2.x)) as f64;
+
+                    ctx.begin_path();
+                    ctx.arc_with_anticlockwise(scx, scy, r, a1, a2, *ccw)?;
+                    ctx.stroke();
+                }
+            }
             _ => {}
         }
     }
@@ -907,6 +1039,27 @@ fn draw_sketch_2d(
                     ctx.stroke();
                 }
             }
+            SketchTool::Rectangle if temp_points.len() == 1 => {
+                let p1 = temp_points[0];
+                let (x1, y1) = to_screen(p1);
+
+                // First point marker
+                ctx.set_fill_style(&JsValue::from_str("#ff6b35"));
+                ctx.begin_path();
+                ctx.arc(x1, y1, 6.0, 0.0, 2.0 * std::f64::consts::PI)?;
+                ctx.fill();
+
+                if let Some(mp) = mouse_pos {
+                    let (x2, y2) = to_screen(mp);
+                    let left = x1.min(x2);
+                    let right = x1.max(x2);
+                    let top = y1.min(y2);
+                    let bottom = y1.max(y2);
+                    ctx.begin_path();
+                    ctx.rect(left, top, right - left, bottom - top);
+                    ctx.stroke();
+                }
+            }
             SketchTool::Circle if temp_points.len() == 1 => {
                 // Draw center marker
                 let (cx, cy) = to_screen(temp_points[0]);
@@ -922,6 +1075,46 @@ fn draw_sketch_2d(
                     ctx.begin_path();
                     ctx.arc(cx, cy, radius, 0.0, 2.0 * std::f64::consts::PI)?;
                     ctx.stroke();
+                }
+            }
+            SketchTool::Arc if temp_points.len() == 1 => {
+                let (x1, y1) = to_screen(temp_points[0]);
+                ctx.set_fill_style(&JsValue::from_str("#ff6b35"));
+                ctx.begin_path();
+                ctx.arc(x1, y1, 6.0, 0.0, 2.0 * std::f64::consts::PI)?;
+                ctx.fill();
+
+                if let Some(mp) = mouse_pos {
+                    let (x2, y2) = to_screen(mp);
+                    ctx.begin_path();
+                    ctx.move_to(x1, y1);
+                    ctx.line_to(x2, y2);
+                    ctx.stroke();
+                }
+            }
+            SketchTool::Arc if temp_points.len() == 2 => {
+                if let Some(mp) = mouse_pos {
+                    let p1 = temp_points[0];
+                    let pm = temp_points[1];
+                    let p2 = mp;
+                    if let Some(c) = circumcenter(p1, pm, p2) {
+                        let radius = c.distance(&p1) as f64 * zoom as f64;
+                        let (scx, scy) = to_screen(c);
+
+                        let a1 = -((p1.y - c.y).atan2(p1.x - c.x)) as f64;
+                        let am = -((pm.y - c.y).atan2(pm.x - c.x)) as f64;
+                        let a2 = -((p2.y - c.y).atan2(p2.x - c.x)) as f64;
+
+                        // Decide ccw in sketch space so the sweep passes through mid point.
+                        let s = normalize_angle((p1.y - c.y).atan2(p1.x - c.x));
+                        let m = normalize_angle((pm.y - c.y).atan2(pm.x - c.x));
+                        let e = normalize_angle((p2.y - c.y).atan2(p2.x - c.x));
+                        let ccw = angle_in_ccw_sweep(s, e, m);
+
+                        ctx.begin_path();
+                        ctx.arc_with_anticlockwise(scx, scy, radius, a1, a2, ccw)?;
+                        ctx.stroke();
+                    }
                 }
             }
             _ => {}
@@ -1116,6 +1309,101 @@ fn download_binary_file(filename: &str, content: &[u8]) -> Result<(), JsValue> {
     Ok(())
 }
 
+fn solid_bbox_center(solid: &Solid) -> Point3 {
+    if solid.vertices.is_empty() {
+        return Point3::new(0.0, 0.0, 0.0);
+    }
+    let mut minx = f32::INFINITY;
+    let mut miny = f32::INFINITY;
+    let mut minz = f32::INFINITY;
+    let mut maxx = f32::NEG_INFINITY;
+    let mut maxy = f32::NEG_INFINITY;
+    let mut maxz = f32::NEG_INFINITY;
+
+    for v in &solid.vertices {
+        minx = minx.min(v.point.x);
+        miny = miny.min(v.point.y);
+        minz = minz.min(v.point.z);
+        maxx = maxx.max(v.point.x);
+        maxy = maxy.max(v.point.y);
+        maxz = maxz.max(v.point.z);
+    }
+
+    Point3::new((minx + maxx) * 0.5, (miny + maxy) * 0.5, (minz + maxz) * 0.5)
+}
+
+fn apply_linear_pattern() -> Result<(), JsValue> {
+    let window = web_sys::window().ok_or("No window")?;
+    let document = window.document().ok_or("No document")?;
+
+    let count = get_input_value(&document, "pattern-linear-count")? as u32;
+    let spacing = get_input_value(&document, "pattern-linear-spacing")? as f32;
+
+    let dir_select = document
+        .get_element_by_id("pattern-linear-direction")
+        .ok_or("Pattern linear direction select not found")?;
+    let dir_select: HtmlSelectElement = dir_select.dyn_into()?;
+    let dir = match dir_select.value().as_str() {
+        "y" => Vector3::Y,
+        "z" => Vector3::Z,
+        _ => Vector3::X,
+    };
+
+    STATE.with(|state| {
+        let mut s = state.borrow_mut();
+        let solid = s
+            .solid
+            .as_ref()
+            .ok_or_else(|| JsValue::from_str("No solid to pattern"))?;
+
+        let instances = linear_pattern(solid, dir, count.max(1), spacing);
+        s.pattern_instances = Some(instances);
+        drop(s);
+        render()?;
+        Ok(())
+    })
+}
+
+fn apply_circular_pattern() -> Result<(), JsValue> {
+    let window = web_sys::window().ok_or("No window")?;
+    let document = window.document().ok_or("No document")?;
+
+    let count = get_input_value(&document, "pattern-circular-count")? as u32;
+
+    let axis_select = document
+        .get_element_by_id("pattern-circular-axis")
+        .ok_or("Pattern circular axis select not found")?;
+    let axis_select: HtmlSelectElement = axis_select.dyn_into()?;
+    let axis = match axis_select.value().as_str() {
+        "x" => Vector3::X,
+        "y" => Vector3::Y,
+        _ => Vector3::Z,
+    };
+
+    STATE.with(|state| {
+        let mut s = state.borrow_mut();
+        let solid = s
+            .solid
+            .as_ref()
+            .ok_or_else(|| JsValue::from_str("No solid to pattern"))?;
+
+        let center = solid_bbox_center(solid);
+        let instances = circular_pattern(solid, axis, center, count.max(1));
+        s.pattern_instances = Some(instances);
+        drop(s);
+        render()?;
+        Ok(())
+    })
+}
+
+fn clear_pattern() -> Result<(), JsValue> {
+    STATE.with(|state| {
+        state.borrow_mut().pattern_instances = None;
+    });
+    render()?;
+    Ok(())
+}
+
 fn export_stl() -> Result<(), JsValue> {
     STATE.with(|state| {
         let state = state.borrow();
@@ -1152,6 +1440,7 @@ fn perform_boolean(operation: &str) -> Result<(), JsValue> {
         match result {
             Ok(new_solid) => {
                 state.solid = Some(new_solid);
+                state.pattern_instances = None; // Clear patterns on topology-changing ops
                 state.solid_a = None;  // Reset for next operation
                 state.solid_b = None;
                 drop(state);
@@ -1219,6 +1508,7 @@ fn set_sketch_tool(tool: &str) {
         s.sketch_tool = match tool {
             "line" => SketchTool::Line,
             "arc" => SketchTool::Arc,
+            "rectangle" => SketchTool::Rectangle,
             "circle" => SketchTool::Circle,
             "point" => SketchTool::Point,
             "select" => SketchTool::Select,
@@ -1260,6 +1550,53 @@ fn extrude_current_sketch() -> Result<(), JsValue> {
             Err(e) => {
                 Err(JsValue::from_str(&format!("Extrude failed: {:?}", e)))
             }
+        }
+    })
+}
+
+fn revolve_current_sketch() -> Result<(), JsValue> {
+    let window = web_sys::window().ok_or("No window")?;
+    let document = window.document().ok_or("No document")?;
+
+    let angle = get_input_value(&document, "revolve-angle")? as f32;
+    let segments = get_input_value(&document, "revolve-segments")? as u32;
+
+    let axis_select = document
+        .get_element_by_id("revolve-axis")
+        .ok_or("Revolve axis select not found")?;
+    let axis_select: HtmlSelectElement = axis_select.dyn_into()?;
+    let axis = match axis_select.value().as_str() {
+        "x" => RevolveAxis::X,
+        _ => RevolveAxis::Y,
+    };
+
+    STATE.with(|state| {
+        let mut s = state.borrow_mut();
+        let sketch = s
+            .current_sketch
+            .as_ref()
+            .ok_or_else(|| JsValue::from_str("No sketch to revolve"))?;
+
+        web_sys::console::log_1(&"Revolving sketch...".into());
+
+        let params = RevolveParams {
+            angle_degrees: angle,
+            axis,
+            segments: segments.max(3),
+        };
+
+        match revolve_sketch(sketch, &params) {
+            Ok(solid) => {
+                s.solid = Some(solid);
+                s.mode = AppMode::View3D;
+                drop(s);
+
+                web_sys::console::log_1(&"Revolve complete - switched to 3D view".into());
+                display_properties(&document)?;
+                render()?;
+                Ok(())
+            }
+            Err(e) => Err(JsValue::from_str(&format!("Revolve failed: {:?}", e))),
         }
     })
 }
@@ -1314,14 +1651,14 @@ fn handle_sketch_click(screen_x: f64, screen_y: f64) -> Result<(), JsValue> {
         let has_temp_point = !s.temp_points.is_empty();
         let first_temp = if has_temp_point { Some(s.temp_points[0]) } else { None };
 
-        if let Some(sketch) = s.current_sketch.as_mut() {
+        if s.current_sketch.is_some() {
             match tool {
                 SketchTool::Line => {
                     if let Some(p1) = first_temp {
-                        // Second click - create line
+                        let sketch = s.current_sketch.as_mut().unwrap();
                         let p1_id = sketch.add_point(p1);
                         let p2_id = sketch.add_point(pos);
-                        let line_id = SketchEntityId(sketch.entities.len() as u32);
+                        let line_id = next_entity_id(sketch);
 
                         sketch.add_entity(SketchEntity::Line {
                             id: line_id,
@@ -1330,19 +1667,21 @@ fn handle_sketch_click(screen_x: f64, screen_y: f64) -> Result<(), JsValue> {
                         });
 
                         s.temp_points.clear();
-                        web_sys::console::log_1(&format!("Line created: ({:.1},{:.1}) → ({:.1},{:.1})", p1.x, p1.y, pos.x, pos.y).into());
+                        web_sys::console::log_1(&format!(
+                            "Line created: ({:.1},{:.1}) → ({:.1},{:.1})",
+                            p1.x, p1.y, pos.x, pos.y
+                        ).into());
                     } else {
-                        // First click - store snapped point
                         s.temp_points.push(pos);
                         web_sys::console::log_1(&format!("Line: first point at ({:.1}, {:.1})", pos.x, pos.y).into());
                     }
                 }
                 SketchTool::Circle => {
                     if let Some(center) = first_temp {
-                        // Second click - create circle
+                        let sketch = s.current_sketch.as_mut().unwrap();
                         let center_id = sketch.add_point(center);
                         let radius = center.distance(&pos);
-                        let circle_id = SketchEntityId(sketch.entities.len() as u32);
+                        let circle_id = next_entity_id(sketch);
 
                         sketch.add_entity(SketchEntity::Circle {
                             id: circle_id,
@@ -1351,21 +1690,68 @@ fn handle_sketch_click(screen_x: f64, screen_y: f64) -> Result<(), JsValue> {
                         });
 
                         s.temp_points.clear();
-                        web_sys::console::log_1(&format!("Circle created: center ({:.1},{:.1}), radius {:.1}", center.x, center.y, radius).into());
+                        web_sys::console::log_1(&format!(
+                            "Circle created: center ({:.1},{:.1}), radius {:.1}",
+                            center.x, center.y, radius
+                        ).into());
                     } else {
-                        // First click - center
                         s.temp_points.push(pos);
                         web_sys::console::log_1(&format!("Circle: center at ({:.1}, {:.1})", pos.x, pos.y).into());
                     }
                 }
+                SketchTool::Rectangle => {
+                    if let Some(p1) = first_temp {
+                        let p2 = pos;
+
+                        let x_min = p1.x.min(p2.x);
+                        let x_max = p1.x.max(p2.x);
+                        let y_min = p1.y.min(p2.y);
+                        let y_max = p1.y.max(p2.y);
+
+                        let a = Point2::new(x_min, y_min);
+                        let b = Point2::new(x_max, y_min);
+                        let c = Point2::new(x_max, y_max);
+                        let d = Point2::new(x_min, y_max);
+
+                        let sketch = s.current_sketch.as_mut().unwrap();
+                        let a_id = sketch.add_point(a);
+                        let b_id = sketch.add_point(b);
+                        let c_id = sketch.add_point(c);
+                        let d_id = sketch.add_point(d);
+
+                        let id0 = next_entity_id(sketch);
+                        let id1 = SketchEntityId(id0.0 + 1);
+                        let id2 = SketchEntityId(id0.0 + 2);
+                        let id3 = SketchEntityId(id0.0 + 3);
+
+                        sketch.add_entity(SketchEntity::Line { id: id0, start: a_id, end: b_id });
+                        sketch.add_entity(SketchEntity::Line { id: id1, start: b_id, end: c_id });
+                        sketch.add_entity(SketchEntity::Line { id: id2, start: c_id, end: d_id });
+                        sketch.add_entity(SketchEntity::Line { id: id3, start: d_id, end: a_id });
+
+                        s.sketch_constraints.push(Constraint::Geometric(GeometricConstraint::Horizontal { line: id0 }));
+                        s.sketch_constraints.push(Constraint::Geometric(GeometricConstraint::Vertical { line: id1 }));
+                        s.sketch_constraints.push(Constraint::Geometric(GeometricConstraint::Horizontal { line: id2 }));
+                        s.sketch_constraints.push(Constraint::Geometric(GeometricConstraint::Vertical { line: id3 }));
+
+                        s.temp_points.clear();
+                        web_sys::console::log_1(&format!(
+                            "Rectangle created: ({:.1},{:.1}) to ({:.1},{:.1})",
+                            x_min, y_min, x_max, y_max
+                        ).into());
+                    } else {
+                        s.temp_points.push(pos);
+                        web_sys::console::log_1(&format!("Rectangle: first corner at ({:.1}, {:.1})", pos.x, pos.y).into());
+                    }
+                }
                 SketchTool::Point => {
+                    let sketch = s.current_sketch.as_mut().unwrap();
                     sketch.add_point(pos);
                     web_sys::console::log_1(&format!("Point created at ({:.1}, {:.1})", pos.x, pos.y).into());
                 }
                 SketchTool::Select => {
-                    // Find entity at click position
+                    let sketch = s.current_sketch.as_ref().unwrap();
                     if let Some(entity_id) = find_entity_at_point(sketch, pos, 10.0) {
-                        // Toggle selection
                         if let Some(idx) = s.selected_entities.iter().position(|&id| id == entity_id) {
                             s.selected_entities.remove(idx);
                             web_sys::console::log_1(&format!("Deselected entity {:?}", entity_id).into());
@@ -1374,13 +1760,57 @@ fn handle_sketch_click(screen_x: f64, screen_y: f64) -> Result<(), JsValue> {
                             web_sys::console::log_1(&format!("Selected entity {:?}", entity_id).into());
                         }
                     } else {
-                        // Clicked on empty space - clear selection
                         s.selected_entities.clear();
                         web_sys::console::log_1(&"Selection cleared".into());
                     }
                 }
                 SketchTool::Arc => {
-                    // TODO: Implement arc tool
+                    // 3-point arc: start, mid(on arc), end
+                    if s.temp_points.len() < 2 {
+                        s.temp_points.push(pos);
+                        web_sys::console::log_1(&format!(
+                            "Arc: point {} at ({:.1}, {:.1})",
+                            s.temp_points.len(),
+                            pos.x,
+                            pos.y
+                        ).into());
+                    } else {
+                        let p1 = s.temp_points[0];
+                        let pm = s.temp_points[1];
+                        let p2 = pos;
+                        s.temp_points.clear();
+
+                        let Some(center) = circumcenter(p1, pm, p2) else {
+                            web_sys::console::warn_1(&"Arc: points are collinear; cancelled".into());
+                            return Ok(());
+                        };
+
+                        let radius = center.distance(&p1);
+                        let start_ang = normalize_angle((p1.y - center.y).atan2(p1.x - center.x));
+                        let mid_ang = normalize_angle((pm.y - center.y).atan2(pm.x - center.x));
+                        let end_ang = normalize_angle((p2.y - center.y).atan2(p2.x - center.x));
+                        let ccw = angle_in_ccw_sweep(start_ang, end_ang, mid_ang);
+
+                        let sketch = s.current_sketch.as_mut().unwrap();
+                        let center_id = sketch.add_point(center);
+                        let start_id = sketch.add_point(p1);
+                        let end_id = sketch.add_point(p2);
+                        let arc_id = next_entity_id(sketch);
+
+                        sketch.add_entity(SketchEntity::Arc {
+                            id: arc_id,
+                            center: center_id,
+                            start: start_id,
+                            end: end_id,
+                            radius,
+                            ccw,
+                        });
+
+                        web_sys::console::log_1(&format!(
+                            "Arc created: center ({:.1},{:.1}) r={:.1} ccw={}",
+                            center.x, center.y, radius, ccw
+                        ).into());
+                    }
                 }
             }
         }

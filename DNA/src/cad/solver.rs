@@ -24,7 +24,8 @@ impl Default for SolverConfig {
         Self {
             max_iterations: 100,
             tolerance: TOLERANCE,
-            damping_factor: 0.5,  // Conservative damping
+            // 0.5 can oscillate for some simple geometric constraints with our simplified update rule.
+            damping_factor: 0.25,
         }
     }
 }
