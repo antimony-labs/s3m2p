@@ -86,6 +86,8 @@ pub enum SketchEntity {
         start: SketchPointId,
         end: SketchPointId,
         radius: f32,
+        /// Arc direction in sketch coordinates (true = counter-clockwise from start→end).
+        ccw: bool,
     },
     Circle {
         id: SketchEntityId,
@@ -196,6 +198,38 @@ impl Sketch {
     }
 }
 
+/// Compute circumcenter of three points (circle through 3 points).
+///
+/// Returns `None` if the points are collinear or numerically degenerate.
+pub fn circumcenter(p1: Point2, p2: Point2, p3: Point2) -> Option<Point2> {
+    // Based on standard determinant formula.
+    let x1 = p1.x;
+    let y1 = p1.y;
+    let x2 = p2.x;
+    let y2 = p2.y;
+    let x3 = p3.x;
+    let y3 = p3.y;
+
+    let d = 2.0 * (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2));
+    if d.abs() < 1e-8 {
+        return None;
+    }
+
+    let x1sq_y1sq = x1 * x1 + y1 * y1;
+    let x2sq_y2sq = x2 * x2 + y2 * y2;
+    let x3sq_y3sq = x3 * x3 + y3 * y3;
+
+    let cx = (x1sq_y1sq * (y2 - y3) + x2sq_y2sq * (y3 - y1) + x3sq_y3sq * (y1 - y2)) / d;
+    let cy = (x1sq_y1sq * (x3 - x2) + x2sq_y2sq * (x1 - x3) + x3sq_y3sq * (x2 - x1)) / d;
+
+    Some(Point2::new(cx, cy))
+}
+
+/// Signed area *2 of triangle (a,b,c). Positive => CCW turn.
+pub fn orient2d(a: Point2, b: Point2, c: Point2) -> f32 {
+    (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -239,5 +273,33 @@ mod tests {
         let p1 = Point2::new(0.0, 0.0);
         let p2 = Point2::new(3.0, 4.0);
         assert!((p1.distance(&p2) - 5.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_circumcenter_right_triangle() {
+        // Triangle: (0,0), (2,0), (0,2) has circumcenter at (1,1).
+        let p1 = Point2::new(0.0, 0.0);
+        let p2 = Point2::new(2.0, 0.0);
+        let p3 = Point2::new(0.0, 2.0);
+        let c = circumcenter(p1, p2, p3).unwrap();
+        assert!((c.x - 1.0).abs() < 1e-5);
+        assert!((c.y - 1.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_circumcenter_collinear_none() {
+        let p1 = Point2::new(0.0, 0.0);
+        let p2 = Point2::new(1.0, 1.0);
+        let p3 = Point2::new(2.0, 2.0);
+        assert!(circumcenter(p1, p2, p3).is_none());
+    }
+
+    #[test]
+    fn test_orient2d_sign() {
+        let a = Point2::new(0.0, 0.0);
+        let b = Point2::new(1.0, 0.0);
+        let c = Point2::new(1.0, 1.0);
+        assert!(orient2d(a, b, c) > 0.0);
+        assert!(orient2d(a, c, b) < 0.0);
     }
 }

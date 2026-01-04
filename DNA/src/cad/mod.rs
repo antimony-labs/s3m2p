@@ -45,6 +45,8 @@ pub mod geometry;
 pub mod intersect;
 pub mod mesh;
 pub mod primitives;
+pub mod revolve;
+pub mod pattern;
 pub mod sketch;
 pub mod solver;
 pub mod topology;
@@ -68,3 +70,5 @@ pub use sketch::{Sketch, SketchPlane, Point2, SketchPoint, SketchPointId, Sketch
 pub use constraints::{Constraint, GeometricConstraint, DimensionalConstraint};
 pub use solver::{ConstraintSolver, SolverConfig, SolverResult};
 pub use extrude::{extrude_sketch, ExtrudeParams, ExtrudeError};
+pub use revolve::{revolve_sketch, RevolveParams, RevolveAxis, RevolveError};
+pub use pattern::{linear_pattern, circular_pattern};

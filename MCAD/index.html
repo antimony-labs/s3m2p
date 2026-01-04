@@ -335,6 +335,8 @@ MODIFIED: 2025-12-09
                     <h2>Drawing Tools</h2>
                     <button id="tool-select" onclick="setSketchTool('select')" class="export-btn tool-btn">Select</button>
                     <button id="tool-line" onclick="setSketchTool('line')" class="export-btn tool-btn active">Line</button>
+                    <button id="tool-arc" onclick="setSketchTool('arc')" class="export-btn tool-btn">Arc</button>
+                    <button id="tool-rectangle" onclick="setSketchTool('rectangle')" class="export-btn tool-btn">Rectangle</button>
                     <button id="tool-circle" onclick="setSketchTool('circle')" class="export-btn tool-btn">Circle</button>
                     <button id="tool-point" onclick="setSketchTool('point')" class="export-btn tool-btn">Point</button>
 
@@ -352,6 +354,29 @@ MODIFIED: 2025-12-09
                     <button onclick="extrudeSketch()" class="export-btn" style="background: rgba(255, 107, 53, 0.2);">
                         Extrude → 3D
                     </button>
+                    <div style="margin-top: 0.75rem;">
+                        <label style="display:block; font-size:0.8rem; color:#808080; margin-bottom:0.25rem;">Revolve</label>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; margin-bottom:0.5rem;">
+                            <div>
+                                <label for="revolve-angle" style="display:block; font-size:0.75rem; color:#a0a0a0; margin-bottom:0.25rem;">Angle (deg)</label>
+                                <input type="number" id="revolve-angle" value="360" step="1" min="1" max="360" style="width:100%; padding:0.5rem; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,107,53,0.3); border-radius:6px; color:#ff6b35; font-family:inherit; font-size:0.85rem; text-align:center;">
+                            </div>
+                            <div>
+                                <label for="revolve-segments" style="display:block; font-size:0.75rem; color:#a0a0a0; margin-bottom:0.25rem;">Segments</label>
+                                <input type="number" id="revolve-segments" value="32" step="1" min="3" max="128" style="width:100%; padding:0.5rem; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,107,53,0.3); border-radius:6px; color:#ff6b35; font-family:inherit; font-size:0.85rem; text-align:center;">
+                            </div>
+                        </div>
+                        <div class="input-group" style="margin-bottom:0.5rem;">
+                            <label for="revolve-axis">Axis</label>
+                            <select id="revolve-axis" class="primitive-select">
+                                <option value="y">Y</option>
+                                <option value="x">X</option>
+                            </select>
+                        </div>
+                        <button onclick="revolveSketch()" class="export-btn" style="background: rgba(255, 107, 53, 0.2);">
+                            Revolve → 3D
+                        </button>
+                    </div>
                     <p class="info-text" style="margin-top: 0.5rem; font-size: 0.7rem;">
                         Draw entities, apply constraints, then extrude to 3D.
                     </p>
@@ -461,6 +486,57 @@ MODIFIED: 2025-12-09
                     <p class="info-text" style="font-size: 0.75rem; margin-top: 0;">
                         Export to industry-standard CAD/3D printing formats
                     </p>
+                </div>
+
+                <div class="export-section">
+                    <h2>Patterns</h2>
+                    <div class="input-group">
+                        <label>Linear Pattern</label>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
+                            <div>
+                                <label for="pattern-linear-count">Count</label>
+                                <input type="number" id="pattern-linear-count" value="3" step="1" min="1" max="50">
+                            </div>
+                            <div>
+                                <label for="pattern-linear-spacing">Spacing <span class="unit">(mm)</span></label>
+                                <input type="number" id="pattern-linear-spacing" value="50" step="1" min="0">
+                            </div>
+                        </div>
+                        <label for="pattern-linear-direction" style="margin-top:0.5rem;">Direction</label>
+                        <select id="pattern-linear-direction" class="primitive-select">
+                            <option value="x">X</option>
+                            <option value="y">Y</option>
+                            <option value="z">Z</option>
+                        </select>
+                        <button onclick="window.applyLinearPattern && window.applyLinearPattern()" class="export-btn" style="margin-top:0.5rem;">
+                            Apply Linear Pattern
+                        </button>
+                    </div>
+
+                    <div class="input-group" style="margin-top:1rem;">
+                        <label>Circular Pattern</label>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
+                            <div>
+                                <label for="pattern-circular-count">Count</label>
+                                <input type="number" id="pattern-circular-count" value="6" step="1" min="1" max="100">
+                            </div>
+                            <div>
+                                <label for="pattern-circular-axis">Axis</label>
+                                <select id="pattern-circular-axis" class="primitive-select">
+                                    <option value="z">Z</option>
+                                    <option value="y">Y</option>
+                                    <option value="x">X</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button onclick="window.applyCircularPattern && window.applyCircularPattern()" class="export-btn" style="margin-top:0.5rem;">
+                            Apply Circular Pattern
+                        </button>
+                    </div>
+
+                    <button onclick="window.clearPattern && window.clearPattern()" class="export-btn" style="margin-top:0.75rem;">
+                        Clear Pattern
+                    </button>
                 </div>
 
                 <p class="info-text">

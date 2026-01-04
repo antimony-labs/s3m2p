@@ -71,10 +71,15 @@ pub use dna::cad::primitives::{
 pub use dna::cad::boolean::{BooleanOp, BooleanError, union, difference, intersection};
 
 // Sketcher
-pub use dna::cad::sketch::{Sketch, SketchPlane, Point2, SketchPoint, SketchPointId, SketchEntity, SketchEntityId, ConstraintId};
+pub use dna::cad::sketch::{
+    circumcenter, orient2d, ConstraintId, Point2, Sketch, SketchEntity, SketchEntityId, SketchPlane,
+    SketchPoint, SketchPointId,
+};
 pub use dna::cad::constraints::{Constraint, GeometricConstraint, DimensionalConstraint};
 pub use dna::cad::solver::{ConstraintSolver, SolverConfig, SolverResult};
 pub use dna::cad::extrude::{extrude_sketch, ExtrudeParams, ExtrudeError};
+pub use dna::cad::revolve::{revolve_sketch, RevolveParams, RevolveAxis, RevolveError};
+pub use dna::cad::pattern::{linear_pattern, circular_pattern};
 
 // ─────────────────────────────────────────────────────────────────────────────────
 // HIGH-LEVEL API
