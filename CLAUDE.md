@@ -31,6 +31,7 @@ Use `./SCRIPTS/dev-serve.sh <project>` to start - it auto-kills any existing pro
 | blog | 8085 | http://127.0.0.1:8085 | Blog platform |
 | learn | 8086 | http://127.0.0.1:8086 | Learning hub |
 | arch | 8087 | http://127.0.0.1:8087 | Architecture explorer |
+| mcad | 8088 | http://127.0.0.1:8088 | Mechanical CAD modeler |
 | pll | 8090 | http://127.0.0.1:8090 | PLL designer |
 | power | 8091 | http://127.0.0.1:8091 | Power circuits |
 | ai | 8100 | http://127.0.0.1:8100 | AI tutorials |
@@ -62,6 +63,7 @@ S3M2P/
 ├── HELIOS/                 # Solar system (helios.too.foo)
 ├── SIMULATION/             # Simulations (e.g., chladni.too.foo)
 ├── TOOLS/                  # User-facing tools (autocrate.too.foo, etc.)
+├── MCAD/                   # Mechanical CAD (mcad.too.foo)
 ├── LEARN/                  # Learning tutorials (ai.too.foo, slam.too.foo, etc.)
 └── BLOG/                   # Blog platform (blog.too.foo)
 ```
@@ -79,11 +81,15 @@ SIMULATION/
 
 TOOLS/
 ├── AUTOCRATE/              # Shipping crate generator (autocrate.too.foo)
-├── CRM/                    # CRM (crm.too.foo)
 ├── PLL/                    # PLL designer (pll.too.foo)
 ├── POWER_CIRCUITS/         # Power circuit designer (power.too.foo)
-├── CAD/                    # CAD tools
 └── SPICE/                  # SPICE simulation
+
+MCAD/
+├── src/                    # WASM frontend
+├── CORE/                   # MCAD engines
+│   └── CAD_ENGINE/         # B-Rep kernel, solid modeling
+└── index.html              # CAD UI (mcad.too.foo)
 
 LEARN/
 ├── AI/                     # AI/ML tutorials (ai.too.foo)

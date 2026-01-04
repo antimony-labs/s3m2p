@@ -30,10 +30,10 @@ cmd_up() {
         local pids=()
 
         # Define project groups
-        local -a MAIN_PROJECTS=(welcome helios blog arch)
+        local -a MAIN_PROJECTS=(welcome helios blog arch mcad)
         local -a ML_PROJECTS=(learn)
         local -a LEARN_PROJECTS=(ubuntu esp32 slam ai opencv arduino swarm)
-        local -a TOOLS_PROJECTS=(pll autocrate sensors power crm)
+        local -a TOOLS_PROJECTS=(pll autocrate sensors power)
         local -a SIM_PROJECTS=(chladni coming_soon)
 
         # Function to start a project

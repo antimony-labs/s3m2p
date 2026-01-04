@@ -40,8 +40,8 @@ declare -A PROJECT_PORTS=(
     ["swarm"]="8105"
     ["slam"]="8106"
     ["git"]="8107"
-    ["crm"]="8108"
     ["coming_soon"]="8109"
+    ["mcad"]="8088"
 
 )
 
@@ -66,7 +66,7 @@ declare -A PROJECT_DIRS=(
     ["slam"]="LEARN/SLAM"
     ["git"]="LEARN/GIT"
     ["coming_soon"]="COMING_SOON"
-    ["crm"]="COMING_SOON"
+    ["mcad"]="MCAD"
 
 )
 
@@ -78,8 +78,8 @@ declare -A PAGES_PROJECTS=(
     ["chladni"]="chladni-too-foo"
     ["sensors"]="sensors-too-foo"
     ["autocrate"]="autocrate-too-foo"
-    ["crm"]="crm-too-foo"
     ["pll"]="pll-too-foo"
+    ["mcad"]="mcad-too-foo"
     ["coming_soon"]="coming-soon-too-foo"
 
     ["ai"]="ai-too-foo"
@@ -100,7 +100,6 @@ declare -A STATIC_PROJECTS=(
     ["arduino"]=1
     ["sensors"]=1
     ["power"]=1
-    ["crm"]=1
 )
 
 # Export for sub-shells

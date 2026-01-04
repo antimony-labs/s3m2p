@@ -1,8 +1,8 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: lib.rs | TOOLS/CAD/src/lib.rs
-//! PURPOSE: CAD solid modeler WASM application with 3D wireframe visualization
-//! MODIFIED: 2025-12-09
-//! LAYER: TOOLS → CAD
+//! FILE: lib.rs | MCAD/src/lib.rs
+//! PURPOSE: MCAD solid modeler WASM application with 3D wireframe visualization
+//! MODIFIED: 2026-01-04
+//! LAYER: MCAD (L1 Bubble)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 #![allow(unexpected_cfgs)]

@@ -1,16 +1,18 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# FILE: Trunk.toml | TOOLS/CAD/Trunk.toml
-# PURPOSE: Trunk build configuration for CAD solid modeler WASM bundling
-# MODIFIED: 2025-12-09
+# FILE: Cargo.toml | MCAD/CORE/CAD_ENGINE/Cargo.toml
+# PURPOSE: Package manifest for CAD engine with DNA B-Rep dependencies
+# MODIFIED: 2026-01-04
 # ═══════════════════════════════════════════════════════════════════════════════
 
-[build]
-target = "index.html"
-dist = "dist"
+[package]
+name = "cad-engine"
+version.workspace = true
+edition.workspace = true
 
-[watch]
-ignore = ["dist"]
+[dependencies]
+dna.workspace = true
+glam.workspace = true
+serde.workspace = true
 
-[serve]
-address = "127.0.0.1"
-port = 8093
+[lints]
+workspace = true
