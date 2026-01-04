@@ -195,6 +195,41 @@ fn init_ui() -> Result<(), JsValue> {
     )?;
     set_view_closure.forget();
 
+    // Export mode toggle to JS
+    let toggle_mode_closure = Closure::wrap(Box::new(|| {
+        toggle_mode();
+    }) as Box<dyn Fn()>);
+    js_sys::Reflect::set(
+        &window,
+        &JsValue::from_str("toggleMode"),
+        toggle_mode_closure.as_ref(),
+    )?;
+    toggle_mode_closure.forget();
+
+    // Export sketch tool selection to JS
+    let set_tool_closure = Closure::wrap(Box::new(|tool: String| {
+        set_sketch_tool(&tool);
+    }) as Box<dyn Fn(String)>);
+    js_sys::Reflect::set(
+        &window,
+        &JsValue::from_str("setSketchTool"),
+        set_tool_closure.as_ref(),
+    )?;
+    set_tool_closure.forget();
+
+    // Export extrude function to JS
+    let extrude_closure = Closure::wrap(Box::new(|| {
+        if let Err(e) = extrude_current_sketch() {
+            web_sys::console::error_1(&format!("Extrude failed: {:?}", e).into());
+        }
+    }) as Box<dyn Fn()>);
+    js_sys::Reflect::set(
+        &window,
+        &JsValue::from_str("extrudeSketch"),
+        extrude_closure.as_ref(),
+    )?;
+    extrude_closure.forget();
+
     // Create initial solid
     create_solid()?;
 
@@ -207,12 +242,34 @@ fn setup_viewport_events(document: &Document) -> Result<(), JsValue> {
         .ok_or("Canvas not found")?;
     let canvas: HtmlCanvasElement = canvas.dyn_into()?;
 
-    // Mouse down
+    // Mouse click - for sketch mode
+    {
+        let canvas_clone = canvas.clone();
+        let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
+            STATE.with(|state| {
+                let state_ref = state.borrow();
+                if state_ref.mode == AppMode::Sketch2D {
+                    drop(state_ref);  // Release borrow
+                    // Get canvas coordinates
+                    let rect = canvas_clone.get_bounding_client_rect();
+                    let x = event.client_x() as f64 - rect.left();
+                    let y = event.client_y() as f64 - rect.top();
+                    let _ = handle_sketch_click(x, y);
+                }
+            });
+        }) as Box<dyn FnMut(MouseEvent)>);
+        canvas.set_onclick(Some(closure.as_ref().unchecked_ref()));
+        closure.forget();
+    }
+
+    // Mouse down - for 3D view dragging
     {
         let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
             STATE.with(|state| {
                 let mut state = state.borrow_mut();
-                state.dragging = true;
+                if state.mode == AppMode::View3D {
+                    state.dragging = true;
+                }
                 state.last_mouse_x = event.client_x();
                 state.last_mouse_y = event.client_y();
             });
@@ -444,17 +501,36 @@ fn render() -> Result<(), JsValue> {
 
     STATE.with(|state| {
         let state = state.borrow();
-        if let Some(ref solid) = state.solid {
-            draw_wireframe(
-                &ctx,
-                solid,
-                css_width,
-                css_height,
-                state.rotation_x,
-                state.rotation_y,
-                state.zoom,
-            )
-            .ok();
+        match state.mode {
+            AppMode::View3D => {
+                if let Some(ref solid) = state.solid {
+                    draw_wireframe(
+                        &ctx,
+                        solid,
+                        css_width,
+                        css_height,
+                        state.rotation_x,
+                        state.rotation_y,
+                        state.zoom,
+                    )
+                    .ok();
+                }
+            }
+            AppMode::Sketch2D => {
+                if let Some(ref sketch) = state.current_sketch {
+                    draw_sketch_2d(
+                        &ctx,
+                        sketch,
+                        &state.temp_points,
+                        state.sketch_tool,
+                        css_width,
+                        css_height,
+                        state.pan_2d,
+                        state.zoom_2d,
+                    )
+                    .ok();
+                }
+            }
         }
     });
 
@@ -529,6 +605,125 @@ fn draw_wireframe(
 
     // Draw axis indicator
     draw_axis_indicator(ctx, width, height, sin_x, cos_x, sin_y, cos_y)?;
+
+    Ok(())
+}
+
+fn draw_sketch_2d(
+    ctx: &CanvasRenderingContext2d,
+    sketch: &Sketch,
+    temp_points: &[Point2],
+    tool: SketchTool,
+    width: f64,
+    height: f64,
+    pan: Point2,
+    zoom: f32,
+) -> Result<(), JsValue> {
+    let cx = width / 2.0;
+    let cy = height / 2.0;
+
+    // Transform sketch coordinates to screen
+    let to_screen = |p: Point2| -> (f64, f64) {
+        let sx = cx + (p.x as f64 + pan.x as f64) * zoom as f64;
+        let sy = cy - (p.y as f64 + pan.y as f64) * zoom as f64;  // Y inverted
+        (sx, sy)
+    };
+
+    // Draw grid
+    ctx.set_stroke_style(&JsValue::from_str("rgba(255, 107, 53, 0.1)"));
+    ctx.set_line_width(0.5);
+    let grid_spacing = 50.0 * zoom as f64;
+    let start_x = (cx % grid_spacing - grid_spacing);
+    let start_y = (cy % grid_spacing - grid_spacing);
+
+    // Vertical grid lines
+    let mut x = start_x;
+    while x < width {
+        ctx.begin_path();
+        ctx.move_to(x, 0.0);
+        ctx.line_to(x, height);
+        ctx.stroke();
+        x += grid_spacing;
+    }
+
+    // Horizontal grid lines
+    let mut y = start_y;
+    while y < height {
+        ctx.begin_path();
+        ctx.move_to(0.0, y);
+        ctx.line_to(width, y);
+        ctx.stroke();
+        y += grid_spacing;
+    }
+
+    // Draw origin axes (thicker)
+    ctx.set_stroke_style(&JsValue::from_str("rgba(255, 107, 53, 0.3)"));
+    ctx.set_line_width(1.5);
+    ctx.begin_path();
+    ctx.move_to(cx, 0.0);
+    ctx.line_to(cx, height);
+    ctx.stroke();
+    ctx.begin_path();
+    ctx.move_to(0.0, cy);
+    ctx.line_to(width, cy);
+    ctx.stroke();
+
+    // Draw sketch entities
+    ctx.set_stroke_style(&JsValue::from_str("#ff6b35"));
+    ctx.set_line_width(2.0);
+
+    for entity in &sketch.entities {
+        match entity {
+            SketchEntity::Line { start, end, .. } => {
+                if let (Some(p1), Some(p2)) = (sketch.point(*start), sketch.point(*end)) {
+                    let (x1, y1) = to_screen(p1.position);
+                    let (x2, y2) = to_screen(p2.position);
+                    ctx.begin_path();
+                    ctx.move_to(x1, y1);
+                    ctx.line_to(x2, y2);
+                    ctx.stroke();
+                }
+            }
+            SketchEntity::Circle { center, radius, .. } => {
+                if let Some(c) = sketch.point(*center) {
+                    let (cx, cy) = to_screen(c.position);
+                    let r = *radius as f64 * zoom as f64;
+                    ctx.begin_path();
+                    ctx.arc(cx, cy, r, 0.0, 2.0 * std::f64::consts::PI)?;
+                    ctx.stroke();
+                }
+            }
+            _ => {}
+        }
+    }
+
+    // Draw points
+    ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+    for point in &sketch.points {
+        let (px, py) = to_screen(point.position);
+        ctx.begin_path();
+        ctx.arc(px, py, 4.0, 0.0, 2.0 * std::f64::consts::PI)?;
+        ctx.fill();
+    }
+
+    // Draw temp preview (rubber-banding)
+    if !temp_points.is_empty() {
+        ctx.set_stroke_style(&JsValue::from_str("rgba(255, 107, 53, 0.5)"));
+        ctx.set_line_width(1.0);
+        ctx.set_line_dash(&js_sys::Array::of2(&JsValue::from_f64(5.0), &JsValue::from_f64(5.0)))?;
+
+        match tool {
+            SketchTool::Line if temp_points.len() == 1 => {
+                // Show preview line from first point to cursor (would need mouse pos)
+                let (x1, y1) = to_screen(temp_points[0]);
+                ctx.begin_path();
+                ctx.arc(x1, y1, 4.0, 0.0, 2.0 * std::f64::consts::PI)?;
+                ctx.fill();
+            }
+            _ => {}
+        }
+        ctx.set_line_dash(&js_sys::Array::new())?;  // Reset dash
+    }
 
     Ok(())
 }
@@ -723,5 +918,159 @@ fn perform_boolean(operation: &str) -> Result<(), JsValue> {
                 Err(JsValue::from_str(&format!("Boolean operation failed: {:?}", e)))
             }
         }
+    })
+}
+
+fn toggle_mode() {
+    STATE.with(|state| {
+        let mut s = state.borrow_mut();
+        s.mode = match s.mode {
+            AppMode::View3D => {
+                web_sys::console::log_1(&"Entering Sketch mode".into());
+                s.current_sketch = Some(Sketch::new(SketchPlane::XY));
+                s.temp_points.clear();
+                AppMode::Sketch2D
+            }
+            AppMode::Sketch2D => {
+                web_sys::console::log_1(&"Entering 3D View mode".into());
+                AppMode::View3D
+            }
+        };
+    });
+    let _ = render();
+}
+
+fn set_sketch_tool(tool: &str) {
+    STATE.with(|state| {
+        let mut s = state.borrow_mut();
+        s.sketch_tool = match tool {
+            "line" => SketchTool::Line,
+            "arc" => SketchTool::Arc,
+            "circle" => SketchTool::Circle,
+            "point" => SketchTool::Point,
+            "select" => SketchTool::Select,
+            _ => SketchTool::Select,
+        };
+        s.temp_points.clear();  // Reset tool state
+        web_sys::console::log_1(&format!("Tool changed to: {}", tool).into());
+    });
+}
+
+fn extrude_current_sketch() -> Result<(), JsValue> {
+    STATE.with(|state| {
+        let mut s = state.borrow_mut();
+
+        let sketch = s.current_sketch.as_ref()
+            .ok_or_else(|| JsValue::from_str("No sketch to extrude"))?;
+
+        web_sys::console::log_1(&"Extruding sketch...".into());
+
+        let params = ExtrudeParams {
+            distance: 50.0,  // TODO: get from UI input
+            symmetric: false,
+        };
+
+        match extrude_sketch(sketch, &params) {
+            Ok(solid) => {
+                s.solid = Some(solid);
+                s.mode = AppMode::View3D;  // Switch back to 3D view
+                drop(s);
+
+                web_sys::console::log_1(&"Extrude complete - switched to 3D view".into());
+
+                let window = web_sys::window().ok_or("No window")?;
+                let document = window.document().ok_or("No document")?;
+                display_properties(&document)?;
+                render()?;
+                Ok(())
+            }
+            Err(e) => {
+                Err(JsValue::from_str(&format!("Extrude failed: {:?}", e)))
+            }
+        }
+    })
+}
+
+fn handle_sketch_click(screen_x: f64, screen_y: f64) -> Result<(), JsValue> {
+    // Convert screen coordinates to sketch coordinates
+    let (sketch_x, sketch_y) = STATE.with(|state| {
+        let s = state.borrow();
+        let zoom = s.zoom_2d;
+        let pan = s.pan_2d;
+
+        let canvas_width = 800.0;
+        let canvas_height = 600.0;
+        let cx = canvas_width / 2.0;
+        let cy = canvas_height / 2.0;
+
+        let sx = ((screen_x - cx) / zoom as f64 - pan.x as f64) as f32;
+        let sy = (-(screen_y - cy) / zoom as f64 - pan.y as f64) as f32;
+        (sx, sy)
+    });
+
+    let pos = Point2::new(sketch_x, sketch_y);
+    web_sys::console::log_1(&format!("Click at sketch coords: ({}, {})", sketch_x, sketch_y).into());
+
+    STATE.with(|state| {
+        let mut s = state.borrow_mut();
+        let tool = s.sketch_tool;
+        let has_temp_point = !s.temp_points.is_empty();
+        let first_temp = if has_temp_point { Some(s.temp_points[0]) } else { None };
+
+        if let Some(sketch) = s.current_sketch.as_mut() {
+            match tool {
+                SketchTool::Line => {
+                    if let Some(p1) = first_temp {
+                        // Second click - create line
+                        let p1_id = sketch.add_point(p1);
+                        let p2_id = sketch.add_point(pos);
+                        let line_id = SketchEntityId(sketch.entities.len() as u32);
+
+                        sketch.add_entity(SketchEntity::Line {
+                            id: line_id,
+                            start: p1_id,
+                            end: p2_id,
+                        });
+
+                        s.temp_points.clear();
+                        web_sys::console::log_1(&"Line created".into());
+                    } else {
+                        // First click - store point
+                        s.temp_points.push(pos);
+                        web_sys::console::log_1(&"Line: first point placed".into());
+                    }
+                }
+                SketchTool::Circle => {
+                    if let Some(center) = first_temp {
+                        // Second click - create circle
+                        let center_id = sketch.add_point(center);
+                        let radius = center.distance(&pos);
+                        let circle_id = SketchEntityId(sketch.entities.len() as u32);
+
+                        sketch.add_entity(SketchEntity::Circle {
+                            id: circle_id,
+                            center: center_id,
+                            radius,
+                        });
+
+                        s.temp_points.clear();
+                        web_sys::console::log_1(&format!("Circle created with radius {}", radius).into());
+                    } else {
+                        // First click - center
+                        s.temp_points.push(pos);
+                        web_sys::console::log_1(&"Circle: center placed".into());
+                    }
+                }
+                SketchTool::Point => {
+                    sketch.add_point(pos);
+                    web_sys::console::log_1(&format!("Point created at ({}, {})", sketch_x, sketch_y).into());
+                }
+                _ => {}
+            }
+        }
+
+        drop(s);
+        render()?;
+        Ok(())
     })
 }

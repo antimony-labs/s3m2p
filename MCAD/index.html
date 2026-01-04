@@ -314,12 +314,33 @@ MODIFIED: 2025-12-09
 <body>
     <div class="container">
         <header>
-            <h1>CAD Modeler</h1>
-            <p class="subtitle">B-Rep Solid Modeling Engine</p>
+            <h1>MCAD</h1>
+            <p class="subtitle">Professional Parametric CAD</p>
+            <div style="margin-top: 1rem;">
+                <button onclick="toggleMode()" style="padding: 0.5rem 1.5rem; background: #ff6b35; border: none; border-radius: 6px; color: white; cursor: pointer; font-family: inherit; font-weight: 500;">
+                    Toggle Mode (3D ↔ Sketch)
+                </button>
+            </div>
         </header>
 
         <div class="main-grid">
             <div class="panel-left">
+                <div id="sketch-tools" style="display: none;">
+                    <h2>Drawing Tools</h2>
+                    <button onclick="setSketchTool('line')" class="export-btn">Line</button>
+                    <button onclick="setSketchTool('circle')" class="export-btn">Circle</button>
+                    <button onclick="setSketchTool('point')" class="export-btn">Point</button>
+
+                    <h2 style="margin-top: 1.5rem;">Operations</h2>
+                    <button onclick="extrudeSketch()" class="export-btn" style="background: rgba(255, 107, 53, 0.2);">
+                        Extrude → 3D
+                    </button>
+                    <p class="info-text" style="margin-top: 0.5rem; font-size: 0.7rem;">
+                        Click to draw entities. Click Extrude to create 3D solid.
+                    </p>
+                </div>
+
+                <div id="primitive-tools">
                 <h2>Create Primitive</h2>
 
                 <div class="input-group">
@@ -429,6 +450,7 @@ MODIFIED: 2025-12-09
                     Create parametric solid primitives using our B-Rep kernel.
                     Drag on the viewport to rotate. Scroll to zoom.
                 </p>
+                </div>
             </div>
 
             <div class="panel-right">
@@ -495,6 +517,33 @@ MODIFIED: 2025-12-09
             document.getElementById('sphere-params').style.display = type === 'sphere' ? 'block' : 'none';
             document.getElementById('cone-params').style.display = type === 'cone' ? 'block' : 'none';
         });
+
+        // Track current mode for UI updates
+        let currentMode = '3d';
+
+        // Override toggleMode to update UI
+        const originalToggleMode = window.toggleMode;
+        window.toggleMode = function() {
+            if (originalToggleMode) originalToggleMode();
+            currentMode = currentMode === '3d' ? 'sketch' : '3d';
+            updatePanelVisibility();
+        };
+
+        function updatePanelVisibility() {
+            const sketchTools = document.getElementById('sketch-tools');
+            const primitiveTools = document.getElementById('primitive-tools');
+
+            if (currentMode === 'sketch') {
+                if (sketchTools) sketchTools.style.display = 'block';
+                if (primitiveTools) primitiveTools.style.display = 'none';
+            } else {
+                if (sketchTools) sketchTools.style.display = 'none';
+                if (primitiveTools) primitiveTools.style.display = 'block';
+            }
+        }
+
+        // Initialize on load
+        setTimeout(updatePanelVisibility, 100);
     </script>
 </body>
 
