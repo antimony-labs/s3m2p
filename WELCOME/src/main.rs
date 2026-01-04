@@ -715,84 +715,30 @@ fn is_paused() -> bool {
 // BUBBLE RENDERING
 // ============================================
 
-/// SVG namespace for creating SVG elements
-const SVG_NS: &str = "http://www.w3.org/2000/svg";
-
-/// Create an SVG element with curved text below the bubble
-/// The text follows an arc centered at the bottom of the bubble
-fn create_curved_text_svg(
+/// Create a straight text label element below the bubble
+/// Shows both label (top line) and description (bottom line)
+fn create_bubble_label(
     document: &Document,
     label: &str,
-    layout: &BubbleLayout,
-    index: usize,
+    description: &str,
 ) -> Option<web_sys::Element> {
-    // SVG dimensions - encompasses the bubble plus text area
-    let svg_size = layout.effective_radius * 2.0;
-    let center = svg_size / 2.0;
+    // Create container div
+    let container = document.create_element("div").ok()?;
+    container.set_attribute("class", "bubble-label-container").ok();
 
-    // Arc for text: positioned below the bubble
-    // Arc radius = bubble_radius + text_gap + text_size/2 (center of text)
-    let arc_radius = layout.bubble_radius + layout.text_gap + layout.text_size / 2.0;
+    // Create label span
+    let label_el = document.create_element("span").ok()?;
+    label_el.set_attribute("class", "bubble-label-text").ok();
+    label_el.set_text_content(Some(label));
+    container.append_child(&label_el).ok();
 
-    // In SVG coords (y increases downward):
-    // - 0° is right, 90° is bottom, 180° is left, 270° is top
-    // - For bottom arc: start at lower-left (~135°), end at lower-right (~45°)
-    // - Arc spans ~90° centered at bottom (6 o'clock position)
-    let arc_start_angle = 135.0_f64.to_radians(); // Lower-left
-    let arc_end_angle = 45.0_f64.to_radians(); // Lower-right
+    // Create description span
+    let desc_el = document.create_element("span").ok()?;
+    desc_el.set_attribute("class", "bubble-desc-text").ok();
+    desc_el.set_text_content(Some(description));
+    container.append_child(&desc_el).ok();
 
-    // Calculate arc endpoints
-    let x1 = center + arc_radius * arc_start_angle.cos();
-    let y1 = center + arc_radius * arc_start_angle.sin();
-    let x2 = center + arc_radius * arc_end_angle.cos();
-    let y2 = center + arc_radius * arc_end_angle.sin();
-
-    // Create SVG element
-    let svg = document.create_element_ns(Some(SVG_NS), "svg").ok()?;
-    svg.set_attribute("class", "bubble-text-arc").ok();
-    svg.set_attribute("width", &format!("{:.1}", svg_size)).ok();
-    svg.set_attribute("height", &format!("{:.1}", svg_size))
-        .ok();
-    svg.set_attribute("viewBox", &format!("0 0 {:.1} {:.1}", svg_size, svg_size))
-        .ok();
-
-    // Create defs for the path
-    let defs = document.create_element_ns(Some(SVG_NS), "defs").ok()?;
-
-    // Create arc path (clockwise arc at bottom of circle)
-    let path = document.create_element_ns(Some(SVG_NS), "path").ok()?;
-    let path_id = format!("text-arc-{}", index);
-    path.set_attribute("id", &path_id).ok();
-
-    // SVG arc: M x1,y1 A rx,ry rotation large-arc sweep x2,y2
-    // large-arc=0 (small arc), sweep=0 (counter-clockwise, goes through bottom)
-    let arc_d = format!(
-        "M {:.2} {:.2} A {:.2} {:.2} 0 0 0 {:.2} {:.2}",
-        x1, y1, arc_radius, arc_radius, x2, y2
-    );
-    path.set_attribute("d", &arc_d).ok();
-    path.set_attribute("fill", "none").ok();
-    defs.append_child(&path).ok();
-    svg.append_child(&defs).ok();
-
-    // Create text element
-    let text = document.create_element_ns(Some(SVG_NS), "text").ok()?;
-    text.set_attribute("font-size", &format!("{:.1}", layout.text_size))
-        .ok();
-
-    // Create textPath referencing our arc
-    let text_path = document.create_element_ns(Some(SVG_NS), "textPath").ok()?;
-    text_path
-        .set_attribute("href", &format!("#{}", path_id))
-        .ok();
-    text_path.set_attribute("startOffset", "50%").ok();
-    text_path.set_attribute("text-anchor", "middle").ok();
-    text_path.set_text_content(Some(label));
-
-    text.append_child(&text_path).ok();
-    svg.append_child(&text).ok();
-
-    Some(svg)
+    Some(container)
 }
 
 /// Clear existing bubbles and render new ones
@@ -802,7 +748,7 @@ fn render_bubbles(document: &Document, bubbles: &[Bubble], show_back: bool) {
         None => return,
     };
 
-    // Remove existing bubbles and text arcs
+    // Remove existing bubbles and labels
     let monoliths = document.get_elements_by_class_name("monolith");
     while monoliths.length() > 0 {
         if let Some(el) = monoliths.item(0) {
@@ -812,6 +758,12 @@ fn render_bubbles(document: &Document, bubbles: &[Bubble], show_back: bool) {
     let text_arcs = document.get_elements_by_class_name("bubble-text-arc");
     while text_arcs.length() > 0 {
         if let Some(el) = text_arcs.item(0) {
+            el.remove();
+        }
+    }
+    let label_containers = document.get_elements_by_class_name("bubble-label-container");
+    while label_containers.length() > 0 {
+        if let Some(el) = label_containers.item(0) {
             el.remove();
         }
     }
@@ -943,6 +895,9 @@ fn render_bubbles(document: &Document, bubbles: &[Bubble], show_back: bool) {
                 let hash = cat_id.hash_route();
                 link.set_attribute("href", hash).ok();
             }
+            BubbleAction::Profile => {
+                link.set_attribute("href", "#/profile").ok();
+            }
         }
 
         // Add icon
@@ -955,18 +910,17 @@ fn render_bubbles(document: &Document, bubbles: &[Bubble], show_back: bool) {
         // Add to constellation
         constellation.append_child(&link).ok();
 
-        // Create and position SVG curved text
-        if let Some(svg) = create_curved_text_svg(document, bubble.label, &layout, i) {
-            let svg_size = layout.effective_radius * 2.0;
-            let svg_style = format!(
-                "left: {:.1}px; top: {:.1}px; width: {:.1}px; height: {:.1}px;",
-                bubble_x - svg_size / 2.0,
-                bubble_y - svg_size / 2.0,
-                svg_size,
-                svg_size
+        // Create and position straight text label below bubble
+        if let Some(label_el) = create_bubble_label(document, bubble.label, bubble.description) {
+            // Position label below the bubble
+            let label_top = bubble_y + layout.bubble_radius + 8.0; // 8px gap below bubble
+            let label_style = format!(
+                "left: {:.1}px; top: {:.1}px;",
+                bubble_x,
+                label_top
             );
-            svg.set_attribute("style", &svg_style).ok();
-            constellation.append_child(&svg).ok();
+            label_el.set_attribute("style", &label_style).ok();
+            constellation.append_child(&label_el).ok();
         }
     }
 }
@@ -993,6 +947,7 @@ fn handle_route_change(document: &Document) {
     // Toggle containers
     let arch_container = document.get_element_by_id("arch-container");
     let about_container = document.get_element_by_id("about-container");
+    let profile_container = document.get_element_by_id("profile-container");
     let back_button = document.get_element_by_id("back-button");
 
     // Handle arch-container visibility
@@ -1019,11 +974,24 @@ fn handle_route_change(document: &Document) {
         }
     }
 
+    // Handle profile-container visibility
+    if let Some(container) = profile_container {
+        if matches!(route, Route::Profile) {
+            container.set_attribute("style", "display: flex;").ok();
+            if let Some(btn) = back_button.as_ref() {
+                btn.set_attribute("style", "display: flex; z-index: 5001;").ok();
+            }
+        } else {
+            container.set_attribute("style", "display: none;").ok();
+        }
+    }
+
     match route {
         Route::Home => render_home(document),
         Route::Category(cat_id) => render_category(document, cat_id),
         Route::Architecture => render_architecture_diagram(document),
         Route::About => render_about_page(document),
+        Route::Profile => render_profile_page(document),
     }
 }
 
@@ -1131,6 +1099,441 @@ fn render_about_page(document: &Document) {
             .ok();
         closure.forget();
     }
+}
+
+/// Render the personal profile page
+fn render_profile_page(document: &Document) {
+    let container = match document.get_element_by_id("profile-container") {
+        Some(el) => el,
+        None => return,
+    };
+    container.set_inner_html("");
+
+    let panel = document.create_element("div").unwrap();
+    panel.set_attribute("class", "profile-panel").ok();
+    panel.set_inner_html(
+        r##"
+        <button id="profile-close">&times;</button>
+
+        <div class="profile-header">
+            <h1>SHIVAM BHARDWAJ</h1>
+            <p class="title">Senior Robotics & Automation Engineer</p>
+            <p class="location">San Jose, CA · H1B Transfer Ready</p>
+        </div>
+
+        <div class="profile-about">
+            <p>I build embedded and mechatronic systems that ship. 6+ years delivering safety-critical robotics across self-driving vehicles, surgical robots, datacenter automation, and semiconductor equipment.</p>
+            <p class="clients-line">Supported <span class="highlight">Meta</span>, <span class="highlight">Tesla</span>, <span class="highlight">Apple</span>, <span class="highlight">Amazon Robotics</span>, <span class="highlight">Applied Materials</span>, and <span class="highlight">Saildrone</span>.</p>
+        </div>
+
+        <div class="impact-metrics">
+            <div class="metric-card">
+                <span class="metric-context">AutoCrate</span>
+                <span class="metric-value">5d→1hr</span>
+                <span class="metric-label">Design Time</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-context">Harness Production</span>
+                <span class="metric-value">70→10%</span>
+                <span class="metric-label">Defect Rate</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-context">Surgical Robot</span>
+                <span class="metric-value">0.1mm</span>
+                <span class="metric-label">Registration</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-context">Manufacturing</span>
+                <span class="metric-value">2.8×</span>
+                <span class="metric-label">Scale-up</span>
+            </div>
+        </div>
+
+        <div class="featured-section">
+            <div class="section-title">Featured Work · Click for Details</div>
+            <div class="featured-grid">
+                <div class="featured-card" data-project="autocrate">
+                    <div class="featured-name">AutoCrate Design Engine →</div>
+                    <div class="featured-desc">Reverse-engineered <a href="https://www.plm.automation.siemens.com/global/en/products/nx/" target="_blank">Siemens NX</a> Expressions to build a parametric crate design engine. Reduced design time from 5 days to 1 hour. Generates <a href="https://www.astm.org/d6251-13.html" target="_blank">ASTM D6251</a>-compliant shipping crate designs.</div>
+                    <div class="featured-tags">
+                        <span>Siemens NX API</span><span>React</span><span>Python</span><span>ASTM D6251</span>
+                    </div>
+                </div>
+                <div class="featured-card" data-project="surgical">
+                    <div class="featured-name">Surgical Robot Registration →</div>
+                    <div class="featured-desc"><a href="https://en.wikipedia.org/wiki/Iterative_closest_point" target="_blank">ICP algorithm</a> for femur-to-drill alignment using <a href="https://vtk.org" target="_blank">VTK</a>/<a href="https://pointclouds.org" target="_blank">PCL</a>. Processed 10,000+ point clouds in 300ms with 0.1mm accuracy. <a href="https://www.fda.gov/medical-devices/premarket-submissions-selecting-and-preparing-correct-submission/premarket-notification-510k" target="_blank">FDA 510(k)</a> compliant.</div>
+                    <div class="featured-tags">
+                        <span>C++</span><span>VTK</span><span>PCL</span><span>FDA 510(k)</span>
+                    </div>
+                </div>
+                <div class="featured-card" data-project="forensics">
+                    <div class="featured-name">Robotic Forensics Workcell →</div>
+                    <div class="featured-desc">Multi-modal sensing for server counterfeit detection at <a href="https://about.meta.com" target="_blank">Meta</a>. Combined RF spectrum analysis, <a href="https://www.flir.com" target="_blank">thermal imaging</a> (±0.5°C), capacitance probing, and <a href="https://opencv.org" target="_blank">machine vision</a>. <a href="https://www.ni.com/en/shop/labview.html" target="_blank">LabVIEW</a> UI for test automation.</div>
+                    <div class="featured-tags">
+                        <span>Sensor Fusion</span><span>Computer Vision</span><span>Meta</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="timeline-section">
+            <div class="section-title">Experience</div>
+            <div class="timeline">
+                <div class="timeline-entry">
+                    <div class="timeline-period">2023 — Present</div>
+                    <div class="timeline-role">Mechatronics Engineer</div>
+                    <div class="timeline-company"><a href="https://www.designvisionaries.com" target="_blank">Design Visionaries</a> <span class="timeline-location">· San Jose, CA</span></div>
+                    <div class="timeline-desc">AutoCrate design engine, 10-layer AR glasses flex PCB, harness production scaling (25→70 units/day), MBD transition for semiconductor lab.</div>
+                    <div class="timeline-clients"><a href="https://www.appliedmaterials.com" target="_blank">Applied Materials</a>, <a href="https://www.saildrone.com" target="_blank">Saildrone</a>, Industrial IoT</div>
+                </div>
+                <div class="timeline-entry">
+                    <div class="timeline-period">2022 — 2023</div>
+                    <div class="timeline-role">Engineering Manager</div>
+                    <div class="timeline-company">Advanced Engineering Services <span class="timeline-location">· San Jose, CA</span></div>
+                    <div class="timeline-desc">Robotic forensics workcell, Class-8 diesel-to-electric conversion, waveguide frame design for AR hardware demos.</div>
+                    <div class="timeline-clients"><a href="https://about.meta.com/realitylabs/" target="_blank">Meta Reality Labs</a>, <a href="https://www.appliedmaterials.com" target="_blank">Applied Materials</a>, AAA</div>
+                </div>
+                <div class="timeline-entry">
+                    <div class="timeline-period">2021 — 2022</div>
+                    <div class="timeline-role">Senior Robotics Engineer</div>
+                    <div class="timeline-company"><a href="https://velodynelidar.com" target="_blank">Velodyne Lidar</a> <span class="timeline-location">· Alameda, CA</span></div>
+                    <div class="timeline-desc">Next-gen LiDAR validation at highway speeds, pioneered first SaaS deployment with <a href="https://www.ansible.com" target="_blank">Ansible</a> automation, <a href="https://en.wikipedia.org/wiki/Precision_Time_Protocol" target="_blank">PTP</a> sync and <a href="https://en.wikipedia.org/wiki/Real-time_kinematic_positioning" target="_blank">RTK GPS</a> integration.</div>
+                    <div class="timeline-clients"><a href="https://www.ford.com" target="_blank">Ford</a>, <a href="https://www.aboutamazon.com/news/transportation/amazon-scout" target="_blank">Amazon Scout</a>, <a href="https://www.knightscope.com" target="_blank">Knightscope</a>, Bluecity</div>
+                </div>
+                <div class="timeline-entry">
+                    <div class="timeline-period">2020</div>
+                    <div class="timeline-role">Robotics Software Engineer</div>
+                    <div class="timeline-company">ARI (stealth) <span class="timeline-location">· Sunnyvale, CA</span></div>
+                    <div class="timeline-desc">Surgical registration algorithm (0.1mm accuracy), 6-DOF <a href="https://www.kuka.com" target="_blank">Kuka</a> robot control via <a href="https://www.beckhoff.com" target="_blank">Beckhoff</a> PLC, <a href="https://www.fda.gov/medical-devices/premarket-submissions-selecting-and-preparing-correct-submission/premarket-notification-510k" target="_blank">FDA 510(k)</a> compliance. Acquired by <a href="https://www.zimmerbiomet.com" target="_blank">Zimmer Biomet</a> via Monogram.</div>
+                    <div class="timeline-clients"><a href="https://www.iso.org/standard/38421.html" target="_blank">IEC 62304</a>, Surgical Robotics</div>
+                </div>
+                <div class="timeline-entry">
+                    <div class="timeline-period">2019</div>
+                    <div class="timeline-role">Visiting Researcher</div>
+                    <div class="timeline-company"><a href="https://ai4ce.github.io" target="_blank">NYU AI4CE Lab</a> <span class="timeline-location">· Brooklyn, NY</span></div>
+                    <div class="timeline-desc">GPS-denied visual localization pipeline using <a href="https://colmap.github.io" target="_blank">COLMAP</a> 3D reconstruction. Fine-tuned neural network achieving ~10cm relocalization accuracy.</div>
+                    <div class="timeline-clients">Prof. <a href="https://engineering.nyu.edu/faculty/chen-feng" target="_blank">Chen Feng</a></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="education-section">
+            <div class="section-title">Education</div>
+            <div class="education-entry">
+                <div class="edu-degree">M.S. Mechatronics & Robotics</div>
+                <div class="edu-school"><a href="https://www.nyu.edu" target="_blank">New York University</a></div>
+                <div class="edu-detail">Research: <a href="https://colmap.github.io" target="_blank">COLMAP</a>-based visual relocalization, swarm robotics. Founded Self-Driving VIP team — 1st Novel Design, 3rd overall at <a href="https://www.igvc.org" target="_blank">26th IGVC</a>.</div>
+            </div>
+            <div class="education-entry">
+                <div class="edu-degree">B.Tech Electronics</div>
+                <div class="edu-school"><a href="https://www.ipu.ac.in" target="_blank">I.P. University, Delhi</a></div>
+                <div class="edu-detail">Top-3 Projects Award. Built <a href="https://ardupilot.org" target="_blank">ArduPilot</a> autonomous drone.</div>
+            </div>
+        </div>
+
+        <div class="skills-section">
+            <div class="section-title">Skills</div>
+            <div class="skills-categories">
+                <div class="skill-category">
+                    <span class="skill-cat-name">Robotics</span>
+                    <div class="skill-cat-tags">
+                        <span>ROS2</span><span>MoveIt</span><span>Nav2</span><span>SLAM</span><span>Sensor Fusion</span>
+                    </div>
+                </div>
+                <div class="skill-category">
+                    <span class="skill-cat-name">Languages</span>
+                    <div class="skill-cat-tags">
+                        <span>C++</span><span>Rust</span><span>Python</span><span>Embedded C</span>
+                    </div>
+                </div>
+                <div class="skill-category">
+                    <span class="skill-cat-name">Hardware</span>
+                    <div class="skill-cat-tags">
+                        <span>PCB Design</span><span>Siemens NX</span><span>SolidWorks</span><span>GD&T</span>
+                    </div>
+                </div>
+                <div class="skill-category">
+                    <span class="skill-cat-name">Embedded</span>
+                    <div class="skill-cat-tags">
+                        <span>STM32</span><span>ESP32</span><span>I2C</span><span>CAN</span><span>EtherCAT</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="social-links">
+            <a href="https://github.com/Shivam-Bhardwaj" target="_blank" rel="noopener noreferrer" class="social-link">
+                <svg viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                GitHub
+            </a>
+            <a href="https://linkedin.com/in/shivambdj" target="_blank" rel="noopener noreferrer" class="social-link">
+                <svg viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                LinkedIn
+            </a>
+            <a href="https://x.com/LazyShivam" target="_blank" rel="noopener noreferrer" class="social-link">
+                <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                X
+            </a>
+        </div>
+    "##,
+    );
+    container.append_child(&panel).ok();
+
+    // Close button handler
+    if let Some(close_btn) = document.get_element_by_id("profile-close") {
+        let closure = Closure::wrap(Box::new(move |_: web_sys::Event| {
+            navigate_home();
+        }) as Box<dyn FnMut(_)>);
+        close_btn
+            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+            .ok();
+        closure.forget();
+    }
+
+    // Featured work card click handlers
+    let featured_cards = document.get_elements_by_class_name("featured-card");
+    for i in 0..featured_cards.length() {
+        if let Some(card) = featured_cards.item(i) {
+            if let Ok(card_html) = card.dyn_into::<web_sys::HtmlElement>() {
+                let project_id = card_html.get_attribute("data-project").unwrap_or_default();
+                let project_id_clone = project_id.clone();
+
+                let document_clone = document.clone();
+                let closure = Closure::wrap(Box::new(move |_: web_sys::Event| {
+                    render_case_study(&document_clone, &project_id_clone);
+                }) as Box<dyn FnMut(_)>);
+
+                card_html
+                    .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+                    .ok();
+                closure.forget();
+            }
+        }
+    }
+}
+
+/// Render case study modal for a specific project
+fn render_case_study(document: &Document, project_id: &str) {
+    let container = match document.get_element_by_id("case-study-container") {
+        Some(el) => el,
+        None => return,
+    };
+
+    // Show the container
+    container.set_attribute("style", "display: flex;").ok();
+    container.set_inner_html("");
+
+    let panel = document.create_element("div").unwrap();
+    panel.set_attribute("class", "case-study-panel").ok();
+
+    // Generate content based on project
+    let content = match project_id {
+        "autocrate" => r##"
+        <button id="case-study-close">&times;</button>
+        <div class="case-study-header">
+            <h1>AutoCrate Design Engine</h1>
+            <div class="case-study-meta">Design Visionaries · 2023-2025 · <a href="https://www.appliedmaterials.com" target="_blank">Applied Materials</a>, <a href="https://www.saildrone.com" target="_blank">Saildrone</a></div>
+        </div>
+
+        <div class="case-study-section">
+            <h2>Problem</h2>
+            <p><a href="https://www.appliedmaterials.com" target="_blank">Applied Materials</a> needed custom <a href="https://www.astm.org/d6251-13.html" target="_blank">ASTM D6251</a>-compliant shipping crates for semiconductor equipment. Traditional CAD workflow took 5 days per design using <a href="https://www.plm.automation.siemens.com/global/en/products/nx/" target="_blank">Siemens NX</a>'s slow Open API. Custom crate adoption was only 20% due to long lead times.</p>
+        </div>
+
+        <div class="case-study-section">
+            <h2>Solution</h2>
+            <p>Reverse-engineered <a href="https://www.plm.automation.siemens.com/global/en/products/nx/" target="_blank">Siemens NX</a>'s internal Expression system (bypassing the bottleneck API) to create a parametric design engine that auto-generates crate assemblies from specifications.</p>
+            <p>Built a <a href="https://react.dev" target="_blank">React</a>/<a href="https://www.python.org" target="_blank">Python</a> GUI where users input dimensions, weight, and compliance requirements. The engine outputs:</p>
+            <ul>
+                <li><a href="https://www.astm.org/d6251-13.html" target="_blank">ASTM D6251</a>-compliant technical drawings</li>
+                <li>3D <a href="https://en.wikipedia.org/wiki/ISO_10303-21" target="_blank">STEP</a> assembly files (NX-importable)</li>
+                <li>Bill of Materials (BOM)</li>
+                <li>Cut lists for manufacturing</li>
+            </ul>
+        </div>
+
+        <div class="case-study-highlight">
+            <strong>Impact: 5 days → 1 hour</strong> design time reduction<br>
+            Custom crate adoption increased from <strong>20% → 50%</strong>
+        </div>
+
+        <div class="case-study-section">
+            <h2>Technical Approach</h2>
+            <p>The key breakthrough was discovering that NX Expressions (an internal formula system) could be manipulated programmatically without the slow Open API. I wrote a Python script that:</p>
+            <ul>
+                <li>Parses user specs (L×W×H, weight, shock/vibration requirements)</li>
+                <li>Calculates structural members per <a href="https://www.astm.org/d6251-13.html" target="_blank">ASTM D6251</a> formulas</li>
+                <li>Generates NX Expression files that rebuild the assembly parametrically</li>
+                <li>Exports drawings with <a href="https://en.wikipedia.org/wiki/Geometric_dimensioning_and_tolerancing" target="_blank">GD&T</a> annotations for manufacturing</li>
+            </ul>
+        </div>
+
+        <div class="case-study-tags">
+            <span class="case-study-tag">Siemens NX API</span>
+            <span class="case-study-tag">Python</span>
+            <span class="case-study-tag">React</span>
+            <span class="case-study-tag">ASTM D6251</span>
+            <span class="case-study-tag">Parametric CAD</span>
+            <span class="case-study-tag">MBD</span>
+        </div>
+        "##,
+
+        "surgical" => r##"
+        <button id="case-study-close">&times;</button>
+        <div class="case-study-header">
+            <h1>Surgical Robot Registration</h1>
+            <div class="case-study-meta">ARI (stealth startup → <a href="https://www.zimmerbiomet.com" target="_blank">Zimmer Biomet</a>) · 2020 · <a href="https://www.fda.gov/medical-devices/premarket-submissions-selecting-and-preparing-correct-submission/premarket-notification-510k" target="_blank">FDA 510(k)</a> Compliance</div>
+        </div>
+
+        <div class="case-study-section">
+            <h2>Problem</h2>
+            <p>Robotic knee replacement surgery requires precise alignment between the patient's femur (known from pre-op MRI) and the surgical drill's real-time position (tracked via <a href="https://optitrack.com" target="_blank">OptiTrack</a> motion capture).</p>
+            <p>The registration algorithm must compute the 6-DOF transformation matrix in real-time with sub-millimeter accuracy to enable autonomous bone milling.</p>
+        </div>
+
+        <div class="case-study-section">
+            <h2>Solution</h2>
+            <p>Developed a C++ registration algorithm using <a href="https://vtk.org" target="_blank">VTK</a> (Visualization Toolkit) and <a href="https://pointclouds.org" target="_blank">PCL</a> (Point Cloud Library) that implements <a href="https://en.wikipedia.org/wiki/Iterative_closest_point" target="_blank">Iterative Closest Point (ICP)</a> to align two 3D point clouds:</p>
+            <ul>
+                <li><strong>Source:</strong> Patient's femur from MRI (pre-op 3D model)</li>
+                <li><strong>Target:</strong> Intra-operative drill position from <a href="https://optitrack.com" target="_blank">OptiTrack</a> markers</li>
+            </ul>
+        </div>
+
+        <div class="case-study-highlight">
+            <strong>0.1mm translation</strong> and <strong>0.3° rotation</strong> accuracy<br>
+            Registration time: <strong>300ms</strong> (20s data collection)
+        </div>
+
+        <div class="case-study-section">
+            <h2>Technical Implementation</h2>
+            <ul>
+                <li>Processed 10,000+ point clouds per registration cycle</li>
+                <li>Implemented <a href="https://en.wikipedia.org/wiki/Iterative_closest_point" target="_blank">ICP</a> with normal-based correspondence filtering</li>
+                <li>Integrated with 6-DOF <a href="https://www.kuka.com" target="_blank">Kuka Robot</a> via <a href="https://www.beckhoff.com" target="_blank">Beckhoff</a> PLC (1ms cycle time)</li>
+                <li><a href="https://www.dds-foundation.org" target="_blank">DDS</a> middleware + <a href="https://protobuf.dev" target="_blank">Protobuf</a> serialization for real-time data (5ms latency)</li>
+                <li><a href="https://www.fda.gov/medical-devices/premarket-submissions-selecting-and-preparing-correct-submission/premarket-notification-510k" target="_blank">FDA 510(k)</a> compliance under <a href="https://www.iso.org/standard/38421.html" target="_blank">IEC 62304</a> safety standards</li>
+            </ul>
+        </div>
+
+        <div class="case-study-section">
+            <h2>Industry Impact</h2>
+            <p>This "Active Milling" approach (autonomous cutting) was a first for ARI, moving beyond standard "jig-holding" robotics. The innovation contributed to ARI's acquisition by Monogram, which was subsequently acquired by <a href="https://www.zimmerbiomet.com" target="_blank">Zimmer Biomet</a> in 2025.</p>
+        </div>
+
+        <div class="case-study-tags">
+            <span class="case-study-tag">C++</span>
+            <span class="case-study-tag">VTK</span>
+            <span class="case-study-tag">PCL</span>
+            <span class="case-study-tag">ICP Algorithm</span>
+            <span class="case-study-tag">FDA 510(k)</span>
+            <span class="case-study-tag">IEC 62304</span>
+            <span class="case-study-tag">Kuka Robot</span>
+            <span class="case-study-tag">Beckhoff PLC</span>
+        </div>
+        "##,
+
+        "forensics" => r##"
+        <button id="case-study-close">&times;</button>
+        <div class="case-study-header">
+            <h1>Multi-Modal Robotic Forensics</h1>
+            <div class="case-study-meta">Advanced Engineering Services · 2022-2023 · <a href="https://about.meta.com/realitylabs/" target="_blank">Meta Reality Labs</a></div>
+        </div>
+
+        <div class="case-study-section">
+            <h2>Problem</h2>
+            <p><a href="https://about.meta.com" target="_blank">Meta</a> needed an automated solution to detect counterfeit components in datacenter server hardware. Manual inspection was slow, inconsistent, and couldn't catch sophisticated counterfeits. A single sensing modality (e.g., visual inspection alone) wasn't sufficient to identify all types of fraud.</p>
+        </div>
+
+        <div class="case-study-section">
+            <h2>Solution</h2>
+            <p>Designed and built a complete robotic workcell integrating four complementary sensing modalities to create unique component "fingerprints":</p>
+            <ul>
+                <li><strong>RF Spectrum Analysis:</strong> <a href="https://www.tek.com/en/products/spectrum-analyzers" target="_blank">RF Spectrum Analyzer</a> to capture electromagnetic signatures and detect cloned chips</li>
+                <li><strong>Thermal Camera:</strong> ±0.5°C precision <a href="https://www.flir.com" target="_blank">thermal imaging</a> to identify anomalous heat dissipation patterns</li>
+                <li><strong>Capacitance Probing:</strong> Measures electrical properties of PCB traces and component pins</li>
+                <li><strong>Optical Inspection:</strong> 85mm industrial lens with <a href="https://opencv.org" target="_blank">machine vision</a> for visual defect detection</li>
+            </ul>
+        </div>
+
+        <div class="case-study-highlight">
+            <strong>0.5% repeatability</strong> across test cycles<br>
+            Multi-modal fusion reduced false positives by <strong>40%</strong> vs single-sensor
+        </div>
+
+        <div class="case-study-section">
+            <h2>Hardware Development</h2>
+            <p>Developed a custom end effector that integrated all four sensors into a single robotic tool:</p>
+            <ul>
+                <li>Mechanical design for multi-sensor mounting with micron-level alignment tolerances</li>
+                <li>Integrated RF Spectrum Analyzer with shielded cabling (critical for signal integrity)</li>
+                <li>Mounted thermal camera with isolation to prevent cross-contamination from other sensors</li>
+                <li>Capacitance probe array with spring-loaded pins for consistent contact</li>
+                <li>Industrial camera mount with adjustable focus for varying component heights</li>
+                <li>Quick-change interface for different component form factors (CPUs, GPUs, memory modules)</li>
+            </ul>
+        </div>
+
+        <div class="case-study-section">
+            <h2>Software & Control</h2>
+            <ul>
+                <li><strong><a href="https://www.ni.com/en/shop/labview.html" target="_blank">LabVIEW</a> UI:</strong> Developed operator interface for test sequencing, real-time sensor visualization, and data analytics</li>
+                <li>6-axis robotic arm trajectory planning for automated multi-point scanning</li>
+                <li>Sensor fusion algorithm combining RF, thermal, capacitance, and optical data streams</li>
+                <li><a href="https://opencv.org" target="_blank">OpenCV</a>-based Computer Vision pipeline for optical defect classification</li>
+                <li>Automated data logging and statistical analysis to establish component "ground truth" profiles</li>
+                <li>Test sequencing automation with pass/fail criteria</li>
+            </ul>
+        </div>
+
+        <div class="case-study-section">
+            <h2>Impact</h2>
+            <p>Enabled <a href="https://about.meta.com" target="_blank">Meta</a> to verify component authenticity at production scale. The multi-modal approach successfully identified counterfeits that single-sensor methods missed, protecting datacenter hardware supply chain integrity. The workcell achieved 0.5% measurement repeatability across thousands of test cycles.</p>
+        </div>
+
+        <div class="case-study-tags">
+            <span class="case-study-tag">Robotics</span>
+            <span class="case-study-tag">RF Spectrum Analysis</span>
+            <span class="case-study-tag">Thermal Imaging</span>
+            <span class="case-study-tag">Sensor Fusion</span>
+            <span class="case-study-tag">OpenCV</span>
+            <span class="case-study-tag">LabVIEW</span>
+            <span class="case-study-tag">End Effector Design</span>
+            <span class="case-study-tag">Meta</span>
+        </div>
+        "##,
+
+        _ => return, // Unknown project
+    };
+
+    panel.set_inner_html(content);
+    container.append_child(&panel).ok();
+
+    // Close button handler
+    if let Some(close_btn) = document.get_element_by_id("case-study-close") {
+        let container_clone = container.clone();
+        let closure = Closure::wrap(Box::new(move |_: web_sys::Event| {
+            container_clone.set_attribute("style", "display: none;").ok();
+        }) as Box<dyn FnMut(_)>);
+        close_btn
+            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+            .ok();
+        closure.forget();
+    }
+
+    // Click outside to close
+    let container_clone = container.clone();
+    let closure = Closure::wrap(Box::new(move |e: web_sys::Event| {
+        if let Some(target) = e.target() {
+            if target == container_clone.clone().into() {
+                container_clone.set_attribute("style", "display: none;").ok();
+            }
+        }
+    }) as Box<dyn FnMut(_)>);
+    container
+        .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+        .ok();
+    closure.forget();
 }
 
 /// Set up hashchange event listener
