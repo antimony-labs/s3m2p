@@ -11,12 +11,12 @@ use std::f32::consts::PI;
 use wasm_bindgen::prelude::*;
 use web_sys::{
     CanvasRenderingContext2d, Document, Element, HtmlCanvasElement, HtmlElement, HtmlInputElement,
-    HtmlSelectElement, MouseEvent, WheelEvent,
+    HtmlSelectElement, MouseEvent, WheelEvent, Blob, Url, HtmlAnchorElement,
 };
 
 use cad_engine::{
     is_manifold, make_box, make_cone, make_cylinder, make_sphere, surface_area, volume, Point3,
-    Solid,
+    Solid, solid_to_step, solid_to_stl, union, difference, intersection,
 };
 
 // Global state for the current solid and view
@@ -26,6 +26,8 @@ thread_local! {
 
 struct AppState {
     solid: Option<Solid>,
+    solid_a: Option<Solid>,  // For Boolean operations
+    solid_b: Option<Solid>,  // For Boolean operations
     rotation_x: f32,
     rotation_y: f32,
     zoom: f32,
@@ -38,6 +40,8 @@ impl Default for AppState {
     fn default() -> Self {
         Self {
             solid: None,
+            solid_a: None,
+            solid_b: None,
             rotation_x: 0.5,  // ~30 degrees
             rotation_y: 0.75, // ~45 degrees
             zoom: 2.0,
@@ -70,6 +74,64 @@ fn init_ui() -> Result<(), JsValue> {
         let closure = Closure::wrap(Box::new(move || {
             if let Err(e) = create_solid() {
                 web_sys::console::error_1(&format!("Create failed: {:?}", e).into());
+            }
+        }) as Box<dyn FnMut()>);
+        btn.set_onclick(Some(closure.as_ref().unchecked_ref()));
+        closure.forget();
+    }
+
+    // Set up export STEP button
+    if let Some(btn) = document.get_element_by_id("export-step-btn") {
+        let btn: HtmlElement = btn.dyn_into()?;
+        let closure = Closure::wrap(Box::new(move || {
+            if let Err(e) = export_step() {
+                web_sys::console::error_1(&format!("Export failed: {:?}", e).into());
+            }
+        }) as Box<dyn FnMut()>);
+        btn.set_onclick(Some(closure.as_ref().unchecked_ref()));
+        closure.forget();
+    }
+
+    // Set up export STL button
+    if let Some(btn) = document.get_element_by_id("export-stl-btn") {
+        let btn: HtmlElement = btn.dyn_into()?;
+        let closure = Closure::wrap(Box::new(move || {
+            if let Err(e) = export_stl() {
+                web_sys::console::error_1(&format!("Export failed: {:?}", e).into());
+            }
+        }) as Box<dyn FnMut()>);
+        btn.set_onclick(Some(closure.as_ref().unchecked_ref()));
+        closure.forget();
+    }
+
+    // Set up Boolean operation buttons
+    if let Some(btn) = document.get_element_by_id("boolean-union-btn") {
+        let btn: HtmlElement = btn.dyn_into()?;
+        let closure = Closure::wrap(Box::new(move || {
+            if let Err(e) = perform_boolean("union") {
+                web_sys::console::error_1(&format!("Boolean union failed: {:?}", e).into());
+            }
+        }) as Box<dyn FnMut()>);
+        btn.set_onclick(Some(closure.as_ref().unchecked_ref()));
+        closure.forget();
+    }
+
+    if let Some(btn) = document.get_element_by_id("boolean-diff-btn") {
+        let btn: HtmlElement = btn.dyn_into()?;
+        let closure = Closure::wrap(Box::new(move || {
+            if let Err(e) = perform_boolean("difference") {
+                web_sys::console::error_1(&format!("Boolean difference failed: {:?}", e).into());
+            }
+        }) as Box<dyn FnMut()>);
+        btn.set_onclick(Some(closure.as_ref().unchecked_ref()));
+        closure.forget();
+    }
+
+    if let Some(btn) = document.get_element_by_id("boolean-intersect-btn") {
+        let btn: HtmlElement = btn.dyn_into()?;
+        let closure = Closure::wrap(Box::new(move || {
+            if let Err(e) = perform_boolean("intersection") {
+                web_sys::console::error_1(&format!("Boolean intersection failed: {:?}", e).into());
             }
         }) as Box<dyn FnMut()>);
         btn.set_onclick(Some(closure.as_ref().unchecked_ref()));
@@ -243,9 +305,17 @@ fn create_solid() -> Result<(), JsValue> {
         _ => make_box(100.0, 50.0, 25.0),
     };
 
-    // Update state
+    // Update state - store as solid_a if empty, solid_b if solid_a exists, otherwise main solid
     STATE.with(|state| {
-        state.borrow_mut().solid = Some(solid);
+        let mut state = state.borrow_mut();
+        if state.solid_a.is_none() {
+            state.solid_a = Some(solid.clone());
+            web_sys::console::log_1(&"Stored as Solid A".into());
+        } else if state.solid_b.is_none() {
+            state.solid_b = Some(solid.clone());
+            web_sys::console::log_1(&"Stored as Solid B - ready for Boolean operations".into());
+        }
+        state.solid = Some(solid);
     });
 
     // Update display
@@ -492,4 +562,123 @@ fn set_text(document: &Document, id: &str, text: &str) -> Result<(), JsValue> {
         elem.set_inner_text(text);
     }
     Ok(())
+}
+
+fn download_file(filename: &str, content: &str) -> Result<(), JsValue> {
+    let window = web_sys::window().ok_or("No window")?;
+    let document = window.document().ok_or("No document")?;
+    let body = document.body().ok_or("No body")?;
+
+    let parts = js_sys::Array::of1(&JsValue::from_str(content));
+    let properties = web_sys::BlobPropertyBag::new();
+    properties.set_type("text/plain");
+    let blob = Blob::new_with_str_sequence_and_options(&parts, &properties)?;
+
+    let url = Url::create_object_url_with_blob(&blob)?;
+    let a = document.create_element("a")?.dyn_into::<HtmlAnchorElement>()?;
+    a.set_href(&url);
+    a.set_download(filename);
+    a.style().set_property("display", "none")?;
+
+    body.append_child(&a)?;
+    a.click();
+    body.remove_child(&a)?;
+    Url::revoke_object_url(&url)?;
+
+    Ok(())
+}
+
+fn export_step() -> Result<(), JsValue> {
+    STATE.with(|state| {
+        let state = state.borrow();
+        if let Some(ref solid) = state.solid {
+            web_sys::console::log_1(&"Exporting STEP file...".into());
+            let step_content = solid_to_step(solid, "solid");
+            download_file("model.step", &step_content)?;
+            web_sys::console::log_1(&"STEP export complete".into());
+        } else {
+            web_sys::console::warn_1(&"No solid to export - create one first".into());
+        }
+        Ok(())
+    })
+}
+
+fn download_binary_file(filename: &str, content: &[u8]) -> Result<(), JsValue> {
+    let window = web_sys::window().ok_or("No window")?;
+    let document = window.document().ok_or("No document")?;
+    let body = document.body().ok_or("No body")?;
+
+    let array = js_sys::Uint8Array::from(content);
+    let parts = js_sys::Array::of1(&array);
+    let properties = web_sys::BlobPropertyBag::new();
+    properties.set_type("application/octet-stream");
+    let blob = Blob::new_with_u8_array_sequence_and_options(&parts, &properties)?;
+
+    let url = Url::create_object_url_with_blob(&blob)?;
+    let a = document.create_element("a")?.dyn_into::<HtmlAnchorElement>()?;
+    a.set_href(&url);
+    a.set_download(filename);
+    a.style().set_property("display", "none")?;
+
+    body.append_child(&a)?;
+    a.click();
+    body.remove_child(&a)?;
+    Url::revoke_object_url(&url)?;
+
+    Ok(())
+}
+
+fn export_stl() -> Result<(), JsValue> {
+    STATE.with(|state| {
+        let state = state.borrow();
+        if let Some(ref solid) = state.solid {
+            web_sys::console::log_1(&"Exporting STL file...".into());
+            let stl_binary = solid_to_stl(solid, "solid");
+            download_binary_file("model.stl", &stl_binary)?;
+            web_sys::console::log_1(&"STL export complete".into());
+        } else {
+            web_sys::console::warn_1(&"No solid to export - create one first".into());
+        }
+        Ok(())
+    })
+}
+
+fn perform_boolean(operation: &str) -> Result<(), JsValue> {
+    STATE.with(|state| {
+        let mut state = state.borrow_mut();
+
+        let solid_a = state.solid_a.as_ref()
+            .ok_or_else(|| JsValue::from_str("No Solid A - create first solid"))?;
+        let solid_b = state.solid_b.as_ref()
+            .ok_or_else(|| JsValue::from_str("No Solid B - create second solid"))?;
+
+        web_sys::console::log_1(&format!("Performing Boolean {} operation...", operation).into());
+
+        let result = match operation {
+            "union" => union(solid_a, solid_b),
+            "difference" => difference(solid_a, solid_b),
+            "intersection" => intersection(solid_a, solid_b),
+            _ => return Err(JsValue::from_str("Unknown operation")),
+        };
+
+        match result {
+            Ok(new_solid) => {
+                state.solid = Some(new_solid);
+                state.solid_a = None;  // Reset for next operation
+                state.solid_b = None;
+                drop(state);
+
+                web_sys::console::log_1(&format!("Boolean {} complete", operation).into());
+
+                let window = web_sys::window().ok_or("No window")?;
+                let document = window.document().ok_or("No document")?;
+                display_properties(&document)?;
+                render()?;
+                Ok(())
+            }
+            Err(e) => {
+                Err(JsValue::from_str(&format!("Boolean operation failed: {:?}", e)))
+            }
+        }
+    })
 }

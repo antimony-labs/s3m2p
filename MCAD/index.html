@@ -152,6 +152,32 @@ MODIFIED: 2025-12-09
             box-shadow: 0 0 20px rgba(255, 107, 53, 0.2);
         }
 
+        .export-section {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 107, 53, 0.1);
+        }
+
+        .export-btn {
+            width: 100%;
+            padding: 0.6rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            border-radius: 6px;
+            color: #a0a0a0;
+            font-family: inherit;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 0.5rem;
+        }
+
+        .export-btn:hover {
+            border-color: #ff6b35;
+            color: #ff6b35;
+            background: rgba(255, 107, 53, 0.05);
+        }
+
         .info-text {
             margin-top: 1.25rem;
             font-size: 0.75rem;
@@ -379,6 +405,25 @@ MODIFIED: 2025-12-09
                 </div>
 
                 <button id="create-btn">Create Solid</button>
+
+                <div class="export-section">
+                    <h2>Boolean Operations</h2>
+                    <button id="boolean-union-btn" class="export-btn">Union (A ∪ B)</button>
+                    <button id="boolean-diff-btn" class="export-btn">Difference (A - B)</button>
+                    <button id="boolean-intersect-btn" class="export-btn">Intersection (A ∩ B)</button>
+                    <p class="info-text" style="font-size: 0.75rem; margin-top: 0;">
+                        Create two solids, then combine them
+                    </p>
+                </div>
+
+                <div class="export-section">
+                    <h2>Export</h2>
+                    <button id="export-step-btn" class="export-btn">Export STEP (.step)</button>
+                    <button id="export-stl-btn" class="export-btn">Export STL (.stl)</button>
+                    <p class="info-text" style="font-size: 0.75rem; margin-top: 0;">
+                        Export to industry-standard CAD/3D printing formats
+                    </p>
+                </div>
 
                 <p class="info-text">
                     Create parametric solid primitives using our B-Rep kernel.

@@ -67,6 +67,9 @@ pub use dna::cad::primitives::{
     make_sphere_at,
 };
 
+// Boolean operations
+pub use dna::cad::boolean::{BooleanOp, BooleanError, union, difference, intersection};
+
 // ─────────────────────────────────────────────────────────────────────────────────
 // HIGH-LEVEL API
 // ─────────────────────────────────────────────────────────────────────────────────
@@ -261,6 +264,134 @@ pub fn surface_area(solid: &Solid) -> f32 {
     }
 
     total_area
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────
+// EXPORT
+// ─────────────────────────────────────────────────────────────────────────────────
+
+/// Convert a Solid to STL binary format for 3D printing
+pub fn solid_to_stl(solid: &Solid, name: &str) -> Vec<u8> {
+    use dna::cad::mesh::solid_to_mesh;
+    use dna::export::stl::write_stl_binary;
+
+    let mesh = solid_to_mesh(solid);
+    write_stl_binary(&mesh, name)
+}
+
+/// Convert a Solid to STEP AP242 format
+///
+/// This exports the B-Rep topology to ISO 10303-21 STEP format.
+/// Currently supports planar faces (boxes, cylinders with flat caps).
+pub fn solid_to_step(solid: &Solid, name: &str) -> String {
+    use dna::export::step::StepWriter;
+
+    let mut writer = StepWriter::new();
+
+    // Create points for all vertices
+    let point_ids: Vec<_> = solid.vertices.iter()
+        .map(|v| writer.add_point(None, v.point.x as f64, v.point.y as f64, v.point.z as f64))
+        .collect();
+
+    // Create vertex_point entities
+    let vertex_ids: Vec<_> = point_ids.iter()
+        .map(|&pid| writer.add_vertex_point(None, pid))
+        .collect();
+
+    // Create edge_curve entities for each edge
+    let edge_ids: Vec<_> = solid.edges.iter()
+        .map(|edge| {
+            let start_pt = point_ids[edge.start.0 as usize];
+
+            // Create line geometry for linear edges
+            let start_vertex = &solid.vertices[edge.start.0 as usize];
+            let end_vertex = &solid.vertices[edge.end.0 as usize];
+            let dir = end_vertex.point.to_vec3() - start_vertex.point.to_vec3();
+            let length = dir.length() as f64;
+
+            if length > 0.0 {
+                let dir = dir.normalize();
+                let dir_id = writer.add_direction(None, dir.x as f64, dir.y as f64, dir.z as f64);
+                let vec_id = writer.add_vector(None, dir_id, length);
+                let line_id = writer.add_line(None, start_pt, vec_id);
+
+                writer.add_edge_curve(
+                    None,
+                    vertex_ids[edge.start.0 as usize],
+                    vertex_ids[edge.end.0 as usize],
+                    line_id,
+                    true
+                )
+            } else {
+                // Degenerate edge - create placeholder
+                let dir_id = writer.add_direction(None, 1.0, 0.0, 0.0);
+                let vec_id = writer.add_vector(None, dir_id, 0.001);
+                let line_id = writer.add_line(None, start_pt, vec_id);
+
+                writer.add_edge_curve(
+                    None,
+                    vertex_ids[edge.start.0 as usize],
+                    vertex_ids[edge.end.0 as usize],
+                    line_id,
+                    true
+                )
+            }
+        })
+        .collect();
+
+    // Create faces
+    let face_ids: Vec<_> = solid.faces.iter()
+        .map(|face| {
+            // Create oriented edges for the face loop
+            let oriented_edges: Vec<_> = face.outer_loop.edges.iter()
+                .map(|&edge_id| {
+                    writer.add_oriented_edge(None, edge_ids[edge_id.0 as usize], true)
+                })
+                .collect();
+
+            // Create face bound (loop)
+            let face_bound = writer.add_face_bound(None, oriented_edges, true);
+
+            // For planar faces, create a plane
+            // Simplified: use first three vertices to define plane
+            let verts: Vec<&Vertex> = face.outer_loop.edges.iter()
+                .take(3)
+                .filter_map(|&edge_id| solid.edge(edge_id))
+                .filter_map(|e| solid.vertex(e.start))
+                .collect();
+
+            let plane_position = if verts.len() >= 3 {
+                let p0 = verts[0].point.to_vec3();
+                let p1 = verts[1].point.to_vec3();
+                let p2 = verts[2].point.to_vec3();
+
+                let v1 = p1 - p0;
+                let v2 = p2 - p0;
+                let normal = v1.cross(v2).normalize();
+
+                let origin_id = writer.add_point(None, p0.x as f64, p0.y as f64, p0.z as f64);
+                let normal_id = writer.add_direction(None, normal.x as f64, normal.y as f64, normal.z as f64);
+                writer.add_axis2_placement_3d(None, origin_id, Some(normal_id), None)
+            } else {
+                // Fallback to origin
+                let origin_id = writer.add_point(None, 0.0, 0.0, 0.0);
+                let normal_id = writer.add_direction(None, 0.0, 0.0, 1.0);
+                writer.add_axis2_placement_3d(None, origin_id, Some(normal_id), None)
+            };
+
+            let plane_id = writer.add_plane(None, plane_position);
+
+            writer.add_advanced_face(None, plane_id, vec![face_bound])
+        })
+        .collect();
+
+    // Create closed shell
+    let shell_id = writer.add_closed_shell(None, face_ids);
+
+    // Create manifold solid brep
+    writer.add_manifold_solid_brep(Some(name), shell_id);
+
+    writer.to_string()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────

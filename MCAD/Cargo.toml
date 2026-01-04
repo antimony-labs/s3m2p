@@ -38,4 +38,8 @@ features = [
     "WheelEvent",
     "CssStyleDeclaration",
     "DomRect",
+    "Blob",
+    "BlobPropertyBag",
+    "Url",
+    "HtmlAnchorElement",
 ]
