@@ -385,12 +385,10 @@ impl CelestialCamera {
 
         // Right vector (perpendicular to forward and Z-up)
         let world_up = DVec3::Z;
-        // NOTE: Use `world_up × forward` (not `forward × world_up`) so that at
-        // azimuth=0 the +X axis maps to the right side of the screen.
-        let right = world_up.cross(forward).normalize();
+        let right = forward.cross(world_up).normalize();
 
         // Correct up vector (perpendicular to forward and right)
-        let up = forward.cross(right).normalize();
+        let up = right.cross(forward).normalize();
 
         (right, up)
     }
@@ -399,7 +397,7 @@ impl CelestialCamera {
     ///
     /// Returns (screen_x, screen_y, depth) where:
     /// - screen_x, screen_y: pixel coordinates (0,0 = top-left)
-    /// - depth: signed depth along the view axis (for sorting, larger = closer)
+    /// - depth: distance from camera plane (for sorting, larger = further)
     pub fn project(&self, world_pos: DVec3) -> (f64, f64, f64) {
         // 1. Position relative to target (prevents floating-point precision loss)
         let rel_pos = world_pos - self.target_position;
@@ -430,9 +428,7 @@ impl CelestialCamera {
         let screen_x = (ndc_x + 1.0) * 0.5 * self.viewport_width;
         let screen_y = (1.0 - ndc_y) * 0.5 * self.viewport_height;
 
-        // Depth convention: positive = closer to camera, negative = farther (behind target).
-        // This matches render-side assumptions for depth-based opacity/size cues.
-        (screen_x, screen_y, -cam_z)
+        (screen_x, screen_y, cam_z)
     }
 
     // Note: project_from_frame() removed - FrameGraph stored in SimulationState

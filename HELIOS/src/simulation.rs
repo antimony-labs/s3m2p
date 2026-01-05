@@ -13,7 +13,6 @@
 #![allow(clippy::manual_clamp)]
 
 use crate::cca_projection::{CelestialCamera, ObjectId, ScaleLevel};
-use crate::galactic_background::MilkyWayField;
 use crate::star_data::{Band, UniverseDataManager};
 use dna::world::stars::{create_bright_stars, StarDatabase};
 use glam::DVec3;
@@ -508,9 +507,6 @@ pub struct SimulationState {
     // Local star LOD manager (phase 1 - local DB only)
     pub star_mgr: UniverseDataManager,
 
-    // === MILKY WAY BACKGROUND ===
-    pub milky_way: MilkyWayField,
-
     // === HELIOSPHERE ===
     pub termination_shock_au: f64,
     pub heliopause_au: f64,
@@ -596,7 +592,6 @@ impl SimulationState {
             selected_object: ObjectId::Sun, // Default: focused on Sun
             stars: create_bright_stars(),   // ~35 brightest stars with 3D positions
             star_mgr: UniverseDataManager::new(4000), // hard cap on stars per frame (phase 1)
-            milky_way: MilkyWayField::new(42),       // Deterministic Milky Way background
 
             termination_shock_au: 94.0,
             heliopause_au: 121.0,
@@ -1371,10 +1366,7 @@ impl SimulationState {
 
         // Zoom so that the full heliosphere (including bow shock) is visible,
         // while preserving AU/pixel semantics.
-        //
-        // NOTE: Keep this within the Heliosphere scale bucket so that
-        // heliosphere-specific input behavior (Sun-centered orbit) stays active.
-        self.zoom_to(0.85); // Shows full heliosphere including bow shock
+        self.zoom_to(1.2); // Shows full heliosphere including bow shock
     }
 
     /// View to nearby stars scale (~5 light-years, Alpha Centauri visible)

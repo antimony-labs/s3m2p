@@ -13,7 +13,6 @@ use glam::DVec3;
 /// Wavelength bands for multi-spectrum visualization
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[allow(dead_code)] // Phase 2: Band selection UI not yet implemented
-#[allow(clippy::upper_case_acronyms)] // CMB is a standard acronym in astronomy
 pub enum Band {
     Gamma = 0,   // High-energy gamma rays
     XRay = 1,    // X-rays
@@ -71,14 +70,13 @@ impl UniverseDataManager {
             constellation_edges: Vec::new(),
             frame_times: [0.0; 60],
             frame_idx: 0,
-            lod_level: 6,     // Start with good detail
-            mag_limit: 6.0,   // Show naked-eye visible stars
+            lod_level: 6, // Start with good detail
+            mag_limit: 6.0, // Show naked-eye visible stars
             tile_cache: None, // Local mode
         }
     }
 
     /// Create new manager with streaming (Phase 2)
-    #[allow(dead_code)] // Phase 2: Tile streaming not yet wired into the app entrypoint
     pub fn new_with_streaming(max_visible: usize, server_url: String) -> Self {
         Self {
             current_band: Band::Optical,
@@ -308,7 +306,7 @@ impl UniverseDataManager {
         // FIXED: Stars are at infinity - always render as background skybox!
         // They're 100s-1000s of light-years away, so position check doesn't work
         // at solar system scale. Just render based on direction.
-        true // Always visible
+        true  // Always visible
     }
 
     fn star_pos_at_time(&self, star: &Star, _jd: f64) -> DVec3 {

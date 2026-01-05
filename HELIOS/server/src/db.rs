@@ -16,9 +16,9 @@ use std::collections::HashMap;
 pub struct StarData {
     pub hip_id: i32,
     pub name: String,
-    pub ra: f64,       // Right Ascension (degrees)
-    pub dec: f64,      // Declination (degrees)
-    pub parallax: f64, // Milliarcseconds
+    pub ra: f64,           // Right Ascension (degrees)
+    pub dec: f64,          // Declination (degrees)
+    pub parallax: f64,     // Milliarcseconds
     pub magnitude: f64,
     pub color_bv: f64,
     pub constellation: String,
@@ -26,7 +26,6 @@ pub struct StarData {
 
 impl StarData {
     /// Convert RA/Dec to Cartesian position in HCI frame
-    #[allow(dead_code)] // Server-side helper; used when converting DB rows to renderable positions
     pub fn position(&self) -> DVec3 {
         let distance_pc = if self.parallax > 0.0 {
             1000.0 / self.parallax
@@ -111,16 +110,11 @@ impl StarDatabase {
     }
 
     /// Batch query for multiple tiles (optimization)
-    #[allow(dead_code)] // Phase 2: Batch endpoint not yet wired into all request paths
-    pub async fn query_tiles_batch(
-        &self,
-        keys: Vec<SpatialKey>,
-    ) -> Result<HashMap<SpatialKey, Vec<StarData>>> {
+    pub async fn query_tiles_batch(&self, keys: Vec<SpatialKey>) -> Result<HashMap<SpatialKey, Vec<StarData>>> {
         let mut results = HashMap::new();
 
         // Execute queries in parallel
-        let futures: Vec<_> = keys
-            .iter()
+        let futures: Vec<_> = keys.iter()
             .map(|&k| async move {
                 let stars = self.query_tile(k).await?;
                 Ok::<(SpatialKey, Vec<StarData>), anyhow::Error>((k, stars))
@@ -138,7 +132,9 @@ impl StarDatabase {
 
     /// Health check - verify database connection
     pub async fn health_check(&self) -> Result<()> {
-        sqlx::query("SELECT 1").fetch_one(&self.pool).await?;
+        sqlx::query("SELECT 1")
+            .fetch_one(&self.pool)
+            .await?;
         Ok(())
     }
 }
@@ -161,10 +157,10 @@ fn angular_size_for_level(level: u8) -> f64 {
 /// Magnitude limit for LOD level (brighter = lower magnitude)
 fn magnitude_limit_for_level(level: u8) -> f64 {
     match level {
-        0..=2 => 2.0, // Brightest stars only
-        3..=4 => 4.0, // Naked eye visible
-        5..=6 => 6.0, // Binocular limit
-        7..=8 => 8.0, // Small telescope
-        _ => 10.0,    // Deep survey
+        0..=2 => 2.0,  // Brightest stars only
+        3..=4 => 4.0,  // Naked eye visible
+        5..=6 => 6.0,  // Binocular limit
+        7..=8 => 8.0,  // Small telescope
+        _ => 10.0,     // Deep survey
     }
 }
