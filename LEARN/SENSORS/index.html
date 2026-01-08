@@ -575,19 +575,19 @@ MODIFIED: 2025-12-09
                     </div>
                 </div>
                 <div class="panel-section">
-                    <h3>Dead Reckoning</h3>
+                    <h3>Visual SLAM</h3>
                     <div class="sensor-values">
                         <div class="sensor-value x">
-                            <span class="label">Velocity X</span>
-                            <span class="value" id="vel-x">0.00</span>
+                            <span class="label">Position X</span>
+                            <span class="value" id="pos-x">0.00</span>
                         </div>
                         <div class="sensor-value y">
-                            <span class="label">Velocity Y</span>
-                            <span class="value" id="vel-y">0.00</span>
+                            <span class="label">Position Y</span>
+                            <span class="value" id="pos-y">0.00</span>
                         </div>
                         <div class="sensor-value z">
-                            <span class="label">Velocity Z</span>
-                            <span class="value" id="vel-z">0.00</span>
+                            <span class="label">Position Z</span>
+                            <span class="value" id="pos-z">0.00</span>
                         </div>
                     </div>
                     <div class="sensor-info">
@@ -598,7 +598,11 @@ MODIFIED: 2025-12-09
                         <span class="info-label">Distance:</span>
                         <span class="info-value" id="distance-value">0.00 m</span>
                     </div>
-                    <button class="permission-btn" id="reset-dead-reckoning-btn" style="margin-top: 12px;">Reset</button>
+                    <div class="sensor-info">
+                        <span class="info-label">Landmarks:</span>
+                        <span class="info-value" id="landmarks-count">0</span>
+                    </div>
+                    <button class="permission-btn" id="reset-slam-btn" style="margin-top: 12px;">Reset</button>
                 </div>
                 <div class="panel-section">
                     <h3>Device Orientation</h3>

@@ -11,8 +11,9 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
-    window, CanvasRenderingContext2d, DeviceOrientationEvent, HtmlCanvasElement, HtmlVideoElement,
-    MediaStreamConstraints, AudioContext, AnalyserNode, AudioContextOptions,
+    window, AnalyserNode, AudioContext, AudioContextOptions, CanvasRenderingContext2d,
+    DeviceOrientationEvent, HtmlCanvasElement, HtmlVideoElement, MediaStreamConstraints,
+    ImageData,
 };
 
 const GRAPH_HISTORY_SIZE: usize = 200;
@@ -49,32 +50,28 @@ struct OrientData {
     gamma: f64,
 }
 
-struct DeadReckoning {
-    velocity_x: f64,
-    velocity_y: f64,
-    velocity_z: f64,
+struct VisualSLAM {
+    position_x: f64,
+    position_y: f64,
+    position_z: f64,
     speed: f64,
     distance: f64,
-    last_time: Option<f64>,
-    gravity_x: f64,
-    gravity_y: f64,
-    gravity_z: f64,
-    gravity_calibrated: bool,
+    last_keypoints: Vec<(f64, f64)>,
+    map_points: Vec<(f64, f64, f64)>, // x, y, z positions of landmarks
+    initialized: bool,
 }
 
-impl Default for DeadReckoning {
+impl Default for VisualSLAM {
     fn default() -> Self {
         Self {
-            velocity_x: 0.0,
-            velocity_y: 0.0,
-            velocity_z: 0.0,
+            position_x: 0.0,
+            position_y: 0.0,
+            position_z: 0.0,
             speed: 0.0,
             distance: 0.0,
-            last_time: None,
-            gravity_x: 0.0,
-            gravity_y: 0.0,
-            gravity_z: 0.0,
-            gravity_calibrated: false,
+            last_keypoints: Vec::new(),
+            map_points: Vec::new(),
+            initialized: false,
         }
     }
 }
@@ -94,7 +91,7 @@ struct SensorState {
     proximity: Option<f64>,
     sensors_available: bool,
     camera_available: bool,
-    dead_reckoning: DeadReckoning,
+    visual_slam: VisualSLAM,
 }
 
 impl SensorState {
@@ -114,7 +111,7 @@ impl SensorState {
             proximity: None,
             sensors_available: false,
             camera_available: false,
-            dead_reckoning: DeadReckoning::default(),
+            visual_slam: VisualSLAM::default(),
         }
     }
 
@@ -168,8 +165,11 @@ pub fn main() {
     // Set up sensor permission button (for iOS)
     setup_sensor_button();
 
-    // Set up dead reckoning reset button
-    setup_dead_reckoning_reset_button();
+    // Set up visual SLAM reset button
+    setup_visual_slam_reset_button();
+    
+    // Start visual SLAM processing from camera
+    start_visual_slam_loop();
 
     // Start render loop
     start_render_loop();
@@ -307,13 +307,10 @@ fn setup_motion_listeners() {
                     let mut state = s.borrow_mut();
                     state.push_accel(x, y, z);
                     state.sensors_available = true;
-                    
-                    // Update dead reckoning
-                    update_dead_reckoning(&mut state.dead_reckoning, x, y, z);
+
                 });
 
                 update_accel_display(x, y, z);
-                update_dead_reckoning_display();
             }
         }
 
@@ -539,10 +536,10 @@ fn setup_audio_analysis(stream: web_sys::MediaStream) {
             if let Ok(analyser) = audio_ctx.create_analyser() {
                 analyser.set_fft_size(256);
                 analyser.set_smoothing_time_constant(0.8);
-                
+
                 // Connect source to analyser
                 let _ = source.connect_with_audio_node(&analyser);
-                
+
                 // Start analyzing
                 start_audio_analysis_loop(analyser);
             }
@@ -557,16 +554,16 @@ fn start_audio_analysis_loop(analyser: AnalyserNode) {
     *g.borrow_mut() = Some(Closure::new(move || {
         let buffer_length = analyser.frequency_bin_count();
         let mut data_array = vec![0u8; buffer_length as usize];
-        
+
         analyser.get_byte_frequency_data(&mut data_array);
-        
+
         // Calculate average volume
         let sum: u32 = data_array.iter().map(|&x| x as u32).sum();
         let average = sum / buffer_length;
         let percentage = (average as f64 / 255.0 * 100.0).min(100.0);
-        
+
         update_microphone_display(percentage);
-        
+
         // Schedule next analysis
         request_animation_frame(f.borrow().as_ref().unwrap());
     }));
@@ -599,88 +596,256 @@ fn update_microphone_status(status: &str, text: &str) {
     }
 }
 
-fn update_dead_reckoning(dr: &mut DeadReckoning, accel_x: f64, accel_y: f64, accel_z: f64) {
+fn start_visual_slam_loop() {
+    let f = Rc::new(RefCell::new(None::<Closure<dyn FnMut()>>));
+    let g = f.clone();
+
+    *g.borrow_mut() = Some(Closure::new(move || {
+        process_visual_slam_frame();
+        request_animation_frame(f.borrow().as_ref().unwrap());
+    }));
+
+    request_animation_frame(g.borrow().as_ref().unwrap());
+}
+
+fn process_visual_slam_frame() {
+    let document = window().unwrap().document().unwrap();
+    
+    // Get video element
+    let video: HtmlVideoElement = match document.get_element_by_id("camera-video") {
+        Some(el) => el.unchecked_into(),
+        None => return,
+    };
+
+    // Check if video is ready
+    if video.ready_state() < 2 {
+        return; // Not ready
+    }
+
+    // Create temporary canvas to capture frame
+    let canvas = match document.create_element("canvas") {
+        Ok(el) => el.unchecked_into::<HtmlCanvasElement>(),
+        Err(_) => return,
+    };
+
+    canvas.set_width(video.video_width());
+    canvas.set_height(video.video_height());
+
+    let ctx: CanvasRenderingContext2d = match canvas.get_context("2d") {
+        Ok(Some(ctx)) => ctx.unchecked_into(),
+        _ => return,
+    };
+
+    // Draw video frame to canvas
+    let _ = ctx.draw_image_with_html_video_element(&video, 0.0, 0.0);
+
+    // Get image data
+    let image_data = match ctx.get_image_data(0.0, 0.0, canvas.width() as f64, canvas.height() as f64) {
+        Ok(data) => data,
+        Err(_) => return,
+    };
+
+    // Process frame for visual SLAM
+    STATE.with(|s| {
+        let mut state = s.borrow_mut();
+        update_visual_slam(&mut state.visual_slam, &image_data);
+    });
+
+    update_visual_slam_display();
+}
+
+fn update_visual_slam(slam: &mut VisualSLAM, current_frame: &ImageData) {
     let window = window().unwrap();
     let performance = window.performance().unwrap();
-    let current_time = performance.now() / 1000.0; // Convert to seconds
+    let current_time = performance.now() / 1000.0;
 
-    // Calibrate gravity when device is stationary (first few readings)
-    if !dr.gravity_calibrated {
-        // Use first reading as gravity estimate (device should be at rest)
-        dr.gravity_x = accel_x;
-        dr.gravity_y = accel_y;
-        dr.gravity_z = accel_z;
-        dr.gravity_calibrated = true;
-        dr.last_time = Some(current_time);
+    // Extract features from current frame
+    let current_features = extract_features(current_frame);
+
+    if !slam.initialized {
+        // Initialize with first frame
+        slam.last_keypoints = current_features;
+        slam.initialized = true;
         return;
     }
 
-    if let Some(last_time) = dr.last_time {
-        let dt = current_time - last_time;
-        
-        // Only process if dt is reasonable (avoid huge jumps)
-        if dt > 0.0 && dt < 1.0 {
-            // Subtract gravity to get linear acceleration
-            let linear_accel_x = accel_x - dr.gravity_x;
-            let linear_accel_y = accel_y - dr.gravity_y;
-            let linear_accel_z = accel_z - dr.gravity_z;
-            
-            // Integrate acceleration to get velocity: v = v0 + a*dt
-            dr.velocity_x += linear_accel_x * dt;
-            dr.velocity_y += linear_accel_y * dt;
-            dr.velocity_z += linear_accel_z * dt;
-            
-            // Apply damping to reduce drift (simple low-pass filter)
-            let damping = 0.95;
-            dr.velocity_x *= damping;
-            dr.velocity_y *= damping;
-            dr.velocity_z *= damping;
-            
-            // Calculate speed magnitude: |v| = sqrt(vx² + vy² + vz²)
-            dr.speed = (dr.velocity_x * dr.velocity_x 
-                       + dr.velocity_y * dr.velocity_y 
-                       + dr.velocity_z * dr.velocity_z).sqrt();
-            
-            // Integrate velocity to get distance: d = d0 + v*dt
-            let avg_velocity = dr.speed;
-            dr.distance += avg_velocity * dt;
+    // Match features between frames
+    let matches = match_features(&slam.last_keypoints, &current_features);
+
+    if matches.len() >= 8 {
+        // Estimate camera motion using matched features
+        if let Some((dx, dy, dz)) = estimate_motion(&matches) {
+            // Update position
+            slam.position_x += dx;
+            slam.position_y += dy;
+            slam.position_z += dz;
+
+            // Calculate speed
+            let dt = 0.033; // Assume ~30fps
+            slam.speed = (dx * dx + dy * dy + dz * dz).sqrt() / dt;
+
+            // Update distance
+            slam.distance += (dx * dx + dy * dy + dz * dz).sqrt();
+
+            // Add new landmarks from unmatched features
+            for (x, y) in &current_features {
+                let pt = (*x, *y);
+                if !matches.iter().any(|m| m.1 == pt) {
+                    // Convert to 3D (simplified - assume depth based on feature quality)
+                    slam.map_points.push((*x, *y, 1.0));
+                }
+            }
+
+            // Limit map size
+            if slam.map_points.len() > 1000 {
+                slam.map_points.remove(0);
+            }
         }
     }
-    
-    dr.last_time = Some(current_time);
+
+    // Update last keypoints for next frame
+    slam.last_keypoints = current_features;
 }
 
-fn update_dead_reckoning_display() {
+fn extract_features(image_data: &ImageData) -> Vec<(f64, f64)> {
+    let data = image_data.data();
+    let width = image_data.width() as usize;
+    let height = image_data.height() as usize;
+    let mut features = Vec::new();
+
+    // Simple corner detection using gradient magnitude
+    // Sample every 20 pixels to avoid too many features
+    for y in (10..height - 10).step_by(20) {
+        for x in (10..width - 10).step_by(20) {
+            let idx = (y * width + x) * 4;
+            if idx + 3 < data.length() as usize {
+                // Calculate gradient magnitude (simplified)
+                let gx = get_pixel_intensity(&data, width, x + 1, y) as f64
+                    - get_pixel_intensity(&data, width, x - 1, y) as f64;
+                let gy = get_pixel_intensity(&data, width, x, y + 1) as f64
+                    - get_pixel_intensity(&data, width, x, y - 1) as f64;
+                let gradient_mag = (gx * gx + gy * gy).sqrt();
+
+                // Threshold for corner detection
+                if gradient_mag > 30.0 {
+                    features.push((x as f64, y as f64));
+                }
+            }
+        }
+    }
+
+    features
+}
+
+fn get_pixel_intensity(data: &js_sys::Uint8ClampedArray, width: usize, x: usize, y: usize) -> u8 {
+    let idx = (y * width + x) * 4;
+    if idx + 2 < data.length() as usize {
+        let r = data.get_index(idx as u32) as u32;
+        let g = data.get_index((idx + 1) as u32) as u32;
+        let b = data.get_index((idx + 2) as u32) as u32;
+        ((r + g + b) / 3) as u8
+    } else {
+        0
+    }
+}
+
+fn match_features(
+    last_features: &[(f64, f64)],
+    current_features: &[(f64, f64)],
+) -> Vec<((f64, f64), (f64, f64))> {
+    let mut matches = Vec::new();
+    let max_distance = 50.0; // Maximum pixel distance for matching
+
+    for &last_pt in last_features {
+        let mut best_match = None;
+        let mut best_dist = max_distance;
+
+        for &current_pt in current_features {
+            let dx = current_pt.0 - last_pt.0;
+            let dy = current_pt.1 - last_pt.1;
+            let dist = (dx * dx + dy * dy).sqrt();
+
+            if dist < best_dist {
+                best_dist = dist;
+                best_match = Some(current_pt);
+            }
+        }
+
+        if let Some(match_pt) = best_match {
+            matches.push((last_pt, match_pt));
+        }
+    }
+
+    matches
+}
+
+fn estimate_motion(matches: &[((f64, f64), (f64, f64))]) -> Option<(f64, f64, f64)> {
+    if matches.len() < 8 {
+        return None;
+    }
+
+    // Simplified motion estimation using average displacement
+    // In real SLAM, you'd use essential matrix or homography
+    let mut sum_dx = 0.0;
+    let mut sum_dy = 0.0;
+    let mut count = 0.0;
+
+    for (last_pt, current_pt) in matches {
+        let dx = current_pt.0 - last_pt.0;
+        let dy = current_pt.1 - last_pt.1;
+        sum_dx += dx;
+        sum_dy += dy;
+        count += 1.0;
+    }
+
+    if count > 0.0 {
+        // Convert pixel displacement to meters (simplified scaling)
+        // Assume camera FOV ~60 degrees, typical phone camera
+        let scale = 0.001; // Rough conversion factor
+        let dx = (sum_dx / count) * scale;
+        let dy = (sum_dy / count) * scale;
+        let dz = 0.0; // Can't estimate depth from 2D features alone
+
+        Some((dx, dy, dz))
+    } else {
+        None
+    }
+}
+
+fn update_visual_slam_display() {
     let document = window().unwrap().document().unwrap();
 
     STATE.with(|s| {
         let state = s.borrow();
-        let dr = &state.dead_reckoning;
+        let slam = &state.visual_slam;
 
-        if let Some(el) = document.get_element_by_id("vel-x") {
-            el.set_text_content(Some(&format!("{:.2}", dr.velocity_x)));
+        if let Some(el) = document.get_element_by_id("pos-x") {
+            el.set_text_content(Some(&format!("{:.3}", slam.position_x)));
         }
-        if let Some(el) = document.get_element_by_id("vel-y") {
-            el.set_text_content(Some(&format!("{:.2}", dr.velocity_y)));
+        if let Some(el) = document.get_element_by_id("pos-y") {
+            el.set_text_content(Some(&format!("{:.3}", slam.position_y)));
         }
-        if let Some(el) = document.get_element_by_id("vel-z") {
-            el.set_text_content(Some(&format!("{:.2}", dr.velocity_z)));
+        if let Some(el) = document.get_element_by_id("pos-z") {
+            el.set_text_content(Some(&format!("{:.3}", slam.position_z)));
         }
         if let Some(el) = document.get_element_by_id("speed-value") {
-            el.set_text_content(Some(&format!("{:.2} m/s", dr.speed)));
+            el.set_text_content(Some(&format!("{:.3} m/s", slam.speed)));
         }
         if let Some(el) = document.get_element_by_id("distance-value") {
-            el.set_text_content(Some(&format!("{:.2} m", dr.distance)));
+            el.set_text_content(Some(&format!("{:.3} m", slam.distance)));
+        }
+        if let Some(el) = document.get_element_by_id("landmarks-count") {
+            el.set_text_content(Some(&format!("{}", slam.map_points.len())));
         }
     });
 }
 
-fn setup_dead_reckoning_reset_button() {
+fn setup_visual_slam_reset_button() {
     let document = window().unwrap().document().unwrap();
 
-    if let Some(btn) = document.get_element_by_id("reset-dead-reckoning-btn") {
+    if let Some(btn) = document.get_element_by_id("reset-slam-btn") {
         let closure = Closure::wrap(Box::new(move || {
-            reset_dead_reckoning();
+            reset_visual_slam();
         }) as Box<dyn Fn()>);
 
         let _ = btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref());
@@ -688,13 +853,13 @@ fn setup_dead_reckoning_reset_button() {
     }
 }
 
-fn reset_dead_reckoning() {
+fn reset_visual_slam() {
     STATE.with(|s| {
         let mut state = s.borrow_mut();
-        state.dead_reckoning = DeadReckoning::default();
+        state.visual_slam = VisualSLAM::default();
     });
-    
-    update_dead_reckoning_display();
+
+    update_visual_slam_display();
 }
 
 fn update_camera_placeholder(message: &str) {
@@ -794,7 +959,9 @@ fn setup_ambient_light_sensor() {
                     }
                 }) as Box<dyn Fn(JsValue)>);
 
-                if let Ok(add_listener_val) = js_sys::Reflect::get(&sensor_obj, &"addEventListener".into()) {
+                if let Ok(add_listener_val) =
+                    js_sys::Reflect::get(&sensor_obj, &"addEventListener".into())
+                {
                     if add_listener_val.is_function() {
                         let add_listener: js_sys::Function = add_listener_val.unchecked_into();
                         let _ = add_listener.call2(
@@ -829,10 +996,9 @@ fn setup_proximity_sensor() {
     if let Ok(proximity_sensor) = js_sys::Reflect::get(&window, &"ProximitySensor".into()) {
         if !proximity_sensor.is_undefined() {
             // Try to create sensor instance
-            if let Ok(sensor) = js_sys::Reflect::construct(
-                proximity_sensor.unchecked_ref(),
-                &js_sys::Array::new(),
-            ) {
+            if let Ok(sensor) =
+                js_sys::Reflect::construct(proximity_sensor.unchecked_ref(), &js_sys::Array::new())
+            {
                 let sensor_obj = sensor;
 
                 // Set up reading event
@@ -852,7 +1018,9 @@ fn setup_proximity_sensor() {
                     }
                 }) as Box<dyn Fn(JsValue)>);
 
-                if let Ok(add_listener_val) = js_sys::Reflect::get(&sensor_obj, &"addEventListener".into()) {
+                if let Ok(add_listener_val) =
+                    js_sys::Reflect::get(&sensor_obj, &"addEventListener".into())
+                {
                     if add_listener_val.is_function() {
                         let add_listener: js_sys::Function = add_listener_val.unchecked_into();
                         let _ = add_listener.call2(

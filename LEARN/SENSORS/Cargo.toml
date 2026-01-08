@@ -47,6 +47,8 @@ features = [
     "AnalyserNode",
     "MediaStreamAudioSourceNode",
     "Performance",
+    "ImageData",
+    "Uint8ClampedArray",
 ]
 
 [profile.release]
