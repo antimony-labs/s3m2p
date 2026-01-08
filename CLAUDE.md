@@ -42,6 +42,7 @@ Use `./SCRIPTS/dev-serve.sh <project>` to start - it auto-kills any existing pro
 | swarm | 8105 | http://127.0.0.1:8105 | Swarm robotics |
 | slam | 8106 | http://127.0.0.1:8106 | SLAM tutorials |
 | git | 8107 | http://127.0.0.1:8107 | Git tutorials |
+| ds | 8108 | http://127.0.0.1:8108 | Data structures |
 
 ## Agent Protocol
 

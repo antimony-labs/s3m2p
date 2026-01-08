@@ -29,6 +29,22 @@ pub mod boids;
 
 // AI/ML demos
 pub mod perceptron;
+
+// Data Structures demos
+pub mod pseudocode;
+pub mod array_demo;
+pub mod linked_list_demo;
+pub mod stack_demo;
+pub mod queue_demo;
+pub mod binary_tree_demo;
+pub mod bst_demo;
+pub mod heap_demo;
+pub mod hash_table_demo;
+pub mod graph_demo;
+pub mod balanced_tree_demo;
+
+// Algorithm Problems (Practice section)
+pub mod problems;
 pub mod neural_network;
 pub mod cnn_filter;
 pub mod attention;
@@ -62,3 +78,19 @@ pub use neural_network::{NeuralNetworkDemo, Activation, NNDataset, NNDataPoint};
 pub use cnn_filter::{CnnFilterDemo, FilterType, ImagePattern};
 pub use attention::{AttentionDemo, Sentence};
 pub use grid_world::{GridWorldDemo, Cell, Action, GridLayout};
+
+// Data Structures exports
+pub use pseudocode::{Pseudocode, CodeLine};
+pub use array_demo::{ArrayDemo, ArrayAnimation};
+pub use linked_list_demo::{LinkedListDemo, ListNode, ListAnimation};
+pub use stack_demo::{StackDemo, StackAnimation};
+pub use queue_demo::{QueueDemo, QueueAnimation};
+pub use binary_tree_demo::{BinaryTreeDemo, TreeNode, TreeAnimation, TraversalOrder};
+pub use bst_demo::{BstDemo, BstNode, BstAnimation, HighlightState};
+pub use heap_demo::{HeapDemo, HeapAnimation, HeapType};
+pub use hash_table_demo::{HashTableDemo, HashEntry, HashAnimation, CollisionStrategy};
+pub use graph_demo::{GraphDemo, Vertex, Edge, VertexState, GraphAnimation, TraversalAlgorithm};
+pub use balanced_tree_demo::{BalancedTreeDemo, AvlNode, AvlAnimation, RotationType, HighlightType};
+
+// Algorithm Problems exports
+pub use problems::{Problem, Pattern, Difficulty, PROBLEMS, ALL_PATTERNS};

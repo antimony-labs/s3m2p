@@ -93,6 +93,7 @@ mod urls {
     pub const SWARM: &str = "http://localhost:8105";
     pub const SLAM: &str = "http://localhost:8106";
     pub const GIT: &str = "http://localhost:8107";
+    pub const ALGORITHMS: &str = "http://localhost:8108";
 
     pub const BLOG: &str = "http://localhost:8085";
     #[allow(dead_code)]
@@ -117,6 +118,7 @@ mod urls {
     pub const SWARM: &str = "https://swarm.too.foo";
     pub const SLAM: &str = "https://slam.too.foo";
     pub const GIT: &str = "https://git.too.foo";
+    pub const ALGORITHMS: &str = "https://ds.too.foo";
 
     pub const BLOG: &str = "https://blog.too.foo";
     pub const GENERIC_404: &str = "https://404.too.foo";
@@ -307,6 +309,13 @@ pub const LEARN_BUBBLES: &[Bubble] = &[
         description: "Version Control Mastery",
         icon: "assets/islands/git.svg",
         action: BubbleAction::DirectProject(GIT),
+    },
+    Bubble {
+        id: "algorithms",
+        label: "Algorithms",
+        description: "Data Structures & LeetCode",
+        icon: "assets/islands/algorithms.svg",
+        action: BubbleAction::DirectProject(ALGORITHMS),
     },
 ];
 
