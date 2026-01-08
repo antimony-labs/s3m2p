@@ -13,6 +13,7 @@ use wasm_bindgen_futures::JsFuture;
 use web_sys::{
     window, AnalyserNode, AudioContext, AudioContextOptions, CanvasRenderingContext2d,
     DeviceOrientationEvent, HtmlCanvasElement, HtmlVideoElement, ImageData, MediaStreamConstraints,
+    MediaTrackConstraints,
 };
 
 const GRAPH_HISTORY_SIZE: usize = 200;
@@ -111,6 +112,8 @@ struct SensorState {
     proximity: Option<f64>,
     sensors_available: bool,
     camera_available: bool,
+    current_camera_facing: String, // "user" (front) or "environment" (back)
+    current_stream: Option<web_sys::MediaStream>,
     visual_slam: VisualSLAM,
 }
 
@@ -131,6 +134,8 @@ impl SensorState {
             proximity: None,
             sensors_available: false,
             camera_available: false,
+            current_camera_facing: "environment".to_string(), // Start with back camera
+            current_stream: None,
             visual_slam: VisualSLAM::default(),
         }
     }
@@ -178,6 +183,9 @@ pub fn main() {
 
     // Set up camera button
     setup_camera_button();
+
+    // Set up camera switch button
+    setup_camera_switch_button();
 
     // Set up microphone button
     setup_microphone_button();
@@ -464,13 +472,42 @@ fn setup_microphone_button() {
 }
 
 async fn request_camera() {
+    request_camera_with_facing(None).await;
+}
+
+async fn request_camera_with_facing(facing_mode: Option<&str>) {
     let window = window().expect("no window");
     let navigator = window.navigator();
 
+    // Stop existing stream if any
+    STATE.with(|s| {
+        let state = s.borrow();
+        if let Some(ref stream) = state.current_stream {
+            let tracks = stream.get_tracks();
+            for i in 0..tracks.length() {
+                let track_val = tracks.get(i);
+                if let Ok(track) = track_val.dyn_into::<web_sys::MediaStreamTrack>() {
+                    let _ = track.stop();
+                }
+            }
+        }
+    });
+
+    // Determine facing mode
+    let facing_str = if let Some(fm) = facing_mode {
+        fm.to_string()
+    } else {
+        STATE.with(|s| s.borrow().current_camera_facing.clone())
+    };
+
     if let Ok(media_devices) = navigator.media_devices() {
         let constraints = MediaStreamConstraints::new();
-        constraints.set_video(&JsValue::TRUE);
         constraints.set_audio(&JsValue::FALSE);
+
+        // Create video constraints object with facing mode
+        let video_constraints = MediaTrackConstraints::new();
+        video_constraints.set_facing_mode(&JsValue::from_str(&facing_str));
+        constraints.set_video(&JsValue::from(video_constraints));
 
         match media_devices.get_user_media_with_constraints(&constraints) {
             Ok(promise) => {
@@ -485,13 +522,26 @@ async fn request_camera() {
                             let _ = video.play();
                         }
 
+                        // Update state
+                        STATE.with(|s| {
+                            let mut state = s.borrow_mut();
+                            state.current_stream = Some(stream.clone());
+                            state.current_camera_facing = facing_str.clone();
+                        });
+
                         // Hide placeholder via style
                         if let Some(placeholder) = document.get_element_by_id("camera-placeholder")
                         {
                             let _ = placeholder.set_attribute("style", "display: none;");
                         }
 
-                        update_camera_status("available", "Streaming");
+                        // Show switch button
+                        if let Some(btn) = document.get_element_by_id("switch-camera-btn") {
+                            let _ = btn.set_attribute("style", "display: block; margin-top: 8px;");
+                        }
+
+                        let camera_name = if facing_str == "user" { "Front" } else { "Back" };
+                        update_camera_status("available", &format!("Streaming ({})", camera_name));
                     }
                     Err(_) => {
                         update_camera_status("error", "Permission Denied");
@@ -505,6 +555,34 @@ async fn request_camera() {
             }
         }
     }
+}
+
+fn setup_camera_switch_button() {
+    let document = window().unwrap().document().unwrap();
+
+    if let Some(btn) = document.get_element_by_id("switch-camera-btn") {
+        let closure = Closure::wrap(Box::new(move || {
+            wasm_bindgen_futures::spawn_local(async {
+                switch_camera().await;
+            });
+        }) as Box<dyn Fn()>);
+
+        let _ = btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref());
+        closure.forget();
+    }
+}
+
+async fn switch_camera() {
+    let new_facing = STATE.with(|s| {
+        let state = s.borrow();
+        if state.current_camera_facing == "user" {
+            "environment"
+        } else {
+            "user"
+        }
+    });
+
+    request_camera_with_facing(Some(new_facing)).await;
 }
 
 async fn request_microphone() {
