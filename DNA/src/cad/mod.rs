@@ -63,10 +63,10 @@ pub use topology::{
     CurveType, Edge, EdgeId, Face, FaceId, FaceOrientation, Loop, Shell, ShellId, Solid,
     SurfaceType, Vertex, VertexId,
 };
-pub use mesh::{TriangleMesh, solid_to_mesh};
-pub use intersect::{Classification, plane_plane_intersect, ray_sphere_intersect, ray_cylinder_intersect, point_in_solid};
+pub use mesh::{TriangleMesh, solid_to_mesh, PickableMesh, solid_to_pickable_mesh};
+pub use intersect::{Classification, plane_plane_intersect, ray_sphere_intersect, ray_cylinder_intersect, point_in_solid, ray_triangle_intersect, pick_face, FaceHit};
 pub use boolean::{BooleanOp, BooleanError, union, difference, intersection};
-pub use sketch::{Sketch, SketchPlane, Point2, SketchPoint, SketchPointId, SketchEntity, SketchEntityId, ConstraintId};
+pub use sketch::{Sketch, SketchPlane, SketchCoordinateFrame, Point2, SketchPoint, SketchPointId, SketchEntity, SketchEntityId, ConstraintId};
 pub use constraints::{Constraint, GeometricConstraint, DimensionalConstraint};
 pub use solver::{ConstraintSolver, SolverConfig, SolverResult, DofStatus, ConstraintAnalysis};
 pub use extrude::{extrude_sketch, ExtrudeParams, ExtrudeError};

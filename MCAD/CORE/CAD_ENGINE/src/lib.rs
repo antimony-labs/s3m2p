@@ -67,13 +67,17 @@ pub use dna::cad::primitives::{
     make_sphere_at,
 };
 
+// Mesh triangulation and picking
+pub use dna::cad::mesh::{TriangleMesh, solid_to_mesh, PickableMesh, solid_to_pickable_mesh};
+pub use dna::cad::intersect::{ray_triangle_intersect, pick_face, FaceHit};
+
 // Boolean operations
 pub use dna::cad::boolean::{BooleanOp, BooleanError, union, difference, intersection};
 
 // Sketcher
 pub use dna::cad::sketch::{
     circumcenter, orient2d, ConstraintId, Point2, Sketch, SketchEntity, SketchEntityId, SketchPlane,
-    SketchPoint, SketchPointId,
+    SketchPoint, SketchPointId, SketchCoordinateFrame,
 };
 pub use dna::cad::constraints::{Constraint, GeometricConstraint, DimensionalConstraint};
 pub use dna::cad::solver::{ConstraintSolver, SolverConfig, SolverResult, DofStatus, ConstraintAnalysis};

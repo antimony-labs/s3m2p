@@ -6,7 +6,7 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 use super::geometry::{Point3, Vector3};
-use super::topology::{Solid, Face};
+use super::topology::{Solid, Face, FaceId, EdgeId};
 
 /// Triangle mesh representation
 #[derive(Clone, Debug)]
@@ -97,6 +97,62 @@ fn triangulate_face(face: &Face, solid: &Solid, mesh: &mut TriangleMesh) {
         ]);
         mesh.normals.push(normal);
     }
+}
+
+/// Triangle mesh with face provenance for picking
+#[derive(Clone, Debug)]
+pub struct PickableMesh {
+    /// The underlying triangle mesh
+    pub mesh: TriangleMesh,
+    /// For each triangle, the source face ID
+    pub triangle_to_face: Vec<FaceId>,
+    /// Edge segments for edge picking (start, end, edge_id)
+    pub edge_segments: Vec<(Point3, Point3, EdgeId)>,
+}
+
+impl PickableMesh {
+    pub fn new() -> Self {
+        Self {
+            mesh: TriangleMesh::new(),
+            triangle_to_face: Vec::new(),
+            edge_segments: Vec::new(),
+        }
+    }
+}
+
+impl Default for PickableMesh {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Convert a solid to a pickable mesh with face provenance
+pub fn solid_to_pickable_mesh(solid: &Solid) -> PickableMesh {
+    let mut pickable = PickableMesh::new();
+
+    // Triangulate each face and track which face each triangle belongs to
+    for face in &solid.faces {
+        let start_tri_idx = pickable.mesh.triangles.len();
+        triangulate_face(face, solid, &mut pickable.mesh);
+        let end_tri_idx = pickable.mesh.triangles.len();
+
+        // All triangles from start_tri_idx to end_tri_idx belong to this face
+        for _ in start_tri_idx..end_tri_idx {
+            pickable.triangle_to_face.push(face.id);
+        }
+    }
+
+    // Extract edge segments for edge picking
+    for edge in &solid.edges {
+        if let (Some(start_v), Some(end_v)) = (
+            solid.vertex(edge.start),
+            solid.vertex(edge.end),
+        ) {
+            pickable.edge_segments.push((start_v.point, end_v.point, edge.id));
+        }
+    }
+
+    pickable
 }
 
 #[cfg(test)]

@@ -6,14 +6,193 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 use super::geometry::{Point3, Vector3};
+use super::topology::{Face, Solid};
 use serde::{Serialize, Deserialize};
 
+/// Coordinate frame for arbitrary sketch planes
+///
+/// Defines a local 2D coordinate system embedded in 3D space.
+/// The U and V axes define the sketch plane, with the normal perpendicular to both.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SketchCoordinateFrame {
+    /// Origin point in 3D world space
+    pub origin: Point3,
+    /// Normal vector (perpendicular to sketch plane)
+    pub normal: Vector3,
+    /// U axis (local X direction in sketch)
+    pub u_axis: Vector3,
+    /// V axis (local Y direction in sketch)
+    pub v_axis: Vector3,
+}
+
+impl SketchCoordinateFrame {
+    /// Create a coordinate frame from origin and normal
+    ///
+    /// Automatically computes orthogonal U and V axes.
+    pub fn from_origin_normal(origin: Point3, normal: Vector3) -> Option<Self> {
+        // Normalize the normal
+        let len = normal.length();
+        if len < 1e-8 {
+            return None;
+        }
+        let normal = Vector3::new(normal.x / len, normal.y / len, normal.z / len);
+
+        // Find a vector not parallel to normal to create U axis
+        let reference = if normal.x.abs() < 0.9 {
+            Vector3::new(1.0, 0.0, 0.0)
+        } else {
+            Vector3::new(0.0, 1.0, 0.0)
+        };
+
+        // U = reference × normal (normalized)
+        let u = Vector3::new(
+            reference.y * normal.z - reference.z * normal.y,
+            reference.z * normal.x - reference.x * normal.z,
+            reference.x * normal.y - reference.y * normal.x,
+        );
+        let u_len = u.length();
+        if u_len < 1e-8 {
+            return None;
+        }
+        let u_axis = Vector3::new(u.x / u_len, u.y / u_len, u.z / u_len);
+
+        // V = normal × U (already normalized since both inputs are unit vectors)
+        let v_axis = Vector3::new(
+            normal.y * u_axis.z - normal.z * u_axis.y,
+            normal.z * u_axis.x - normal.x * u_axis.z,
+            normal.x * u_axis.y - normal.y * u_axis.x,
+        );
+
+        Some(Self {
+            origin,
+            normal,
+            u_axis,
+            v_axis,
+        })
+    }
+
+    /// Create a coordinate frame from a face on a solid
+    ///
+    /// Uses the face's planar surface normal and centroid as origin.
+    pub fn from_face(face: &Face, solid: &Solid) -> Option<Self> {
+        // Get first 3 vertices to compute face normal
+        let verts: Vec<Point3> = face.outer_loop.edges.iter()
+            .take(3)
+            .filter_map(|&edge_id| {
+                solid.edge(edge_id)
+                    .and_then(|e| solid.vertex(e.start))
+                    .map(|v| v.point)
+            })
+            .collect();
+
+        if verts.len() < 3 {
+            return None;
+        }
+
+        // Compute face normal from first 3 vertices
+        let v0 = verts[0].to_vec3();
+        let v1 = verts[1].to_vec3();
+        let v2 = verts[2].to_vec3();
+
+        let edge1 = v1 - v0;
+        let edge2 = v2 - v0;
+        let cross = edge1.cross(edge2);
+
+        if cross.length() < 1e-8 {
+            return None; // Degenerate face
+        }
+
+        let normal = Vector3::from_vec3(cross.normalize());
+
+        // Compute centroid as origin
+        let all_verts: Vec<Point3> = face.outer_loop.edges.iter()
+            .filter_map(|&edge_id| {
+                solid.edge(edge_id)
+                    .and_then(|e| solid.vertex(e.start))
+                    .map(|v| v.point)
+            })
+            .collect();
+
+        if all_verts.is_empty() {
+            return None;
+        }
+
+        let mut cx = 0.0f32;
+        let mut cy = 0.0f32;
+        let mut cz = 0.0f32;
+        for v in &all_verts {
+            cx += v.x;
+            cy += v.y;
+            cz += v.z;
+        }
+        let n = all_verts.len() as f32;
+        let origin = Point3::new(cx / n, cy / n, cz / n);
+
+        Self::from_origin_normal(origin, normal)
+    }
+
+    /// Create an offset plane (parallel to this frame, shifted along normal)
+    pub fn with_offset(&self, distance: f32) -> Self {
+        Self {
+            origin: Point3::new(
+                self.origin.x + self.normal.x * distance,
+                self.origin.y + self.normal.y * distance,
+                self.origin.z + self.normal.z * distance,
+            ),
+            normal: self.normal,
+            u_axis: self.u_axis,
+            v_axis: self.v_axis,
+        }
+    }
+
+    /// Transform a 2D sketch point to 3D world space
+    pub fn to_3d(&self, p: Point2) -> Point3 {
+        Point3::new(
+            self.origin.x + self.u_axis.x * p.x + self.v_axis.x * p.y,
+            self.origin.y + self.u_axis.y * p.x + self.v_axis.y * p.y,
+            self.origin.z + self.u_axis.z * p.x + self.v_axis.z * p.y,
+        )
+    }
+
+    /// Transform a 3D world point to 2D sketch coordinates
+    ///
+    /// Projects the point onto the sketch plane.
+    pub fn from_3d(&self, p: Point3) -> Point2 {
+        // Vector from origin to point
+        let v = Vector3::new(
+            p.x - self.origin.x,
+            p.y - self.origin.y,
+            p.z - self.origin.z,
+        );
+
+        // Project onto U and V axes
+        let u = v.x * self.u_axis.x + v.y * self.u_axis.y + v.z * self.u_axis.z;
+        let v_coord = v.x * self.v_axis.x + v.y * self.v_axis.y + v.z * self.v_axis.z;
+
+        Point2::new(u, v_coord)
+    }
+}
+
+impl PartialEq for SketchCoordinateFrame {
+    fn eq(&self, other: &Self) -> bool {
+        const TOL: f32 = 1e-6;
+        (self.origin.x - other.origin.x).abs() < TOL
+            && (self.origin.y - other.origin.y).abs() < TOL
+            && (self.origin.z - other.origin.z).abs() < TOL
+            && (self.normal.x - other.normal.x).abs() < TOL
+            && (self.normal.y - other.normal.y).abs() < TOL
+            && (self.normal.z - other.normal.z).abs() < TOL
+    }
+}
+
 /// Sketch plane orientation
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum SketchPlane {
     XY,  // Normal: +Z
     YZ,  // Normal: +X
     XZ,  // Normal: +Y
+    /// Arbitrary plane defined by a coordinate frame
+    Arbitrary(SketchCoordinateFrame),
 }
 
 /// 2D point in sketch coordinates
@@ -165,19 +344,39 @@ impl Sketch {
 
     /// Transform 2D sketch point to 3D world space
     pub fn to_3d_point(&self, p: Point2) -> Point3 {
-        match self.plane {
+        match &self.plane {
             SketchPlane::XY => Point3::new(p.x, p.y, 0.0),
             SketchPlane::YZ => Point3::new(0.0, p.x, p.y),
             SketchPlane::XZ => Point3::new(p.x, 0.0, p.y),
+            SketchPlane::Arbitrary(frame) => frame.to_3d(p),
         }
     }
 
     /// Transform 3D world point to 2D sketch space
     pub fn from_3d_point(&self, p: Point3) -> Point2 {
-        match self.plane {
+        match &self.plane {
             SketchPlane::XY => Point2::new(p.x, p.y),
             SketchPlane::YZ => Point2::new(p.y, p.z),
             SketchPlane::XZ => Point2::new(p.x, p.z),
+            SketchPlane::Arbitrary(frame) => frame.from_3d(p),
+        }
+    }
+
+    /// Get the normal vector for this sketch plane
+    pub fn normal(&self) -> Vector3 {
+        match &self.plane {
+            SketchPlane::XY => Vector3::new(0.0, 0.0, 1.0),
+            SketchPlane::YZ => Vector3::new(1.0, 0.0, 0.0),
+            SketchPlane::XZ => Vector3::new(0.0, 1.0, 0.0),
+            SketchPlane::Arbitrary(frame) => frame.normal,
+        }
+    }
+
+    /// Get the origin point for this sketch plane
+    pub fn origin(&self) -> Point3 {
+        match &self.plane {
+            SketchPlane::XY | SketchPlane::YZ | SketchPlane::XZ => Point3::new(0.0, 0.0, 0.0),
+            SketchPlane::Arbitrary(frame) => frame.origin,
         }
     }
 
@@ -301,5 +500,81 @@ mod tests {
         let c = Point2::new(1.0, 1.0);
         assert!(orient2d(a, b, c) > 0.0);
         assert!(orient2d(a, c, b) < 0.0);
+    }
+
+    #[test]
+    fn test_coordinate_frame_from_origin_normal() {
+        // Frame at origin with Z normal (like XY plane)
+        let frame = SketchCoordinateFrame::from_origin_normal(
+            Point3::new(0.0, 0.0, 0.0),
+            Vector3::new(0.0, 0.0, 1.0),
+        ).unwrap();
+
+        // U and V should be perpendicular to normal and each other
+        let u_dot_n = frame.u_axis.x * frame.normal.x
+            + frame.u_axis.y * frame.normal.y
+            + frame.u_axis.z * frame.normal.z;
+        let v_dot_n = frame.v_axis.x * frame.normal.x
+            + frame.v_axis.y * frame.normal.y
+            + frame.v_axis.z * frame.normal.z;
+        let u_dot_v = frame.u_axis.x * frame.v_axis.x
+            + frame.u_axis.y * frame.v_axis.y
+            + frame.u_axis.z * frame.v_axis.z;
+
+        assert!(u_dot_n.abs() < 1e-6);
+        assert!(v_dot_n.abs() < 1e-6);
+        assert!(u_dot_v.abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_coordinate_frame_roundtrip() {
+        // Create a tilted plane
+        let frame = SketchCoordinateFrame::from_origin_normal(
+            Point3::new(10.0, 20.0, 30.0),
+            Vector3::new(1.0, 1.0, 1.0), // Tilted normal
+        ).unwrap();
+
+        // Transform a 2D point to 3D and back
+        let p2 = Point2::new(5.0, 7.0);
+        let p3 = frame.to_3d(p2);
+        let back = frame.from_3d(p3);
+
+        assert!((back.x - p2.x).abs() < 1e-5);
+        assert!((back.y - p2.y).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_coordinate_frame_offset() {
+        let frame = SketchCoordinateFrame::from_origin_normal(
+            Point3::new(0.0, 0.0, 0.0),
+            Vector3::new(0.0, 0.0, 1.0),
+        ).unwrap();
+
+        let offset = frame.with_offset(10.0);
+
+        assert!((offset.origin.z - 10.0).abs() < 1e-6);
+        assert!(offset.normal == frame.normal);
+        assert!(offset.u_axis == frame.u_axis);
+        assert!(offset.v_axis == frame.v_axis);
+    }
+
+    #[test]
+    fn test_arbitrary_sketch_plane() {
+        let frame = SketchCoordinateFrame::from_origin_normal(
+            Point3::new(5.0, 5.0, 5.0),
+            Vector3::new(0.0, 1.0, 0.0), // Y normal (like XZ plane but shifted)
+        ).unwrap();
+
+        let sketch = Sketch::new(SketchPlane::Arbitrary(frame));
+
+        // Point at origin of sketch plane
+        let p3 = sketch.to_3d_point(Point2::new(0.0, 0.0));
+        assert!((p3.x - 5.0).abs() < 1e-5);
+        assert!((p3.y - 5.0).abs() < 1e-5);
+        assert!((p3.z - 5.0).abs() < 1e-5);
+
+        // Normal should be Y
+        let n = sketch.normal();
+        assert!((n.y - 1.0).abs() < 1e-5);
     }
 }

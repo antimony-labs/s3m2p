@@ -5,8 +5,9 @@
 //! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
-use super::geometry::{Point3, Vector3, Plane, Line, Ray};
-use super::topology::Solid;
+use super::geometry::{Point3, Vector3, Plane, Line, Ray, TOLERANCE};
+use super::topology::{Solid, FaceId};
+use super::mesh::TriangleMesh;
 
 /// Classification of a point relative to a solid
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -201,6 +202,105 @@ pub fn point_in_solid(point: Point3, solid: &Solid) -> Classification {
     } else {
         Classification::Inside
     }
+}
+
+/// Ray-triangle intersection using Moller-Trumbore algorithm
+///
+/// Returns Some(t) where t is the distance along the ray if intersection occurs,
+/// or None if the ray misses the triangle.
+pub fn ray_triangle_intersect(ray: &Ray, v0: Point3, v1: Point3, v2: Point3) -> Option<f32> {
+    const EPSILON: f32 = 1e-7;
+
+    let edge1 = v1.to_vec3() - v0.to_vec3();
+    let edge2 = v2.to_vec3() - v0.to_vec3();
+
+    // Calculate determinant
+    let h = ray.direction.to_vec3().cross(edge2);
+    let det = edge1.dot(h);
+
+    // Ray parallel to triangle
+    if det.abs() < EPSILON {
+        return None;
+    }
+
+    let inv_det = 1.0 / det;
+    let s = ray.origin.to_vec3() - v0.to_vec3();
+
+    // Calculate u barycentric coordinate
+    let u = s.dot(h) * inv_det;
+    if u < 0.0 || u > 1.0 {
+        return None;
+    }
+
+    // Calculate v barycentric coordinate
+    let q = s.cross(edge1);
+    let v = ray.direction.to_vec3().dot(q) * inv_det;
+    if v < 0.0 || u + v > 1.0 {
+        return None;
+    }
+
+    // Calculate t (distance along ray)
+    let t = edge2.dot(q) * inv_det;
+
+    if t > EPSILON {
+        Some(t)
+    } else {
+        None
+    }
+}
+
+/// Result of face picking
+#[derive(Debug, Clone)]
+pub struct FaceHit {
+    /// ID of the hit face
+    pub face_id: FaceId,
+    /// Hit point in world coordinates
+    pub hit_point: Point3,
+    /// Distance along the ray
+    pub distance: f32,
+    /// Triangle index within the mesh
+    pub triangle_index: usize,
+}
+
+/// Pick the closest face hit by a ray
+///
+/// Uses ray-triangle intersection against all triangles in the mesh,
+/// then maps the hit triangle back to its source face.
+pub fn pick_face(
+    ray: &Ray,
+    mesh: &TriangleMesh,
+    triangle_to_face: &[FaceId],
+) -> Option<FaceHit> {
+    let mut closest: Option<FaceHit> = None;
+
+    for (tri_idx, triangle) in mesh.triangles.iter().enumerate() {
+        if triangle[0] >= mesh.vertices.len()
+            || triangle[1] >= mesh.vertices.len()
+            || triangle[2] >= mesh.vertices.len()
+        {
+            continue;
+        }
+
+        let v0 = mesh.vertices[triangle[0]];
+        let v1 = mesh.vertices[triangle[1]];
+        let v2 = mesh.vertices[triangle[2]];
+
+        if let Some(t) = ray_triangle_intersect(ray, v0, v1, v2) {
+            let is_closer = closest.as_ref().map_or(true, |c| t < c.distance);
+            if is_closer {
+                let face_id = triangle_to_face.get(tri_idx).copied().unwrap_or(FaceId(0));
+                let hit_point = Point3::from_vec3(ray.origin.to_vec3() + ray.direction.to_vec3() * t);
+                closest = Some(FaceHit {
+                    face_id,
+                    hit_point,
+                    distance: t,
+                    triangle_index: tri_idx,
+                });
+            }
+        }
+    }
+
+    closest
 }
 
 #[cfg(test)]
