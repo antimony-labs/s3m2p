@@ -56,7 +56,7 @@ declare -A PROJECT_DIRS=(
     ["learn"]="LEARN"
     ["arch"]="ARCH"
     ["pll"]="TOOLS/PLL"
-    ["power"]="COMING_SOON"
+    ["power"]="TOOLS/POWER_CIRCUITS"
     ["ai"]="LEARN/AI"
     ["ubuntu"]="LEARN/UBUNTU"
     ["opencv"]="LEARN/OPENCV"
@@ -99,7 +99,6 @@ declare -A STATIC_PROJECTS=(
     ["coming_soon"]=1
     ["arduino"]=1
     ["sensors"]=1
-    ["power"]=1
 )
 
 # Export for sub-shells
