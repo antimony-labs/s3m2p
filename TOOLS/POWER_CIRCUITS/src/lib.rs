@@ -101,12 +101,6 @@ impl WaveformView {
         }
     }
 
-    /// Pan by delta (in seconds)
-    fn pan(&mut self, delta_t: f64) {
-        let duration = self.duration();
-        self.t_start = (self.t_start + delta_t).clamp(0.0, self.t_max - duration);
-        self.t_end = self.t_start + duration;
-    }
 }
 
 struct AppState {
@@ -1062,12 +1056,63 @@ fn draw_schematic(document: &Document, topology: TopologyType) -> Result<(), JsV
     // Draw grid
     draw_grid(&ctx, width, height);
 
-    // Draw topology-specific schematic
+    // Get component values from current design
+    let (vin, vout, l_val, cout_val, cin_val, r_load) = STATE.with(|state| {
+        let s = state.borrow();
+        let r_load = if s.iout > 0.0 { s.vout / s.iout } else { 0.0 };
+        match &s.design {
+            CurrentDesign::Buck(d) => (
+                s.vin_nom,
+                s.vout,
+                d.inductor.selected_value,
+                d.output_capacitor.selected_value,
+                d.input_capacitor.selected_value,
+                r_load,
+            ),
+            CurrentDesign::Boost(d) => (
+                s.vin_nom,
+                s.vout,
+                d.inductor.selected_value,
+                d.output_capacitor.selected_value,
+                d.input_capacitor.selected_value,
+                r_load,
+            ),
+            CurrentDesign::LDO(d) => (
+                s.vin_nom,
+                s.vout,
+                0.0,
+                d.output_capacitor.selected_value,
+                d.input_capacitor.selected_value,
+                r_load,
+            ),
+            CurrentDesign::None => (s.vin_nom, s.vout, 0.0, 0.0, 0.0, r_load),
+        }
+    });
+
+    // Draw topology-specific schematic with values
     match topology {
-        TopologyType::Buck => draw_buck_schematic(&ctx, width, height),
-        TopologyType::Boost => draw_boost_schematic(&ctx, width, height),
-        TopologyType::LDO => draw_ldo_schematic(&ctx, width, height),
+        TopologyType::Buck => draw_buck_schematic(&ctx, width, height, vin, vout, l_val, cout_val, r_load),
+        TopologyType::Boost => draw_boost_schematic(&ctx, width, height, vin, vout, l_val, cout_val, r_load),
+        TopologyType::LDO => draw_ldo_schematic(&ctx, width, height, vin, vout, cin_val, cout_val, r_load),
         _ => Ok(()),
+    }
+}
+
+/// Format component value with appropriate SI prefix
+fn format_value(val: f64, unit: &str) -> String {
+    if val == 0.0 {
+        return format!("--{}", unit);
+    }
+    if val >= 1.0 {
+        format!("{:.1}{}", val, unit)
+    } else if val >= 1e-3 {
+        format!("{:.1}m{}", val * 1e3, unit)
+    } else if val >= 1e-6 {
+        format!("{:.1}u{}", val * 1e6, unit)
+    } else if val >= 1e-9 {
+        format!("{:.1}n{}", val * 1e9, unit)
+    } else {
+        format!("{:.1}p{}", val * 1e12, unit)
     }
 }
 
@@ -1095,14 +1140,14 @@ fn draw_grid(ctx: &CanvasRenderingContext2d, width: f64, height: f64) {
     }
 }
 
-fn draw_buck_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64) -> Result<(), JsValue> {
+fn draw_buck_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64, vin: f64, vout: f64, l_val: f64, cout_val: f64, r_load: f64) -> Result<(), JsValue> {
     let cx = width / 2.0;
     let cy = height / 2.0;
 
     ctx.set_stroke_style(&JsValue::from_str("#00ffaa"));
     ctx.set_fill_style(&JsValue::from_str("#00ffaa"));
     ctx.set_line_width(2.0);
-    ctx.set_font("12px Monaco, monospace");
+    ctx.set_font("11px Monaco, monospace");
 
     // Buck converter topology:
     // Vin+ --[Q]--+--[L]--+--[Load]
@@ -1126,8 +1171,9 @@ fn draw_buck_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64) 
     let _ = ctx.fill_text("Buck Converter", cx - 50.0, 25.0);
     ctx.set_fill_style(&JsValue::from_str("#00ffaa"));
 
-    // Draw Vin source (vertical, between rails)
-    draw_voltage_source(ctx, left_x, cy, "Vin");
+    // Draw Vin source with value
+    let vin_label = format!("{:.0}V", vin);
+    draw_voltage_source(ctx, left_x, cy, &vin_label);
 
     // Draw high-side switch (horizontal on top rail)
     draw_nmos_h(ctx, sw_x, top_y, "Q");
@@ -1135,14 +1181,22 @@ fn draw_buck_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64) 
     // Draw freewheeling diode (vertical, cathode up at junction)
     draw_diode_v(ctx, junc_x, cy + 25.0, "D");
 
-    // Draw inductor (horizontal)
-    draw_inductor_h(ctx, ind_x, mid_y, "L");
+    // Draw inductor with value
+    let l_label = format_value(l_val, "H");
+    draw_inductor_h(ctx, ind_x, mid_y, &l_label);
 
-    // Draw output capacitor (vertical)
-    draw_capacitor_v(ctx, out_x, cy + 20.0, "Cout");
+    // Draw output capacitor with value
+    let cout_label = format_value(cout_val, "F");
+    draw_capacitor_v(ctx, out_x, cy + 20.0, &cout_label);
 
-    // Draw load resistor (vertical)
-    draw_resistor_v(ctx, load_x, cy + 20.0, "Load");
+    // Draw load resistor with value
+    let load_label = format!("{:.1}R", r_load);
+    draw_resistor_v(ctx, load_x, cy + 20.0, &load_label);
+
+    // Draw Vout label
+    ctx.set_fill_style(&JsValue::from_str("#ffaa00"));
+    let _ = ctx.fill_text(&format!("{:.1}V", vout), out_x + 10.0, mid_y - 10.0);
+    ctx.set_fill_style(&JsValue::from_str("#00ffaa"));
 
     // === WIRING ===
     ctx.set_stroke_style(&JsValue::from_str("#00ffaa"));
@@ -1231,21 +1285,17 @@ fn draw_buck_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64) 
     // Ground symbol
     draw_ground(ctx, cx, bot_y);
 
-    // Output voltage label
-    ctx.set_fill_style(&JsValue::from_str("#ffaa00"));
-    let _ = ctx.fill_text("Vout", out_x + 10.0, mid_y - 10.0);
-
     Ok(())
 }
 
-fn draw_boost_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64) -> Result<(), JsValue> {
+fn draw_boost_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64, vin: f64, vout: f64, l_val: f64, cout_val: f64, r_load: f64) -> Result<(), JsValue> {
     let cx = width / 2.0;
     let cy = height / 2.0;
 
     ctx.set_stroke_style(&JsValue::from_str("#00ffaa"));
     ctx.set_fill_style(&JsValue::from_str("#00ffaa"));
     ctx.set_line_width(2.0);
-    ctx.set_font("12px Monaco, monospace");
+    ctx.set_font("11px Monaco, monospace");
 
     // Boost converter topology:
     // Vin+ --[L]--+--[D]--+--[Load]
@@ -1268,11 +1318,13 @@ fn draw_boost_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64)
     let _ = ctx.fill_text("Boost Converter", cx - 50.0, 25.0);
     ctx.set_fill_style(&JsValue::from_str("#00ffaa"));
 
-    // Draw Vin source (vertical, between rails)
-    draw_voltage_source(ctx, left_x, cy, "Vin");
+    // Draw Vin source with value
+    let vin_label = format!("{:.0}V", vin);
+    draw_voltage_source(ctx, left_x, cy, &vin_label);
 
-    // Draw inductor (horizontal, on top rail)
-    draw_inductor_h(ctx, ind_x, top_y, "L");
+    // Draw inductor with value
+    let l_label = format_value(l_val, "H");
+    draw_inductor_h(ctx, ind_x, top_y, &l_label);
 
     // Draw switch (vertical, from junction to ground)
     draw_nmos_vertical(ctx, junc_x, cy + 10.0, "Q");
@@ -1280,11 +1332,18 @@ fn draw_boost_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64)
     // Draw diode (horizontal, from junction to output) - pointing right
     draw_diode_h(ctx, diode_x, top_y, "D");
 
-    // Draw output capacitor (vertical)
-    draw_capacitor_v(ctx, out_x, cy, "Cout");
+    // Draw output capacitor with value
+    let cout_label = format_value(cout_val, "F");
+    draw_capacitor_v(ctx, out_x, cy, &cout_label);
 
-    // Draw load resistor (vertical)
-    draw_resistor_v(ctx, load_x, cy, "Load");
+    // Draw load resistor with value
+    let load_label = format!("{:.1}R", r_load);
+    draw_resistor_v(ctx, load_x, cy, &load_label);
+
+    // Draw Vout label
+    ctx.set_fill_style(&JsValue::from_str("#ffaa00"));
+    let _ = ctx.fill_text(&format!("{:.1}V", vout), out_x + 10.0, top_y - 10.0);
+    ctx.set_fill_style(&JsValue::from_str("#00ffaa"));
 
     // === WIRING ===
     ctx.set_stroke_style(&JsValue::from_str("#00ffaa"));
@@ -1372,21 +1431,17 @@ fn draw_boost_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64)
     // Ground symbol at center of bottom rail
     draw_ground(ctx, cx, bot_y);
 
-    // Output voltage label
-    ctx.set_fill_style(&JsValue::from_str("#ffaa00"));
-    let _ = ctx.fill_text("Vout", out_x + 10.0, top_y - 10.0);
-
     Ok(())
 }
 
-fn draw_ldo_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64) -> Result<(), JsValue> {
+fn draw_ldo_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64, vin: f64, vout: f64, cin_val: f64, cout_val: f64, r_load: f64) -> Result<(), JsValue> {
     let cx = width / 2.0;
     let cy = height / 2.0;
 
     ctx.set_stroke_style(&JsValue::from_str("#00ffaa"));
     ctx.set_fill_style(&JsValue::from_str("#00ffaa"));
     ctx.set_line_width(2.0);
-    ctx.set_font("12px Monaco, monospace");
+    ctx.set_font("11px Monaco, monospace");
 
     // LDO topology (simple linear regulator):
     // Vin+ --[Cin]--[LDO]--[Cout]--[Load]
@@ -1406,11 +1461,13 @@ fn draw_ldo_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64) -
     let _ = ctx.fill_text("LDO Regulator", cx - 45.0, 25.0);
     ctx.set_fill_style(&JsValue::from_str("#00ffaa"));
 
-    // Draw Vin source
-    draw_voltage_source(ctx, left_x, cy, "Vin");
+    // Draw Vin source with value
+    let vin_label = format!("{:.0}V", vin);
+    draw_voltage_source(ctx, left_x, cy, &vin_label);
 
-    // Draw input capacitor
-    draw_capacitor_v(ctx, cin_x, cy, "Cin");
+    // Draw input capacitor with value
+    let cin_label = format_value(cin_val, "F");
+    draw_capacitor_v(ctx, cin_x, cy, &cin_label);
 
     // Draw LDO IC as box with pins
     ctx.set_stroke_style(&JsValue::from_str("#00ffaa"));
@@ -1422,13 +1479,20 @@ fn draw_ldo_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64) -
     let _ = ctx.fill_text("IN", ldo_x - 30.0, cy - 30.0);
     let _ = ctx.fill_text("OUT", ldo_x + 15.0, cy - 30.0);
     let _ = ctx.fill_text("GND", ldo_x - 8.0, cy + 38.0);
-    ctx.set_font("12px Monaco, monospace");
+    ctx.set_font("11px Monaco, monospace");
 
-    // Draw output capacitor
-    draw_capacitor_v(ctx, cout_x, cy, "Cout");
+    // Draw output capacitor with value
+    let cout_label = format_value(cout_val, "F");
+    draw_capacitor_v(ctx, cout_x, cy, &cout_label);
 
-    // Draw load resistor
-    draw_resistor_v(ctx, load_x, cy, "Load");
+    // Draw load resistor with value
+    let load_label = format!("{:.1}R", r_load);
+    draw_resistor_v(ctx, load_x, cy, &load_label);
+
+    // Draw Vout label
+    ctx.set_fill_style(&JsValue::from_str("#ffaa00"));
+    let _ = ctx.fill_text(&format!("{:.1}V", vout), cout_x + 15.0, top_y - 10.0);
+    ctx.set_fill_style(&JsValue::from_str("#00ffaa"));
 
     // === WIRING ===
     ctx.set_stroke_style(&JsValue::from_str("#00ffaa"));
@@ -1508,10 +1572,6 @@ fn draw_ldo_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64) -
     // Ground symbol
     draw_ground(ctx, cx, bot_y);
 
-    // Output voltage label
-    ctx.set_fill_style(&JsValue::from_str("#ffaa00"));
-    let _ = ctx.fill_text("Vout", cout_x + 15.0, top_y - 10.0);
-
     Ok(())
 }
 
@@ -1543,141 +1603,6 @@ fn draw_voltage_source(ctx: &CanvasRenderingContext2d, x: f64, y: f64, label: &s
     let _ = ctx.fill_text(label, x - 10.0, y - 28.0);
 }
 
-fn draw_resistor(ctx: &CanvasRenderingContext2d, x: f64, y: f64, label: &str) {
-    // Zigzag pattern
-    ctx.begin_path();
-    ctx.move_to(x, y - 30.0);
-    ctx.line_to(x, y - 20.0);
-    ctx.line_to(x - 8.0, y - 15.0);
-    ctx.line_to(x + 8.0, y - 5.0);
-    ctx.line_to(x - 8.0, y + 5.0);
-    ctx.line_to(x + 8.0, y + 15.0);
-    ctx.line_to(x, y + 20.0);
-    ctx.line_to(x, y + 30.0);
-    ctx.stroke();
-
-    // Label
-    let _ = ctx.fill_text(label, x + 12.0, y + 5.0);
-}
-
-fn draw_capacitor(ctx: &CanvasRenderingContext2d, x: f64, y: f64, label: &str) {
-    // Two parallel plates
-    ctx.begin_path();
-    ctx.move_to(x, y - 20.0);
-    ctx.line_to(x, y - 5.0);
-    ctx.stroke();
-
-    ctx.begin_path();
-    ctx.move_to(x - 12.0, y - 5.0);
-    ctx.line_to(x + 12.0, y - 5.0);
-    ctx.stroke();
-
-    ctx.begin_path();
-    ctx.move_to(x - 12.0, y + 5.0);
-    ctx.line_to(x + 12.0, y + 5.0);
-    ctx.stroke();
-
-    ctx.begin_path();
-    ctx.move_to(x, y + 5.0);
-    ctx.line_to(x, y + 20.0);
-    ctx.stroke();
-
-    // Label
-    let _ = ctx.fill_text(label, x + 15.0, y + 5.0);
-}
-
-fn draw_inductor(ctx: &CanvasRenderingContext2d, x: f64, y: f64, label: &str) {
-    // Coils (semicircles)
-    ctx.begin_path();
-    ctx.move_to(x - 40.0, y);
-    ctx.line_to(x - 30.0, y);
-    ctx.stroke();
-
-    for i in 0..4 {
-        let cx = x - 22.0 + (i as f64 * 14.0);
-        ctx.begin_path();
-        ctx.arc(cx, y, 7.0, PI, 0.0).ok();
-        ctx.stroke();
-    }
-
-    ctx.begin_path();
-    ctx.move_to(x + 30.0, y);
-    ctx.line_to(x + 40.0, y);
-    ctx.stroke();
-
-    // Label
-    let _ = ctx.fill_text(label, x - 5.0, y - 15.0);
-}
-
-fn draw_diode(ctx: &CanvasRenderingContext2d, x: f64, y: f64, label: &str) {
-    // Triangle pointing right
-    ctx.begin_path();
-    ctx.move_to(x - 20.0, y);
-    ctx.line_to(x - 8.0, y);
-    ctx.stroke();
-
-    ctx.begin_path();
-    ctx.move_to(x - 8.0, y - 10.0);
-    ctx.line_to(x - 8.0, y + 10.0);
-    ctx.line_to(x + 8.0, y);
-    ctx.close_path();
-    ctx.stroke();
-
-    // Cathode bar
-    ctx.begin_path();
-    ctx.move_to(x + 8.0, y - 10.0);
-    ctx.line_to(x + 8.0, y + 10.0);
-    ctx.stroke();
-
-    ctx.begin_path();
-    ctx.move_to(x + 8.0, y);
-    ctx.line_to(x + 20.0, y);
-    ctx.stroke();
-
-    // Label
-    let _ = ctx.fill_text(label, x - 3.0, y - 15.0);
-}
-
-fn draw_switch(ctx: &CanvasRenderingContext2d, x: f64, y: f64, label: &str) {
-    // MOSFET-style switch symbol
-    ctx.begin_path();
-    ctx.move_to(x - 30.0, y);
-    ctx.line_to(x - 10.0, y);
-    ctx.stroke();
-
-    // Gate
-    ctx.begin_path();
-    ctx.move_to(x - 10.0, y - 15.0);
-    ctx.line_to(x - 10.0, y + 15.0);
-    ctx.stroke();
-
-    // Channel
-    ctx.begin_path();
-    ctx.move_to(x - 5.0, y - 12.0);
-    ctx.line_to(x - 5.0, y + 12.0);
-    ctx.stroke();
-
-    // Drain/Source
-    ctx.begin_path();
-    ctx.move_to(x - 5.0, y - 8.0);
-    ctx.line_to(x + 10.0, y - 8.0);
-    ctx.line_to(x + 10.0, y);
-    ctx.stroke();
-
-    ctx.begin_path();
-    ctx.move_to(x - 5.0, y + 8.0);
-    ctx.line_to(x + 10.0, y + 8.0);
-    ctx.line_to(x + 10.0, y);
-    ctx.stroke();
-
-    ctx.begin_path();
-    ctx.move_to(x + 10.0, y);
-    ctx.line_to(x + 30.0, y);
-    ctx.stroke();
-
-    // Label
-    let _ = ctx.fill_text(label, x - 5.0, y - 22.0);
-}
 
 fn draw_ground(ctx: &CanvasRenderingContext2d, x: f64, y: f64) {
     ctx.begin_path();
