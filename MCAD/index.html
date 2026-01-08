@@ -287,6 +287,62 @@ MODIFIED: 2025-12-09
             color: #ff6b35;
         }
 
+        /* Status Bar */
+        .status-bar {
+            display: flex;
+            gap: 1.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 0, 0, 0.6);
+            border-top: 1px solid rgba(255, 107, 53, 0.2);
+            font-size: 0.75rem;
+            color: #a0a0a0;
+            margin-top: 0.5rem;
+            border-radius: 0 0 8px 8px;
+            flex-wrap: wrap;
+        }
+
+        .status-section {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .status-label {
+            color: #606060;
+        }
+
+        .status-value {
+            color: #ff6b35;
+            font-weight: 500;
+        }
+
+        .status-message {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        #status-message-value {
+            color: #a0a0a0;
+        }
+        #status-message-value.info { color: #00ddff; }
+        #status-message-value.warning { color: #ffdd00; }
+        #status-message-value.error { color: #ff4444; }
+        #status-message-value.success { color: #44ff88; }
+
+        .status-coords {
+            font-family: 'SF Mono', monospace;
+            color: #808080;
+        }
+
+        .status-dof {
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+        }
+        .status-dof.ok { background: rgba(68, 255, 136, 0.2); color: #44ff88; }
+        .status-dof.warning { background: rgba(255, 221, 0, 0.2); color: #ffdd00; }
+        .status-dof.error { background: rgba(255, 68, 68, 0.2); color: #ff4444; }
+
         @media (max-width: 1000px) {
             .main-grid {
                 grid-template-columns: 1fr;
@@ -555,6 +611,33 @@ MODIFIED: 2025-12-09
                         <button class="view-btn active" onclick="setView('iso')">Isometric</button>
                     </div>
                     <canvas id="viewport-canvas"></canvas>
+                    <div id="status-bar" class="status-bar">
+                        <div class="status-section">
+                            <span class="status-label">Mode:</span>
+                            <span id="status-mode" class="status-value">3D View</span>
+                        </div>
+                        <div class="status-section">
+                            <span class="status-label">Tool:</span>
+                            <span id="status-tool" class="status-value">-</span>
+                        </div>
+                        <div class="status-section">
+                            <span class="status-label">Snap:</span>
+                            <span id="status-snap" class="status-value">Grid</span>
+                        </div>
+                        <div class="status-section">
+                            <span class="status-label">Constraints:</span>
+                            <span id="status-constraints" class="status-value">0</span>
+                        </div>
+                        <div class="status-section">
+                            <span id="status-dof" class="status-dof"></span>
+                        </div>
+                        <div class="status-section status-message">
+                            <span id="status-message-value">Ready</span>
+                        </div>
+                        <div class="status-section status-coords">
+                            <span id="status-coords">X: - Y: -</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="results-section">
@@ -620,7 +703,20 @@ MODIFIED: 2025-12-09
             if (originalToggleMode) originalToggleMode();
             currentMode = currentMode === '3d' ? 'sketch' : '3d';
             updatePanelVisibility();
+            updateStatusBar();
         };
+
+        // Update status bar values
+        function updateStatusBar() {
+            const modeEl = document.getElementById('status-mode');
+            const toolEl = document.getElementById('status-tool');
+            if (modeEl) {
+                modeEl.textContent = currentMode === 'sketch' ? 'Sketch 2D' : '3D View';
+            }
+            if (toolEl) {
+                toolEl.textContent = currentMode === 'sketch' ? 'Line [L]' : '-';
+            }
+        }
 
         function updatePanelVisibility() {
             const sketchTools = document.getElementById('sketch-tools');
@@ -639,6 +735,10 @@ MODIFIED: 2025-12-09
         setTimeout(updatePanelVisibility, 100);
 
         // Wrapper for setSketchTool that also updates UI
+        const toolShortcuts = {
+            'select': 'Select [S]', 'line': 'Line [L]', 'arc': 'Arc [A]',
+            'rectangle': 'Rect [R]', 'circle': 'Circle [C]', 'point': 'Point [P]'
+        };
         const originalSetSketchTool = window.setSketchTool;
         window.setSketchTool = function(tool) {
             if (originalSetSketchTool) originalSetSketchTool(tool);
@@ -646,6 +746,9 @@ MODIFIED: 2025-12-09
             document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
             const activeBtn = document.getElementById('tool-' + tool);
             if (activeBtn) activeBtn.classList.add('active');
+            // Update status bar
+            const toolEl = document.getElementById('status-tool');
+            if (toolEl) toolEl.textContent = toolShortcuts[tool] || tool;
         };
 
         // Constraint application

@@ -38,6 +38,85 @@ pub struct SolverResult {
     pub final_error: f32,
 }
 
+/// Degrees of Freedom status
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DofStatus {
+    /// All DOF are constrained - sketch is fully defined
+    FullyConstrained,
+    /// Some DOF remain unconstrained
+    UnderConstrained { dof: usize },
+    /// More constraints than DOF - system may be inconsistent
+    OverConstrained { redundant: usize },
+}
+
+/// Result of DOF analysis
+#[derive(Clone, Debug)]
+pub struct ConstraintAnalysis {
+    /// DOF status
+    pub dof_status: DofStatus,
+    /// Total degrees of freedom (2 per point)
+    pub total_dof: usize,
+    /// Number of constraints
+    pub constraint_count: usize,
+    /// Remaining unconstrained DOF (positive = under, negative = over)
+    pub remaining_dof: i32,
+    /// Per-constraint status: true = satisfied, false = not satisfied
+    pub constraint_satisfied: Vec<bool>,
+}
+
+impl ConstraintAnalysis {
+    /// Analyze a sketch and its constraints
+    pub fn analyze(sketch: &Sketch, constraints: &[Constraint]) -> Self {
+        // Each point has 2 DOF (x, y)
+        let total_dof = sketch.points.len() * 2;
+        let constraint_count = constraints.len();
+
+        // Simple DOF counting (doesn't account for dependent constraints)
+        let remaining_dof = total_dof as i32 - constraint_count as i32;
+
+        let dof_status = if remaining_dof == 0 {
+            DofStatus::FullyConstrained
+        } else if remaining_dof > 0 {
+            DofStatus::UnderConstrained { dof: remaining_dof as usize }
+        } else {
+            DofStatus::OverConstrained { redundant: (-remaining_dof) as usize }
+        };
+
+        // Check which constraints are satisfied
+        let constraint_satisfied: Vec<bool> = constraints
+            .iter()
+            .map(|c| c.evaluate(sketch) < TOLERANCE)
+            .collect();
+
+        Self {
+            dof_status,
+            total_dof,
+            constraint_count,
+            remaining_dof,
+            constraint_satisfied,
+        }
+    }
+
+    /// Get a human-readable status message
+    pub fn status_message(&self) -> String {
+        match &self.dof_status {
+            DofStatus::FullyConstrained => "Fully constrained".to_string(),
+            DofStatus::UnderConstrained { dof } => format!("Under-constrained by {} DOF", dof),
+            DofStatus::OverConstrained { redundant } => format!("Over-constrained ({} redundant)", redundant),
+        }
+    }
+
+    /// Count satisfied constraints
+    pub fn satisfied_count(&self) -> usize {
+        self.constraint_satisfied.iter().filter(|&&s| s).count()
+    }
+
+    /// Count unsatisfied constraints
+    pub fn unsatisfied_count(&self) -> usize {
+        self.constraint_satisfied.iter().filter(|&&s| !s).count()
+    }
+}
+
 /// Parametric constraint solver
 pub struct ConstraintSolver {
     config: SolverConfig,

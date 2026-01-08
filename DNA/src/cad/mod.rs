@@ -68,7 +68,7 @@ pub use intersect::{Classification, plane_plane_intersect, ray_sphere_intersect,
 pub use boolean::{BooleanOp, BooleanError, union, difference, intersection};
 pub use sketch::{Sketch, SketchPlane, Point2, SketchPoint, SketchPointId, SketchEntity, SketchEntityId, ConstraintId};
 pub use constraints::{Constraint, GeometricConstraint, DimensionalConstraint};
-pub use solver::{ConstraintSolver, SolverConfig, SolverResult};
+pub use solver::{ConstraintSolver, SolverConfig, SolverResult, DofStatus, ConstraintAnalysis};
 pub use extrude::{extrude_sketch, ExtrudeParams, ExtrudeError};
 pub use revolve::{revolve_sketch, RevolveParams, RevolveAxis, RevolveError};
 pub use pattern::{linear_pattern, circular_pattern};
