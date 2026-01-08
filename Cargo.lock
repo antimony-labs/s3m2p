@@ -1969,8 +1969,18 @@ name = "power-circuits"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
+ "js-sys",
+ "power-engine",
  "wasm-bindgen",
  "web-sys",
+]
+
+[[package]]
+name = "power-engine"
+version = "0.1.0"
+dependencies = [
+ "dna",
+ "serde",
 ]
 
 [[package]]

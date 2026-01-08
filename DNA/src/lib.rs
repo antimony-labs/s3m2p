@@ -89,6 +89,16 @@ pub use physics::solvers::pde::FFT2D;
 pub mod pll;
 pub use pll::*;
 
+/// Power supply design (Buck, Boost, LDO)
+pub mod power;
+pub use power::{
+    design_buck, design_boost, design_ldo, quick_buck, quick_boost, quick_ldo,
+    recommend_topology, BuckDesign, BuckRequirements, BoostDesign, BoostRequirements,
+    DesignPriority, DesignWarning, EfficiencyBreakdown, LDODesign, LDORequirements,
+    OperatingMode, RippleSpec, SelectedComponent, ThermalAnalysis, TopologyRecommendation,
+    TopologyType, VoltageRange,
+};
+
 /// SPICE circuit simulation engine
 /// DEPRECATED: Use `physics::electromagnetics::lumped` or `spice_engine` crate
 #[deprecated(

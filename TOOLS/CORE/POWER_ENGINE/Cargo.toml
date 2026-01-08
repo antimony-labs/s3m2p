@@ -1,0 +1,17 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Cargo.toml | TOOLS/CORE/POWER_ENGINE/Cargo.toml
+# PURPOSE: Power supply design engine - high-level API
+# MODIFIED: 2026-01-07
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[package]
+name = "power-engine"
+version.workspace = true
+edition.workspace = true
+description = "Power supply design engine for Buck, Boost, and LDO topologies"
+
+[dependencies]
+dna.workspace = true
+serde.workspace = true
+
+[dev-dependencies]

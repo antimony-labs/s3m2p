@@ -1,8 +1,8 @@
 <!--
 ═══════════════════════════════════════════════════════════════════════════════
 FILE: index.html | TOOLS/POWER_CIRCUITS/index.html
-PURPOSE: Power circuit designer web application entry point for supply design
-MODIFIED: 2025-12-02
+PURPOSE: Power circuit designer web application with topology calculators
+MODIFIED: 2026-01-07
 ═══════════════════════════════════════════════════════════════════════════════
 -->
 <!DOCTYPE html>
@@ -10,80 +10,544 @@ MODIFIED: 2025-12-02
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Power Circuits Designer</title>
+    <title>Power Circuit Designer | too.foo</title>
     <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" />
     <style>
+        :root {
+            --bg-primary: #050508;
+            --bg-secondary: #0a0a12;
+            --bg-panel: #0f0f18;
+            --border-color: #1a1a24;
+            --text-primary: #e0e0e0;
+            --text-secondary: #808090;
+            --accent-green: #00ffaa;
+            --accent-orange: #ffaa00;
+            --accent-red: #ff4444;
+            --accent-blue: #4488ff;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
+
         body {
             min-height: 100vh;
+            background: var(--bg-primary);
+            font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+        .app-container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            grid-template-rows: auto 1fr;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        header {
+            grid-column: 1 / -1;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo h1 {
+            font-size: 1.4rem;
+            color: var(--accent-green);
+            text-shadow: 0 0 10px rgba(0, 255, 170, 0.3);
+        }
+
+        .logo span {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .back-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 6px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 16px;
+        }
+
+        .panel-header {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: bold;
+            color: var(--accent-orange);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .panel-content {
+            padding: 14px;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            font-size: 0.85rem;
+        }
+
+        input[type="number"],
+        select {
+            width: 100%;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 8px 10px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 13px;
+        }
+
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--accent-green);
+            box-shadow: 0 0 0 2px rgba(0, 255, 170, 0.1);
+        }
+
+        select {
+            cursor: pointer;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .input-group input {
+            flex: 1;
+        }
+
+        .input-unit {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            min-width: 30px;
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--accent-green);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover {
+            background: #00dd99;
+            box-shadow: 0 0 15px rgba(0, 255, 170, 0.3);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            margin-top: 8px;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+        }
+
+        /* Main Content */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Schematic Canvas */
+        .schematic-section {
+            flex: 1;
+            padding: 16px;
+            min-height: 300px;
+        }
+
+        .canvas-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #050508 0%, #0a0a12 100%);
-            font-family: 'Monaco', 'Courier New', monospace;
-            color: #e0e0e0;
         }
-        .container {
-            text-align: center;
-            padding: 2rem;
-            max-width: 600px;
+
+        #schematic-canvas {
+            background: var(--bg-panel);
+            border-radius: 4px;
         }
-        h1 {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-            color: #00ffaa;
-            text-shadow: 0 0 20px rgba(0, 255, 170, 0.5);
+
+        /* Results Section */
+        .results-section {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 16px;
         }
-        .description {
-            font-size: 1.2rem;
-            margin-bottom: 2rem;
-            color: #b0b0b0;
-            line-height: 1.6;
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
         }
-        .status {
-            font-size: 1.5rem;
-            margin-bottom: 2rem;
-            color: #ffaa00;
+
+        .result-panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+        }
+
+        .result-panel h3 {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.85rem;
+            color: var(--accent-green);
+        }
+
+        .result-panel table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .result-panel td {
+            padding: 6px 14px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .result-panel tr:last-child td {
+            border-bottom: none;
+        }
+
+        .component-name {
+            color: var(--text-secondary);
+        }
+
+        .component-value {
+            color: var(--accent-green);
+            text-align: right;
             font-weight: bold;
         }
-        .back-link {
-            display: inline-block;
-            margin-top: 2rem;
-            padding: 0.8rem 1.5rem;
-            background: rgba(0, 255, 170, 0.1);
-            border: 1px solid rgba(0, 255, 170, 0.3);
-            color: #00ffaa;
-            text-decoration: none;
+
+        .component-note {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            font-style: italic;
+        }
+
+        .perf-value {
+            text-align: right;
+            color: var(--accent-blue);
+        }
+
+        /* Warnings */
+        .warnings-list {
+            list-style: none;
+            padding: 10px 14px;
+        }
+
+        .warnings-list li {
+            padding: 4px 0;
+        }
+
+        .warning-item {
+            color: var(--accent-orange);
+        }
+
+        .no-warnings {
+            color: var(--accent-green);
+        }
+
+        /* Error Message */
+        #error-msg {
+            display: none;
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+            padding: 12px;
             border-radius: 4px;
-            transition: all 0.3s ease;
+            margin-bottom: 16px;
         }
-        .back-link:hover {
-            background: rgba(0, 255, 170, 0.2);
-            border-color: #00ffaa;
+
+        /* Design Summary */
+        #design-summary {
+            padding: 10px 14px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            border-bottom: 1px solid var(--border-color);
         }
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 1.8rem;
+
+        /* Recommendation Text */
+        #recommendation-text {
+            padding: 10px 14px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-style: italic;
+            min-height: 40px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .app-container {
+                grid-template-columns: 1fr;
             }
-            .description {
-                font-size: 1rem;
+
+            .sidebar {
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .results-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Power Circuit Designer</h1>
-        <p class="description">
-            Design and analyze power supply circuits with automated component selection,
-            topology optimization, and thermal analysis. From linear regulators to switching converters.
-        </p>
-        <p class="status">Coming Soon</p>
-        <a href="https://too.foo" class="back-link">← Back to antimony-labs</a>
+    <div class="app-container">
+        <header>
+            <div class="logo">
+                <h1>Power Circuit Designer</h1>
+                <span>Buck | Boost | LDO</span>
+            </div>
+            <a href="https://too.foo" class="back-link">too.foo</a>
+        </header>
+
+        <aside class="sidebar">
+            <!-- Topology Selection -->
+            <div class="panel">
+                <div class="panel-header">Topology</div>
+                <div class="panel-content">
+                    <div class="form-group">
+                        <label for="topology">Converter Type</label>
+                        <select id="topology">
+                            <option value="buck" selected>Buck (Step-Down)</option>
+                            <option value="boost">Boost (Step-Up)</option>
+                            <option value="ldo">LDO (Linear)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="priority">Design Priority</label>
+                        <select id="priority">
+                            <option value="efficiency" selected>Efficiency</option>
+                            <option value="size">Size</option>
+                            <option value="cost">Cost</option>
+                            <option value="noise">Low Noise</option>
+                        </select>
+                    </div>
+                    <button id="auto-detect-btn" class="btn btn-secondary">Auto-Detect Topology</button>
+                    <div id="recommendation-text"></div>
+                </div>
+            </div>
+
+            <!-- Theory Panel -->
+            <div class="panel" id="theory-panel">
+                <div class="panel-header">Theory</div>
+                <div class="panel-content" id="theory-content" style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5;">
+                    <div id="theory-buck" class="theory-text">
+                        <strong style="color: var(--accent-green);">Buck Converter</strong> (Step-Down)<br><br>
+                        Steps voltage down using high-frequency switching.<br><br>
+                        <strong>Key equations:</strong><br>
+                        D = V<sub>out</sub> / V<sub>in</sub><br>
+                        L = V<sub>out</sub>(1-D) / (f<sub>sw</sub> × ΔI<sub>L</sub>)<br><br>
+                        <strong>Operation:</strong> When switch ON, energy stored in inductor. When OFF, diode conducts and inductor releases energy to load.
+                    </div>
+                    <div id="theory-boost" class="theory-text" style="display: none;">
+                        <strong style="color: var(--accent-green);">Boost Converter</strong> (Step-Up)<br><br>
+                        Steps voltage up using inductor energy storage.<br><br>
+                        <strong>Key equations:</strong><br>
+                        D = 1 - V<sub>in</sub> / V<sub>out</sub><br>
+                        L = V<sub>in</sub> × D / (f<sub>sw</sub> × ΔI<sub>L</sub>)<br><br>
+                        <strong>Operation:</strong> When switch ON, inductor charges from input. When OFF, inductor + input voltage combine to boost output.
+                    </div>
+                    <div id="theory-ldo" class="theory-text" style="display: none;">
+                        <strong style="color: var(--accent-green);">LDO Regulator</strong> (Linear)<br><br>
+                        Linear dropout regulator - no switching noise.<br><br>
+                        <strong>Key equations:</strong><br>
+                        P<sub>diss</sub> = (V<sub>in</sub> - V<sub>out</sub>) × I<sub>out</sub><br>
+                        η = V<sub>out</sub> / V<sub>in</sub><br><br>
+                        <strong>Trade-offs:</strong> Low noise, simple design, but wastes power as heat. Best when V<sub>in</sub> ≈ V<sub>out</sub>.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Parameters -->
+            <div class="panel">
+                <div class="panel-header">Input Parameters</div>
+                <div class="panel-content">
+                    <div class="form-group">
+                        <label for="vin">Input Voltage (nominal)</label>
+                        <div class="input-group">
+                            <input type="number" id="vin" value="12" step="0.1" min="1" max="100">
+                            <span class="input-unit">V</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="vout">Output Voltage</label>
+                        <div class="input-group">
+                            <input type="number" id="vout" value="5" step="0.1" min="0.5" max="100">
+                            <span class="input-unit">V</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="iout">Output Current (max)</label>
+                        <div class="input-group">
+                            <input type="number" id="iout" value="2" step="0.1" min="0.01" max="50">
+                            <span class="input-unit">A</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="fsw">Switching Frequency</label>
+                        <div class="input-group">
+                            <input type="number" id="fsw" value="500" step="10" min="10" max="5000">
+                            <span class="input-unit">kHz</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Design Button -->
+            <button id="design-btn" class="btn btn-primary">Calculate Design</button>
+            <button id="simulate-btn" class="btn btn-secondary">Run Simulation</button>
+
+            <!-- Simulation Parameters -->
+            <div class="panel" id="sim-params-panel" style="margin-top: 16px;">
+                <div class="panel-header">Simulation</div>
+                <div class="panel-content">
+                    <div class="form-group">
+                        <label for="sim-duration">Duration</label>
+                        <div class="input-group">
+                            <input type="number" id="sim-duration" value="500" step="10" min="10" max="10000">
+                            <span class="input-unit">us</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Display -->
+            <div id="error-msg"></div>
+        </aside>
+
+        <main class="main-content">
+            <!-- Schematic Display -->
+            <section class="schematic-section" style="flex: 0.6;">
+                <div class="canvas-container">
+                    <canvas id="schematic-canvas" width="600" height="250"></canvas>
+                </div>
+            </section>
+
+            <!-- Waveform Display -->
+            <section class="waveform-section" style="flex: 0.4; padding: 16px; padding-top: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="color: var(--text-secondary); font-size: 0.85rem;">
+                        Transient Waveforms
+                    </span>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <span style="color: var(--text-secondary); font-size: 0.75rem;">
+                            Scroll: zoom | Drag: pan | Dbl-click: reset
+                        </span>
+                        <button id="reset-view-btn" class="btn btn-secondary" style="width: auto; padding: 4px 10px; margin: 0; font-size: 0.8rem;">
+                            Reset View
+                        </button>
+                    </div>
+                </div>
+                <div class="canvas-container" style="height: calc(100% - 30px); cursor: grab;">
+                    <canvas id="waveform-canvas" width="600" height="180"></canvas>
+                </div>
+            </section>
+
+            <!-- Results Display -->
+            <section class="results-section">
+                <div id="design-summary"></div>
+                <div class="results-grid">
+                    <!-- Components -->
+                    <div class="result-panel">
+                        <h3>Components</h3>
+                        <table>
+                            <tbody id="components-table">
+                                <!-- Filled by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Performance -->
+                    <div class="result-panel">
+                        <h3>Performance</h3>
+                        <table>
+                            <tbody id="performance-table">
+                                <!-- Filled by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Warnings -->
+                    <div class="result-panel">
+                        <h3>Warnings</h3>
+                        <ul id="warnings-list" class="warnings-list">
+                            <!-- Filled by JavaScript -->
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </main>
     </div>
 </body>
 </html>
