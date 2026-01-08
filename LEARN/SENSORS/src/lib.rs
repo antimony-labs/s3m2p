@@ -12,7 +12,7 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
     window, CanvasRenderingContext2d, DeviceOrientationEvent, HtmlCanvasElement, HtmlVideoElement,
-    MediaStreamConstraints,
+    MediaStreamConstraints, AudioContext, AnalyserNode, AudioContextOptions,
 };
 
 const GRAPH_HISTORY_SIZE: usize = 200;
@@ -129,6 +129,9 @@ pub fn main() {
 
     // Set up camera button
     setup_camera_button();
+
+    // Set up microphone button
+    setup_microphone_button();
 
     // Set up sensor permission button (for iOS)
     setup_sensor_button();
@@ -390,6 +393,21 @@ fn setup_camera_button() {
     }
 }
 
+fn setup_microphone_button() {
+    let document = window().unwrap().document().unwrap();
+
+    if let Some(btn) = document.get_element_by_id("mic-btn") {
+        let closure = Closure::wrap(Box::new(move || {
+            wasm_bindgen_futures::spawn_local(async {
+                request_microphone().await;
+            });
+        }) as Box<dyn Fn()>);
+
+        let _ = btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref());
+        closure.forget();
+    }
+}
+
 async fn request_camera() {
     let window = window().expect("no window");
     let navigator = window.navigator();
@@ -431,6 +449,114 @@ async fn request_camera() {
                 update_camera_placeholder("Failed to access camera");
             }
         }
+    }
+}
+
+async fn request_microphone() {
+    let window = window().expect("no window");
+    let navigator = window.navigator();
+
+    if let Ok(media_devices) = navigator.media_devices() {
+        let constraints = MediaStreamConstraints::new();
+        constraints.set_video(&JsValue::FALSE);
+        constraints.set_audio(&JsValue::TRUE);
+
+        match media_devices.get_user_media_with_constraints(&constraints) {
+            Ok(promise) => {
+                match JsFuture::from(promise).await {
+                    Ok(stream) => {
+                        let stream: web_sys::MediaStream = stream.unchecked_into();
+
+                        // Hide button
+                        let document = window.document().unwrap();
+                        if let Some(btn) = document.get_element_by_id("mic-btn") {
+                            let _ = btn.set_attribute("style", "display: none;");
+                        }
+
+                        // Set up audio analysis
+                        setup_audio_analysis(stream);
+
+                        update_microphone_status("available", "Active");
+                    }
+                    Err(_) => {
+                        update_microphone_status("error", "Permission Denied");
+                    }
+                }
+            }
+            Err(_) => {
+                update_microphone_status("error", "Error");
+            }
+        }
+    }
+}
+
+fn setup_audio_analysis(stream: web_sys::MediaStream) {
+    // Create AudioContext
+    let options = AudioContextOptions::new();
+    if let Ok(audio_ctx) = AudioContext::new_with_context_options(&options) {
+        // Create MediaStreamAudioSourceNode
+        if let Ok(source) = audio_ctx.create_media_stream_source(&stream) {
+            // Create AnalyserNode
+            if let Ok(analyser) = audio_ctx.create_analyser() {
+                analyser.set_fft_size(256);
+                analyser.set_smoothing_time_constant(0.8);
+                
+                // Connect source to analyser
+                let _ = source.connect_with_audio_node(&analyser);
+                
+                // Start analyzing
+                start_audio_analysis_loop(analyser);
+            }
+        }
+    }
+}
+
+fn start_audio_analysis_loop(analyser: AnalyserNode) {
+    let f = Rc::new(RefCell::new(None::<Closure<dyn FnMut()>>));
+    let g = f.clone();
+
+    *g.borrow_mut() = Some(Closure::new(move || {
+        let buffer_length = analyser.frequency_bin_count();
+        let mut data_array = vec![0u8; buffer_length as usize];
+        
+        analyser.get_byte_frequency_data(&mut data_array);
+        
+        // Calculate average volume
+        let sum: u32 = data_array.iter().map(|&x| x as u32).sum();
+        let average = sum / (buffer_length as u32);
+        let percentage = (average as f64 / 255.0 * 100.0).min(100.0);
+        
+        update_microphone_display(percentage);
+        
+        // Schedule next analysis
+        request_animation_frame(f.borrow().as_ref().unwrap());
+    }));
+
+    request_animation_frame(g.borrow().as_ref().unwrap());
+}
+
+fn update_microphone_display(percentage: f64) {
+    let document = window().unwrap().document().unwrap();
+
+    if let Some(el) = document.get_element_by_id("mic-level") {
+        el.set_text_content(Some(&format!("{:.0}%", percentage)));
+    }
+
+    if let Some(bar) = document.get_element_by_id("mic-bar") {
+        let bar_el: web_sys::HtmlElement = bar.unchecked_into();
+        let _ = bar_el.set_attribute("style", &format!("width: {:.1}%; background: linear-gradient(90deg, #1a1a2e 0%, #4ecdc4 50%, #00ffff 100%);", percentage));
+    }
+}
+
+fn update_microphone_status(status: &str, text: &str) {
+    let document = window().unwrap().document().unwrap();
+
+    if let Some(dot) = document.get_element_by_id("mic-dot") {
+        let _ = dot.set_attribute("class", &format!("status-dot {}", status));
+    }
+    if let Some(el) = document.get_element_by_id("mic-status") {
+        el.set_text_content(Some(text));
+        let _ = el.set_attribute("class", &format!("status-text {}", status));
     }
 }
 
@@ -498,11 +624,7 @@ fn update_magnetometer_display(x: f64, y: f64, z: f64) {
 
     // Calculate heading (compass direction)
     let heading = y.atan2(x) * 180.0 / std::f64::consts::PI;
-    let heading_normalized = if heading < 0.0 {
-        heading + 360.0
-    } else {
-        heading
-    };
+    let heading_normalized = (heading + 360.0) % 360.0;
 
     if let Some(el) = document.get_element_by_id("mag-heading") {
         el.set_text_content(Some(&format!("{:.0}°", heading_normalized)));

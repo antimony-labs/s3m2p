@@ -42,6 +42,10 @@ features = [
     "EventTarget",
     "Event",
     "AddEventListenerOptions",
+    "AudioContext",
+    "AudioContextOptions",
+    "AnalyserNode",
+    "MediaStreamAudioSourceNode",
 ]
 
 [profile.release]
