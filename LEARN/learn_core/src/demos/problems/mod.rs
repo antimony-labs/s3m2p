@@ -5,6 +5,17 @@
 //! LAYER: LEARN -> learn_core -> demos -> problems
 //! ===============================================================================
 
+// Problem visualization demos
+pub mod two_pointers;
+pub mod sliding_window;
+pub mod binary_search;
+pub mod stack_problems;
+
+pub use two_pointers::{TwoPointersDemo, TwoPointerVariant};
+pub use sliding_window::{SlidingWindowDemo, SlidingWindowVariant};
+pub use binary_search::{BinarySearchDemo, BinarySearchVariant};
+pub use stack_problems::{StackProblemsDemo, StackProblemVariant, StackItem};
+
 /// Difficulty level for algorithm problems
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Difficulty {
