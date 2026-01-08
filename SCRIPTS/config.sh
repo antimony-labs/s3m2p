@@ -51,7 +51,7 @@ declare -A PROJECT_DIRS=(
     ["welcome"]="WELCOME"
     ["helios"]="HELIOS"
     ["chladni"]="SIMULATION/CHLADNI"
-    ["sensors"]="COMING_SOON"
+    ["sensors"]="LEARN/SENSORS"
     ["autocrate"]="TOOLS/AUTOCRATE"
     ["blog"]="BLOG"
     ["learn"]="LEARN"
@@ -101,7 +101,7 @@ declare -A PAGES_PROJECTS=(
 declare -A STATIC_PROJECTS=(
     ["coming_soon"]=1
     ["arduino"]=1
-    ["sensors"]=1
+    ["power"]=1
 )
 
 # Export for sub-shells
