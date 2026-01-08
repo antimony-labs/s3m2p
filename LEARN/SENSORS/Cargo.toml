@@ -46,6 +46,7 @@ features = [
     "AudioContextOptions",
     "AnalyserNode",
     "MediaStreamAudioSourceNode",
+    "Performance",
 ]
 
 [profile.release]
