@@ -1310,6 +1310,88 @@ MODIFIED: 2026-01-07
             line-height: 1.7;
         }
 
+        /* Examples Section */
+        .examples-section {
+            background: var(--surface);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+
+        .examples-section h3 {
+            margin-bottom: 15px;
+        }
+
+        .examples-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .example-item {
+            background: var(--overlay-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 16px;
+            transition: border-color 0.2s;
+        }
+
+        .example-item:hover {
+            border-color: var(--accent);
+        }
+
+        .example-header {
+            margin-bottom: 12px;
+        }
+
+        .example-label {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .example-content {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .example-input,
+        .example-output {
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .example-input strong,
+        .example-output strong {
+            color: var(--text-muted);
+            font-weight: 500;
+            margin-right: 8px;
+        }
+
+        .example-input code,
+        .example-output code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg);
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: var(--accent);
+            font-size: 0.9em;
+            border: 1px solid var(--border);
+        }
+
+        .example-explanation {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-style: italic;
+            line-height: 1.6;
+        }
+
         .hint-section {
             background: var(--surface);
             border: 1px solid var(--border);

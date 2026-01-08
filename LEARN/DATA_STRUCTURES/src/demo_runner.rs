@@ -10,7 +10,19 @@ use wasm_bindgen::JsCast;
 use learn_web::Canvas;
 use learn_core::{Demo, demos::*};
 use learn_core::demos::pseudocode::Pseudocode;
-use learn_core::demos::problems::{Pattern, PROBLEMS};
+use learn_core::demos::problems::{
+    Pattern, PROBLEMS,
+    // Problem demos
+    TwoPointersDemo, TwoPointerVariant,
+    SlidingWindowDemo, SlidingWindowVariant,
+    BinarySearchDemo, BinarySearchVariant,
+    StackProblemsDemo, StackProblemVariant,
+    FastSlowDemo, FastSlowVariant,
+    TreeProblemsDemo, TreeProblemVariant,
+    HeapProblemsDemo, HeapProblemVariant,
+    GraphProblemsDemo, GraphProblemVariant,
+    DPProblemsDemo, DPProblemVariant,
+};
 use std::cell::RefCell;
 
 // ===============================================================================
@@ -94,6 +106,11 @@ enum ActiveProblemDemo {
     SlidingWindow(SlidingWindowDemo),
     BinarySearch(BinarySearchDemo),
     StackProblems(StackProblemsDemo),
+    FastSlow(FastSlowDemo),
+    TreeProblems(TreeProblemsDemo),
+    HeapProblems(HeapProblemsDemo),
+    GraphProblems(GraphProblemsDemo),
+    DPProblems(DPProblemsDemo),
 }
 
 /// Dispatch to the appropriate demo based on lesson index
@@ -1360,9 +1377,55 @@ pub fn start_problem_demo(problem_id: usize, canvas_id: &str) -> Result<(), JsVa
             };
             ActiveProblemDemo::StackProblems(StackProblemsDemo::new(variant))
         }
-        // For patterns without demos yet, use a placeholder
-        _ => {
-            ActiveProblemDemo::TwoPointers(TwoPointersDemo::new(TwoPointerVariant::TwoSumSorted))
+        Pattern::FastSlowPointers => {
+            let variant = match problem_id {
+                10 => FastSlowVariant::LinkedListCycle,
+                11 => FastSlowVariant::FindMiddle,
+                12 => FastSlowVariant::CycleStart,
+                13 => FastSlowVariant::HappyNumber,
+                _ => FastSlowVariant::LinkedListCycle,
+            };
+            ActiveProblemDemo::FastSlow(FastSlowDemo::new(variant))
+        }
+        Pattern::TreeTraversal => {
+            let variant = match problem_id {
+                24 => TreeProblemVariant::LevelOrderTraversal,
+                25 => TreeProblemVariant::MaxDepth,
+                26 => TreeProblemVariant::ValidateBST,
+                27 => TreeProblemVariant::LowestCommonAncestor,
+                28 => TreeProblemVariant::SerializeTree,
+                _ => TreeProblemVariant::LevelOrderTraversal,
+            };
+            ActiveProblemDemo::TreeProblems(TreeProblemsDemo::new(variant))
+        }
+        Pattern::HeapTopK => {
+            let variant = match problem_id {
+                29 => HeapProblemVariant::KthLargest,
+                30 => HeapProblemVariant::MergeKSortedLists,
+                31 => HeapProblemVariant::TopKFrequent,
+                32 => HeapProblemVariant::MedianFromStream,
+                _ => HeapProblemVariant::KthLargest,
+            };
+            ActiveProblemDemo::HeapProblems(HeapProblemsDemo::new(variant))
+        }
+        Pattern::GraphTraversal => {
+            let variant = match problem_id {
+                33 => GraphProblemVariant::NumberOfIslands,
+                34 => GraphProblemVariant::CloneGraph,
+                35 => GraphProblemVariant::CourseSchedule,
+                36 => GraphProblemVariant::WordLadder,
+                _ => GraphProblemVariant::NumberOfIslands,
+            };
+            ActiveProblemDemo::GraphProblems(GraphProblemsDemo::new(variant))
+        }
+        Pattern::DynamicProgramming => {
+            let variant = match problem_id {
+                37 => DPProblemVariant::ClimbingStairs,
+                38 => DPProblemVariant::LongestIncreasingSubsequence,
+                39 => DPProblemVariant::CoinChange,
+                _ => DPProblemVariant::ClimbingStairs,
+            };
+            ActiveProblemDemo::DPProblems(DPProblemsDemo::new(variant))
         }
     };
 
@@ -1388,6 +1451,11 @@ fn start_problem_animation_loop(canvas_id: String) {
                     ActiveProblemDemo::SlidingWindow(demo) => demo.step(0.016),
                     ActiveProblemDemo::BinarySearch(demo) => demo.step(0.016),
                     ActiveProblemDemo::StackProblems(demo) => demo.step(0.016),
+                    ActiveProblemDemo::FastSlow(demo) => demo.step(0.016),
+                    ActiveProblemDemo::TreeProblems(demo) => demo.step(0.016),
+                    ActiveProblemDemo::HeapProblems(demo) => demo.step(0.016),
+                    ActiveProblemDemo::GraphProblems(demo) => demo.step(0.016),
+                    ActiveProblemDemo::DPProblems(demo) => demo.step(0.016),
                 }
             }
         });
@@ -1416,6 +1484,11 @@ fn render_problem_demo(canvas_id: &str) -> Result<(), JsValue> {
                 ActiveProblemDemo::SlidingWindow(demo) => render_sliding_window(&canvas, demo),
                 ActiveProblemDemo::BinarySearch(demo) => render_binary_search(&canvas, demo),
                 ActiveProblemDemo::StackProblems(demo) => render_stack_problems(&canvas, demo),
+                ActiveProblemDemo::FastSlow(demo) => render_fast_slow(&canvas, demo),
+                ActiveProblemDemo::TreeProblems(demo) => render_tree_problems(&canvas, demo),
+                ActiveProblemDemo::HeapProblems(demo) => render_heap_problems(&canvas, demo),
+                ActiveProblemDemo::GraphProblems(demo) => render_graph_problems(&canvas, demo),
+                ActiveProblemDemo::DPProblems(demo) => render_dp_problems(&canvas, demo),
             }
         }
     });
@@ -1433,6 +1506,11 @@ pub fn problem_step() {
                 ActiveProblemDemo::SlidingWindow(demo) => demo.step_algorithm(),
                 ActiveProblemDemo::BinarySearch(demo) => demo.step_algorithm(),
                 ActiveProblemDemo::StackProblems(demo) => demo.step_algorithm(),
+                ActiveProblemDemo::FastSlow(demo) => demo.step_algorithm(),
+                ActiveProblemDemo::TreeProblems(demo) => demo.step_algorithm(),
+                ActiveProblemDemo::HeapProblems(demo) => demo.step_algorithm(),
+                ActiveProblemDemo::GraphProblems(demo) => demo.step_algorithm(),
+                ActiveProblemDemo::DPProblems(demo) => demo.step_algorithm(),
             }
         }
     });
@@ -1448,6 +1526,11 @@ pub fn problem_reset() {
                 ActiveProblemDemo::SlidingWindow(demo) => demo.reset(42),
                 ActiveProblemDemo::BinarySearch(demo) => demo.reset(42),
                 ActiveProblemDemo::StackProblems(demo) => demo.reset(42),
+                ActiveProblemDemo::FastSlow(demo) => demo.reset(42),
+                ActiveProblemDemo::TreeProblems(demo) => demo.reset(42),
+                ActiveProblemDemo::HeapProblems(demo) => demo.reset(42),
+                ActiveProblemDemo::GraphProblems(demo) => demo.reset(42),
+                ActiveProblemDemo::DPProblems(demo) => demo.reset(42),
             }
         }
     });
@@ -1865,6 +1948,347 @@ fn render_stack_problems(canvas: &Canvas, demo: &StackProblemsDemo) {
             item.value.to_string()
         };
         ctx.fill_text(&text, stack_x + 40.0, y + item_h / 2.0 + 2.0).ok();
+    }
+
+    draw_message(ctx, w, h, &demo.message);
+    draw_pseudocode(ctx, w, h, &demo.pseudocode);
+}
+
+fn render_fast_slow(canvas: &Canvas, demo: &FastSlowDemo) {
+    let ctx = canvas.ctx();
+    let w = canvas.width();
+    let h = canvas.height();
+
+    canvas.clear("#0a0a12");
+
+    let (slow, fast) = demo.get_pointers();
+
+    // Draw linked list nodes
+    if !demo.nodes.is_empty() {
+        let node_r = 25.0;
+        let spacing = 80.0;
+        let start_x = 80.0;
+        let y = h / 2.0 - 40.0;
+
+        for (i, node) in demo.nodes.iter().enumerate() {
+            let x = start_x + i as f64 * spacing;
+
+            // Node circle
+            let fill = if i == slow && i == fast {
+                "rgba(255, 215, 0, 0.4)" // Gold when both
+            } else if i == slow {
+                "rgba(0, 255, 170, 0.4)" // Green for slow
+            } else if i == fast {
+                "rgba(255, 100, 100, 0.4)" // Red for fast
+            } else {
+                "rgba(60, 60, 80, 0.6)"
+            };
+
+            ctx.begin_path();
+            ctx.arc(x, y, node_r, 0.0, std::f64::consts::PI * 2.0).ok();
+            ctx.set_fill_style(&JsValue::from_str(fill));
+            ctx.fill();
+            ctx.set_stroke_style(&JsValue::from_str("#00d4aa"));
+            ctx.set_line_width(2.0);
+            ctx.stroke();
+
+            // Node value
+            ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+            ctx.set_font("bold 16px 'JetBrains Mono', monospace");
+            ctx.set_text_align("center");
+            ctx.fill_text(&node.value.to_string(), x, y + 5.0).ok();
+
+            // Arrow to next
+            if let Some(next) = node.next {
+                let next_x = if next > i {
+                    start_x + next as f64 * spacing - node_r
+                } else {
+                    start_x + next as f64 * spacing
+                };
+
+                if next > i {
+                    ctx.begin_path();
+                    ctx.move_to(x + node_r, y);
+                    ctx.line_to(next_x - 5.0, y);
+                    ctx.set_stroke_style(&JsValue::from_str("#666688"));
+                    ctx.stroke();
+                } else {
+                    ctx.begin_path();
+                    ctx.move_to(x + node_r, y);
+                    ctx.quadratic_curve_to(x + 40.0, y + 60.0, next_x, y + node_r);
+                    ctx.set_stroke_style(&JsValue::from_str("#ff6b6b"));
+                    ctx.stroke();
+                }
+            }
+        }
+
+        ctx.set_font("12px 'JetBrains Mono', monospace");
+        ctx.set_fill_style(&JsValue::from_str("#00d4aa"));
+        ctx.fill_text("slow", start_x + slow as f64 * spacing, y - 40.0).ok();
+        ctx.set_fill_style(&JsValue::from_str("#ff6b6b"));
+        ctx.fill_text("fast", start_x + fast as f64 * spacing, y - 55.0).ok();
+    } else {
+        ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+        ctx.set_font("24px 'JetBrains Mono', monospace");
+        ctx.set_text_align("center");
+        ctx.fill_text(&format!("slow = {}", demo.slow_num), w / 3.0, h / 2.0).ok();
+        ctx.fill_text(&format!("fast = {}", demo.fast_num), 2.0 * w / 3.0, h / 2.0).ok();
+    }
+
+    draw_message(ctx, w, h, &demo.message);
+    draw_pseudocode(ctx, w, h, &demo.pseudocode);
+}
+
+fn render_tree_problems(canvas: &Canvas, demo: &TreeProblemsDemo) {
+    let ctx = canvas.ctx();
+    let w = canvas.width();
+    let h = canvas.height();
+
+    canvas.clear("#0a0a12");
+
+    let nodes = demo.get_nodes();
+    let node_r = 22.0_f64;
+    let tree_h = h * 0.6;
+    let tree_top = 60.0_f64;
+
+    ctx.set_stroke_style(&JsValue::from_str("#444466"));
+    ctx.set_line_width(2.0);
+    for node in nodes {
+        let x = f64::from(node.x) * w;
+        let y = tree_top + f64::from(node.y) * tree_h;
+
+        if let Some(left_idx) = node.left {
+            if let Some(left) = nodes.get(left_idx) {
+                ctx.begin_path();
+                ctx.move_to(x, y + node_r);
+                ctx.line_to(f64::from(left.x) * w, tree_top + f64::from(left.y) * tree_h - node_r);
+                ctx.stroke();
+            }
+        }
+        if let Some(right_idx) = node.right {
+            if let Some(right) = nodes.get(right_idx) {
+                ctx.begin_path();
+                ctx.move_to(x, y + node_r);
+                ctx.line_to(f64::from(right.x) * w, tree_top + f64::from(right.y) * tree_h - node_r);
+                ctx.stroke();
+            }
+        }
+    }
+
+    for (i, node) in nodes.iter().enumerate() {
+        let x = f64::from(node.x) * w;
+        let y = tree_top + f64::from(node.y) * tree_h;
+
+        let fill = if demo.current_node == Some(i) {
+            "rgba(0, 255, 170, 0.5)"
+        } else if demo.visited.get(i).copied().unwrap_or(false) {
+            "rgba(100, 100, 150, 0.5)"
+        } else {
+            "rgba(60, 60, 80, 0.6)"
+        };
+
+        ctx.begin_path();
+        ctx.arc(x, y, node_r, 0.0, std::f64::consts::PI * 2.0).ok();
+        ctx.set_fill_style(&JsValue::from_str(fill));
+        ctx.fill();
+        ctx.set_stroke_style(&JsValue::from_str("#00d4aa"));
+        ctx.stroke();
+
+        ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+        ctx.set_font("bold 14px 'JetBrains Mono', monospace");
+        ctx.set_text_align("center");
+        ctx.fill_text(&node.value.to_string(), x, y + 5.0).ok();
+    }
+
+    if !demo.levels.is_empty() {
+        ctx.set_fill_style(&JsValue::from_str("#888899"));
+        ctx.set_font("12px 'JetBrains Mono', monospace");
+        ctx.set_text_align("left");
+        ctx.fill_text(&format!("Levels: {:?}", demo.levels), 20.0, h - 60.0).ok();
+    }
+
+    draw_message(ctx, w, h, &demo.message);
+    draw_pseudocode(ctx, w, h, &demo.pseudocode);
+}
+
+fn render_heap_problems(canvas: &Canvas, demo: &HeapProblemsDemo) {
+    let ctx = canvas.ctx();
+    let w = canvas.width();
+    let h = canvas.height();
+
+    canvas.clear("#0a0a12");
+
+    let box_w = 45.0;
+    let box_h = 35.0;
+    let start_x = 50.0;
+    let y = 80.0;
+
+    ctx.set_fill_style(&JsValue::from_str("#888899"));
+    ctx.set_font("12px 'JetBrains Mono', monospace");
+    ctx.set_text_align("left");
+    ctx.fill_text("Input:", 10.0, y + box_h / 2.0).ok();
+
+    for (i, &val) in demo.arr.iter().enumerate() {
+        let x = start_x + i as f64 * box_w;
+        let fill = if i == demo.pos.saturating_sub(1) {
+            "rgba(0, 255, 170, 0.3)"
+        } else if i < demo.pos {
+            "rgba(100, 100, 130, 0.3)"
+        } else {
+            "rgba(40, 40, 60, 0.6)"
+        };
+
+        ctx.set_fill_style(&JsValue::from_str(fill));
+        ctx.fill_rect(x, y, box_w - 4.0, box_h);
+        ctx.set_stroke_style(&JsValue::from_str("#444466"));
+        ctx.stroke_rect(x, y, box_w - 4.0, box_h);
+
+        ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+        ctx.set_font("14px 'JetBrains Mono', monospace");
+        ctx.set_text_align("center");
+        ctx.fill_text(&val.to_string(), x + box_w / 2.0 - 2.0, y + box_h / 2.0 + 5.0).ok();
+    }
+
+    let heap_y = 180.0;
+    ctx.set_fill_style(&JsValue::from_str("#888899"));
+    ctx.set_font("12px 'JetBrains Mono', monospace");
+    ctx.set_text_align("left");
+    ctx.fill_text("Min Heap:", 10.0, heap_y + 20.0).ok();
+
+    let heap = demo.get_heap();
+    for (i, &val) in heap.iter().enumerate() {
+        let x = start_x + i as f64 * box_w;
+
+        ctx.set_fill_style(&JsValue::from_str("rgba(0, 212, 170, 0.2)"));
+        ctx.fill_rect(x, heap_y, box_w - 4.0, box_h);
+        ctx.set_stroke_style(&JsValue::from_str("#00d4aa"));
+        ctx.stroke_rect(x, heap_y, box_w - 4.0, box_h);
+
+        ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+        ctx.set_font("14px 'JetBrains Mono', monospace");
+        ctx.set_text_align("center");
+        let text = if val == i32::MAX { "inf".to_string() } else { val.to_string() };
+        ctx.fill_text(&text, x + box_w / 2.0 - 2.0, heap_y + box_h / 2.0 + 5.0).ok();
+    }
+
+    draw_message(ctx, w, h, &demo.message);
+    draw_pseudocode(ctx, w, h, &demo.pseudocode);
+}
+
+fn render_graph_problems(canvas: &Canvas, demo: &GraphProblemsDemo) {
+    use learn_core::demos::problems::Cell;
+
+    let ctx = canvas.ctx();
+    let w = canvas.width();
+    let h = canvas.height();
+
+    canvas.clear("#0a0a12");
+
+    let grid = demo.get_grid();
+
+    if !grid.is_empty() {
+        let cell_size = 50.0;
+        let start_x = (w - demo.cols as f64 * cell_size) / 2.0;
+        let start_y = 80.0;
+
+        for (r, row) in grid.iter().enumerate() {
+            for (c, &cell) in row.iter().enumerate() {
+                let x = start_x + c as f64 * cell_size;
+                let y = start_y + r as f64 * cell_size;
+
+                let fill = match cell {
+                    Cell::Water => "rgba(30, 60, 120, 0.6)",
+                    Cell::Land => "rgba(60, 180, 60, 0.6)",
+                    Cell::Visited => "rgba(100, 100, 130, 0.5)",
+                };
+
+                ctx.set_fill_style(&JsValue::from_str(fill));
+                ctx.fill_rect(x, y, cell_size - 2.0, cell_size - 2.0);
+
+                if demo.current_pos == Some((r, c)) {
+                    ctx.set_stroke_style(&JsValue::from_str("#00d4aa"));
+                    ctx.set_line_width(3.0);
+                    ctx.stroke_rect(x, y, cell_size - 2.0, cell_size - 2.0);
+                }
+            }
+        }
+
+        ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+        ctx.set_font("16px 'JetBrains Mono', monospace");
+        ctx.set_text_align("left");
+        ctx.fill_text(&format!("Islands found: {}", demo.island_count), 20.0, 50.0).ok();
+    } else if !demo.word_path.is_empty() {
+        ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+        ctx.set_font("20px 'JetBrains Mono', monospace");
+        ctx.set_text_align("center");
+        ctx.fill_text(&format!("Path: {}", demo.word_path.join(" -> ")), w / 2.0, h / 2.0).ok();
+    }
+
+    draw_message(ctx, w, h, &demo.message);
+    draw_pseudocode(ctx, w, h, &demo.pseudocode);
+}
+
+fn render_dp_problems(canvas: &Canvas, demo: &DPProblemsDemo) {
+    let ctx = canvas.ctx();
+    let w = canvas.width();
+    let h = canvas.height();
+
+    canvas.clear("#0a0a12");
+
+    let dp = demo.get_dp();
+    let box_w = 50.0;
+    let box_h = 40.0;
+    let start_x = (w - dp.len().min(12) as f64 * box_w) / 2.0;
+    let y = h / 2.0 - 60.0;
+
+    ctx.set_fill_style(&JsValue::from_str("#888899"));
+    ctx.set_font("12px 'JetBrains Mono', monospace");
+    ctx.set_text_align("left");
+    ctx.fill_text("DP Table:", 20.0, y - 20.0).ok();
+
+    for (i, &val) in dp.iter().take(12).enumerate() {
+        let x = start_x + i as f64 * box_w;
+
+        let fill = if demo.highlights.contains(&i) {
+            "rgba(0, 255, 170, 0.3)"
+        } else {
+            "rgba(40, 40, 60, 0.6)"
+        };
+
+        ctx.set_fill_style(&JsValue::from_str(fill));
+        ctx.fill_rect(x, y, box_w - 4.0, box_h);
+        ctx.set_stroke_style(&JsValue::from_str("#444466"));
+        ctx.stroke_rect(x, y, box_w - 4.0, box_h);
+
+        ctx.set_fill_style(&JsValue::from_str("#666688"));
+        ctx.set_font("10px 'JetBrains Mono', monospace");
+        ctx.set_text_align("center");
+        ctx.fill_text(&i.to_string(), x + box_w / 2.0 - 2.0, y - 5.0).ok();
+
+        ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+        ctx.set_font("14px 'JetBrains Mono', monospace");
+        let text = if val == i32::MAX { "inf".to_string() } else { val.to_string() };
+        ctx.fill_text(&text, x + box_w / 2.0 - 2.0, y + box_h / 2.0 + 5.0).ok();
+    }
+
+    if !demo.nums.is_empty() {
+        let nums_y = y + 80.0;
+        ctx.set_fill_style(&JsValue::from_str("#888899"));
+        ctx.set_font("12px 'JetBrains Mono', monospace");
+        ctx.set_text_align("left");
+        ctx.fill_text("Array:", 20.0, nums_y - 5.0).ok();
+
+        for (i, &val) in demo.nums.iter().enumerate() {
+            let x = start_x + i as f64 * box_w;
+
+            ctx.set_fill_style(&JsValue::from_str("rgba(60, 60, 100, 0.4)"));
+            ctx.fill_rect(x, nums_y, box_w - 4.0, box_h - 5.0);
+
+            ctx.set_fill_style(&JsValue::from_str("#aaaacc"));
+            ctx.set_font("12px 'JetBrains Mono', monospace");
+            ctx.set_text_align("center");
+            ctx.fill_text(&val.to_string(), x + box_w / 2.0 - 2.0, nums_y + box_h / 2.0).ok();
+        }
     }
 
     draw_message(ctx, w, h, &demo.message);
