@@ -121,7 +121,8 @@ MODIFIED: 2025-12-09
 
         #main-content {
             flex: 1;
-            display: flex;
+            display: grid;
+            grid-template-columns: 1.4fr 0.8fr;
             padding: 20px;
             gap: 20px;
             overflow-x: hidden;
@@ -129,17 +130,57 @@ MODIFIED: 2025-12-09
             min-height: 0;
         }
 
-        #camera-panel {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+        /* SLAM first */
+        #slam-panel {
             background: var(--surface-light);
             border-radius: 12px;
             border: 1px solid var(--border);
-            padding: 20px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow: hidden;
             min-height: 300px;
+        }
+
+        .slam-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .slam-title {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .slam-title h2 {
+            font-size: 1rem;
+            color: var(--accent);
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+
+        .slam-title .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .slam-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .slam-grid {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 12px;
+            align-items: stretch;
+            min-height: 0;
         }
 
         #video-container {
@@ -158,6 +199,60 @@ MODIFIED: 2025-12-09
             object-fit: cover;
             display: block;
         }
+
+        #slam-overlay {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .slam-side {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 0;
+        }
+
+        #slam-map {
+            width: 100%;
+            height: 220px;
+            background: var(--input-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-dim);
+        }
+
+        #slam-hud {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .hud-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 10px;
+        }
+
+        .hud-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .hud-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+
+        .hud-value.good { color: #4ecdc4; }
+        .hud-value.warn { color: #ffe66d; }
+        .hud-value.bad { color: #ff6b6b; }
 
         #camera-placeholder {
             position: absolute;
@@ -208,16 +303,15 @@ MODIFIED: 2025-12-09
         }
 
         #sensor-panel {
-            width: 400px;
-            flex-shrink: 0;
             background: var(--surface);
             border-radius: 12px;
             border: 1px solid var(--border);
-            padding: 20px;
+            padding: 16px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 16px;
             overflow-y: auto;
+            min-height: 0;
         }
 
         .panel-section {
@@ -490,7 +584,7 @@ MODIFIED: 2025-12-09
                 min-height: 100%;
             }
             #main-content {
-                flex-direction: column;
+                grid-template-columns: 1fr;
                 padding: 10px;
                 gap: 10px;
                 overflow-y: visible;
@@ -498,14 +592,14 @@ MODIFIED: 2025-12-09
             }
             #sensor-panel {
                 width: 100%;
-                order: 0;
+                order: 1;
                 max-height: none;
                 overflow-y: visible;
             }
-            #camera-panel {
-                order: 1;
-                min-height: 250px;
-            }
+            #slam-panel { order: 0; }
+            .slam-grid { grid-template-columns: 1fr; }
+            #video-container { max-width: none; }
+            #slam-map { height: 180px; }
             #accel-graph, #gyro-graph {
                 height: 150px;
             }
@@ -523,16 +617,64 @@ MODIFIED: 2025-12-09
             <a href="/">← back to too.foo</a>
         </header>
         <div id="main-content">
-            <div id="camera-panel">
-                <div id="video-container">
-                    <video id="camera-video" autoplay playsinline muted></video>
-                    <div id="camera-placeholder">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                            <circle cx="12" cy="13" r="4"/>
-                        </svg>
-                        <p id="camera-status-text">Camera requires permission</p>
+            <div id="slam-panel">
+                <div class="slam-header">
+                    <div class="slam-title">
+                        <h2>Visual SLAM</h2>
+                        <div class="subtitle">ORB-like feature tracking + trajectory map</div>
+                    </div>
+                    <div class="slam-actions">
                         <button class="permission-btn" id="camera-btn">Enable Camera</button>
+                        <button class="permission-btn" id="reset-slam-btn">Reset SLAM</button>
+                    </div>
+                </div>
+
+                <div class="slam-grid">
+                    <div id="video-container">
+                        <video id="camera-video" autoplay playsinline muted></video>
+                        <canvas id="slam-overlay"></canvas>
+                        <canvas id="slam-capture" style="display:none"></canvas>
+                        <div id="camera-placeholder">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                <circle cx="12" cy="13" r="4"/>
+                            </svg>
+                            <p id="camera-status-text">Camera requires permission</p>
+                        </div>
+                    </div>
+
+                    <div class="slam-side">
+                        <canvas id="slam-map"></canvas>
+                        <div id="slam-hud">
+                            <div class="hud-row">
+                                <span class="hud-label">Tracking</span>
+                                <span class="hud-value" id="slam-status">Waiting</span>
+                            </div>
+                            <div class="hud-row">
+                                <span class="hud-label">Keypoints</span>
+                                <span class="hud-value" id="slam-keypoints">0</span>
+                            </div>
+                            <div class="hud-row">
+                                <span class="hud-label">Matches</span>
+                                <span class="hud-value" id="slam-matches">0</span>
+                            </div>
+                            <div class="hud-row">
+                                <span class="hud-label">Quality</span>
+                                <span class="hud-value" id="slam-quality">0%</span>
+                            </div>
+                            <div class="hud-row">
+                                <span class="hud-label">Position</span>
+                                <span class="hud-value" id="slam-pos">0.00, 0.00</span>
+                            </div>
+                            <div class="hud-row">
+                                <span class="hud-label">Distance</span>
+                                <span class="hud-value" id="slam-distance">0.00 m</span>
+                            </div>
+                            <div class="hud-row">
+                                <span class="hud-label">Landmarks</span>
+                                <span class="hud-value" id="slam-landmarks">0</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -574,36 +716,7 @@ MODIFIED: 2025-12-09
                         </div>
                     </div>
                 </div>
-                <div class="panel-section">
-                    <h3>Visual SLAM</h3>
-                    <div class="sensor-values">
-                        <div class="sensor-value x">
-                            <span class="label">Position X</span>
-                            <span class="value" id="pos-x">0.00</span>
-                        </div>
-                        <div class="sensor-value y">
-                            <span class="label">Position Y</span>
-                            <span class="value" id="pos-y">0.00</span>
-                        </div>
-                        <div class="sensor-value z">
-                            <span class="label">Position Z</span>
-                            <span class="value" id="pos-z">0.00</span>
-                        </div>
-                    </div>
-                    <div class="sensor-info">
-                        <span class="info-label">Speed:</span>
-                        <span class="info-value" id="speed-value">0.00 m/s</span>
-                    </div>
-                    <div class="sensor-info">
-                        <span class="info-label">Distance:</span>
-                        <span class="info-value" id="distance-value">0.00 m</span>
-                    </div>
-                    <div class="sensor-info">
-                        <span class="info-label">Landmarks:</span>
-                        <span class="info-value" id="landmarks-count">0</span>
-                    </div>
-                    <button class="permission-btn" id="reset-slam-btn" style="margin-top: 12px;">Reset</button>
-                </div>
+                <!-- SLAM is now the primary panel above -->
                 <div class="panel-section">
                     <h3>Device Orientation</h3>
                     <div id="orientation-values">
