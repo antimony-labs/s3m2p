@@ -648,6 +648,18 @@ mod tests {
     }
 
     #[test]
+    fn test_vector_normalize_zero() {
+        let v = Vector3::ZERO;
+        assert!(v.normalize().is_none());
+    }
+
+    #[test]
+    fn test_vector_normalize_near_zero() {
+        let v = Vector3::new(1e-8, 0.0, 0.0);
+        assert!(v.normalize().is_none());
+    }
+
+    #[test]
     fn test_vector_cross() {
         let v1 = Vector3::X;
         let v2 = Vector3::Y;
@@ -665,11 +677,33 @@ mod tests {
     }
 
     #[test]
+    fn test_plane_from_collinear_points() {
+        let p1 = Point3::new(0.0, 0.0, 0.0);
+        let p2 = Point3::new(1.0, 1.0, 1.0);
+        let p3 = Point3::new(2.0, 2.0, 2.0);
+        assert!(Plane::from_points(p1, p2, p3).is_none());
+    }
+
+    #[test]
     fn test_ray_plane_intersection() {
         let ray = Ray::new(Point3::new(0.0, 0.0, 5.0), Vector3::NEG_Z).unwrap();
         let plane = Plane::XY;
         let t = ray.intersect_plane(&plane).unwrap();
         assert!((t - 5.0).abs() < TOLERANCE);
+    }
+
+    #[test]
+    fn test_ray_parallel_to_plane() {
+        let ray = Ray::new(Point3::new(0.0, 0.0, 5.0), Vector3::X).unwrap();
+        let plane = Plane::XY;
+        assert!(ray.intersect_plane(&plane).is_none());
+    }
+
+    #[test]
+    fn test_ray_behind_origin() {
+        let ray = Ray::new(Point3::new(0.0, 0.0, 5.0), Vector3::Z).unwrap();
+        let plane = Plane::XY;
+        assert!(ray.intersect_plane(&plane).is_none());
     }
 
     #[test]
@@ -685,10 +719,266 @@ mod tests {
     }
 
     #[test]
+    fn test_bounding_box_empty_diagonal() {
+        let bbox = BoundingBox3::EMPTY;
+        assert!(bbox.diagonal().is_infinite());
+    }
+
+    #[test]
     fn test_transform() {
         let p = Point3::new(1.0, 0.0, 0.0);
         let t = Transform3::from_translation(Vector3::new(0.0, 5.0, 0.0));
         let transformed = p.transform(&t);
         assert!((transformed.y - 5.0).abs() < TOLERANCE);
+    }
+
+    #[test]
+    fn test_transform_inverse() {
+        let t = Transform3::from_rotation_z(0.5)
+            .then(Transform3::from_translation(Vector3::new(10.0, 20.0, 30.0)));
+        let t_inv = t.inverse();
+
+        let p = Point3::new(1.0, 2.0, 3.0);
+        let transformed = p.transform(&t);
+        let back = transformed.transform(&t_inv);
+        assert!(p.approx_eq(back, 1e-4));
+    }
+
+    #[test]
+    fn test_lerp_midpoint() {
+        let p1 = Point3::new(0.0, 0.0, 0.0);
+        let p2 = Point3::new(10.0, 20.0, 30.0);
+        let mid = p1.lerp(p2, 0.5);
+        assert!((mid.x - 5.0).abs() < TOLERANCE);
+        assert!((mid.y - 10.0).abs() < TOLERANCE);
+        assert!((mid.z - 15.0).abs() < TOLERANCE);
+    }
+
+    #[test]
+    fn test_vector_project_onto() {
+        let v = Vector3::new(3.0, 4.0, 0.0);
+        let onto = Vector3::X;
+        let proj = v.project_onto(onto);
+        assert!((proj.x - 3.0).abs() < TOLERANCE);
+        assert!(proj.y.abs() < TOLERANCE);
+        assert!(proj.z.abs() < TOLERANCE);
+    }
+
+    #[test]
+    fn test_vector_angle() {
+        let v1 = Vector3::X;
+        let v2 = Vector3::Y;
+        let angle = v1.angle(v2);
+        assert!((angle - std::f32::consts::FRAC_PI_2).abs() < TOLERANCE);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PROPERTY-BASED TESTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+#[cfg(test)]
+mod proptest_tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        /// Vector normalization produces unit length (when normalizable)
+        #[test]
+        fn prop_normalize_produces_unit_vector(
+            x in -1000.0f32..1000.0,
+            y in -1000.0f32..1000.0,
+            z in -1000.0f32..1000.0
+        ) {
+            let v = Vector3::new(x, y, z);
+            if let Some(n) = v.normalize() {
+                prop_assert!((n.length() - 1.0).abs() < 1e-5,
+                    "Normalized vector length should be 1.0, got {}", n.length());
+            }
+        }
+
+        /// Point distance is symmetric: d(a,b) == d(b,a)
+        #[test]
+        fn prop_distance_symmetric(
+            x1 in -1000.0f32..1000.0, y1 in -1000.0f32..1000.0, z1 in -1000.0f32..1000.0,
+            x2 in -1000.0f32..1000.0, y2 in -1000.0f32..1000.0, z2 in -1000.0f32..1000.0
+        ) {
+            let p1 = Point3::new(x1, y1, z1);
+            let p2 = Point3::new(x2, y2, z2);
+            let d1 = p1.distance(p2);
+            let d2 = p2.distance(p1);
+            prop_assert!((d1 - d2).abs() < TOLERANCE,
+                "Distance should be symmetric: {} vs {}", d1, d2);
+        }
+
+        /// Distance is non-negative
+        #[test]
+        fn prop_distance_non_negative(
+            x1 in -1000.0f32..1000.0, y1 in -1000.0f32..1000.0, z1 in -1000.0f32..1000.0,
+            x2 in -1000.0f32..1000.0, y2 in -1000.0f32..1000.0, z2 in -1000.0f32..1000.0
+        ) {
+            let p1 = Point3::new(x1, y1, z1);
+            let p2 = Point3::new(x2, y2, z2);
+            prop_assert!(p1.distance(p2) >= 0.0);
+        }
+
+        /// Dot product is commutative: a·b == b·a
+        #[test]
+        fn prop_dot_commutative(
+            x1 in -100.0f32..100.0, y1 in -100.0f32..100.0, z1 in -100.0f32..100.0,
+            x2 in -100.0f32..100.0, y2 in -100.0f32..100.0, z2 in -100.0f32..100.0
+        ) {
+            let v1 = Vector3::new(x1, y1, z1);
+            let v2 = Vector3::new(x2, y2, z2);
+            prop_assert!((v1.dot(v2) - v2.dot(v1)).abs() < TOLERANCE,
+                "Dot product should be commutative");
+        }
+
+        /// Cross product is anti-commutative: a×b == -(b×a)
+        #[test]
+        fn prop_cross_anticommutative(
+            x1 in -100.0f32..100.0, y1 in -100.0f32..100.0, z1 in -100.0f32..100.0,
+            x2 in -100.0f32..100.0, y2 in -100.0f32..100.0, z2 in -100.0f32..100.0
+        ) {
+            let v1 = Vector3::new(x1, y1, z1);
+            let v2 = Vector3::new(x2, y2, z2);
+            let c1 = v1.cross(v2);
+            let c2 = v2.cross(v1);
+            prop_assert!((c1.x + c2.x).abs() < TOLERANCE);
+            prop_assert!((c1.y + c2.y).abs() < TOLERANCE);
+            prop_assert!((c1.z + c2.z).abs() < TOLERANCE);
+        }
+
+        /// Cross product is perpendicular to both inputs
+        #[test]
+        fn prop_cross_perpendicular(
+            x1 in -100.0f32..100.0, y1 in -100.0f32..100.0, z1 in -100.0f32..100.0,
+            x2 in -100.0f32..100.0, y2 in -100.0f32..100.0, z2 in -100.0f32..100.0
+        ) {
+            let v1 = Vector3::new(x1, y1, z1);
+            let v2 = Vector3::new(x2, y2, z2);
+            let cross = v1.cross(v2);
+
+            // Cross product should be perpendicular to both (within tolerance)
+            // For small cross products, the dot product tolerance scales with magnitude
+            let tol = (cross.length() + 1.0) * 1e-4;
+            prop_assert!(cross.dot(v1).abs() < tol,
+                "Cross product should be perpendicular to v1");
+            prop_assert!(cross.dot(v2).abs() < tol,
+                "Cross product should be perpendicular to v2");
+        }
+
+        /// Lerp at t=0 returns first point
+        #[test]
+        fn prop_lerp_at_zero(
+            x1 in -1000.0f32..1000.0, y1 in -1000.0f32..1000.0, z1 in -1000.0f32..1000.0,
+            x2 in -1000.0f32..1000.0, y2 in -1000.0f32..1000.0, z2 in -1000.0f32..1000.0
+        ) {
+            let p1 = Point3::new(x1, y1, z1);
+            let p2 = Point3::new(x2, y2, z2);
+            let result = p1.lerp(p2, 0.0);
+            prop_assert!(result.approx_eq(p1, TOLERANCE));
+        }
+
+        /// Lerp at t=1 returns second point
+        #[test]
+        fn prop_lerp_at_one(
+            x1 in -1000.0f32..1000.0, y1 in -1000.0f32..1000.0, z1 in -1000.0f32..1000.0,
+            x2 in -1000.0f32..1000.0, y2 in -1000.0f32..1000.0, z2 in -1000.0f32..1000.0
+        ) {
+            let p1 = Point3::new(x1, y1, z1);
+            let p2 = Point3::new(x2, y2, z2);
+            let result = p1.lerp(p2, 1.0);
+            prop_assert!(result.approx_eq(p2, TOLERANCE));
+        }
+
+        /// Lerp at t=0.5 produces midpoint
+        #[test]
+        fn prop_lerp_midpoint(
+            x1 in -1000.0f32..1000.0, y1 in -1000.0f32..1000.0, z1 in -1000.0f32..1000.0,
+            x2 in -1000.0f32..1000.0, y2 in -1000.0f32..1000.0, z2 in -1000.0f32..1000.0
+        ) {
+            let p1 = Point3::new(x1, y1, z1);
+            let p2 = Point3::new(x2, y2, z2);
+            let mid = p1.lerp(p2, 0.5);
+            let expected = Point3::new((x1 + x2) / 2.0, (y1 + y2) / 2.0, (z1 + z2) / 2.0);
+            prop_assert!(mid.approx_eq(expected, 1e-4));
+        }
+
+        /// BoundingBox contains all input points
+        #[test]
+        fn prop_bbox_contains_inputs(
+            points in prop::collection::vec(
+                (-100.0f32..100.0, -100.0f32..100.0, -100.0f32..100.0),
+                1..20
+            )
+        ) {
+            let pts: Vec<Point3> = points.iter()
+                .map(|(x, y, z)| Point3::new(*x, *y, *z))
+                .collect();
+            let bbox = BoundingBox3::from_points(&pts);
+
+            for p in &pts {
+                prop_assert!(bbox.contains(*p),
+                    "BoundingBox should contain input point {:?}", p);
+            }
+        }
+
+        /// Plane projection point lies on plane (distance = 0)
+        #[test]
+        fn prop_plane_projection_on_plane(
+            px in -100.0f32..100.0, py in -100.0f32..100.0, pz in -100.0f32..100.0,
+            nx in -1.0f32..1.0, ny in -1.0f32..1.0, nz in -1.0f32..1.0,
+            qx in -100.0f32..100.0, qy in -100.0f32..100.0, qz in -100.0f32..100.0
+        ) {
+            let normal = Vector3::new(nx, ny, nz);
+            if normal.length() < TOLERANCE {
+                return Ok(());
+            }
+
+            if let Some(plane) = Plane::new(Point3::new(px, py, pz), normal) {
+                let point = Point3::new(qx, qy, qz);
+                let projected = plane.project_point(point);
+                let dist = plane.signed_distance(projected).abs();
+                prop_assert!(dist < 1e-4,
+                    "Projected point should be on plane, distance = {}", dist);
+            }
+        }
+
+        /// Transform then inverse transform returns original point
+        #[test]
+        fn prop_transform_inverse_roundtrip(
+            px in -100.0f32..100.0, py in -100.0f32..100.0, pz in -100.0f32..100.0,
+            tx in -50.0f32..50.0, ty in -50.0f32..50.0, tz in -50.0f32..50.0,
+            angle in 0.0f32..6.28
+        ) {
+            let p = Point3::new(px, py, pz);
+            let transform = Transform3::from_translation(Vector3::new(tx, ty, tz))
+                .then(Transform3::from_rotation_z(angle));
+
+            let transformed = p.transform(&transform);
+            let back = transformed.transform(&transform.inverse());
+
+            prop_assert!(p.approx_eq(back, 1e-4),
+                "Transform roundtrip failed: {:?} -> {:?}", p, back);
+        }
+
+        /// All geometry operations produce finite results (no NaN/Inf)
+        #[test]
+        fn prop_operations_finite(
+            x in -1000.0f32..1000.0, y in -1000.0f32..1000.0, z in -1000.0f32..1000.0
+        ) {
+            let p = Point3::new(x, y, z);
+            let v = Vector3::new(x, y, z);
+
+            // All basic operations should produce finite results
+            prop_assert!(p.x.is_finite() && p.y.is_finite() && p.z.is_finite());
+            prop_assert!(v.length().is_finite());
+            prop_assert!(v.length_squared().is_finite());
+            prop_assert!(v.dot(v).is_finite());
+
+            let cross = v.cross(Vector3::X);
+            prop_assert!(cross.x.is_finite() && cross.y.is_finite() && cross.z.is_finite());
+        }
     }
 }
