@@ -33,12 +33,13 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 use glam::{Mat4, Vec3};
+use serde::{Serialize, Deserialize};
 
 /// Tolerance for geometric comparisons (1 micrometer)
 pub const TOLERANCE: f32 = 1e-6;
 
 /// 3D point in space
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Point3 {
     pub x: f32,
     pub y: f32,
@@ -136,7 +137,7 @@ impl std::ops::Sub for Point3 {
 }
 
 /// 3D direction vector
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Vector3 {
     pub x: f32,
     pub y: f32,

@@ -6,6 +6,10 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 #![allow(unexpected_cfgs)]
+
+pub mod renderer;
+pub mod selection3d;
+
 use std::cell::RefCell;
 use std::f32::consts::PI;
 use wasm_bindgen::prelude::*;
@@ -17,13 +21,17 @@ use web_sys::{
 use cad_engine::{
     is_manifold, make_box, make_cone, make_cylinder, make_sphere, surface_area, volume, Point3,
     Solid, solid_to_step, solid_to_stl, union, difference, intersection,
-    Sketch, SketchPlane, Point2, SketchEntity, SketchEntityId, SketchPointId,
+    Sketch, SketchPlane, SketchCoordinateFrame, Point2, SketchEntity, SketchEntityId, SketchPointId,
     Constraint, GeometricConstraint, DimensionalConstraint,
     ConstraintSolver, ExtrudeParams, extrude_sketch, ConstraintAnalysis, DofStatus,
     circumcenter,
     RevolveParams, RevolveAxis, revolve_sketch,
     linear_pattern, circular_pattern, Vector3,
+    FaceId,
 };
+
+use crate::renderer::RenderMode;
+use crate::selection3d::{Selection3D, SelectionMode3D};
 
 // Global state for the current solid and view
 thread_local! {
@@ -260,6 +268,10 @@ struct AppState {
     pan_3d: (f32, f32),                    // 3D view pan offset
     last_mouse_x: i32,
     last_mouse_y: i32,
+
+    // Render and selection modes
+    render_mode: RenderMode,
+    selection3d: Selection3D,
 }
 
 impl Default for AppState {
@@ -293,6 +305,9 @@ impl Default for AppState {
             pan_3d: (0.0, 0.0),
             last_mouse_x: 0,
             last_mouse_y: 0,
+
+            render_mode: RenderMode::default(),
+            selection3d: Selection3D::default(),
         }
     }
 }
@@ -507,6 +522,52 @@ fn init_ui() -> Result<(), JsValue> {
         solve_closure.as_ref(),
     )?;
     solve_closure.forget();
+
+    // Export render mode function to JS
+    let render_mode_closure = Closure::wrap(Box::new(|mode: String| {
+        set_render_mode(&mode);
+    }) as Box<dyn Fn(String)>);
+    js_sys::Reflect::set(
+        &window,
+        &JsValue::from_str("setRenderModeWasm"),
+        render_mode_closure.as_ref(),
+    )?;
+    render_mode_closure.forget();
+
+    // Export selection mode function to JS
+    let selection_mode_closure = Closure::wrap(Box::new(|mode: String| {
+        set_selection_mode(&mode);
+    }) as Box<dyn Fn(String)>);
+    js_sys::Reflect::set(
+        &window,
+        &JsValue::from_str("setSelectionModeWasm"),
+        selection_mode_closure.as_ref(),
+    )?;
+    selection_mode_closure.forget();
+
+    // Export sketch plane function to JS
+    let sketch_plane_closure = Closure::wrap(Box::new(|plane: String| {
+        set_sketch_plane(&plane);
+    }) as Box<dyn Fn(String)>);
+    js_sys::Reflect::set(
+        &window,
+        &JsValue::from_str("setSketchPlaneWasm"),
+        sketch_plane_closure.as_ref(),
+    )?;
+    sketch_plane_closure.forget();
+
+    // Export sketch on face function to JS
+    let sketch_on_face_closure = Closure::wrap(Box::new(|| {
+        if let Err(e) = sketch_on_selected_face() {
+            web_sys::console::error_1(&format!("Sketch on face failed: {:?}", e).into());
+        }
+    }) as Box<dyn Fn()>);
+    js_sys::Reflect::set(
+        &window,
+        &JsValue::from_str("sketchOnSelectedFaceWasm"),
+        sketch_on_face_closure.as_ref(),
+    )?;
+    sketch_on_face_closure.forget();
 
     // Create initial solid
     create_solid()?;
@@ -2888,6 +2949,105 @@ fn solve_current_sketch() -> Result<(), JsValue> {
                 result.iterations, result.final_error
             ).into());
         }
+
+        drop(s);
+        render()?;
+        Ok(())
+    })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────
+// RENDER AND SELECTION MODE FUNCTIONS
+// ─────────────────────────────────────────────────────────────────────────────────
+
+/// Set the render mode (wireframe, shaded, hidden)
+fn set_render_mode(mode: &str) {
+    STATE.with(|state| {
+        let mut s = state.borrow_mut();
+        s.render_mode = match mode {
+            "wireframe" => RenderMode::Wireframe,
+            "shaded" => RenderMode::Shaded,
+            "hidden" => RenderMode::HiddenLine,
+            _ => RenderMode::Wireframe,
+        };
+        web_sys::console::log_1(&format!("Render mode: {:?}", s.render_mode).into());
+    });
+    let _ = render();
+}
+
+/// Set the 3D selection mode (face, edge, vertex)
+fn set_selection_mode(mode: &str) {
+    STATE.with(|state| {
+        let mut s = state.borrow_mut();
+        let new_mode = match mode {
+            "face" => SelectionMode3D::Face,
+            "edge" => SelectionMode3D::Edge,
+            "vertex" => SelectionMode3D::Vertex,
+            _ => SelectionMode3D::Face,
+        };
+        s.selection3d.set_mode(new_mode);
+        web_sys::console::log_1(&format!("Selection mode: {:?}", new_mode).into());
+    });
+}
+
+/// Set the sketch plane
+fn set_sketch_plane(plane: &str) {
+    STATE.with(|state| {
+        let mut s = state.borrow_mut();
+        let new_plane = match plane {
+            "xy" => SketchPlane::XY,
+            "xz" => SketchPlane::XZ,
+            "yz" => SketchPlane::YZ,
+            _ => SketchPlane::XY,
+        };
+
+        // If we have an active sketch, update its plane
+        if let Some(ref mut sketch) = s.current_sketch {
+            sketch.plane = new_plane.clone();
+            web_sys::console::log_1(&format!("Sketch plane changed to: {:?}", new_plane).into());
+        } else {
+            // If no sketch, create one with the new plane
+            s.current_sketch = Some(Sketch::new(new_plane.clone()));
+            web_sys::console::log_1(&format!("New sketch on plane: {:?}", new_plane).into());
+        }
+    });
+    let _ = render();
+}
+
+/// Start a sketch on the selected face
+fn sketch_on_selected_face() -> Result<(), JsValue> {
+    STATE.with(|state| {
+        let mut s = state.borrow_mut();
+
+        // Check if we have a selected face
+        let face_id = s.selection3d.primary_face()
+            .ok_or_else(|| JsValue::from_str("No face selected. Select a face first."))?;
+
+        // Get the solid
+        let solid = s.solid.as_ref()
+            .ok_or_else(|| JsValue::from_str("No solid available"))?;
+
+        // Find the face in the solid
+        let face = solid.face(face_id)
+            .ok_or_else(|| JsValue::from_str("Face not found in solid"))?;
+
+        // Create coordinate frame from face
+        let frame = SketchCoordinateFrame::from_face(face, solid)
+            .ok_or_else(|| JsValue::from_str("Could not create coordinate frame from face"))?;
+
+        // Create new sketch on the arbitrary plane
+        let sketch = Sketch::new(SketchPlane::Arbitrary(frame));
+        s.current_sketch = Some(sketch);
+
+        // Switch to sketch mode
+        s.mode = AppMode::Sketch2D;
+        s.sketch_tool = SketchTool::Line;
+        s.temp_points.clear();
+        s.sketch_constraints.clear();
+        s.selected_entities.clear();
+
+        web_sys::console::log_1(&format!("Starting sketch on face {:?}", face_id).into());
+        show_status("Sketching on face", StatusType::Success);
 
         drop(s);
         render()?;
