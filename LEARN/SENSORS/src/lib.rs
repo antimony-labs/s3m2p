@@ -64,9 +64,9 @@ struct VisualSLAM {
     last_descriptors: Vec<[u32; 8]>, // 256-bit BRIEF-like descriptor
     current_keypoints: Vec<(f64, f64)>,
     current_matches: Vec<((f64, f64), (f64, f64), u32)>, // (prev, curr, hamming)
-    map_points: Vec<(f64, f64, f64)>, // x, y, z positions of landmarks
-    trajectory: Vec<(f64, f64)>,      // x,y in "map" frame
-    tracking_quality: f64,            // 0..1
+    map_points: Vec<(f64, f64, f64)>,                    // x, y, z positions of landmarks
+    trajectory: Vec<(f64, f64)>,                         // x,y in "map" frame
+    tracking_quality: f64,                               // 0..1
     is_tracking: bool,
     initialized: bool,
 }
@@ -702,7 +702,7 @@ thread_local! {
     static BRIEF_PATTERN: Vec<(i8,i8,i8,i8)> = make_brief_pattern();
 }
 
-fn make_brief_pattern() -> Vec<(i8,i8,i8,i8)> {
+fn make_brief_pattern() -> Vec<(i8, i8, i8, i8)> {
     // Deterministic pseudo-random pattern (256 pairs) within [-BRIEF_RADIUS, BRIEF_RADIUS]
     let mut out = Vec::with_capacity(256);
     let mut x: u32 = 0xC0FFEE42;
@@ -942,12 +942,7 @@ fn update_visual_slam(slam: &mut VisualSLAM, current_frame: &ImageData) {
         return;
     }
 
-    let matches = orb_match(
-        &slam.last_keypoints,
-        &slam.last_descriptors,
-        &kps,
-        &descs,
-    );
+    let matches = orb_match(&slam.last_keypoints, &slam.last_descriptors, &kps, &descs);
 
     let kp_count = kps.len().max(1);
     slam.tracking_quality = (matches.len() as f64 / kp_count as f64).clamp(0.0, 1.0);
@@ -985,8 +980,11 @@ fn update_visual_slam(slam: &mut VisualSLAM, current_frame: &ImageData) {
                     }
                     let nx = (*x / fw) - 0.5;
                     let ny = (*y / fh) - 0.5;
-                    slam.map_points
-                        .push((slam.position_x + nx * 0.8, slam.position_y + ny * 0.8, 1.0));
+                    slam.map_points.push((
+                        slam.position_x + nx * 0.8,
+                        slam.position_y + ny * 0.8,
+                        1.0,
+                    ));
                 }
             }
         }
@@ -1037,7 +1035,10 @@ fn update_visual_slam_display() {
             let _ = el.set_attribute("class", cls);
         }
         if let Some(el) = document.get_element_by_id("slam-pos") {
-            el.set_text_content(Some(&format!("{:.2}, {:.2}", slam.position_x, slam.position_y)));
+            el.set_text_content(Some(&format!(
+                "{:.2}, {:.2}",
+                slam.position_x, slam.position_y
+            )));
         }
         if let Some(el) = document.get_element_by_id("slam-distance") {
             el.set_text_content(Some(&format!("{:.2} m", slam.distance)));
@@ -1381,7 +1382,12 @@ fn render_slam_overlay() {
     STATE.with(|s| {
         let state = s.borrow();
         let slam = &state.visual_slam;
-        if !slam.initialized || slam.frame_w == 0 || slam.frame_h == 0 || slam.video_w == 0 || slam.video_h == 0 {
+        if !slam.initialized
+            || slam.frame_w == 0
+            || slam.frame_h == 0
+            || slam.video_w == 0
+            || slam.video_h == 0
+        {
             return;
         }
 
@@ -1408,7 +1414,10 @@ fn render_slam_overlay() {
             let (x1, y1) = map_pt(a.0, a.1);
             let (x2, y2) = map_pt(b.0, b.1);
             let alpha = (1.0 - (*ham as f64 / 90.0)).clamp(0.15, 0.9);
-            ctx.set_stroke_style(&JsValue::from_str(&format!("rgba(78, 205, 196, {:.3})", alpha)));
+            ctx.set_stroke_style(&JsValue::from_str(&format!(
+                "rgba(78, 205, 196, {:.3})",
+                alpha
+            )));
             ctx.begin_path();
             ctx.move_to(x1, y1);
             ctx.line_to(x2, y2);
@@ -1416,7 +1425,11 @@ fn render_slam_overlay() {
         }
 
         // Draw keypoints
-        let kp_color = if slam.is_tracking { "rgba(0, 255, 255, 0.85)" } else { "rgba(255, 230, 109, 0.85)" };
+        let kp_color = if slam.is_tracking {
+            "rgba(0, 255, 255, 0.85)"
+        } else {
+            "rgba(255, 230, 109, 0.85)"
+        };
         ctx.set_fill_style(&JsValue::from_str(kp_color));
         for (x, y) in slam.current_keypoints.iter().take(260) {
             let (cx, cy) = map_pt(*x, *y);
