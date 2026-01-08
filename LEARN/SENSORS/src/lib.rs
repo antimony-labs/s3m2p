@@ -12,8 +12,7 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
     window, AnalyserNode, AudioContext, AudioContextOptions, CanvasRenderingContext2d,
-    DeviceOrientationEvent, HtmlCanvasElement, HtmlVideoElement, MediaStreamConstraints,
-    ImageData,
+    DeviceOrientationEvent, HtmlCanvasElement, HtmlVideoElement, ImageData, MediaStreamConstraints,
 };
 
 const GRAPH_HISTORY_SIZE: usize = 200;
@@ -56,8 +55,19 @@ struct VisualSLAM {
     position_z: f64,
     speed: f64,
     distance: f64,
+    // Processing frame size (downsampled) and video size (for overlay scaling)
+    frame_w: u32,
+    frame_h: u32,
+    video_w: u32,
+    video_h: u32,
     last_keypoints: Vec<(f64, f64)>,
-    map_points: Vec<(f64, f64, f64)>, // x, y, z positions of landmarks
+    last_descriptors: Vec<[u32; 8]>, // 256-bit BRIEF-like descriptor
+    current_keypoints: Vec<(f64, f64)>,
+    current_matches: Vec<((f64, f64), (f64, f64), u32)>, // (prev, curr, hamming)
+    map_points: Vec<(f64, f64, f64)>,                    // x, y, z positions of landmarks
+    trajectory: Vec<(f64, f64)>,                         // x,y in "map" frame
+    tracking_quality: f64,                               // 0..1
+    is_tracking: bool,
     initialized: bool,
 }
 
@@ -69,8 +79,18 @@ impl Default for VisualSLAM {
             position_z: 0.0,
             speed: 0.0,
             distance: 0.0,
+            frame_w: 0,
+            frame_h: 0,
+            video_w: 0,
+            video_h: 0,
             last_keypoints: Vec::new(),
+            last_descriptors: Vec::new(),
+            current_keypoints: Vec::new(),
+            current_matches: Vec::new(),
             map_points: Vec::new(),
+            trajectory: vec![(0.0, 0.0)],
+            tracking_quality: 0.0,
+            is_tracking: false,
             initialized: false,
         }
     }
@@ -167,7 +187,7 @@ pub fn main() {
 
     // Set up visual SLAM reset button
     setup_visual_slam_reset_button();
-    
+
     // Start visual SLAM processing from camera
     start_visual_slam_loop();
 
@@ -307,7 +327,6 @@ fn setup_motion_listeners() {
                     let mut state = s.borrow_mut();
                     state.push_accel(x, y, z);
                     state.sensors_available = true;
-
                 });
 
                 update_accel_display(x, y, z);
@@ -610,7 +629,7 @@ fn start_visual_slam_loop() {
 
 fn process_visual_slam_frame() {
     let document = window().unwrap().document().unwrap();
-    
+
     // Get video element
     let video: HtmlVideoElement = match document.get_element_by_id("camera-video") {
         Some(el) => el.unchecked_into(),
@@ -622,194 +641,357 @@ fn process_visual_slam_frame() {
         return; // Not ready
     }
 
-    // Create temporary canvas to capture frame
-    let canvas = match document.create_element("canvas") {
-        Ok(el) => el.unchecked_into::<HtmlCanvasElement>(),
-        Err(_) => return,
+    // Use hidden capture canvas (downsampled) to keep SLAM cheap on mobile
+    let canvas: HtmlCanvasElement = match document.get_element_by_id("slam-capture") {
+        Some(el) => el.unchecked_into(),
+        None => return,
     };
 
-    canvas.set_width(video.video_width());
-    canvas.set_height(video.video_height());
+    // Processing resolution (keeps CPU reasonable)
+    let proc_w: u32 = 200;
+    let proc_h: u32 = 150;
+    canvas.set_width(proc_w);
+    canvas.set_height(proc_h);
 
     let ctx: CanvasRenderingContext2d = match canvas.get_context("2d") {
         Ok(Some(ctx)) => ctx.unchecked_into(),
         _ => return,
     };
 
-    // Draw video frame to canvas
-    let _ = ctx.draw_image_with_html_video_element(&video, 0.0, 0.0);
+    // Draw video frame to canvas (scaled)
+    let _ = ctx.draw_image_with_html_video_element_and_dw_and_dh(
+        &video,
+        0.0,
+        0.0,
+        proc_w as f64,
+        proc_h as f64,
+    );
 
     // Get image data
-    let image_data = match ctx.get_image_data(0.0, 0.0, canvas.width() as f64, canvas.height() as f64) {
-        Ok(data) => data,
-        Err(_) => return,
-    };
+    let image_data =
+        match ctx.get_image_data(0.0, 0.0, canvas.width() as f64, canvas.height() as f64) {
+            Ok(data) => data,
+            Err(_) => return,
+        };
 
     // Process frame for visual SLAM
     STATE.with(|s| {
         let mut state = s.borrow_mut();
+        state.visual_slam.frame_w = proc_w;
+        state.visual_slam.frame_h = proc_h;
+        state.visual_slam.video_w = video.video_width();
+        state.visual_slam.video_h = video.video_height();
         update_visual_slam(&mut state.visual_slam, &image_data);
     });
 
     update_visual_slam_display();
 }
 
-fn update_visual_slam(slam: &mut VisualSLAM, current_frame: &ImageData) {
-    let window = window().unwrap();
-    let performance = window.performance().unwrap();
-    let current_time = performance.now() / 1000.0;
+// === ORB-like Visual SLAM (browser-friendly) ===================================
+// This is not full ORB-SLAM (no BA / loop-closure), but it uses:
+// - FAST corners
+// - BRIEF/ORB-style binary descriptors
+// - Hamming-distance matching + ratio test
+// - Robust motion estimate (median translation)
 
-    // Extract features from current frame
-    let current_features = extract_features(current_frame);
+const ORB_MAX_KEYPOINTS: usize = 320;
+const FAST_THRESHOLD: i32 = 20;
+const BRIEF_RADIUS: i32 = 8;
 
-    if !slam.initialized {
-        // Initialize with first frame
-        slam.last_keypoints = current_features;
-        slam.initialized = true;
-        return;
-    }
-
-    // Match features between frames
-    let matches = match_features(&slam.last_keypoints, &current_features);
-
-    if matches.len() >= 8 {
-        // Estimate camera motion using matched features
-        if let Some((dx, dy, dz)) = estimate_motion(&matches) {
-            // Update position
-            slam.position_x += dx;
-            slam.position_y += dy;
-            slam.position_z += dz;
-
-            // Calculate speed
-            let dt = 0.033; // Assume ~30fps
-            slam.speed = (dx * dx + dy * dy + dz * dz).sqrt() / dt;
-
-            // Update distance
-            slam.distance += (dx * dx + dy * dy + dz * dz).sqrt();
-
-            // Add new landmarks from unmatched features
-            for (x, y) in &current_features {
-                let pt = (*x, *y);
-                if !matches.iter().any(|m| m.1 == pt) {
-                    // Convert to 3D (simplified - assume depth based on feature quality)
-                    slam.map_points.push((*x, *y, 1.0));
-                }
-            }
-
-            // Limit map size
-            if slam.map_points.len() > 1000 {
-                slam.map_points.remove(0);
-            }
-        }
-    }
-
-    // Update last keypoints for next frame
-    slam.last_keypoints = current_features;
+thread_local! {
+    static BRIEF_PATTERN: Vec<(i8,i8,i8,i8)> = make_brief_pattern();
 }
 
-fn extract_features(image_data: &ImageData) -> Vec<(f64, f64)> {
+fn make_brief_pattern() -> Vec<(i8, i8, i8, i8)> {
+    // Deterministic pseudo-random pattern (256 pairs) within [-BRIEF_RADIUS, BRIEF_RADIUS]
+    let mut out = Vec::with_capacity(256);
+    let mut x: u32 = 0xC0FFEE42;
+    for _ in 0..256 {
+        // xorshift32
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        let a = (x & 0xFF) as i16;
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        let b = (x & 0xFF) as i16;
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        let c = (x & 0xFF) as i16;
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        let d = (x & 0xFF) as i16;
+
+        let r = BRIEF_RADIUS as i16;
+        let dx1 = (a % (2 * r + 1)) - r;
+        let dy1 = (b % (2 * r + 1)) - r;
+        let dx2 = (c % (2 * r + 1)) - r;
+        let dy2 = (d % (2 * r + 1)) - r;
+        out.push((dx1 as i8, dy1 as i8, dx2 as i8, dy2 as i8));
+    }
+    out
+}
+
+fn image_to_grayscale(image_data: &ImageData) -> (Vec<u8>, usize, usize) {
+    let w = image_data.width() as usize;
+    let h = image_data.height() as usize;
     let data = image_data.data();
-    let width = image_data.width() as usize;
-    let height = image_data.height() as usize;
-    let mut features = Vec::new();
+    let mut gray = vec![0u8; w * h];
+    for i in 0..(w * h) {
+        let idx = i * 4;
+        if idx + 2 < data.len() {
+            let r = data[idx] as u32;
+            let g = data[idx + 1] as u32;
+            let b = data[idx + 2] as u32;
+            gray[i] = ((r + g + b) / 3) as u8;
+        }
+    }
+    (gray, w, h)
+}
 
-    // Simple corner detection using gradient magnitude
-    // Sample every 20 pixels to avoid too many features
-    for y in (10..height - 10).step_by(20) {
-        for x in (10..width - 10).step_by(20) {
-            let idx = (y * width + x) * 4;
-            if idx + 3 < data.length() as usize {
-                // Calculate gradient magnitude (simplified)
-                let gx = get_pixel_intensity(&data, width, x + 1, y) as f64
-                    - get_pixel_intensity(&data, width, x - 1, y) as f64;
-                let gy = get_pixel_intensity(&data, width, x, y + 1) as f64
-                    - get_pixel_intensity(&data, width, x, y - 1) as f64;
-                let gradient_mag = (gx * gx + gy * gy).sqrt();
+fn fast_corners(gray: &[u8], w: usize, h: usize) -> Vec<(usize, usize, u16)> {
+    // FAST-16 with simplified "count" test (no contiguous arc requirement)
+    let circle: [(i32, i32); 16] = [
+        (0, -3),
+        (1, -3),
+        (2, -2),
+        (3, -1),
+        (3, 0),
+        (3, 1),
+        (2, 2),
+        (1, 3),
+        (0, 3),
+        (-1, 3),
+        (-2, 2),
+        (-3, 1),
+        (-3, 0),
+        (-3, -1),
+        (-2, -2),
+        (-1, -3),
+    ];
 
-                // Threshold for corner detection
-                if gradient_mag > 30.0 {
-                    features.push((x as f64, y as f64));
+    let border = 4usize;
+    let mut corners = Vec::new();
+    for y in border..(h - border) {
+        for x in border..(w - border) {
+            let c = gray[y * w + x] as i32;
+            let t_hi = c + FAST_THRESHOLD;
+            let t_lo = c - FAST_THRESHOLD;
+            let mut brighter = 0;
+            let mut darker = 0;
+            let mut score: u16 = 0;
+            for (dx, dy) in circle {
+                let xx = (x as i32 + dx) as usize;
+                let yy = (y as i32 + dy) as usize;
+                let p = gray[yy * w + xx] as i32;
+                if p > t_hi {
+                    brighter += 1;
+                    score = score.saturating_add((p - t_hi) as u16);
+                } else if p < t_lo {
+                    darker += 1;
+                    score = score.saturating_add((t_lo - p) as u16);
                 }
             }
+            if brighter >= 12 || darker >= 12 {
+                corners.push((x, y, score));
+            }
+        }
+    }
+    corners
+}
+
+fn brief_descriptor(gray: &[u8], w: usize, x: usize, y: usize) -> [u32; 8] {
+    let mut desc = [0u32; 8];
+    BRIEF_PATTERN.with(|pat| {
+        for (i, (dx1, dy1, dx2, dy2)) in pat.iter().enumerate() {
+            let xx1 = (x as i32 + *dx1 as i32) as usize;
+            let yy1 = (y as i32 + *dy1 as i32) as usize;
+            let xx2 = (x as i32 + *dx2 as i32) as usize;
+            let yy2 = (y as i32 + *dy2 as i32) as usize;
+            let p1 = gray[yy1 * w + xx1];
+            let p2 = gray[yy2 * w + xx2];
+            if p1 < p2 {
+                let word = i / 32;
+                let bit = i % 32;
+                desc[word] |= 1u32 << bit;
+            }
+        }
+    });
+    desc
+}
+
+fn hamming(a: &[u32; 8], b: &[u32; 8]) -> u32 {
+    let mut d = 0u32;
+    for i in 0..8 {
+        d += (a[i] ^ b[i]).count_ones();
+    }
+    d
+}
+
+fn orb_extract(image_data: &ImageData, max_kp: usize) -> (Vec<(f64, f64)>, Vec<[u32; 8]>) {
+    let (gray, w, h) = image_to_grayscale(image_data);
+    let mut corners = fast_corners(&gray, w, h);
+    // sort by score descending
+    corners.sort_by(|a, b| b.2.cmp(&a.2));
+
+    let mut keypoints = Vec::new();
+    let mut descriptors = Vec::new();
+
+    let r = BRIEF_RADIUS as usize;
+    for (x, y, _score) in corners.into_iter() {
+        if x < r || y < r || x + r >= w || y + r >= h {
+            continue;
+        }
+        let d = brief_descriptor(&gray, w, x, y);
+        keypoints.push((x as f64, y as f64));
+        descriptors.push(d);
+        if keypoints.len() >= max_kp {
+            break;
         }
     }
 
-    features
+    (keypoints, descriptors)
 }
 
-fn get_pixel_intensity(data: &js_sys::Uint8ClampedArray, width: usize, x: usize, y: usize) -> u8 {
-    let idx = (y * width + x) * 4;
-    if idx + 2 < data.length() as usize {
-        let r = data.get_index(idx as u32) as u32;
-        let g = data.get_index((idx + 1) as u32) as u32;
-        let b = data.get_index((idx + 2) as u32) as u32;
-        ((r + g + b) / 3) as u8
-    } else {
-        0
-    }
-}
-
-fn match_features(
-    last_features: &[(f64, f64)],
-    current_features: &[(f64, f64)],
-) -> Vec<((f64, f64), (f64, f64))> {
+fn orb_match(
+    prev_kp: &[(f64, f64)],
+    prev_desc: &[[u32; 8]],
+    curr_kp: &[(f64, f64)],
+    curr_desc: &[[u32; 8]],
+) -> Vec<((f64, f64), (f64, f64), u32)> {
     let mut matches = Vec::new();
-    let max_distance = 50.0; // Maximum pixel distance for matching
+    if prev_desc.is_empty() || curr_desc.is_empty() {
+        return matches;
+    }
 
-    for &last_pt in last_features {
-        let mut best_match = None;
-        let mut best_dist = max_distance;
+    // mild motion gate (in pixels of processing frame)
+    let gate_px: f64 = 60.0;
+    let max_hamming: u32 = 80;
 
-        for &current_pt in current_features {
-            let dx = current_pt.0 - last_pt.0;
-            let dy = current_pt.1 - last_pt.1;
-            let dist = (dx * dx + dy * dy).sqrt();
+    for (i, a) in prev_desc.iter().enumerate() {
+        let (ax, ay) = prev_kp[i];
+        let mut best = (u32::MAX, usize::MAX);
+        let mut second = (u32::MAX, usize::MAX);
 
-            if dist < best_dist {
-                best_dist = dist;
-                best_match = Some(current_pt);
+        for (j, b) in curr_desc.iter().enumerate() {
+            let (bx, by) = curr_kp[j];
+            if (bx - ax).abs() > gate_px || (by - ay).abs() > gate_px {
+                continue;
+            }
+            let d = hamming(a, b);
+            if d < best.0 {
+                second = best;
+                best = (d, j);
+            } else if d < second.0 {
+                second = (d, j);
             }
         }
 
-        if let Some(match_pt) = best_match {
-            matches.push((last_pt, match_pt));
+        if best.1 != usize::MAX && best.0 <= max_hamming {
+            // ratio test (best significantly better than second)
+            if second.1 == usize::MAX || (best.0 as f64) <= (second.0 as f64 * 0.8) {
+                matches.push((prev_kp[i], curr_kp[best.1], best.0));
+            }
         }
     }
 
     matches
 }
 
-fn estimate_motion(matches: &[((f64, f64), (f64, f64))]) -> Option<(f64, f64, f64)> {
-    if matches.len() < 8 {
+fn median(vals: &mut [f64]) -> f64 {
+    vals.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    vals[vals.len() / 2]
+}
+
+fn estimate_translation_median(matches: &[((f64, f64), (f64, f64), u32)]) -> Option<(f64, f64)> {
+    if matches.len() < 12 {
         return None;
     }
+    let mut dxs = Vec::with_capacity(matches.len());
+    let mut dys = Vec::with_capacity(matches.len());
+    for (a, b, d) in matches {
+        if *d > 70 {
+            continue;
+        }
+        dxs.push(b.0 - a.0);
+        dys.push(b.1 - a.1);
+    }
+    if dxs.len() < 10 {
+        return None;
+    }
+    let dx = median(&mut dxs);
+    let dy = median(&mut dys);
+    Some((dx, dy))
+}
 
-    // Simplified motion estimation using average displacement
-    // In real SLAM, you'd use essential matrix or homography
-    let mut sum_dx = 0.0;
-    let mut sum_dy = 0.0;
-    let mut count = 0.0;
+fn update_visual_slam(slam: &mut VisualSLAM, current_frame: &ImageData) {
+    // Extract ORB-like keypoints + descriptors from current frame
+    let (kps, descs) = orb_extract(current_frame, ORB_MAX_KEYPOINTS);
+    slam.current_keypoints = kps.clone();
+    slam.current_matches.clear();
+    slam.tracking_quality = 0.0;
+    slam.is_tracking = false;
 
-    for (last_pt, current_pt) in matches {
-        let dx = current_pt.0 - last_pt.0;
-        let dy = current_pt.1 - last_pt.1;
-        sum_dx += dx;
-        sum_dy += dy;
-        count += 1.0;
+    if !slam.initialized {
+        slam.last_keypoints = kps;
+        slam.last_descriptors = descs;
+        slam.initialized = true;
+        return;
     }
 
-    if count > 0.0 {
-        // Convert pixel displacement to meters (simplified scaling)
-        // Assume camera FOV ~60 degrees, typical phone camera
-        let scale = 0.001; // Rough conversion factor
-        let dx = (sum_dx / count) * scale;
-        let dy = (sum_dy / count) * scale;
-        let dz = 0.0; // Can't estimate depth from 2D features alone
+    let matches = orb_match(&slam.last_keypoints, &slam.last_descriptors, &kps, &descs);
 
-        Some((dx, dy, dz))
-    } else {
-        None
+    let kp_count = kps.len().max(1);
+    slam.tracking_quality = (matches.len() as f64 / kp_count as f64).clamp(0.0, 1.0);
+    slam.is_tracking = matches.len() >= 25;
+    slam.current_matches = matches.iter().take(80).cloned().collect();
+
+    if slam.is_tracking {
+        if let Some((dx_pix, dy_pix)) = estimate_translation_median(&matches) {
+            // Convert processing-frame pixel motion to "map units"
+            // NOTE: scale is arbitrary; goal is stable visualization.
+            let fw = slam.frame_w.max(1) as f64;
+            let fh = slam.frame_h.max(1) as f64;
+            let dx = -(dx_pix / fw) * 0.35;
+            let dy = -(dy_pix / fh) * 0.35;
+            let dz = 0.0;
+
+            slam.position_x += dx;
+            slam.position_y += dy;
+            slam.position_z += dz;
+
+            let step = (dx * dx + dy * dy + dz * dz).sqrt();
+            slam.distance += step;
+            slam.speed = step / (1.0 / 30.0);
+
+            slam.trajectory.push((slam.position_x, slam.position_y));
+            if slam.trajectory.len() > 600 {
+                slam.trajectory.remove(0);
+            }
+
+            // Add a few "landmarks" around current pose (visual-only)
+            if slam.map_points.len() < 2000 {
+                for (idx, (x, y)) in kps.iter().enumerate().step_by(12) {
+                    if idx % 24 != 0 {
+                        continue;
+                    }
+                    let nx = (*x / fw) - 0.5;
+                    let ny = (*y / fh) - 0.5;
+                    slam.map_points.push((
+                        slam.position_x + nx * 0.8,
+                        slam.position_y + ny * 0.8,
+                        1.0,
+                    ));
+                }
+            }
+        }
     }
+
+    slam.last_keypoints = kps;
+    slam.last_descriptors = descs;
 }
 
 fn update_visual_slam_display() {
@@ -819,22 +1001,49 @@ fn update_visual_slam_display() {
         let state = s.borrow();
         let slam = &state.visual_slam;
 
-        if let Some(el) = document.get_element_by_id("pos-x") {
-            el.set_text_content(Some(&format!("{:.3}", slam.position_x)));
+        // HUD: status + metrics
+        let (status_text, status_class) = if !slam.initialized {
+            ("Waiting", "hud-value warn")
+        } else if slam.is_tracking {
+            ("Tracking", "hud-value good")
+        } else if slam.current_keypoints.len() > 40 {
+            ("Searching", "hud-value warn")
+        } else {
+            ("Lost", "hud-value bad")
+        };
+
+        if let Some(el) = document.get_element_by_id("slam-status") {
+            el.set_text_content(Some(status_text));
+            let _ = el.set_attribute("class", status_class);
         }
-        if let Some(el) = document.get_element_by_id("pos-y") {
-            el.set_text_content(Some(&format!("{:.3}", slam.position_y)));
+        if let Some(el) = document.get_element_by_id("slam-keypoints") {
+            el.set_text_content(Some(&format!("{}", slam.current_keypoints.len())));
         }
-        if let Some(el) = document.get_element_by_id("pos-z") {
-            el.set_text_content(Some(&format!("{:.3}", slam.position_z)));
+        if let Some(el) = document.get_element_by_id("slam-matches") {
+            el.set_text_content(Some(&format!("{}", slam.current_matches.len())));
         }
-        if let Some(el) = document.get_element_by_id("speed-value") {
-            el.set_text_content(Some(&format!("{:.3} m/s", slam.speed)));
+        if let Some(el) = document.get_element_by_id("slam-quality") {
+            let pct = (slam.tracking_quality * 100.0).round() as i32;
+            el.set_text_content(Some(&format!("{}%", pct)));
+            let cls = if slam.tracking_quality >= 0.25 {
+                "hud-value good"
+            } else if slam.tracking_quality >= 0.12 {
+                "hud-value warn"
+            } else {
+                "hud-value bad"
+            };
+            let _ = el.set_attribute("class", cls);
         }
-        if let Some(el) = document.get_element_by_id("distance-value") {
-            el.set_text_content(Some(&format!("{:.3} m", slam.distance)));
+        if let Some(el) = document.get_element_by_id("slam-pos") {
+            el.set_text_content(Some(&format!(
+                "{:.2}, {:.2}",
+                slam.position_x, slam.position_y
+            )));
         }
-        if let Some(el) = document.get_element_by_id("landmarks-count") {
+        if let Some(el) = document.get_element_by_id("slam-distance") {
+            el.set_text_content(Some(&format!("{:.2} m", slam.distance)));
+        }
+        if let Some(el) = document.get_element_by_id("slam-landmarks") {
             el.set_text_content(Some(&format!("{}", slam.map_points.len())));
         }
     });
@@ -1127,6 +1336,8 @@ fn start_render_loop() {
     *g.borrow_mut() = Some(Closure::new(move || {
         render_accel_graph();
         render_gyro_graph();
+        render_slam_overlay();
+        render_slam_map();
         request_animation_frame(f.borrow().as_ref().unwrap());
     }));
 
@@ -1138,6 +1349,194 @@ fn request_animation_frame(f: &Closure<dyn FnMut()>) {
         .unwrap()
         .request_animation_frame(f.as_ref().unchecked_ref())
         .unwrap();
+}
+
+fn render_slam_overlay() {
+    let document = window().unwrap().document().unwrap();
+
+    let canvas: HtmlCanvasElement = match document.get_element_by_id("slam-overlay") {
+        Some(el) => el.unchecked_into(),
+        None => return,
+    };
+
+    let width = canvas.client_width() as u32;
+    let height = canvas.client_height() as u32;
+    if width == 0 || height == 0 {
+        return;
+    }
+
+    let dpr = window().unwrap().device_pixel_ratio();
+    canvas.set_width((width as f64 * dpr) as u32);
+    canvas.set_height((height as f64 * dpr) as u32);
+
+    let ctx: CanvasRenderingContext2d = match canvas.get_context("2d") {
+        Ok(Some(ctx)) => ctx.unchecked_into(),
+        _ => return,
+    };
+    let _ = ctx.scale(dpr, dpr);
+
+    let w = width as f64;
+    let h = height as f64;
+    ctx.clear_rect(0.0, 0.0, w, h);
+
+    STATE.with(|s| {
+        let state = s.borrow();
+        let slam = &state.visual_slam;
+        if !slam.initialized
+            || slam.frame_w == 0
+            || slam.frame_h == 0
+            || slam.video_w == 0
+            || slam.video_h == 0
+        {
+            return;
+        }
+
+        let vw = slam.video_w as f64;
+        let vh = slam.video_h as f64;
+
+        // object-fit: cover mapping
+        let scale = (w / vw).max(h / vh);
+        let offx = (w - vw * scale) / 2.0;
+        let offy = (h - vh * scale) / 2.0;
+
+        let fx = slam.frame_w as f64;
+        let fy = slam.frame_h as f64;
+
+        let map_pt = |px: f64, py: f64| -> (f64, f64) {
+            let vx = px * vw / fx;
+            let vy = py * vh / fy;
+            (vx * scale + offx, vy * scale + offy)
+        };
+
+        // Draw match vectors
+        ctx.set_line_width(1.0);
+        for (a, b, ham) in slam.current_matches.iter().take(40) {
+            let (x1, y1) = map_pt(a.0, a.1);
+            let (x2, y2) = map_pt(b.0, b.1);
+            let alpha = (1.0 - (*ham as f64 / 90.0)).clamp(0.15, 0.9);
+            ctx.set_stroke_style(&JsValue::from_str(&format!(
+                "rgba(78, 205, 196, {:.3})",
+                alpha
+            )));
+            ctx.begin_path();
+            ctx.move_to(x1, y1);
+            ctx.line_to(x2, y2);
+            ctx.stroke();
+        }
+
+        // Draw keypoints
+        let kp_color = if slam.is_tracking {
+            "rgba(0, 255, 255, 0.85)"
+        } else {
+            "rgba(255, 230, 109, 0.85)"
+        };
+        ctx.set_fill_style(&JsValue::from_str(kp_color));
+        for (x, y) in slam.current_keypoints.iter().take(260) {
+            let (cx, cy) = map_pt(*x, *y);
+            ctx.begin_path();
+            let _ = ctx.arc(cx, cy, 2.2, 0.0, std::f64::consts::PI * 2.0);
+            ctx.fill();
+        }
+    });
+}
+
+fn render_slam_map() {
+    let document = window().unwrap().document().unwrap();
+
+    let canvas: HtmlCanvasElement = match document.get_element_by_id("slam-map") {
+        Some(el) => el.unchecked_into(),
+        None => return,
+    };
+
+    let width = canvas.client_width() as u32;
+    let height = canvas.client_height() as u32;
+    if width == 0 || height == 0 {
+        return;
+    }
+
+    let dpr = window().unwrap().device_pixel_ratio();
+    canvas.set_width((width as f64 * dpr) as u32);
+    canvas.set_height((height as f64 * dpr) as u32);
+
+    let ctx: CanvasRenderingContext2d = match canvas.get_context("2d") {
+        Ok(Some(ctx)) => ctx.unchecked_into(),
+        _ => return,
+    };
+    let _ = ctx.scale(dpr, dpr);
+
+    let w = width as f64;
+    let h = height as f64;
+
+    ctx.set_fill_style(&JsValue::from_str("rgba(0, 0, 0, 0.22)"));
+    ctx.fill_rect(0.0, 0.0, w, h);
+
+    // Grid
+    ctx.set_stroke_style(&JsValue::from_str("rgba(0, 255, 255, 0.08)"));
+    ctx.set_line_width(1.0);
+    let grid = 40.0;
+    let mut x = 0.0;
+    while x <= w {
+        ctx.begin_path();
+        ctx.move_to(x, 0.0);
+        ctx.line_to(x, h);
+        ctx.stroke();
+        x += grid;
+    }
+    let mut y = 0.0;
+    while y <= h {
+        ctx.begin_path();
+        ctx.move_to(0.0, y);
+        ctx.line_to(w, y);
+        ctx.stroke();
+        y += grid;
+    }
+
+    STATE.with(|s| {
+        let state = s.borrow();
+        let slam = &state.visual_slam;
+        if slam.trajectory.is_empty() {
+            return;
+        }
+
+        let (cx, cy) = *slam.trajectory.last().unwrap_or(&(0.0, 0.0));
+        let scale = 120.0; // px per map-unit
+
+        let to_screen = |px: f64, py: f64| -> (f64, f64) {
+            (w / 2.0 + (px - cx) * scale, h / 2.0 + (py - cy) * scale)
+        };
+
+        // Landmarks
+        ctx.set_fill_style(&JsValue::from_str("rgba(255, 230, 109, 0.55)"));
+        for (lx, ly, _lz) in slam.map_points.iter().rev().take(600) {
+            let (sx, sy) = to_screen(*lx, *ly);
+            if sx < -10.0 || sx > w + 10.0 || sy < -10.0 || sy > h + 10.0 {
+                continue;
+            }
+            ctx.begin_path();
+            let _ = ctx.arc(sx, sy, 1.5, 0.0, std::f64::consts::PI * 2.0);
+            ctx.fill();
+        }
+
+        // Trajectory
+        ctx.set_stroke_style(&JsValue::from_str("rgba(0, 255, 255, 0.9)"));
+        ctx.set_line_width(2.0);
+        ctx.begin_path();
+        for (i, (tx, ty)) in slam.trajectory.iter().enumerate() {
+            let (sx, sy) = to_screen(*tx, *ty);
+            if i == 0 {
+                ctx.move_to(sx, sy);
+            } else {
+                ctx.line_to(sx, sy);
+            }
+        }
+        ctx.stroke();
+
+        // Current pose marker (center)
+        ctx.set_fill_style(&JsValue::from_str("rgba(78, 205, 196, 1.0)"));
+        ctx.begin_path();
+        let _ = ctx.arc(w / 2.0, h / 2.0, 4.0, 0.0, std::f64::consts::PI * 2.0);
+        ctx.fill();
+    });
 }
 
 fn render_accel_graph() {
