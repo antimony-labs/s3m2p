@@ -34,6 +34,7 @@
 pub mod buck;
 pub mod boost;
 pub mod components;
+pub mod control;
 pub mod ldo;
 pub mod magnetics;
 pub mod state_space;
