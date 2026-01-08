@@ -82,7 +82,7 @@ mod urls {
     pub const PLL: &str = "http://localhost:8090";
     pub const SENSORS: &str = "http://localhost:8083";
     pub const AUTOCRATE: &str = "http://localhost:8084";
-    pub const CRM: &str = "http://localhost:8085"; // Assuming generic port from serve-all or placeholder
+    pub const MCAD: &str = "http://localhost:8088";
     pub const POWER: &str = "http://localhost:8091";
 
     // Learn Bubbles
@@ -106,7 +106,7 @@ mod urls {
     pub const PLL: &str = "https://pll.too.foo";
     pub const SENSORS: &str = "https://sensors.too.foo";
     pub const AUTOCRATE: &str = "https://autocrate.too.foo";
-    pub const CRM: &str = "https://crm.too.foo";
+    pub const MCAD: &str = "https://mcad.too.foo";
     pub const POWER: &str = "https://power.too.foo";
 
     // Learn Bubbles - Currently pointing to 404 in prod, but let's keep them explicit
@@ -214,11 +214,11 @@ pub const TOOLS_BUBBLES: &[Bubble] = &[
         action: BubbleAction::DirectProject(AUTOCRATE), // was 404
     },
     Bubble {
-        id: "crm",
-        label: "CRM",
-        description: "Customer Relations",
-        icon: "assets/islands/crm.svg",
-        action: BubbleAction::DirectProject(CRM), // was 404
+        id: "mcad",
+        label: "MCAD",
+        description: "Mechanical CAD Modeler",
+        icon: "assets/islands/mcad.svg",
+        action: BubbleAction::DirectProject(MCAD),
     },
     Bubble {
         id: "power",
