@@ -76,7 +76,7 @@ pub use dna::cad::sketch::{
     SketchPoint, SketchPointId,
 };
 pub use dna::cad::constraints::{Constraint, GeometricConstraint, DimensionalConstraint};
-pub use dna::cad::solver::{ConstraintSolver, SolverConfig, SolverResult};
+pub use dna::cad::solver::{ConstraintSolver, SolverConfig, SolverResult, DofStatus, ConstraintAnalysis};
 pub use dna::cad::extrude::{extrude_sketch, ExtrudeParams, ExtrudeError};
 pub use dna::cad::revolve::{revolve_sketch, RevolveParams, RevolveAxis, RevolveError};
 pub use dna::cad::pattern::{linear_pattern, circular_pattern};
