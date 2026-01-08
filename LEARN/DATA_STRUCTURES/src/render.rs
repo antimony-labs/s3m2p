@@ -664,6 +664,53 @@ impl LessonRenderer {
             learn_core::demos::problems::Difficulty::Hard => "difficulty-hard",
         };
 
+        // Build examples section
+        let examples_section = if !problem.examples.is_empty() {
+            let examples_html: String = problem.examples.iter().enumerate().map(|(idx, ex)| {
+                let explanation_html = if let Some(expl) = ex.explanation {
+                    format!(r#"<p class="example-explanation">{}</p>"#, expl)
+                } else {
+                    String::new()
+                };
+                format!(
+                    r#"
+                    <div class="example-item">
+                        <div class="example-header">
+                            <span class="example-label">Example {}</span>
+                        </div>
+                        <div class="example-content">
+                            <div class="example-input">
+                                <strong>Input:</strong> <code>{}</code>
+                            </div>
+                            <div class="example-output">
+                                <strong>Output:</strong> <code>{}</code>
+                            </div>
+                            {}
+                        </div>
+                    </div>
+                    "#,
+                    idx + 1,
+                    ex.input,
+                    ex.output,
+                    explanation_html
+                )
+            }).collect::<Vec<_>>().join("");
+            
+            format!(
+                r#"
+                <section class="examples-section">
+                    <h3>Examples</h3>
+                    <div class="examples-list">
+                        {}
+                    </div>
+                </section>
+                "#,
+                examples_html
+            )
+        } else {
+            String::new()
+        };
+
         let html = format!(
             r#"
             <article class="lesson-view problem-view">
@@ -686,6 +733,9 @@ impl LessonRenderer {
                         <h3>Problem</h3>
                         <p>{description}</p>
                     </section>
+
+                    <!-- Examples -->
+                    {examples_section}
 
                     <!-- Interactive Visualization -->
                     <section class="visualization">
@@ -739,6 +789,7 @@ impl LessonRenderer {
             pattern = problem.pattern.label(),
             title = problem.title,
             description = problem.description,
+            examples_section = examples_section,
             hint = problem.hint,
             time = problem.time_complexity,
             space = problem.space_complexity,

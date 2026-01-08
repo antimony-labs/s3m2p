@@ -94,3 +94,7 @@ pub use balanced_tree_demo::{BalancedTreeDemo, AvlNode, AvlAnimation, RotationTy
 
 // Algorithm Problems exports
 pub use problems::{Problem, Pattern, Difficulty, PROBLEMS, ALL_PATTERNS};
+pub use problems::{TwoPointersDemo, TwoPointerVariant};
+pub use problems::{SlidingWindowDemo, SlidingWindowVariant};
+pub use problems::{BinarySearchDemo, BinarySearchVariant};
+pub use problems::{StackProblemsDemo, StackProblemVariant, StackItem};

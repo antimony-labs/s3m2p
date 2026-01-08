@@ -10,6 +10,19 @@ use wasm_bindgen::JsCast;
 use learn_web::Canvas;
 use learn_core::{Demo, demos::*};
 use learn_core::demos::pseudocode::Pseudocode;
+use learn_core::demos::problems::{
+    Pattern, PROBLEMS,
+    // Problem demos
+    TwoPointersDemo, TwoPointerVariant,
+    SlidingWindowDemo, SlidingWindowVariant,
+    BinarySearchDemo, BinarySearchVariant,
+    StackProblemsDemo, StackProblemVariant,
+    FastSlowDemo, FastSlowVariant,
+    TreeProblemsDemo, TreeProblemVariant,
+    HeapProblemsDemo, HeapProblemVariant,
+    GraphProblemsDemo, GraphProblemVariant,
+    DPProblemsDemo, DPProblemVariant,
+};
 use std::cell::RefCell;
 
 // ===============================================================================
@@ -71,6 +84,7 @@ fn get_current_theme_colors() -> &'static PseudocodeColors {
 // Thread-local state for active demo
 thread_local! {
     static ACTIVE_DEMO: RefCell<Option<ActiveDemo>> = const { RefCell::new(None) };
+    static ACTIVE_PROBLEM: RefCell<Option<ActiveProblemDemo>> = const { RefCell::new(None) };
     static ANIMATION_ID: RefCell<Option<i32>> = const { RefCell::new(None) };
 }
 
@@ -85,6 +99,18 @@ enum ActiveDemo {
     HashTable(HashTableDemo),
     Graph(GraphDemo),
     BalancedTree(BalancedTreeDemo),
+}
+
+enum ActiveProblemDemo {
+    TwoPointers(TwoPointersDemo),
+    SlidingWindow(SlidingWindowDemo),
+    BinarySearch(BinarySearchDemo),
+    StackProblems(StackProblemsDemo),
+    FastSlow(FastSlowDemo),
+    TreeProblems(TreeProblemsDemo),
+    HeapProblems(HeapProblemsDemo),
+    GraphProblems(GraphProblemsDemo),
+    DPProblems(DPProblemsDemo),
 }
 
 /// Dispatch to the appropriate demo based on lesson index
@@ -170,6 +196,10 @@ pub fn stop_demo() {
 
     ACTIVE_DEMO.with(|d| {
         *d.borrow_mut() = None;
+    });
+
+    ACTIVE_PROBLEM.with(|p| {
+        *p.borrow_mut() = None;
     });
 }
 
@@ -1289,4 +1319,978 @@ pub fn ds_demo_set_speed(speed: f32) {
             }
         }
     });
+}
+
+// ===============================================================================
+// PROBLEM DEMO FUNCTIONS
+// ===============================================================================
+
+/// Start a problem demo based on problem ID
+#[wasm_bindgen]
+pub fn start_problem_demo(problem_id: usize, canvas_id: &str) -> Result<(), JsValue> {
+    stop_demo();
+
+    let problem = PROBLEMS.get(problem_id).ok_or("Invalid problem ID")?;
+
+    let demo = match problem.pattern {
+        Pattern::TwoPointers => {
+            let variant = match problem_id {
+                0 => TwoPointerVariant::TwoSumSorted,
+                1 => TwoPointerVariant::RemoveDuplicates,
+                2 => TwoPointerVariant::ContainerWithMostWater,
+                3 => TwoPointerVariant::ThreeSum,
+                4 => TwoPointerVariant::TrappingRainWater,
+                _ => TwoPointerVariant::TwoSumSorted,
+            };
+            ActiveProblemDemo::TwoPointers(TwoPointersDemo::new(variant))
+        }
+        Pattern::SlidingWindow => {
+            let variant = match problem_id {
+                5 => SlidingWindowVariant::MaxSumSubarrayK,
+                6 => SlidingWindowVariant::LongestSubstringNoRepeat,
+                7 => SlidingWindowVariant::MinWindowSubstring,
+                8 => SlidingWindowVariant::PermutationInString,
+                9 => SlidingWindowVariant::SlidingWindowMaximum,
+                _ => SlidingWindowVariant::MaxSumSubarrayK,
+            };
+            ActiveProblemDemo::SlidingWindow(SlidingWindowDemo::new(variant))
+        }
+        Pattern::BinarySearch => {
+            let variant = match problem_id {
+                14 => BinarySearchVariant::BasicSearch,
+                15 => BinarySearchVariant::RotatedArray,
+                16 => BinarySearchVariant::FirstLastPosition,
+                17 => BinarySearchVariant::Search2DMatrix,
+                18 => BinarySearchVariant::MedianTwoArrays,
+                _ => BinarySearchVariant::BasicSearch,
+            };
+            ActiveProblemDemo::BinarySearch(BinarySearchDemo::new(variant))
+        }
+        Pattern::StackQueue => {
+            let variant = match problem_id {
+                19 => StackProblemVariant::ValidParentheses,
+                20 => StackProblemVariant::ReversePolishNotation,
+                21 => StackProblemVariant::DailyTemperatures,
+                22 => StackProblemVariant::QueueUsingStacks,
+                23 => StackProblemVariant::LargestRectangleHistogram,
+                _ => StackProblemVariant::ValidParentheses,
+            };
+            ActiveProblemDemo::StackProblems(StackProblemsDemo::new(variant))
+        }
+        Pattern::FastSlowPointers => {
+            let variant = match problem_id {
+                10 => FastSlowVariant::LinkedListCycle,
+                11 => FastSlowVariant::FindMiddle,
+                12 => FastSlowVariant::CycleStart,
+                13 => FastSlowVariant::HappyNumber,
+                _ => FastSlowVariant::LinkedListCycle,
+            };
+            ActiveProblemDemo::FastSlow(FastSlowDemo::new(variant))
+        }
+        Pattern::TreeTraversal => {
+            let variant = match problem_id {
+                24 => TreeProblemVariant::LevelOrderTraversal,
+                25 => TreeProblemVariant::MaxDepth,
+                26 => TreeProblemVariant::ValidateBST,
+                27 => TreeProblemVariant::LowestCommonAncestor,
+                28 => TreeProblemVariant::SerializeTree,
+                _ => TreeProblemVariant::LevelOrderTraversal,
+            };
+            ActiveProblemDemo::TreeProblems(TreeProblemsDemo::new(variant))
+        }
+        Pattern::HeapTopK => {
+            let variant = match problem_id {
+                29 => HeapProblemVariant::KthLargest,
+                30 => HeapProblemVariant::MergeKSortedLists,
+                31 => HeapProblemVariant::TopKFrequent,
+                32 => HeapProblemVariant::MedianFromStream,
+                _ => HeapProblemVariant::KthLargest,
+            };
+            ActiveProblemDemo::HeapProblems(HeapProblemsDemo::new(variant))
+        }
+        Pattern::GraphTraversal => {
+            let variant = match problem_id {
+                33 => GraphProblemVariant::NumberOfIslands,
+                34 => GraphProblemVariant::CloneGraph,
+                35 => GraphProblemVariant::CourseSchedule,
+                36 => GraphProblemVariant::WordLadder,
+                _ => GraphProblemVariant::NumberOfIslands,
+            };
+            ActiveProblemDemo::GraphProblems(GraphProblemsDemo::new(variant))
+        }
+        Pattern::DynamicProgramming => {
+            let variant = match problem_id {
+                37 => DPProblemVariant::ClimbingStairs,
+                38 => DPProblemVariant::LongestIncreasingSubsequence,
+                39 => DPProblemVariant::CoinChange,
+                _ => DPProblemVariant::ClimbingStairs,
+            };
+            ActiveProblemDemo::DPProblems(DPProblemsDemo::new(variant))
+        }
+    };
+
+    ACTIVE_PROBLEM.with(|p| {
+        *p.borrow_mut() = Some(demo);
+    });
+
+    // Initial render
+    render_problem_demo(canvas_id)?;
+
+    // Start animation loop for problems
+    start_problem_animation_loop(canvas_id.to_string());
+
+    Ok(())
+}
+
+fn start_problem_animation_loop(canvas_id: String) {
+    let callback = Closure::wrap(Box::new(move || {
+        ACTIVE_PROBLEM.with(|problem| {
+            if let Some(p) = problem.borrow_mut().as_mut() {
+                match p {
+                    ActiveProblemDemo::TwoPointers(demo) => demo.step(0.016),
+                    ActiveProblemDemo::SlidingWindow(demo) => demo.step(0.016),
+                    ActiveProblemDemo::BinarySearch(demo) => demo.step(0.016),
+                    ActiveProblemDemo::StackProblems(demo) => demo.step(0.016),
+                    ActiveProblemDemo::FastSlow(demo) => demo.step(0.016),
+                    ActiveProblemDemo::TreeProblems(demo) => demo.step(0.016),
+                    ActiveProblemDemo::HeapProblems(demo) => demo.step(0.016),
+                    ActiveProblemDemo::GraphProblems(demo) => demo.step(0.016),
+                    ActiveProblemDemo::DPProblems(demo) => demo.step(0.016),
+                }
+            }
+        });
+
+        let _ = render_problem_demo(&canvas_id);
+        start_problem_animation_loop(canvas_id.clone());
+    }) as Box<dyn FnMut()>);
+
+    if let Some(window) = web_sys::window() {
+        let id = window.request_animation_frame(callback.as_ref().unchecked_ref()).ok();
+        ANIMATION_ID.with(|anim_id| {
+            *anim_id.borrow_mut() = id;
+        });
+    }
+
+    callback.forget();
+}
+
+fn render_problem_demo(canvas_id: &str) -> Result<(), JsValue> {
+    let canvas = Canvas::new(canvas_id)?;
+
+    ACTIVE_PROBLEM.with(|problem| {
+        if let Some(p) = problem.borrow().as_ref() {
+            match p {
+                ActiveProblemDemo::TwoPointers(demo) => render_two_pointers(&canvas, demo),
+                ActiveProblemDemo::SlidingWindow(demo) => render_sliding_window(&canvas, demo),
+                ActiveProblemDemo::BinarySearch(demo) => render_binary_search(&canvas, demo),
+                ActiveProblemDemo::StackProblems(demo) => render_stack_problems(&canvas, demo),
+                ActiveProblemDemo::FastSlow(demo) => render_fast_slow(&canvas, demo),
+                ActiveProblemDemo::TreeProblems(demo) => render_tree_problems(&canvas, demo),
+                ActiveProblemDemo::HeapProblems(demo) => render_heap_problems(&canvas, demo),
+                ActiveProblemDemo::GraphProblems(demo) => render_graph_problems(&canvas, demo),
+                ActiveProblemDemo::DPProblems(demo) => render_dp_problems(&canvas, demo),
+            }
+        }
+    });
+
+    Ok(())
+}
+
+/// Step the problem algorithm forward
+#[wasm_bindgen]
+pub fn problem_step() {
+    ACTIVE_PROBLEM.with(|problem| {
+        if let Some(p) = problem.borrow_mut().as_mut() {
+            match p {
+                ActiveProblemDemo::TwoPointers(demo) => demo.step_algorithm(),
+                ActiveProblemDemo::SlidingWindow(demo) => demo.step_algorithm(),
+                ActiveProblemDemo::BinarySearch(demo) => demo.step_algorithm(),
+                ActiveProblemDemo::StackProblems(demo) => demo.step_algorithm(),
+                ActiveProblemDemo::FastSlow(demo) => demo.step_algorithm(),
+                ActiveProblemDemo::TreeProblems(demo) => demo.step_algorithm(),
+                ActiveProblemDemo::HeapProblems(demo) => demo.step_algorithm(),
+                ActiveProblemDemo::GraphProblems(demo) => demo.step_algorithm(),
+                ActiveProblemDemo::DPProblems(demo) => demo.step_algorithm(),
+            }
+        }
+    });
+}
+
+/// Reset the problem demo
+#[wasm_bindgen]
+pub fn problem_reset() {
+    ACTIVE_PROBLEM.with(|problem| {
+        if let Some(p) = problem.borrow_mut().as_mut() {
+            match p {
+                ActiveProblemDemo::TwoPointers(demo) => demo.reset(42),
+                ActiveProblemDemo::SlidingWindow(demo) => demo.reset(42),
+                ActiveProblemDemo::BinarySearch(demo) => demo.reset(42),
+                ActiveProblemDemo::StackProblems(demo) => demo.reset(42),
+                ActiveProblemDemo::FastSlow(demo) => demo.reset(42),
+                ActiveProblemDemo::TreeProblems(demo) => demo.reset(42),
+                ActiveProblemDemo::HeapProblems(demo) => demo.reset(42),
+                ActiveProblemDemo::GraphProblems(demo) => demo.reset(42),
+                ActiveProblemDemo::DPProblems(demo) => demo.reset(42),
+            }
+        }
+    });
+}
+
+// ===============================================================================
+// PROBLEM RENDERING FUNCTIONS
+// ===============================================================================
+
+fn render_two_pointers(canvas: &Canvas, demo: &TwoPointersDemo) {
+    let ctx = canvas.ctx();
+    let w = canvas.width();
+    let h = canvas.height();
+
+    canvas.clear("#0a0a12");
+
+    let box_w = 50.0;
+    let box_h = 40.0;
+    let start_x = (w - demo.arr.len() as f64 * box_w) / 2.0;
+    let y = h / 2.0 - 40.0;
+
+    // Draw array elements
+    for (i, &val) in demo.arr.iter().enumerate() {
+        let x = start_x + i as f64 * box_w;
+
+        // Background based on pointer positions
+        let fill = if demo.solution.map_or(false, |(l, r)| i == l || i == r) {
+            "rgba(0, 255, 170, 0.4)"
+        } else if i == demo.left || i == demo.right {
+            "rgba(0, 212, 170, 0.3)"
+        } else if demo.is_highlighted(i) {
+            "rgba(0, 212, 170, 0.1)"
+        } else {
+            "rgba(100, 100, 100, 0.05)"
+        };
+
+        ctx.set_fill_style(&JsValue::from_str(fill));
+        ctx.fill_rect(x, y, box_w - 4.0, box_h);
+
+        // Border
+        let stroke = if i == demo.left || i == demo.right {
+            "#00d4aa"
+        } else {
+            "#444444"
+        };
+        ctx.set_stroke_style(&JsValue::from_str(stroke));
+        ctx.set_line_width(2.0);
+        ctx.stroke_rect(x, y, box_w - 4.0, box_h);
+
+        // Value
+        ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+        ctx.set_font("bold 16px 'JetBrains Mono', monospace");
+        ctx.set_text_align("center");
+        ctx.fill_text(&val.to_string(), x + box_w / 2.0 - 2.0, y + box_h / 2.0 + 5.0).ok();
+
+        // Index label
+        ctx.set_fill_style(&JsValue::from_str("#666666"));
+        ctx.set_font("11px 'JetBrains Mono', monospace");
+        ctx.fill_text(&i.to_string(), x + box_w / 2.0 - 2.0, y + box_h + 15.0).ok();
+    }
+
+    // Draw pointer labels
+    if demo.left < demo.arr.len() {
+        let x = start_x + demo.left as f64 * box_w + box_w / 2.0 - 2.0;
+        ctx.set_fill_style(&JsValue::from_str("#00d4aa"));
+        ctx.set_font("bold 12px 'Inter', sans-serif");
+        ctx.fill_text("L", x, y - 10.0).ok();
+    }
+
+    if demo.right < demo.arr.len() {
+        let x = start_x + demo.right as f64 * box_w + box_w / 2.0 - 2.0;
+        ctx.set_fill_style(&JsValue::from_str("#ffc107"));
+        ctx.set_font("bold 12px 'Inter', sans-serif");
+        ctx.fill_text("R", x, y - 10.0).ok();
+    }
+
+    // Draw status message
+    draw_message(ctx, w, h, &demo.message);
+
+    // Draw pseudocode panel
+    draw_pseudocode(ctx, w, h, &demo.pseudocode);
+}
+
+fn render_sliding_window(canvas: &Canvas, demo: &SlidingWindowDemo) {
+    let ctx = canvas.ctx();
+    let w = canvas.width();
+    let h = canvas.height();
+
+    canvas.clear("#0a0a12");
+
+    // For string problems
+    if !demo.input_str.is_empty() {
+        let chars: Vec<char> = demo.input_str.chars().collect();
+        let box_w = 40.0;
+        let box_h = 40.0;
+        let start_x = (w - chars.len() as f64 * box_w) / 2.0;
+        let y = h / 2.0 - 40.0;
+
+        for (i, c) in chars.iter().enumerate() {
+            let x = start_x + i as f64 * box_w;
+
+            let fill = if demo.is_in_window(i) {
+                "rgba(0, 212, 170, 0.3)"
+            } else {
+                "rgba(100, 100, 100, 0.05)"
+            };
+
+            ctx.set_fill_style(&JsValue::from_str(fill));
+            ctx.fill_rect(x, y, box_w - 4.0, box_h);
+
+            ctx.set_stroke_style(&JsValue::from_str(if demo.is_in_window(i) { "#00d4aa" } else { "#444444" }));
+            ctx.set_line_width(2.0);
+            ctx.stroke_rect(x, y, box_w - 4.0, box_h);
+
+            ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+            ctx.set_font("bold 18px 'JetBrains Mono', monospace");
+            ctx.set_text_align("center");
+            ctx.fill_text(&c.to_string(), x + box_w / 2.0 - 2.0, y + box_h / 2.0 + 6.0).ok();
+
+            ctx.set_fill_style(&JsValue::from_str("#666666"));
+            ctx.set_font("11px 'JetBrains Mono', monospace");
+            ctx.fill_text(&i.to_string(), x + box_w / 2.0 - 2.0, y + box_h + 15.0).ok();
+        }
+    } else {
+        // For array problems
+        let box_w = 50.0;
+        let box_h = 40.0;
+        let start_x = (w - demo.arr.len() as f64 * box_w) / 2.0;
+        let y = h / 2.0 - 40.0;
+
+        for (i, &val) in demo.arr.iter().enumerate() {
+            let x = start_x + i as f64 * box_w;
+
+            let fill = if demo.is_in_window(i) {
+                "rgba(0, 212, 170, 0.3)"
+            } else {
+                "rgba(100, 100, 100, 0.05)"
+            };
+
+            ctx.set_fill_style(&JsValue::from_str(fill));
+            ctx.fill_rect(x, y, box_w - 4.0, box_h);
+
+            ctx.set_stroke_style(&JsValue::from_str(if demo.is_in_window(i) { "#00d4aa" } else { "#444444" }));
+            ctx.set_line_width(2.0);
+            ctx.stroke_rect(x, y, box_w - 4.0, box_h);
+
+            ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+            ctx.set_font("bold 16px 'JetBrains Mono', monospace");
+            ctx.set_text_align("center");
+            ctx.fill_text(&val.to_string(), x + box_w / 2.0 - 2.0, y + box_h / 2.0 + 5.0).ok();
+
+            ctx.set_fill_style(&JsValue::from_str("#666666"));
+            ctx.set_font("11px 'JetBrains Mono', monospace");
+            ctx.fill_text(&i.to_string(), x + box_w / 2.0 - 2.0, y + box_h + 15.0).ok();
+        }
+
+        // Draw window bracket
+        let (start, end) = demo.get_window();
+        if start <= end && end < demo.arr.len() {
+            let x1 = start_x + start as f64 * box_w - 5.0;
+            let x2 = start_x + (end + 1) as f64 * box_w - 5.0;
+            ctx.set_stroke_style(&JsValue::from_str("#00d4aa"));
+            ctx.set_line_width(3.0);
+            ctx.begin_path();
+            ctx.move_to(x1, y - 5.0);
+            ctx.line_to(x1, y - 15.0);
+            ctx.line_to(x2, y - 15.0);
+            ctx.line_to(x2, y - 5.0);
+            ctx.stroke();
+        }
+    }
+
+    // Show result info
+    ctx.set_fill_style(&JsValue::from_str("#00d4aa"));
+    ctx.set_font("14px 'JetBrains Mono', monospace");
+    ctx.set_text_align("center");
+    ctx.fill_text(&format!("Best: {}", demo.best_result), w / 2.0, h / 2.0 + 60.0).ok();
+
+    draw_message(ctx, w, h, &demo.message);
+    draw_pseudocode(ctx, w, h, &demo.pseudocode);
+}
+
+fn render_binary_search(canvas: &Canvas, demo: &BinarySearchDemo) {
+    let ctx = canvas.ctx();
+    let w = canvas.width();
+    let h = canvas.height();
+
+    canvas.clear("#0a0a12");
+
+    // Check if it's a 2D matrix problem
+    if !demo.matrix.is_empty() {
+        let cell_size = 45.0;
+        let rows = demo.matrix.len();
+        let cols = demo.matrix[0].len();
+        let start_x = (w - cols as f64 * cell_size) / 2.0;
+        let start_y = (h - rows as f64 * cell_size) / 2.0 - 30.0;
+
+        for (r, row) in demo.matrix.iter().enumerate() {
+            for (c, &val) in row.iter().enumerate() {
+                let x = start_x + c as f64 * cell_size;
+                let y = start_y + r as f64 * cell_size;
+
+                let (pos_r, pos_c) = demo.get_matrix_pos();
+                let fill = if r == pos_r && c == pos_c {
+                    "rgba(0, 212, 170, 0.4)"
+                } else if demo.found.is_some() && val == demo.target {
+                    "rgba(0, 255, 170, 0.4)"
+                } else {
+                    "rgba(100, 100, 100, 0.05)"
+                };
+
+                ctx.set_fill_style(&JsValue::from_str(fill));
+                ctx.fill_rect(x, y, cell_size - 4.0, cell_size - 4.0);
+
+                ctx.set_stroke_style(&JsValue::from_str(if r == pos_r && c == pos_c { "#00d4aa" } else { "#444444" }));
+                ctx.set_line_width(2.0);
+                ctx.stroke_rect(x, y, cell_size - 4.0, cell_size - 4.0);
+
+                ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+                ctx.set_font("bold 14px 'JetBrains Mono', monospace");
+                ctx.set_text_align("center");
+                ctx.fill_text(&val.to_string(), x + cell_size / 2.0 - 2.0, y + cell_size / 2.0 + 4.0).ok();
+            }
+        }
+    } else {
+        // 1D array binary search
+        let box_w = 50.0;
+        let box_h = 40.0;
+        let start_x = (w - demo.arr.len() as f64 * box_w) / 2.0;
+        let y = h / 2.0 - 40.0;
+
+        for (i, &val) in demo.arr.iter().enumerate() {
+            let x = start_x + i as f64 * box_w;
+
+            let fill = if demo.found == Some(i) {
+                "rgba(0, 255, 170, 0.4)"
+            } else if demo.is_mid(i) {
+                "rgba(255, 193, 7, 0.3)"
+            } else if demo.is_in_range(i) {
+                "rgba(0, 212, 170, 0.15)"
+            } else {
+                "rgba(100, 100, 100, 0.03)"
+            };
+
+            ctx.set_fill_style(&JsValue::from_str(fill));
+            ctx.fill_rect(x, y, box_w - 4.0, box_h);
+
+            let stroke = if demo.found == Some(i) {
+                "#00ffaa"
+            } else if demo.is_mid(i) {
+                "#ffc107"
+            } else if demo.is_in_range(i) {
+                "#00d4aa"
+            } else {
+                "#333333"
+            };
+            ctx.set_stroke_style(&JsValue::from_str(stroke));
+            ctx.set_line_width(2.0);
+            ctx.stroke_rect(x, y, box_w - 4.0, box_h);
+
+            ctx.set_fill_style(&JsValue::from_str(if demo.is_in_range(i) { "#ffffff" } else { "#666666" }));
+            ctx.set_font("bold 14px 'JetBrains Mono', monospace");
+            ctx.set_text_align("center");
+            ctx.fill_text(&val.to_string(), x + box_w / 2.0 - 2.0, y + box_h / 2.0 + 5.0).ok();
+
+            ctx.set_fill_style(&JsValue::from_str("#666666"));
+            ctx.set_font("11px 'JetBrains Mono', monospace");
+            ctx.fill_text(&i.to_string(), x + box_w / 2.0 - 2.0, y + box_h + 15.0).ok();
+        }
+
+        // Draw pointer labels
+        let (left, right, mid) = demo.get_bounds();
+        if left < demo.arr.len() {
+            let x = start_x + left as f64 * box_w + box_w / 2.0 - 2.0;
+            ctx.set_fill_style(&JsValue::from_str("#00d4aa"));
+            ctx.set_font("bold 11px 'Inter', sans-serif");
+            ctx.fill_text("L", x, y - 8.0).ok();
+        }
+        if right < demo.arr.len() {
+            let x = start_x + right as f64 * box_w + box_w / 2.0 - 2.0;
+            ctx.set_fill_style(&JsValue::from_str("#00d4aa"));
+            ctx.fill_text("R", x, y - 8.0).ok();
+        }
+        if mid < demo.arr.len() && !demo.complete {
+            let x = start_x + mid as f64 * box_w + box_w / 2.0 - 2.0;
+            ctx.set_fill_style(&JsValue::from_str("#ffc107"));
+            ctx.fill_text("M", x, y - 20.0).ok();
+        }
+    }
+
+    // Show target
+    ctx.set_fill_style(&JsValue::from_str("#00d4aa"));
+    ctx.set_font("14px 'JetBrains Mono', monospace");
+    ctx.set_text_align("center");
+    ctx.fill_text(&format!("Target: {}", demo.target), w / 2.0, h / 2.0 + 60.0).ok();
+
+    draw_message(ctx, w, h, &demo.message);
+    draw_pseudocode(ctx, w, h, &demo.pseudocode);
+}
+
+fn render_stack_problems(canvas: &Canvas, demo: &StackProblemsDemo) {
+    let ctx = canvas.ctx();
+    let w = canvas.width();
+    let h = canvas.height();
+
+    canvas.clear("#0a0a12");
+
+    // Draw input (string or array)
+    if !demo.input.is_empty() {
+        let chars: Vec<char> = demo.input.chars().filter(|c| !c.is_whitespace()).collect();
+        let box_w = 40.0;
+        let box_h = 40.0;
+        let start_x = (w - chars.len() as f64 * box_w) / 2.0;
+        let y = 60.0;
+
+        for (i, c) in chars.iter().enumerate() {
+            let x = start_x + i as f64 * box_w;
+
+            let fill = if i == demo.pos.saturating_sub(1) {
+                "rgba(0, 212, 170, 0.3)"
+            } else if i < demo.pos {
+                "rgba(100, 100, 100, 0.1)"
+            } else {
+                "rgba(100, 100, 100, 0.05)"
+            };
+
+            ctx.set_fill_style(&JsValue::from_str(fill));
+            ctx.fill_rect(x, y, box_w - 4.0, box_h);
+
+            ctx.set_stroke_style(&JsValue::from_str(if i == demo.pos.saturating_sub(1) { "#00d4aa" } else { "#444444" }));
+            ctx.set_line_width(2.0);
+            ctx.stroke_rect(x, y, box_w - 4.0, box_h);
+
+            ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+            ctx.set_font("bold 18px 'JetBrains Mono', monospace");
+            ctx.set_text_align("center");
+            ctx.fill_text(&c.to_string(), x + box_w / 2.0 - 2.0, y + box_h / 2.0 + 6.0).ok();
+        }
+    } else if !demo.arr.is_empty() {
+        // Array input (for temperatures, histogram)
+        let box_w = 45.0;
+        let box_h = 35.0;
+        let start_x = (w - demo.arr.len() as f64 * box_w) / 2.0;
+        let y = 50.0;
+
+        for (i, &val) in demo.arr.iter().enumerate() {
+            let x = start_x + i as f64 * box_w;
+
+            let fill = if i == demo.pos.saturating_sub(1) {
+                "rgba(0, 212, 170, 0.3)"
+            } else if demo.stack.iter().any(|s| s.index == i) {
+                "rgba(255, 193, 7, 0.2)"
+            } else {
+                "rgba(100, 100, 100, 0.05)"
+            };
+
+            ctx.set_fill_style(&JsValue::from_str(fill));
+            ctx.fill_rect(x, y, box_w - 4.0, box_h);
+
+            ctx.set_stroke_style(&JsValue::from_str(if i == demo.pos.saturating_sub(1) { "#00d4aa" } else { "#444444" }));
+            ctx.set_line_width(2.0);
+            ctx.stroke_rect(x, y, box_w - 4.0, box_h);
+
+            ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+            ctx.set_font("bold 14px 'JetBrains Mono', monospace");
+            ctx.set_text_align("center");
+            ctx.fill_text(&val.to_string(), x + box_w / 2.0 - 2.0, y + box_h / 2.0 + 4.0).ok();
+
+            // Show result below if available
+            if !demo.result.is_empty() && i < demo.result.len() && demo.result[i] > 0 {
+                ctx.set_fill_style(&JsValue::from_str("#00d4aa"));
+                ctx.set_font("11px 'JetBrains Mono', monospace");
+                ctx.fill_text(&demo.result[i].to_string(), x + box_w / 2.0 - 2.0, y + box_h + 12.0).ok();
+            }
+        }
+    }
+
+    // Draw stack
+    let stack_x = w - 120.0;
+    let stack_base_y = h - 80.0;
+    let item_h = 30.0;
+
+    ctx.set_fill_style(&JsValue::from_str("#333344"));
+    ctx.set_font("12px 'Inter', sans-serif");
+    ctx.set_text_align("center");
+    ctx.fill_text("Stack", stack_x + 40.0, stack_base_y + 25.0).ok();
+
+    // Stack frame
+    ctx.set_stroke_style(&JsValue::from_str("#444444"));
+    ctx.set_line_width(2.0);
+    ctx.begin_path();
+    ctx.move_to(stack_x, stack_base_y);
+    ctx.line_to(stack_x, stack_base_y - (demo.stack.len() as f64 + 1.0) * item_h);
+    ctx.move_to(stack_x + 80.0, stack_base_y);
+    ctx.line_to(stack_x + 80.0, stack_base_y - (demo.stack.len() as f64 + 1.0) * item_h);
+    ctx.move_to(stack_x - 5.0, stack_base_y);
+    ctx.line_to(stack_x + 85.0, stack_base_y);
+    ctx.stroke();
+
+    // Stack items
+    for (i, item) in demo.stack.iter().enumerate() {
+        let y = stack_base_y - (i + 1) as f64 * item_h;
+
+        ctx.set_fill_style(&JsValue::from_str("rgba(0, 212, 170, 0.2)"));
+        ctx.fill_rect(stack_x + 2.0, y, 76.0, item_h - 4.0);
+
+        ctx.set_stroke_style(&JsValue::from_str("#00d4aa"));
+        ctx.stroke_rect(stack_x + 2.0, y, 76.0, item_h - 4.0);
+
+        ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+        ctx.set_font("bold 14px 'JetBrains Mono', monospace");
+        let text = if let Some(c) = item.char_val {
+            c.to_string()
+        } else {
+            item.value.to_string()
+        };
+        ctx.fill_text(&text, stack_x + 40.0, y + item_h / 2.0 + 2.0).ok();
+    }
+
+    draw_message(ctx, w, h, &demo.message);
+    draw_pseudocode(ctx, w, h, &demo.pseudocode);
+}
+
+fn render_fast_slow(canvas: &Canvas, demo: &FastSlowDemo) {
+    let ctx = canvas.ctx();
+    let w = canvas.width();
+    let h = canvas.height();
+
+    canvas.clear("#0a0a12");
+
+    let (slow, fast) = demo.get_pointers();
+
+    // Draw linked list nodes
+    if !demo.nodes.is_empty() {
+        let node_r = 25.0;
+        let spacing = 80.0;
+        let start_x = 80.0;
+        let y = h / 2.0 - 40.0;
+
+        for (i, node) in demo.nodes.iter().enumerate() {
+            let x = start_x + i as f64 * spacing;
+
+            // Node circle
+            let fill = if i == slow && i == fast {
+                "rgba(255, 215, 0, 0.4)" // Gold when both
+            } else if i == slow {
+                "rgba(0, 255, 170, 0.4)" // Green for slow
+            } else if i == fast {
+                "rgba(255, 100, 100, 0.4)" // Red for fast
+            } else {
+                "rgba(60, 60, 80, 0.6)"
+            };
+
+            ctx.begin_path();
+            ctx.arc(x, y, node_r, 0.0, std::f64::consts::PI * 2.0).ok();
+            ctx.set_fill_style(&JsValue::from_str(fill));
+            ctx.fill();
+            ctx.set_stroke_style(&JsValue::from_str("#00d4aa"));
+            ctx.set_line_width(2.0);
+            ctx.stroke();
+
+            // Node value
+            ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+            ctx.set_font("bold 16px 'JetBrains Mono', monospace");
+            ctx.set_text_align("center");
+            ctx.fill_text(&node.value.to_string(), x, y + 5.0).ok();
+
+            // Arrow to next
+            if let Some(next) = node.next {
+                let next_x = if next > i {
+                    start_x + next as f64 * spacing - node_r
+                } else {
+                    start_x + next as f64 * spacing
+                };
+
+                if next > i {
+                    ctx.begin_path();
+                    ctx.move_to(x + node_r, y);
+                    ctx.line_to(next_x - 5.0, y);
+                    ctx.set_stroke_style(&JsValue::from_str("#666688"));
+                    ctx.stroke();
+                } else {
+                    ctx.begin_path();
+                    ctx.move_to(x + node_r, y);
+                    ctx.quadratic_curve_to(x + 40.0, y + 60.0, next_x, y + node_r);
+                    ctx.set_stroke_style(&JsValue::from_str("#ff6b6b"));
+                    ctx.stroke();
+                }
+            }
+        }
+
+        ctx.set_font("12px 'JetBrains Mono', monospace");
+        ctx.set_fill_style(&JsValue::from_str("#00d4aa"));
+        ctx.fill_text("slow", start_x + slow as f64 * spacing, y - 40.0).ok();
+        ctx.set_fill_style(&JsValue::from_str("#ff6b6b"));
+        ctx.fill_text("fast", start_x + fast as f64 * spacing, y - 55.0).ok();
+    } else {
+        ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+        ctx.set_font("24px 'JetBrains Mono', monospace");
+        ctx.set_text_align("center");
+        ctx.fill_text(&format!("slow = {}", demo.slow_num), w / 3.0, h / 2.0).ok();
+        ctx.fill_text(&format!("fast = {}", demo.fast_num), 2.0 * w / 3.0, h / 2.0).ok();
+    }
+
+    draw_message(ctx, w, h, &demo.message);
+    draw_pseudocode(ctx, w, h, &demo.pseudocode);
+}
+
+fn render_tree_problems(canvas: &Canvas, demo: &TreeProblemsDemo) {
+    let ctx = canvas.ctx();
+    let w = canvas.width();
+    let h = canvas.height();
+
+    canvas.clear("#0a0a12");
+
+    let nodes = demo.get_nodes();
+    let node_r = 22.0_f64;
+    let tree_h = h * 0.6;
+    let tree_top = 60.0_f64;
+
+    ctx.set_stroke_style(&JsValue::from_str("#444466"));
+    ctx.set_line_width(2.0);
+    for node in nodes {
+        let x = f64::from(node.x) * w;
+        let y = tree_top + f64::from(node.y) * tree_h;
+
+        if let Some(left_idx) = node.left {
+            if let Some(left) = nodes.get(left_idx) {
+                ctx.begin_path();
+                ctx.move_to(x, y + node_r);
+                ctx.line_to(f64::from(left.x) * w, tree_top + f64::from(left.y) * tree_h - node_r);
+                ctx.stroke();
+            }
+        }
+        if let Some(right_idx) = node.right {
+            if let Some(right) = nodes.get(right_idx) {
+                ctx.begin_path();
+                ctx.move_to(x, y + node_r);
+                ctx.line_to(f64::from(right.x) * w, tree_top + f64::from(right.y) * tree_h - node_r);
+                ctx.stroke();
+            }
+        }
+    }
+
+    for (i, node) in nodes.iter().enumerate() {
+        let x = f64::from(node.x) * w;
+        let y = tree_top + f64::from(node.y) * tree_h;
+
+        let fill = if demo.current_node == Some(i) {
+            "rgba(0, 255, 170, 0.5)"
+        } else if demo.visited.get(i).copied().unwrap_or(false) {
+            "rgba(100, 100, 150, 0.5)"
+        } else {
+            "rgba(60, 60, 80, 0.6)"
+        };
+
+        ctx.begin_path();
+        ctx.arc(x, y, node_r, 0.0, std::f64::consts::PI * 2.0).ok();
+        ctx.set_fill_style(&JsValue::from_str(fill));
+        ctx.fill();
+        ctx.set_stroke_style(&JsValue::from_str("#00d4aa"));
+        ctx.stroke();
+
+        ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+        ctx.set_font("bold 14px 'JetBrains Mono', monospace");
+        ctx.set_text_align("center");
+        ctx.fill_text(&node.value.to_string(), x, y + 5.0).ok();
+    }
+
+    if !demo.levels.is_empty() {
+        ctx.set_fill_style(&JsValue::from_str("#888899"));
+        ctx.set_font("12px 'JetBrains Mono', monospace");
+        ctx.set_text_align("left");
+        ctx.fill_text(&format!("Levels: {:?}", demo.levels), 20.0, h - 60.0).ok();
+    }
+
+    draw_message(ctx, w, h, &demo.message);
+    draw_pseudocode(ctx, w, h, &demo.pseudocode);
+}
+
+fn render_heap_problems(canvas: &Canvas, demo: &HeapProblemsDemo) {
+    let ctx = canvas.ctx();
+    let w = canvas.width();
+    let h = canvas.height();
+
+    canvas.clear("#0a0a12");
+
+    let box_w = 45.0;
+    let box_h = 35.0;
+    let start_x = 50.0;
+    let y = 80.0;
+
+    ctx.set_fill_style(&JsValue::from_str("#888899"));
+    ctx.set_font("12px 'JetBrains Mono', monospace");
+    ctx.set_text_align("left");
+    ctx.fill_text("Input:", 10.0, y + box_h / 2.0).ok();
+
+    for (i, &val) in demo.arr.iter().enumerate() {
+        let x = start_x + i as f64 * box_w;
+        let fill = if i == demo.pos.saturating_sub(1) {
+            "rgba(0, 255, 170, 0.3)"
+        } else if i < demo.pos {
+            "rgba(100, 100, 130, 0.3)"
+        } else {
+            "rgba(40, 40, 60, 0.6)"
+        };
+
+        ctx.set_fill_style(&JsValue::from_str(fill));
+        ctx.fill_rect(x, y, box_w - 4.0, box_h);
+        ctx.set_stroke_style(&JsValue::from_str("#444466"));
+        ctx.stroke_rect(x, y, box_w - 4.0, box_h);
+
+        ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+        ctx.set_font("14px 'JetBrains Mono', monospace");
+        ctx.set_text_align("center");
+        ctx.fill_text(&val.to_string(), x + box_w / 2.0 - 2.0, y + box_h / 2.0 + 5.0).ok();
+    }
+
+    let heap_y = 180.0;
+    ctx.set_fill_style(&JsValue::from_str("#888899"));
+    ctx.set_font("12px 'JetBrains Mono', monospace");
+    ctx.set_text_align("left");
+    ctx.fill_text("Min Heap:", 10.0, heap_y + 20.0).ok();
+
+    let heap = demo.get_heap();
+    for (i, &val) in heap.iter().enumerate() {
+        let x = start_x + i as f64 * box_w;
+
+        ctx.set_fill_style(&JsValue::from_str("rgba(0, 212, 170, 0.2)"));
+        ctx.fill_rect(x, heap_y, box_w - 4.0, box_h);
+        ctx.set_stroke_style(&JsValue::from_str("#00d4aa"));
+        ctx.stroke_rect(x, heap_y, box_w - 4.0, box_h);
+
+        ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+        ctx.set_font("14px 'JetBrains Mono', monospace");
+        ctx.set_text_align("center");
+        let text = if val == i32::MAX { "inf".to_string() } else { val.to_string() };
+        ctx.fill_text(&text, x + box_w / 2.0 - 2.0, heap_y + box_h / 2.0 + 5.0).ok();
+    }
+
+    draw_message(ctx, w, h, &demo.message);
+    draw_pseudocode(ctx, w, h, &demo.pseudocode);
+}
+
+fn render_graph_problems(canvas: &Canvas, demo: &GraphProblemsDemo) {
+    use learn_core::demos::problems::Cell;
+
+    let ctx = canvas.ctx();
+    let w = canvas.width();
+    let h = canvas.height();
+
+    canvas.clear("#0a0a12");
+
+    let grid = demo.get_grid();
+
+    if !grid.is_empty() {
+        let cell_size = 50.0;
+        let start_x = (w - demo.cols as f64 * cell_size) / 2.0;
+        let start_y = 80.0;
+
+        for (r, row) in grid.iter().enumerate() {
+            for (c, &cell) in row.iter().enumerate() {
+                let x = start_x + c as f64 * cell_size;
+                let y = start_y + r as f64 * cell_size;
+
+                let fill = match cell {
+                    Cell::Water => "rgba(30, 60, 120, 0.6)",
+                    Cell::Land => "rgba(60, 180, 60, 0.6)",
+                    Cell::Visited => "rgba(100, 100, 130, 0.5)",
+                };
+
+                ctx.set_fill_style(&JsValue::from_str(fill));
+                ctx.fill_rect(x, y, cell_size - 2.0, cell_size - 2.0);
+
+                if demo.current_pos == Some((r, c)) {
+                    ctx.set_stroke_style(&JsValue::from_str("#00d4aa"));
+                    ctx.set_line_width(3.0);
+                    ctx.stroke_rect(x, y, cell_size - 2.0, cell_size - 2.0);
+                }
+            }
+        }
+
+        ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+        ctx.set_font("16px 'JetBrains Mono', monospace");
+        ctx.set_text_align("left");
+        ctx.fill_text(&format!("Islands found: {}", demo.island_count), 20.0, 50.0).ok();
+    } else if !demo.word_path.is_empty() {
+        ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+        ctx.set_font("20px 'JetBrains Mono', monospace");
+        ctx.set_text_align("center");
+        ctx.fill_text(&format!("Path: {}", demo.word_path.join(" -> ")), w / 2.0, h / 2.0).ok();
+    }
+
+    draw_message(ctx, w, h, &demo.message);
+    draw_pseudocode(ctx, w, h, &demo.pseudocode);
+}
+
+fn render_dp_problems(canvas: &Canvas, demo: &DPProblemsDemo) {
+    let ctx = canvas.ctx();
+    let w = canvas.width();
+    let h = canvas.height();
+
+    canvas.clear("#0a0a12");
+
+    let dp = demo.get_dp();
+    let box_w = 50.0;
+    let box_h = 40.0;
+    let start_x = (w - dp.len().min(12) as f64 * box_w) / 2.0;
+    let y = h / 2.0 - 60.0;
+
+    ctx.set_fill_style(&JsValue::from_str("#888899"));
+    ctx.set_font("12px 'JetBrains Mono', monospace");
+    ctx.set_text_align("left");
+    ctx.fill_text("DP Table:", 20.0, y - 20.0).ok();
+
+    for (i, &val) in dp.iter().take(12).enumerate() {
+        let x = start_x + i as f64 * box_w;
+
+        let fill = if demo.highlights.contains(&i) {
+            "rgba(0, 255, 170, 0.3)"
+        } else {
+            "rgba(40, 40, 60, 0.6)"
+        };
+
+        ctx.set_fill_style(&JsValue::from_str(fill));
+        ctx.fill_rect(x, y, box_w - 4.0, box_h);
+        ctx.set_stroke_style(&JsValue::from_str("#444466"));
+        ctx.stroke_rect(x, y, box_w - 4.0, box_h);
+
+        ctx.set_fill_style(&JsValue::from_str("#666688"));
+        ctx.set_font("10px 'JetBrains Mono', monospace");
+        ctx.set_text_align("center");
+        ctx.fill_text(&i.to_string(), x + box_w / 2.0 - 2.0, y - 5.0).ok();
+
+        ctx.set_fill_style(&JsValue::from_str("#ffffff"));
+        ctx.set_font("14px 'JetBrains Mono', monospace");
+        let text = if val == i32::MAX { "inf".to_string() } else { val.to_string() };
+        ctx.fill_text(&text, x + box_w / 2.0 - 2.0, y + box_h / 2.0 + 5.0).ok();
+    }
+
+    if !demo.nums.is_empty() {
+        let nums_y = y + 80.0;
+        ctx.set_fill_style(&JsValue::from_str("#888899"));
+        ctx.set_font("12px 'JetBrains Mono', monospace");
+        ctx.set_text_align("left");
+        ctx.fill_text("Array:", 20.0, nums_y - 5.0).ok();
+
+        for (i, &val) in demo.nums.iter().enumerate() {
+            let x = start_x + i as f64 * box_w;
+
+            ctx.set_fill_style(&JsValue::from_str("rgba(60, 60, 100, 0.4)"));
+            ctx.fill_rect(x, nums_y, box_w - 4.0, box_h - 5.0);
+
+            ctx.set_fill_style(&JsValue::from_str("#aaaacc"));
+            ctx.set_font("12px 'JetBrains Mono', monospace");
+            ctx.set_text_align("center");
+            ctx.fill_text(&val.to_string(), x + box_w / 2.0 - 2.0, nums_y + box_h / 2.0).ok();
+        }
+    }
+
+    draw_message(ctx, w, h, &demo.message);
+    draw_pseudocode(ctx, w, h, &demo.pseudocode);
 }

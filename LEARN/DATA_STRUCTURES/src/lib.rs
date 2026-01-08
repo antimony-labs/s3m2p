@@ -416,6 +416,101 @@ pub fn go_to_problem(idx: usize) {
     if let Ok(renderer) = LessonRenderer::new("app") {
         if let Some(problem) = PROBLEMS.get(idx) {
             let _ = renderer.render_problem(problem, PROBLEMS.len());
+
+            // Start the problem demo after a short delay (to let DOM render)
+            let closure = wasm_bindgen::closure::Closure::once_into_js(move || {
+                let result = demo_runner::start_problem_demo(idx, "problem-canvas");
+                if let Err(e) = result {
+                    web_sys::console::error_1(&e);
+                }
+                // Set up problem controls
+                setup_problem_controls();
+            });
+            let _ = web_sys::window()
+                .unwrap()
+                .set_timeout_with_callback_and_timeout_and_arguments_0(
+                    closure.as_ref().unchecked_ref(),
+                    50,
+                );
         }
     }
+}
+
+/// Set up event listeners for problem controls
+fn setup_problem_controls() {
+    let document = match web_sys::window().and_then(|w| w.document()) {
+        Some(d) => d,
+        None => return,
+    };
+
+    // Step button
+    if let Some(el) = document.get_element_by_id("step-btn") {
+        let closure = Closure::wrap(Box::new(|| {
+            demo_runner::problem_step();
+        }) as Box<dyn Fn()>);
+        let _ = el.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref());
+        closure.forget();
+    }
+
+    // Reset button
+    if let Some(el) = document.get_element_by_id("reset-btn") {
+        let closure = Closure::wrap(Box::new(|| {
+            demo_runner::problem_reset();
+        }) as Box<dyn Fn()>);
+        let _ = el.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref());
+        closure.forget();
+    }
+
+    // Play button - auto-step every 500ms
+    if let Some(el) = document.get_element_by_id("play-btn") {
+        let closure = Closure::wrap(Box::new(|| {
+            // Toggle auto-play
+            auto_play_toggle();
+        }) as Box<dyn Fn()>);
+        let _ = el.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref());
+        closure.forget();
+    }
+}
+
+thread_local! {
+    static AUTO_PLAY_INTERVAL: RefCell<Option<i32>> = const { RefCell::new(None) };
+}
+
+fn auto_play_toggle() {
+    AUTO_PLAY_INTERVAL.with(|interval| {
+        let mut interval_ref = interval.borrow_mut();
+        if let Some(id) = interval_ref.take() {
+            // Stop auto-play
+            if let Some(window) = web_sys::window() {
+                window.clear_interval_with_handle(id);
+            }
+            // Update button text
+            if let Some(document) = web_sys::window().and_then(|w| w.document()) {
+                if let Some(btn) = document.get_element_by_id("play-btn") {
+                    btn.set_text_content(Some("Play"));
+                }
+            }
+        } else {
+            // Start auto-play
+            let callback = Closure::wrap(Box::new(|| {
+                demo_runner::problem_step();
+            }) as Box<dyn Fn()>);
+
+            if let Some(window) = web_sys::window() {
+                let id = window.set_interval_with_callback_and_timeout_and_arguments_0(
+                    callback.as_ref().unchecked_ref(),
+                    500,
+                ).ok();
+                *interval_ref = id;
+            }
+            callback.forget();
+
+            // Update button text
+            if let Some(document) = web_sys::window().and_then(|w| w.document()) {
+                if let Some(btn) = document.get_element_by_id("play-btn") {
+                    btn.set_text_content(Some("Pause"));
+                }
+            }
+        }
+    });
 }
