@@ -27,6 +27,22 @@ struct AccelData {
 
 #[derive(Default)]
 #[allow(dead_code)]
+struct GyroData {
+    x: f64,
+    y: f64,
+    z: f64,
+}
+
+#[derive(Default)]
+#[allow(dead_code)]
+struct MagData {
+    x: f64,
+    y: f64,
+    z: f64,
+}
+
+#[derive(Default)]
+#[allow(dead_code)]
 struct OrientData {
     alpha: f64,
     beta: f64,
@@ -37,8 +53,15 @@ struct SensorState {
     accel_history_x: Vec<f64>,
     accel_history_y: Vec<f64>,
     accel_history_z: Vec<f64>,
+    gyro_history_x: Vec<f64>,
+    gyro_history_y: Vec<f64>,
+    gyro_history_z: Vec<f64>,
     current_accel: AccelData,
+    current_gyro: GyroData,
+    current_mag: MagData,
     current_orient: OrientData,
+    ambient_light: f64,
+    proximity: Option<f64>,
     sensors_available: bool,
     camera_available: bool,
 }
@@ -49,8 +72,15 @@ impl SensorState {
             accel_history_x: vec![0.0; GRAPH_HISTORY_SIZE],
             accel_history_y: vec![0.0; GRAPH_HISTORY_SIZE],
             accel_history_z: vec![0.0; GRAPH_HISTORY_SIZE],
+            gyro_history_x: vec![0.0; GRAPH_HISTORY_SIZE],
+            gyro_history_y: vec![0.0; GRAPH_HISTORY_SIZE],
+            gyro_history_z: vec![0.0; GRAPH_HISTORY_SIZE],
             current_accel: AccelData::default(),
+            current_gyro: GyroData::default(),
+            current_mag: MagData::default(),
             current_orient: OrientData::default(),
+            ambient_light: 0.0,
+            proximity: None,
             sensors_available: false,
             camera_available: false,
         }
@@ -67,6 +97,19 @@ impl SensorState {
 
         self.accel_history_z.remove(0);
         self.accel_history_z.push(z);
+    }
+
+    fn push_gyro(&mut self, x: f64, y: f64, z: f64) {
+        self.current_gyro = GyroData { x, y, z };
+
+        self.gyro_history_x.remove(0);
+        self.gyro_history_x.push(x);
+
+        self.gyro_history_y.remove(0);
+        self.gyro_history_y.push(y);
+
+        self.gyro_history_z.remove(0);
+        self.gyro_history_z.push(z);
     }
 }
 
@@ -204,7 +247,7 @@ fn hide_sensor_permission_button() {
 fn setup_motion_listeners() {
     let window = window().expect("no window");
 
-    // Device Motion (accelerometer) - use JsValue since typed accessors aren't fully available
+    // Device Motion (accelerometer, gyroscope, magnetometer) - use JsValue since typed accessors aren't fully available
     let motion_closure = Closure::wrap(Box::new(move |event: JsValue| {
         // Access accelerationIncludingGravity via js_sys::Reflect
         if let Ok(accel) = js_sys::Reflect::get(&event, &"accelerationIncludingGravity".into()) {
@@ -231,11 +274,67 @@ fn setup_motion_listeners() {
                 update_accel_display(x, y, z);
             }
         }
+
+        // Extract gyroscope data from rotationRate
+        if let Ok(rotation_rate) = js_sys::Reflect::get(&event, &"rotationRate".into()) {
+            if !rotation_rate.is_null() && !rotation_rate.is_undefined() {
+                let x = js_sys::Reflect::get(&rotation_rate, &"alpha".into())
+                    .ok()
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(0.0);
+                let y = js_sys::Reflect::get(&rotation_rate, &"beta".into())
+                    .ok()
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(0.0);
+                let z = js_sys::Reflect::get(&rotation_rate, &"gamma".into())
+                    .ok()
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(0.0);
+
+                STATE.with(|s| {
+                    let mut state = s.borrow_mut();
+                    state.push_gyro(x, y, z);
+                });
+
+                update_gyro_display(x, y, z);
+            }
+        }
+
+        // Extract magnetometer data
+        if let Ok(magnetic_field) = js_sys::Reflect::get(&event, &"magneticField".into()) {
+            if !magnetic_field.is_null() && !magnetic_field.is_undefined() {
+                let x = js_sys::Reflect::get(&magnetic_field, &"x".into())
+                    .ok()
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(0.0);
+                let y = js_sys::Reflect::get(&magnetic_field, &"y".into())
+                    .ok()
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(0.0);
+                let z = js_sys::Reflect::get(&magnetic_field, &"z".into())
+                    .ok()
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(0.0);
+
+                STATE.with(|s| {
+                    let mut state = s.borrow_mut();
+                    state.current_mag = MagData { x, y, z };
+                });
+
+                update_magnetometer_display(x, y, z);
+            }
+        }
     }) as Box<dyn Fn(JsValue)>);
 
     let _ = window
         .add_event_listener_with_callback("devicemotion", motion_closure.as_ref().unchecked_ref());
     motion_closure.forget();
+
+    // Try to set up Ambient Light Sensor (if available)
+    setup_ambient_light_sensor();
+
+    // Try to set up Proximity Sensor (if available)
+    setup_proximity_sensor();
 
     // Device Orientation
     let orientation_closure = Closure::wrap(Box::new(move |event: DeviceOrientationEvent| {
@@ -370,6 +469,206 @@ fn update_orientation_display(alpha: f64, beta: f64, gamma: f64) {
     }
 }
 
+fn update_gyro_display(x: f64, y: f64, z: f64) {
+    let document = window().unwrap().document().unwrap();
+
+    if let Some(el) = document.get_element_by_id("gyro-x") {
+        el.set_text_content(Some(&format!("{:.2}", x)));
+    }
+    if let Some(el) = document.get_element_by_id("gyro-y") {
+        el.set_text_content(Some(&format!("{:.2}", y)));
+    }
+    if let Some(el) = document.get_element_by_id("gyro-z") {
+        el.set_text_content(Some(&format!("{:.2}", z)));
+    }
+}
+
+fn update_magnetometer_display(x: f64, y: f64, z: f64) {
+    let document = window().unwrap().document().unwrap();
+
+    if let Some(el) = document.get_element_by_id("mag-x") {
+        el.set_text_content(Some(&format!("{:.2}", x)));
+    }
+    if let Some(el) = document.get_element_by_id("mag-y") {
+        el.set_text_content(Some(&format!("{:.2}", y)));
+    }
+    if let Some(el) = document.get_element_by_id("mag-z") {
+        el.set_text_content(Some(&format!("{:.2}", z)));
+    }
+
+    // Calculate heading (compass direction)
+    let heading = y.atan2(x) * 180.0 / std::f64::consts::PI;
+    let heading_normalized = if heading < 0.0 {
+        heading + 360.0
+    } else {
+        heading
+    };
+
+    if let Some(el) = document.get_element_by_id("mag-heading") {
+        el.set_text_content(Some(&format!("{:.0}°", heading_normalized)));
+    }
+}
+
+fn setup_ambient_light_sensor() {
+    let window = window().expect("no window");
+
+    // Check if AmbientLightSensor is available (Generic Sensor API)
+    if let Ok(ambient_light_sensor) = js_sys::Reflect::get(&window, &"AmbientLightSensor".into()) {
+        if !ambient_light_sensor.is_undefined() {
+            // Try to create sensor instance
+            if let Ok(sensor) = js_sys::Reflect::construct(
+                &ambient_light_sensor.unchecked_ref(),
+                &js_sys::Array::new(),
+            ) {
+                let sensor_obj = sensor;
+
+                // Set up reading event
+                let reading_closure = Closure::wrap(Box::new(move |event: JsValue| {
+                    if let Ok(illuminance) = js_sys::Reflect::get(&event, &"illuminance".into()) {
+                        if let Some(lux) = illuminance.as_f64() {
+                            STATE.with(|s| {
+                                s.borrow_mut().ambient_light = lux;
+                            });
+
+                            update_ambient_light_display(lux);
+                        }
+                    }
+                }) as Box<dyn Fn(JsValue)>);
+
+                if let Ok(add_listener_val) = js_sys::Reflect::get(&sensor_obj, &"addEventListener".into()) {
+                    if add_listener_val.is_function() {
+                        let add_listener: js_sys::Function = add_listener_val.unchecked_into();
+                        let _ = add_listener.call2(
+                            &sensor_obj,
+                            &JsValue::from_str("reading"),
+                            reading_closure.as_ref().unchecked_ref(),
+                        );
+                        reading_closure.forget();
+
+                        // Start the sensor
+                        if let Ok(start_fn) = js_sys::Reflect::get(&sensor_obj, &"start".into()) {
+                            if start_fn.is_function() {
+                                let start: js_sys::Function = start_fn.unchecked_into();
+                                let _ = start.call0(&sensor_obj);
+                            }
+                        }
+                    } else {
+                        reading_closure.forget();
+                    }
+                } else {
+                    reading_closure.forget();
+                }
+            }
+        }
+    }
+}
+
+fn setup_proximity_sensor() {
+    let window = window().expect("no window");
+
+    // Check if ProximitySensor is available (Generic Sensor API)
+    if let Ok(proximity_sensor) = js_sys::Reflect::get(&window, &"ProximitySensor".into()) {
+        if !proximity_sensor.is_undefined() {
+            // Try to create sensor instance
+            if let Ok(sensor) = js_sys::Reflect::construct(
+                &proximity_sensor.unchecked_ref(),
+                &js_sys::Array::new(),
+            ) {
+                let sensor_obj = sensor;
+
+                // Set up reading event
+                let reading_closure = Closure::wrap(Box::new(move |event: JsValue| {
+                    if let Ok(distance) = js_sys::Reflect::get(&event, &"distance".into()) {
+                        if let Some(dist) = distance.as_f64() {
+                            STATE.with(|s| {
+                                s.borrow_mut().proximity = Some(dist);
+                            });
+
+                            update_proximity_display(Some(dist));
+                        }
+                    } else if let Ok(near) = js_sys::Reflect::get(&event, &"near".into()) {
+                        if let Some(is_near) = near.as_bool() {
+                            update_proximity_display(if is_near { Some(0.0) } else { Some(100.0) });
+                        }
+                    }
+                }) as Box<dyn Fn(JsValue)>);
+
+                if let Ok(add_listener_val) = js_sys::Reflect::get(&sensor_obj, &"addEventListener".into()) {
+                    if add_listener_val.is_function() {
+                        let add_listener: js_sys::Function = add_listener_val.unchecked_into();
+                        let _ = add_listener.call2(
+                            &sensor_obj,
+                            &JsValue::from_str("reading"),
+                            reading_closure.as_ref().unchecked_ref(),
+                        );
+                        reading_closure.forget();
+
+                        // Start the sensor
+                        if let Ok(start_fn) = js_sys::Reflect::get(&sensor_obj, &"start".into()) {
+                            if start_fn.is_function() {
+                                let start: js_sys::Function = start_fn.unchecked_into();
+                                let _ = start.call0(&sensor_obj);
+                            }
+                        }
+                    } else {
+                        reading_closure.forget();
+                    }
+                } else {
+                    reading_closure.forget();
+                }
+            }
+        }
+    }
+}
+
+fn update_ambient_light_display(lux: f64) {
+    let document = window().unwrap().document().unwrap();
+
+    if let Some(el) = document.get_element_by_id("light-value") {
+        el.set_text_content(Some(&format!("{:.0}", lux)));
+    }
+
+    // Update light bar (normalize to 0-100% for display, assuming max ~1000 lux)
+    let max_lux = 1000.0;
+    let percentage = (lux / max_lux * 100.0).min(100.0).max(0.0);
+
+    if let Some(bar) = document.get_element_by_id("light-bar") {
+        let bar_el: web_sys::HtmlElement = bar.unchecked_into();
+        let _ = bar_el.set_attribute("style", &format!("width: {:.1}%", percentage));
+    }
+}
+
+fn update_proximity_display(distance: Option<f64>) {
+    let document = window().unwrap().document().unwrap();
+
+    if let Some(el) = document.get_element_by_id("proximity-value") {
+        match distance {
+            Some(dist) => {
+                el.set_text_content(Some(&format!("{:.1} cm", dist)));
+            }
+            None => {
+                el.set_text_content(Some("N/A"));
+            }
+        }
+    }
+
+    // Update proximity indicator
+    if let Some(indicator) = document.get_element_by_id("proximity-indicator") {
+        let indicator_el: web_sys::HtmlElement = indicator.unchecked_into();
+        match distance {
+            Some(dist) if dist < 5.0 => {
+                let _ = indicator_el.set_attribute("class", "proximity-indicator near");
+            }
+            Some(_) => {
+                let _ = indicator_el.set_attribute("class", "proximity-indicator far");
+            }
+            None => {
+                let _ = indicator_el.set_attribute("class", "proximity-indicator");
+            }
+        }
+    }
+}
+
 fn update_sensor_status(status: &str, text: &str) {
     let document = window().unwrap().document().unwrap();
 
@@ -399,7 +698,8 @@ fn start_render_loop() {
     let g = f.clone();
 
     *g.borrow_mut() = Some(Closure::new(move || {
-        render_graph();
+        render_accel_graph();
+        render_gyro_graph();
         request_animation_frame(f.borrow().as_ref().unwrap());
     }));
 
@@ -413,7 +713,7 @@ fn request_animation_frame(f: &Closure<dyn FnMut()>) {
         .unwrap();
 }
 
-fn render_graph() {
+fn render_accel_graph() {
     let document = window().unwrap().document().unwrap();
 
     let canvas: HtmlCanvasElement = match document.get_element_by_id("accel-graph") {
@@ -471,6 +771,79 @@ fn render_graph() {
 
         // Z axis (yellow)
         draw_line(&ctx, &state.accel_history_z, step, center, scale, "#ffe66d");
+    });
+
+    // Legend
+    ctx.set_font("12px 'JetBrains Mono', monospace");
+
+    ctx.set_fill_style(&JsValue::from_str("#ff6b6b"));
+    let _ = ctx.fill_text("X", 10.0, 16.0);
+
+    ctx.set_fill_style(&JsValue::from_str("#4ecdc4"));
+    let _ = ctx.fill_text("Y", 30.0, 16.0);
+
+    ctx.set_fill_style(&JsValue::from_str("#ffe66d"));
+    let _ = ctx.fill_text("Z", 50.0, 16.0);
+}
+
+fn render_gyro_graph() {
+    let document = window().unwrap().document().unwrap();
+
+    let canvas: HtmlCanvasElement = match document.get_element_by_id("gyro-graph") {
+        Some(el) => el.unchecked_into(),
+        None => return,
+    };
+
+    // Get canvas element dimensions via computed style or direct attributes
+    let width = canvas.client_width() as u32;
+    let height = canvas.client_height() as u32;
+
+    if width == 0 || height == 0 {
+        return;
+    }
+
+    // Set canvas internal resolution
+    let dpr = window().unwrap().device_pixel_ratio();
+    canvas.set_width((width as f64 * dpr) as u32);
+    canvas.set_height((height as f64 * dpr) as u32);
+
+    let ctx: CanvasRenderingContext2d = canvas.get_context("2d").unwrap().unwrap().unchecked_into();
+
+    let _ = ctx.scale(dpr, dpr);
+
+    let w = width as f64;
+    let h = height as f64;
+
+    // Clear
+    ctx.set_fill_style(&JsValue::from_str("rgba(0, 0, 0, 0.3)"));
+    ctx.fill_rect(0.0, 0.0, w, h);
+
+    // Draw grid
+    ctx.set_stroke_style(&JsValue::from_str("rgba(0, 255, 255, 0.1)"));
+    ctx.set_line_width(1.0);
+
+    // Horizontal center line
+    ctx.begin_path();
+    ctx.move_to(0.0, h / 2.0);
+    ctx.line_to(w, h / 2.0);
+    ctx.stroke();
+
+    // Draw data
+    STATE.with(|s| {
+        let state = s.borrow();
+
+        let scale = h / 200.0; // ±100 deg/s range for gyroscope
+        let center = h / 2.0;
+        let step = w / (GRAPH_HISTORY_SIZE as f64 - 1.0);
+
+        // X axis (red)
+        draw_line(&ctx, &state.gyro_history_x, step, center, scale, "#ff6b6b");
+
+        // Y axis (teal)
+        draw_line(&ctx, &state.gyro_history_y, step, center, scale, "#4ecdc4");
+
+        // Z axis (yellow)
+        draw_line(&ctx, &state.gyro_history_z, step, center, scale, "#ffe66d");
     });
 
     // Legend
