@@ -1,9 +1,15 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
-//! FILE: components.rs | DNA/src/power/components.rs
-//! PURPOSE: E-series component selection and formatting for power supplies
-//! MODIFIED: 2026-01-07
+//! FILE: mod.rs | DNA/src/power/components/mod.rs
+//! PURPOSE: Power component database - MOSFETs, diodes, capacitors, E-series values
+//! MODIFIED: 2026-01-08
 //! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
+
+pub mod mosfet;
+pub mod diode;
+
+pub use mosfet::*;
+pub use diode::*;
 
 // ============================================================================
 // E-SERIES STANDARD VALUES

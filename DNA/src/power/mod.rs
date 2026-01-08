@@ -35,7 +35,9 @@ pub mod buck;
 pub mod boost;
 pub mod components;
 pub mod ldo;
+pub mod magnetics;
 pub mod state_space;
+pub mod topologies;
 pub mod transient;
 pub mod types;
 
