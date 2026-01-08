@@ -12,8 +12,7 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
     window, AnalyserNode, AudioContext, AudioContextOptions, CanvasRenderingContext2d,
-    DeviceOrientationEvent, HtmlCanvasElement, HtmlVideoElement, MediaStreamConstraints,
-    ImageData,
+    DeviceOrientationEvent, HtmlCanvasElement, HtmlVideoElement, ImageData, MediaStreamConstraints,
 };
 
 const GRAPH_HISTORY_SIZE: usize = 200;
@@ -167,7 +166,7 @@ pub fn main() {
 
     // Set up visual SLAM reset button
     setup_visual_slam_reset_button();
-    
+
     // Start visual SLAM processing from camera
     start_visual_slam_loop();
 
@@ -307,7 +306,6 @@ fn setup_motion_listeners() {
                     let mut state = s.borrow_mut();
                     state.push_accel(x, y, z);
                     state.sensors_available = true;
-
                 });
 
                 update_accel_display(x, y, z);
@@ -610,7 +608,7 @@ fn start_visual_slam_loop() {
 
 fn process_visual_slam_frame() {
     let document = window().unwrap().document().unwrap();
-    
+
     // Get video element
     let video: HtmlVideoElement = match document.get_element_by_id("camera-video") {
         Some(el) => el.unchecked_into(),
@@ -640,10 +638,11 @@ fn process_visual_slam_frame() {
     let _ = ctx.draw_image_with_html_video_element(&video, 0.0, 0.0);
 
     // Get image data
-    let image_data = match ctx.get_image_data(0.0, 0.0, canvas.width() as f64, canvas.height() as f64) {
-        Ok(data) => data,
-        Err(_) => return,
-    };
+    let image_data =
+        match ctx.get_image_data(0.0, 0.0, canvas.width() as f64, canvas.height() as f64) {
+            Ok(data) => data,
+            Err(_) => return,
+        };
 
     // Process frame for visual SLAM
     STATE.with(|s| {
@@ -655,9 +654,6 @@ fn process_visual_slam_frame() {
 }
 
 fn update_visual_slam(slam: &mut VisualSLAM, current_frame: &ImageData) {
-    let window = window().unwrap();
-    let performance = window.performance().unwrap();
-    let current_time = performance.now() / 1000.0;
 
     // Extract features from current frame
     let current_features = extract_features(current_frame);
@@ -708,7 +704,6 @@ fn update_visual_slam(slam: &mut VisualSLAM, current_frame: &ImageData) {
 }
 
 fn extract_features(image_data: &ImageData) -> Vec<(f64, f64)> {
-    let data = image_data.data();
     let width = image_data.width() as usize;
     let height = image_data.height() as usize;
     let mut features = Vec::new();
@@ -717,19 +712,16 @@ fn extract_features(image_data: &ImageData) -> Vec<(f64, f64)> {
     // Sample every 20 pixels to avoid too many features
     for y in (10..height - 10).step_by(20) {
         for x in (10..width - 10).step_by(20) {
-            let idx = (y * width + x) * 4;
-            if idx + 3 < data.length() as usize {
-                // Calculate gradient magnitude (simplified)
-                let gx = get_pixel_intensity(&data, width, x + 1, y) as f64
-                    - get_pixel_intensity(&data, width, x - 1, y) as f64;
-                let gy = get_pixel_intensity(&data, width, x, y + 1) as f64
-                    - get_pixel_intensity(&data, width, x, y - 1) as f64;
-                let gradient_mag = (gx * gx + gy * gy).sqrt();
+            // Calculate gradient magnitude (simplified)
+            let gx = get_pixel_intensity(image_data, width, x + 1, y) as f64
+                - get_pixel_intensity(image_data, width, x - 1, y) as f64;
+            let gy = get_pixel_intensity(image_data, width, x, y + 1) as f64
+                - get_pixel_intensity(image_data, width, x, y - 1) as f64;
+            let gradient_mag = (gx * gx + gy * gy).sqrt();
 
-                // Threshold for corner detection
-                if gradient_mag > 30.0 {
-                    features.push((x as f64, y as f64));
-                }
+            // Threshold for corner detection
+            if gradient_mag > 30.0 {
+                features.push((x as f64, y as f64));
             }
         }
     }
@@ -737,12 +729,13 @@ fn extract_features(image_data: &ImageData) -> Vec<(f64, f64)> {
     features
 }
 
-fn get_pixel_intensity(data: &js_sys::Uint8ClampedArray, width: usize, x: usize, y: usize) -> u8 {
+fn get_pixel_intensity(image_data: &ImageData, width: usize, x: usize, y: usize) -> u8 {
+    let data = image_data.data();
     let idx = (y * width + x) * 4;
-    if idx + 2 < data.length() as usize {
-        let r = data.get_index(idx as u32) as u32;
-        let g = data.get_index((idx + 1) as u32) as u32;
-        let b = data.get_index((idx + 2) as u32) as u32;
+    if idx + 2 < data.len() {
+        let r = data[idx] as u32;
+        let g = data[idx + 1] as u32;
+        let b = data[idx + 2] as u32;
         ((r + g + b) / 3) as u8
     } else {
         0
