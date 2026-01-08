@@ -51,6 +51,7 @@ members = [
     "LEARN/SWARM_ROBOTICS",
     "LEARN/SLAM",
     "LEARN/GIT",
+    "LEARN/DATA_STRUCTURES",
 
     # Learn CORE engines (shared crates)
     "LEARN/learn_core",

@@ -40,6 +40,7 @@ declare -A PROJECT_PORTS=(
     ["swarm"]="8105"
     ["slam"]="8106"
     ["git"]="8107"
+    ["ds"]="8108"
     ["coming_soon"]="8109"
     ["mcad"]="8088"
 
@@ -65,6 +66,7 @@ declare -A PROJECT_DIRS=(
     ["swarm"]="LEARN/SWARM_ROBOTICS"
     ["slam"]="LEARN/SLAM"
     ["git"]="LEARN/GIT"
+    ["ds"]="LEARN/DATA_STRUCTURES"
     ["coming_soon"]="COMING_SOON"
     ["mcad"]="MCAD"
 
@@ -90,6 +92,7 @@ declare -A PAGES_PROJECTS=(
     ["swarm"]="swarm-too-foo"
     ["slam"]="slam-too-foo"
     ["git"]="git-too-foo"
+    ["ds"]="ds-too-foo"
     ["power"]="power-too-foo"
     ["arch"]="arch-too-foo"
 )

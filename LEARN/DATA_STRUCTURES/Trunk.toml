@@ -1,0 +1,15 @@
+# ===============================================================================
+# FILE: Trunk.toml | DATA_STRUCTURES/Trunk.toml
+# PURPOSE: Trunk build configuration for WASM deployment
+# MODIFIED: 2026-01-07
+# ===============================================================================
+[build]
+target = "index.html"
+dist = "dist"
+
+[watch]
+ignore = ["dist"]
+
+[serve]
+address = "127.0.0.1"
+port = 8108
