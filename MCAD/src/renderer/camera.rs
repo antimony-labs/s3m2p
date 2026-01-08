@@ -166,3 +166,313 @@ impl Camera {
         right.cross(forward)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_camera_default_values() {
+        let camera = Camera::new();
+        assert!((camera.rotation_x - 0.5).abs() < 1e-6);
+        assert!((camera.rotation_y - 0.75).abs() < 1e-6);
+        assert!((camera.distance - 200.0).abs() < 1e-6);
+        assert!(camera.pan_offset.length() < 1e-6);
+    }
+
+    #[test]
+    fn test_position_not_at_origin() {
+        let camera = Camera::new();
+        let pos = camera.position();
+        // Camera position should not be at origin
+        assert!(pos.length() > 0.1);
+    }
+
+    #[test]
+    fn test_position_at_expected_distance() {
+        let camera = Camera::new();
+        let pos = camera.position();
+        // Distance from origin should match camera distance
+        assert!((pos.length() - camera.distance).abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_view_matrix_invertible() {
+        let camera = Camera::new();
+        let view = camera.view_matrix();
+        let det = view.determinant();
+        // View matrix should be invertible (non-zero determinant)
+        assert!(det.abs() > 0.01);
+    }
+
+    #[test]
+    fn test_projection_matrix_invertible() {
+        let mut camera = Camera::new();
+        camera.set_aspect(800.0, 600.0);
+        let proj = camera.projection_matrix();
+        let det = proj.determinant();
+        // Projection matrix should be invertible
+        assert!(det.abs() > 0.0);
+    }
+
+    #[test]
+    fn test_view_projection_combined() {
+        let camera = Camera::new();
+        let vp = camera.view_projection_matrix();
+        let view = camera.view_matrix();
+        let proj = camera.projection_matrix();
+
+        // VP should equal P * V
+        let combined = proj * view;
+        for i in 0..16 {
+            let row = i / 4;
+            let col = i % 4;
+            assert!((vp.col(col)[row] - combined.col(col)[row]).abs() < 1e-6);
+        }
+    }
+
+    #[test]
+    fn test_orbit_changes_rotation() {
+        let mut camera = Camera::new();
+        let initial_x = camera.rotation_x;
+        let initial_y = camera.rotation_y;
+
+        camera.orbit(100.0, 50.0);
+
+        assert!(camera.rotation_y > initial_y);
+        assert!(camera.rotation_x > initial_x);
+    }
+
+    #[test]
+    fn test_orbit_clamps_pitch() {
+        let mut camera = Camera::new();
+
+        // Try to rotate beyond limits
+        camera.orbit(0.0, 1000.0);
+        assert!(camera.rotation_x <= 1.5);
+
+        camera.orbit(0.0, -2000.0);
+        assert!(camera.rotation_x >= -1.5);
+    }
+
+    #[test]
+    fn test_pan_changes_offset() {
+        let mut camera = Camera::new();
+        assert!(camera.pan_offset.length() < 1e-6);
+
+        camera.pan(100.0, 50.0);
+
+        assert!(camera.pan_offset.length() > 0.1);
+    }
+
+    #[test]
+    fn test_pan_target_moves() {
+        let mut camera = Camera::new();
+        let initial_target = camera.target();
+
+        camera.pan(100.0, 50.0);
+
+        let new_target = camera.target();
+        assert!((new_target - initial_target).length() > 0.1);
+    }
+
+    #[test]
+    fn test_zoom_in_decreases_distance() {
+        let mut camera = Camera::new();
+        let initial_distance = camera.distance;
+
+        camera.zoom(1.0); // Positive delta = zoom in
+
+        assert!(camera.distance < initial_distance);
+    }
+
+    #[test]
+    fn test_zoom_out_increases_distance() {
+        let mut camera = Camera::new();
+        let initial_distance = camera.distance;
+
+        camera.zoom(-1.0); // Negative delta = zoom out
+
+        assert!(camera.distance > initial_distance);
+    }
+
+    #[test]
+    fn test_zoom_clamps_minimum() {
+        let mut camera = Camera::new();
+        camera.distance = 10.0;
+
+        // Zoom in a lot
+        for _ in 0..100 {
+            camera.zoom(1.0);
+        }
+
+        assert!(camera.distance >= 1.0);
+    }
+
+    #[test]
+    fn test_zoom_clamps_maximum() {
+        let mut camera = Camera::new();
+        camera.distance = 4000.0;
+
+        // Zoom out a lot
+        for _ in 0..100 {
+            camera.zoom(-1.0);
+        }
+
+        assert!(camera.distance <= 5000.0);
+    }
+
+    #[test]
+    fn test_set_aspect_ratio() {
+        let mut camera = Camera::new();
+        camera.set_aspect(1920.0, 1080.0);
+
+        let expected = 1920.0 / 1080.0;
+        assert!((camera.aspect - expected).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_set_aspect_zero_height_safe() {
+        let mut camera = Camera::new();
+        let initial_aspect = camera.aspect;
+
+        camera.set_aspect(800.0, 0.0); // Should not crash or change
+
+        assert!((camera.aspect - initial_aspect).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_preset_view_front() {
+        let mut camera = Camera::new();
+        camera.set_view("front");
+
+        assert!((camera.rotation_x - 0.0).abs() < 1e-6);
+        assert!((camera.rotation_y - 0.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_preset_view_top() {
+        let mut camera = Camera::new();
+        camera.set_view("top");
+
+        use std::f32::consts::FRAC_PI_2;
+        assert!((camera.rotation_x - FRAC_PI_2).abs() < 1e-6);
+        assert!((camera.rotation_y - 0.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_preset_view_right() {
+        let mut camera = Camera::new();
+        camera.set_view("right");
+
+        use std::f32::consts::FRAC_PI_2;
+        assert!((camera.rotation_x - 0.0).abs() < 1e-6);
+        assert!((camera.rotation_y - FRAC_PI_2).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_preset_view_back() {
+        let mut camera = Camera::new();
+        camera.set_view("back");
+
+        use std::f32::consts::PI;
+        assert!((camera.rotation_x - 0.0).abs() < 1e-6);
+        assert!((camera.rotation_y - PI).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_preset_view_iso() {
+        let mut camera = Camera::new();
+        camera.rotation_x = 0.0;
+        camera.rotation_y = 0.0;
+
+        camera.set_view("iso");
+
+        // Should restore to isometric defaults
+        assert!((camera.rotation_x - 0.5).abs() < 1e-6);
+        assert!((camera.rotation_y - 0.75).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_preset_view_unknown_defaults_to_iso() {
+        let mut camera = Camera::new();
+        camera.rotation_x = 0.0;
+        camera.rotation_y = 0.0;
+
+        camera.set_view("unknown_preset");
+
+        // Should default to isometric
+        assert!((camera.rotation_x - 0.5).abs() < 1e-6);
+        assert!((camera.rotation_y - 0.75).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_reset_restores_defaults() {
+        let mut camera = Camera::new();
+        camera.rotation_x = 1.2;
+        camera.rotation_y = 2.3;
+        camera.distance = 500.0;
+        camera.pan_offset = Vec3::new(100.0, 200.0, 300.0);
+
+        camera.reset();
+
+        assert!((camera.rotation_x - 0.5).abs() < 1e-6);
+        assert!((camera.rotation_y - 0.75).abs() < 1e-6);
+        assert!((camera.distance - 200.0).abs() < 1e-6);
+        assert!(camera.pan_offset.length() < 1e-6);
+    }
+
+    #[test]
+    fn test_right_vector_perpendicular_to_up() {
+        let camera = Camera::new();
+        let right = camera.right();
+        let up = camera.up();
+
+        // Right and up should be perpendicular
+        let dot = right.dot(up);
+        assert!(dot.abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_right_and_up_are_unit_vectors() {
+        let camera = Camera::new();
+        let right = camera.right();
+        let up = camera.up();
+
+        assert!((right.length() - 1.0).abs() < 1e-4);
+        assert!((up.length() - 1.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_target_matches_pan_offset() {
+        let mut camera = Camera::new();
+        camera.pan_offset = Vec3::new(10.0, 20.0, 30.0);
+
+        let target = camera.target();
+        assert!((target - camera.pan_offset).length() < 1e-6);
+    }
+
+    #[test]
+    fn test_front_view_position_on_z_axis() {
+        let mut camera = Camera::new();
+        camera.set_view("front");
+
+        let pos = camera.position();
+        // Front view: camera should be on positive Z axis
+        assert!(pos.z.abs() > 1.0); // Significant Z
+        assert!(pos.x.abs() < 1e-4); // Near zero X
+        assert!(pos.y.abs() < 1e-4); // Near zero Y
+    }
+
+    #[test]
+    fn test_top_view_position_on_y_axis() {
+        let mut camera = Camera::new();
+        camera.set_view("top");
+
+        let pos = camera.position();
+        // Top view: camera should be on positive Y axis
+        assert!(pos.y > 1.0); // Significant Y
+        assert!(pos.x.abs() < 1e-4); // Near zero X
+        // Z might have slight value due to trigonometry
+    }
+}
