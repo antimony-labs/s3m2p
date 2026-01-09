@@ -1,0 +1,88 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="handGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00ffff" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#00ff88" stop-opacity="0.6"/>
+    </linearGradient>
+  </defs>
+
+  <style>
+    @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+    @keyframes track { 0%, 100% { stroke-dashoffset: 0; } 50% { stroke-dashoffset: 10; } }
+    @keyframes point-pulse { 0%, 100% { r: 4; } 50% { r: 6; } }
+    .pulse { animation: pulse 2s ease-in-out infinite; }
+    .track { animation: track 1s linear infinite; stroke-dasharray: 5 5; }
+    .point { animation: point-pulse 1s ease-in-out infinite; }
+  </style>
+
+  <!-- Camera frame -->
+  <rect x="30" y="30" width="140" height="140" rx="8" fill="none" stroke="#00ffff" stroke-width="2" opacity="0.4"/>
+  <path d="M30,50 L40,50 L40,40 L50,40" fill="none" stroke="#00ffff" stroke-width="2"/>
+  <path d="M170,50 L160,50 L160,40 L150,40" fill="none" stroke="#00ffff" stroke-width="2"/>
+  <path d="M30,150 L40,150 L40,160 L50,160" fill="none" stroke="#00ffff" stroke-width="2"/>
+  <path d="M170,150 L160,150 L160,160 L150,160" fill="none" stroke="#00ffff" stroke-width="2"/>
+
+  <!-- Hand silhouette -->
+  <g filter="url(#glow)" transform="translate(100, 100)">
+    <!-- Palm -->
+    <ellipse cx="0" cy="20" rx="25" ry="30" fill="url(#handGrad)" opacity="0.3"/>
+
+    <!-- Fingers -->
+    <g stroke="#00ffff" stroke-width="3" fill="none" stroke-linecap="round">
+      <!-- Thumb -->
+      <path d="M-20,15 Q-35,5 -30,-15"/>
+      <!-- Index -->
+      <path d="M-10,-10 L-12,-45"/>
+      <!-- Middle -->
+      <path d="M0,-12 L0,-50"/>
+      <!-- Ring -->
+      <path d="M10,-10 L12,-45"/>
+      <!-- Pinky -->
+      <path d="M20,-5 L25,-35"/>
+    </g>
+
+    <!-- Palm connections -->
+    <g stroke="#00ff88" stroke-width="2" fill="none" opacity="0.6" class="track">
+      <line x1="-20" y1="15" x2="-10" y2="-10"/>
+      <line x1="-10" y1="-10" x2="0" y2="-12"/>
+      <line x1="0" y1="-12" x2="10" y2="-10"/>
+      <line x1="10" y1="-10" x2="20" y2="-5"/>
+    </g>
+  </g>
+
+  <!-- Tracking points (21 landmarks) -->
+  <g fill="#00ffff" class="pulse">
+    <!-- Wrist -->
+    <circle cx="100" cy="140" r="5"/>
+    <!-- Palm base -->
+    <circle cx="80" cy="115" r="3"/>
+    <circle cx="90" cy="110" r="3"/>
+    <circle cx="100" cy="108" r="3"/>
+    <circle cx="110" cy="110" r="3"/>
+    <circle cx="120" cy="115" r="3"/>
+  </g>
+
+  <!-- Fingertip tracking points -->
+  <g fill="#00ff88">
+    <circle cx="70" cy="85" r="4" class="point"/>
+    <circle cx="88" cy="55" r="4" class="point" style="animation-delay: -0.2s"/>
+    <circle cx="100" cy="50" r="4" class="point" style="animation-delay: -0.4s"/>
+    <circle cx="112" cy="55" r="4" class="point" style="animation-delay: -0.6s"/>
+    <circle cx="125" cy="65" r="4" class="point" style="animation-delay: -0.8s"/>
+  </g>
+
+  <!-- ML detection indicator -->
+  <g transform="translate(100, 180)">
+    <text x="0" y="0" fill="#00ffff" font-family="monospace" font-size="8" text-anchor="middle" opacity="0.7">MediaPipe</text>
+  </g>
+
+  <!-- Status indicator -->
+  <circle cx="165" cy="45" r="6" fill="#00ff88" class="pulse"/>
+</svg>
