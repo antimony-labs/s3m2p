@@ -350,6 +350,249 @@
             border-color: var(--accent);
             box-shadow: 0 0 10px var(--glow);
         }
+
+        /* ═══════════════════════════════════════════════════════════════════════════
+           MOBILE RESPONSIVE STYLES
+           ═══════════════════════════════════════════════════════════════════════════ */
+        @media (max-width: 768px) {
+            body {
+                overflow: auto;
+            }
+
+            #container {
+                flex-direction: column;
+                height: auto;
+                min-height: 100vh;
+            }
+
+            #canvas-wrapper {
+                flex: none;
+                width: 100%;
+                height: 45vh;
+                min-height: 280px;
+                max-height: 400px;
+                order: 1;
+            }
+
+            canvas {
+                width: 100% !important;
+                height: 100% !important;
+                object-fit: contain;
+            }
+
+            #no-camera {
+                font-size: 14px;
+            }
+
+            #no-camera p:first-child {
+                font-size: 36px !important;
+            }
+
+            #sidebar {
+                width: 100%;
+                flex: 1;
+                border-left: none;
+                border-top: 1px solid var(--border-dim);
+                padding: 12px 16px 24px;
+                order: 2;
+                overflow-y: auto;
+                max-height: none;
+            }
+
+            h1 {
+                font-size: 20px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .subtitle {
+                font-size: 11px;
+                margin-bottom: 12px;
+            }
+
+            h2 {
+                font-size: 14px;
+                margin: 12px 0 6px;
+            }
+
+            /* Horizontal scrolling mode selector */
+            .mode-selector {
+                display: flex;
+                gap: 8px;
+                overflow-x: auto;
+                padding-bottom: 8px;
+                margin-bottom: 12px;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+
+            .mode-selector::-webkit-scrollbar {
+                display: none;
+            }
+
+            .mode-btn {
+                flex: 0 0 auto;
+                min-width: 80px;
+                padding: 8px 12px;
+                font-size: 11px;
+            }
+
+            .mode-btn .icon {
+                font-size: 18px;
+                margin-bottom: 2px;
+            }
+
+            /* Compact metrics */
+            .metric {
+                padding: 6px 10px;
+                font-size: 12px;
+                margin: 4px 0;
+            }
+
+            /* Touch-friendly buttons */
+            button {
+                padding: 14px;
+                font-size: 13px;
+                margin: 6px 0;
+                min-height: 44px;
+            }
+
+            /* Compact info boxes */
+            .info {
+                font-size: 10px;
+                padding: 10px;
+                margin-top: 12px;
+            }
+
+            /* Color picker - larger touch targets */
+            .color-btn {
+                width: 36px;
+                height: 36px;
+                min-width: 36px;
+            }
+
+            /* Sliders */
+            .slider-control {
+                margin: 8px 0;
+            }
+
+            input[type="range"] {
+                height: 8px;
+            }
+
+            input[type="range"]::-webkit-slider-thumb {
+                width: 20px;
+                height: 20px;
+            }
+
+            /* RPS compact */
+            .rps-result {
+                padding: 10px;
+            }
+
+            .rps-result .big {
+                font-size: 28px;
+            }
+
+            .score-item .num {
+                font-size: 20px;
+            }
+
+            /* Notes mode - stack text input */
+            #notes-text-input {
+                margin: 8px 0;
+            }
+
+            #notes-text {
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+
+            /* Hide less important settings on mobile */
+            .mobile-hide {
+                display: none;
+            }
+
+            /* Collapsible sections */
+            .collapsible-header {
+                cursor: pointer;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .collapsible-header::after {
+                content: '▼';
+                font-size: 10px;
+                color: var(--text-dim);
+                transition: transform 0.2s;
+            }
+
+            .collapsible-header.collapsed::after {
+                transform: rotate(-90deg);
+            }
+
+            .collapsible-content.collapsed {
+                display: none;
+            }
+        }
+
+        /* Extra small screens */
+        @media (max-width: 400px) {
+            #canvas-wrapper {
+                height: 40vh;
+                min-height: 240px;
+            }
+
+            .mode-btn {
+                min-width: 70px;
+                padding: 6px 8px;
+                font-size: 10px;
+            }
+
+            .mode-btn .icon {
+                font-size: 16px;
+            }
+
+            h1 {
+                font-size: 18px;
+            }
+
+            .color-btn {
+                width: 32px;
+                height: 32px;
+                min-width: 32px;
+            }
+        }
+
+        /* Landscape mobile */
+        @media (max-width: 768px) and (orientation: landscape) {
+            #container {
+                flex-direction: row;
+            }
+
+            #canvas-wrapper {
+                width: 55%;
+                height: 100vh;
+                max-height: none;
+                order: 1;
+            }
+
+            #sidebar {
+                width: 45%;
+                height: 100vh;
+                border-top: none;
+                border-left: 1px solid var(--border-dim);
+                order: 2;
+                overflow-y: auto;
+            }
+
+            .mode-selector {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                overflow-x: visible;
+            }
+        }
     </style>
 </head>
 <body>
