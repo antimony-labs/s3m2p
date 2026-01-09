@@ -79,6 +79,7 @@ pub struct Category {
 mod urls {
     pub const HELIOS: &str = "http://localhost:8081";
     pub const CHLADNI: &str = "http://localhost:8082";
+    pub const HANDTRACK: &str = "http://localhost:8121";
     pub const PLL: &str = "http://localhost:8090";
     pub const SENSORS: &str = "http://localhost:8083";
     pub const AUTOCRATE: &str = "http://localhost:8084";
@@ -104,6 +105,7 @@ mod urls {
 mod urls {
     pub const HELIOS: &str = "https://helios.too.foo";
     pub const CHLADNI: &str = "https://chladni.too.foo";
+    pub const HANDTRACK: &str = "https://hand.too.foo";
     pub const PLL: &str = "https://pll.too.foo";
     pub const SENSORS: &str = "https://sensors.too.foo";
     pub const AUTOCRATE: &str = "https://autocrate.too.foo";
@@ -248,7 +250,13 @@ pub const SIMS_BUBBLES: &[Bubble] = &[
         icon: "assets/islands/chladni.svg",
         action: BubbleAction::DirectProject(CHLADNI),
     },
-    // Future: Boids, etc.
+    Bubble {
+        id: "handtrack",
+        label: "Hand",
+        description: "Hand Tracking with MediaPipe",
+        icon: "assets/islands/hand.svg",
+        action: BubbleAction::DirectProject(HANDTRACK),
+    },
 ];
 
 pub const SIMS_CATEGORY: Category = Category {
