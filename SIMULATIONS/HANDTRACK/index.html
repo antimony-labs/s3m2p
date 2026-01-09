@@ -2056,10 +2056,13 @@
                 const mobileHands = document.getElementById('mobile-hands');
                 const mobileFps = document.getElementById('mobile-fps');
                 const mobileGesture = document.getElementById('mobile-gesture');
+                const handCount = document.getElementById('hand-count');
+                const fpsDisplay = document.getElementById('fps-display');
+                const gestureDisplay = document.getElementById('gesture-display');
 
-                if (mobileHands) mobileHands.textContent = document.getElementById('hand-count').textContent;
-                if (mobileFps) mobileFps.textContent = document.getElementById('fps-display').textContent;
-                if (mobileGesture) mobileGesture.textContent = document.getElementById('gesture-display').textContent;
+                if (mobileHands && handCount) mobileHands.textContent = handCount.textContent;
+                if (mobileFps && fpsDisplay) mobileFps.textContent = fpsDisplay.textContent;
+                if (mobileGesture && gestureDisplay) mobileGesture.textContent = gestureDisplay.textContent;
             }, 200);
 
             console.log('Initialized');
