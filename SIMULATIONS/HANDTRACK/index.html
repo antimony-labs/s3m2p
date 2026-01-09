@@ -676,9 +676,9 @@
     <div id="container">
         <div id="canvas-wrapper">
             <canvas id="canvas"></canvas>
-            <div id="no-camera" style="display: block; color: #666; text-align: center; padding: 20px;">
-                <p style="font-size: 48px; margin-bottom: 10px;">✋</p>
-                <p>Click "Start Camera" to begin</p>
+            <div id="no-camera" style="display: flex; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 0; left: 0; right: 0; bottom: 0; color: var(--text-dim); text-align: center; padding: 20px;">
+                <p style="font-size: 64px; margin-bottom: 16px;">✋</p>
+                <p style="font-size: 18px; font-weight: 600; color: var(--accent);">Tap 📷 to Start Camera</p>
             </div>
         </div>
         <div id="sidebar">
@@ -770,6 +770,7 @@
             <!-- Theremin Mode Info -->
             <div class="mode-info" id="info-theremin">
                 <h2>Theremin</h2>
+                <button id="unlock-audio-btn" style="background: var(--accent); color: var(--bg); display: none;">🔊 Tap to Enable Sound</button>
                 <div class="metric">
                     <span class="metric-label">Frequency</span>
                     <span class="metric-value" id="theremin-freq">--</span>
@@ -1079,7 +1080,25 @@
                 audioCtx.resume().then(() => {
                     audioUnlocked = true;
                     console.log('Audio unlocked');
+                    hideUnlockButton();
                 });
+            } else if (audioCtx && audioCtx.state === 'running') {
+                audioUnlocked = true;
+                hideUnlockButton();
+            }
+        }
+
+        function showUnlockButton() {
+            const btn = document.getElementById('unlock-audio-btn');
+            if (btn && !audioUnlocked) {
+                btn.style.display = 'block';
+            }
+        }
+
+        function hideUnlockButton() {
+            const btn = document.getElementById('unlock-audio-btn');
+            if (btn) {
+                btn.style.display = 'none';
             }
         }
 
@@ -1109,8 +1128,29 @@
             // Ensure audio is resumed
             if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
+                // Show unlock button on iOS if audio is still suspended
+                setTimeout(() => {
+                    if (audioCtx.state === 'suspended') {
+                        showUnlockButton();
+                    }
+                }, 100);
+            } else {
+                audioUnlocked = true;
+                hideUnlockButton();
             }
         }
+
+        // Unlock audio button click handler
+        document.getElementById('unlock-audio-btn')?.addEventListener('click', function() {
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume().then(() => {
+                    audioUnlocked = true;
+                    hideUnlockButton();
+                    // Re-init theremin to ensure it's working
+                    initTheremin();
+                });
+            }
+        });
 
         // Calculate hand openness (0 = closed/curled, 1 = fully open)
         function getHandOpenness(landmarks) {
