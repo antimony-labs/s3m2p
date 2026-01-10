@@ -15,17 +15,38 @@ body:
       label: Project
       description: Which project is affected?
       options:
-        - helios
+        # Main platforms
         - welcome (too.foo)
-        - autocrate
-        - chladni
-        - portfolio
-        - blog
+        - helios
         - mcad
-        - ecad
-        - infra
+        - blog
+        - arch
+        # Simulations
+        - chladni
+        - handtrack
+        - powerlaw
+        # Tools
+        - autocrate
+        - pll
+        - power
+        - spice
+        # Learning tutorials
+        - learn
+        - ai
+        - ubuntu
+        - opencv
+        - arduino
+        - esp32
+        - swarm
+        - slam
+        - git
+        - ds
+        - sensors
+        # Infrastructure
         - core
         - storage-server
+        - simulation-cli
+        - infra
     validations:
       required: true
 

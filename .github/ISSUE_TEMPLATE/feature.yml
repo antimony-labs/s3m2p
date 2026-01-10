@@ -15,17 +15,38 @@ body:
       label: Project
       description: Which project is this feature for?
       options:
-        - helios
+        # Main platforms
         - welcome (too.foo)
-        - autocrate
-        - chladni
-        - portfolio
-        - blog
+        - helios
         - mcad
-        - ecad
-        - infra
+        - blog
+        - arch
+        # Simulations
+        - chladni
+        - handtrack
+        - powerlaw
+        # Tools
+        - autocrate
+        - pll
+        - power
+        - spice
+        # Learning tutorials
+        - learn
+        - ai
+        - ubuntu
+        - opencv
+        - arduino
+        - esp32
+        - swarm
+        - slam
+        - git
+        - ds
+        - sensors
+        # Infrastructure
         - core
         - storage-server
+        - simulation-cli
+        - infra
     validations:
       required: true
 
@@ -89,9 +110,12 @@ body:
       label: Affected Projects
       description: Check all that apply (for cross-project features)
       options:
-        - label: core
+        - label: core (DNA library)
+        - label: welcome (too.foo)
         - label: helios
-        - label: too.foo
+        - label: mcad
+        - label: blog
+        - label: learn (tutorials hub)
         - label: storage-server
         - label: simulation-cli
 
