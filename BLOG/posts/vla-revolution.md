@@ -8,8 +8,6 @@ draft: false
 ai_generated: false
 ---
 
-# The VLA Revolution: How Language Models Learned to Control Robots
-
 *A robotics engineer's journey into the new era of robot learning*
 
 **Jump to:** [The Problem](#part-1-the-problem-vlas-solve) | [Neural Networks](#part-2-neural-networks-from-first-principles) | [Transformers](#part-3-the-transformer-architecture) | [Vision-Language Models](#part-4-vision-language-models) | [VLAs](#part-5-vision-language-action-models) | [Evaluation](#part-6-the-evaluation-problem) | [Video Simulators](#part-7-video-models-as-robot-simulators) | [OOD Testing](#part-8-out-of-distribution-evaluation) | [Safety](#part-9-safety-red-teaming) | [Limitations](#part-10-limitations-and-future-directions) | [Industry](#part-11-industry-landscape) | [Getting Started](#part-12-getting-started)

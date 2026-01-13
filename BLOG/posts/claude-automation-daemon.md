@@ -8,8 +8,6 @@ draft: false
 ai_generated: true
 ---
 
-# Automating GitHub Issues with Claude Daemon
-
 > **Meta Note:** This very blog post was created by the automation system it describes. If you're reading this, the system works!
 
 **Jump to:** [The Problem](#the-problem) | [Architecture](#architecture-overview) | [Prerequisites](#prerequisites) | [Setup](#setting-up-the-daemon) | [Triggers](#trigger-mechanism) | [Workflow](#workflow-example) | [Benefits](#benefits-of-automation) | [FAQ](#common-questions) | [Security](#security-considerations) | [Advanced](#advanced-configuration)

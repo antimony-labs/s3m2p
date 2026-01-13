@@ -8,8 +8,6 @@ draft: false
 ai_generated: false
 ---
 
-# Introducing Antimony Labs
-
 Most people name their company after what it does. I named mine after a chemistry joke.
 
 Shivam Bhardwaj → Sb → Antimony (element 51). My parents gave me a periodic table easter egg and I've been waiting 25 years to use it.

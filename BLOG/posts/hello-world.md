@@ -8,8 +8,6 @@ draft: false
 ai_generated: false
 ---
 
-# Welcome to the Blog
-
 This blog is built entirely in **Rust**, compiled to **WebAssembly**, and rendered client-side. No JavaScript frameworks, no server-side rendering - just pure Rust.
 
 ## Why Rust for a Blog?
