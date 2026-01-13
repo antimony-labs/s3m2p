@@ -390,30 +390,13 @@ Now we can understand VLAs completely.
 
 <div class="mermaid">
 flowchart LR
-    subgraph Inputs
-        I1[Camera Images]
-        I2[Instruction]
-        I3[Joint State]
-    end
-
-    subgraph Encoders
-        E1[Vision Encoder]
-        E2[Text Tokenizer]
-        E3[State Embed]
-    end
-
-    subgraph Processing
-        T[Transformer Layers]
-        A[Action Head]
-    end
-
-    I1 --> E1
-    I2 --> E2
-    I3 --> E3
-    E1 --> T
+    I1[Camera Images] --> E1[Vision Encoder]
+    I2[Instruction] --> E2[Text Tokenizer]
+    I3[Joint State] --> E3[State Embed]
+    E1 --> T[Transformer Layers]
     E2 --> T
     E3 --> T
-    T --> A
+    T --> A[Action Head]
     A --> O[Robot Actions]
 </div>
 
