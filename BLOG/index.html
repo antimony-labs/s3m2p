@@ -15,6 +15,7 @@ MODIFIED: 2025-11-29
     <link data-trunk rel="copy-dir" href="posts" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Rajdhani:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
     <script>
         // Theme Manager - Site-wide light/dark mode
         (function() {
@@ -45,28 +46,103 @@ MODIFIED: 2025-11-29
             window.getCurrentTheme = () => document.documentElement.getAttribute('data-theme') || 'dark';
             initTheme();
         })();
+
+        // Mermaid initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: 'base',
+                themeVariables: isDark ? {
+                    primaryColor: '#0a0a10',
+                    primaryTextColor: '#e0e0e0',
+                    primaryBorderColor: '#00d4d4',
+                    lineColor: '#00d4d4',
+                    secondaryColor: '#1a1a2e',
+                    tertiaryColor: '#050508',
+                    background: '#050508',
+                    mainBkg: '#0a0a10',
+                    nodeBorder: '#00d4d4',
+                    clusterBkg: '#0a0a10',
+                    clusterBorder: '#00d4d4',
+                    edgeLabelBackground: '#050508'
+                } : {
+                    primaryColor: '#e8f4f4',
+                    primaryTextColor: '#2a2a2a',
+                    primaryBorderColor: '#007a7a',
+                    lineColor: '#007a7a',
+                    secondaryColor: '#f0f8f8',
+                    tertiaryColor: '#fafafa',
+                    background: '#fafafa',
+                    mainBkg: '#ffffff',
+                    nodeBorder: '#007a7a',
+                    clusterBkg: '#f0f8f8',
+                    clusterBorder: '#007a7a'
+                }
+            });
+        });
+
+        // Re-render mermaid diagrams after WASM loads content
+        window.renderMermaid = function() {
+            const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: 'base',
+                themeVariables: isDark ? {
+                    primaryColor: '#0a0a10',
+                    primaryTextColor: '#e0e0e0',
+                    primaryBorderColor: '#00d4d4',
+                    lineColor: '#00d4d4',
+                    secondaryColor: '#1a1a2e',
+                    tertiaryColor: '#050508',
+                    background: '#050508',
+                    mainBkg: '#0a0a10',
+                    nodeBorder: '#00d4d4',
+                    clusterBkg: '#0a0a10',
+                    clusterBorder: '#00d4d4',
+                    edgeLabelBackground: '#050508'
+                } : {
+                    primaryColor: '#e8f4f4',
+                    primaryTextColor: '#2a2a2a',
+                    primaryBorderColor: '#007a7a',
+                    lineColor: '#007a7a',
+                    secondaryColor: '#f0f8f8',
+                    tertiaryColor: '#fafafa',
+                    background: '#fafafa',
+                    mainBkg: '#ffffff',
+                    nodeBorder: '#007a7a',
+                    clusterBkg: '#f0f8f8',
+                    clusterBorder: '#007a7a'
+                }
+            });
+            mermaid.run({ querySelector: '.mermaid' });
+        };
     </script>
     <style>
         :root {
             --bg: #050508;
             --surface: #0a0a10;
-            --text: #e0e0e0;
+            --text: #c8c8c8;
             --text-muted: #888;
-            --accent: #00ffff;
-            --accent-dim: rgba(0, 255, 255, 0.3);
-            --border: rgba(0, 255, 255, 0.15);
+            --accent: #00d4d4;
+            --accent-soft: #00a0a0;
+            --accent-dim: rgba(0, 212, 212, 0.15);
+            --border: rgba(0, 212, 212, 0.2);
             --heading: #ffffff;
+            --code-bg: rgba(0, 212, 212, 0.1);
         }
 
         :root[data-theme="light"] {
-            --bg: #F5F5F7;
-            --surface: #FFFFFF;
-            --text: #1A1A2E;
-            --text-muted: #666677;
-            --accent: #008B8B;
-            --accent-dim: rgba(0, 139, 139, 0.15);
-            --border: rgba(0, 139, 139, 0.2);
-            --heading: #1A1A2E;
+            --bg: #fafafa;
+            --surface: #ffffff;
+            --text: #2a2a2a;
+            --text-muted: #666666;
+            --accent: #007a7a;
+            --accent-soft: #009090;
+            --accent-dim: rgba(0, 122, 122, 0.1);
+            --border: rgba(0, 122, 122, 0.2);
+            --heading: #1a1a1a;
+            --code-bg: rgba(0, 122, 122, 0.08);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -76,7 +152,25 @@ MODIFIED: 2025-11-29
             background: var(--bg);
             font-family: 'Inter', sans-serif;
             color: var(--text);
-            line-height: 1.6;
+            line-height: 1.5;
+        }
+
+        /* Subtle dot pattern */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            background-image: radial-gradient(circle, rgba(0, 212, 212, 0.15) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        :root[data-theme="light"] body::before {
+            background-image: radial-gradient(circle, rgba(0, 122, 122, 0.05) 1px, transparent 1px);
         }
 
         a { color: var(--accent); text-decoration: none; }
@@ -215,22 +309,52 @@ MODIFIED: 2025-11-29
 
         .post-content h1, .post-content h2, .post-content h3 {
             font-family: 'Rajdhani', sans-serif;
-            color: var(--heading);
             margin-top: 32px;
             margin-bottom: 16px;
         }
 
-        .post-content h2 { font-size: 1.5rem; }
-        .post-content h3 { font-size: 1.25rem; }
+        .post-content h2 {
+            font-size: 1.5rem;
+            color: var(--accent);
+        }
+
+        .post-content h3 {
+            font-size: 1.25rem;
+            color: var(--accent-soft);
+        }
 
         .post-content p {
             margin-bottom: 16px;
             text-align: justify;
         }
 
+        /* Jump navigation styling */
+        .post-content p:first-of-type strong:first-child {
+            display: block;
+            background: var(--accent-dim);
+            padding: 12px 16px;
+            border-radius: 8px;
+            border-left: 3px solid var(--accent);
+            margin-bottom: 24px;
+            font-weight: 500;
+            font-size: 0.9em;
+            line-height: 1.8;
+        }
+
+        .post-content li {
+            text-align: justify;
+            margin-bottom: 6px;
+        }
+
+        .post-content strong {
+            color: var(--heading);
+            font-weight: 600;
+        }
+
         .post-content code {
             font-family: 'JetBrains Mono', monospace;
-            background: var(--surface);
+            background: var(--code-bg);
+            color: var(--accent);
             padding: 2px 6px;
             border-radius: 4px;
             font-size: 0.9em;
@@ -247,6 +371,7 @@ MODIFIED: 2025-11-29
 
         .post-content pre code {
             background: none;
+            color: var(--text);
             padding: 0;
         }
 
@@ -255,12 +380,52 @@ MODIFIED: 2025-11-29
             padding-left: 24px;
         }
 
+        .post-content li::marker {
+            color: var(--accent);
+        }
+
         .post-content blockquote {
             border-left: 3px solid var(--accent);
             padding-left: 16px;
             margin: 20px 0;
             color: var(--text-muted);
             font-style: italic;
+        }
+
+        .post-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.95em;
+        }
+
+        .post-content th {
+            background: var(--accent-dim);
+            color: var(--accent);
+            font-weight: 600;
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 2px solid var(--accent);
+        }
+
+        .post-content td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .post-content tr:hover td {
+            background: var(--accent-dim);
+        }
+
+        /* Mermaid diagrams - centered */
+        .post-content .mermaid {
+            display: flex;
+            justify-content: center;
+            margin: 24px 0;
+        }
+
+        .post-content .mermaid svg {
+            max-width: 100%;
         }
 
         .post-footer {
@@ -302,14 +467,24 @@ MODIFIED: 2025-11-29
             opacity: 0.3;
         }
 
-        /* Navigation */
+        /* Navigation - sticky */
         nav {
+            position: sticky;
+            top: 0;
+            background: rgba(5, 5, 8, 0.9);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             margin-bottom: 40px;
-            padding-bottom: 16px;
+            padding: 16px 0;
             border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            z-index: 100;
+        }
+
+        :root[data-theme="light"] nav {
+            background: rgba(250, 250, 250, 0.9);
         }
 
         nav .logo {
@@ -318,54 +493,267 @@ MODIFIED: 2025-11-29
             color: var(--accent);
         }
 
-        nav .links a {
-            margin-left: 20px;
+        nav .nav-home {
             color: var(--text-muted);
             font-size: 0.9rem;
         }
 
-        nav .links a:hover {
+        nav .nav-home:hover {
             color: var(--accent);
         }
 
-        /* Theme Toggle */
+        /* Theme Toggle - Glowing SVG */
         #theme-toggle {
             background: none;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 6px 10px;
+            border: none;
+            border-radius: 50%;
+            padding: 8px;
             cursor: pointer;
-            font-size: 1rem;
-            color: var(--text-muted);
-            transition: border-color 0.2s, color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
         }
 
         #theme-toggle:hover {
-            border-color: var(--accent);
-            color: var(--accent);
+            transform: scale(1.1);
+        }
+
+        #theme-toggle svg {
+            width: 28px;
+            height: 28px;
+            filter: drop-shadow(0 0 6px var(--accent));
         }
 
         .icon-sun, .icon-moon {
             display: none;
         }
 
-        :root[data-theme="dark"] .icon-sun { display: inline; }
-        :root[data-theme="light"] .icon-moon { display: inline; }
+        :root[data-theme="dark"] .icon-sun { display: block; }
+        :root[data-theme="light"] .icon-moon { display: block; }
+
+        /* Mobile: make toggle more prominent */
+        @media (max-width: 600px) {
+            #theme-toggle svg {
+                width: 32px;
+                height: 32px;
+            }
+        }
+
+        /* Floating navigation buttons */
+        .float-nav {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 99;
+        }
+
+        .float-nav button {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--accent);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 18px;
+        }
+
+        .float-nav button:hover {
+            background: var(--accent);
+            color: var(--bg);
+            border-color: var(--accent);
+            transform: scale(1.1);
+        }
+
+        .float-nav button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .float-nav button:disabled:hover {
+            background: var(--surface);
+            color: var(--accent);
+            transform: none;
+        }
     </style>
 </head>
 <body>
+    <!-- Floating navigation -->
+    <div class="float-nav">
+        <button id="nav-top" title="Back to top">↑</button>
+        <button id="nav-prev" title="Previous section">◀</button>
+        <button id="nav-next" title="Next section">▶</button>
+    </div>
+
+    <script>
+        // Floating header navigation - works with dynamically loaded content
+        (function() {
+            function getHeadings() {
+                // Query fresh each time since content is loaded by WASM
+                return Array.from(document.querySelectorAll('h1, h2, h3')).filter(h => {
+                    // Exclude the main blog title and only get content headings
+                    return h.closest('.post-content') || h.closest('article');
+                });
+            }
+
+            function getCurrentHeadingIndex() {
+                const headings = getHeadings();
+                if (headings.length === 0) return -1;
+
+                const scrollPos = window.scrollY + 120;
+
+                for (let i = headings.length - 1; i >= 0; i--) {
+                    const rect = headings[i].getBoundingClientRect();
+                    const headingTop = rect.top + window.scrollY;
+                    if (headingTop <= scrollPos) {
+                        return i;
+                    }
+                }
+                return -1;
+            }
+
+            function scrollToHeading(index) {
+                const headings = getHeadings();
+                if (index >= 0 && index < headings.length) {
+                    const rect = headings[index].getBoundingClientRect();
+                    const y = rect.top + window.scrollY - 80;
+                    window.scrollTo({ top: y, behavior: 'smooth' });
+                }
+            }
+
+            document.getElementById('nav-top').addEventListener('click', () => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+
+            document.getElementById('nav-prev').addEventListener('click', () => {
+                const headings = getHeadings();
+                const current = getCurrentHeadingIndex();
+                console.log('Prev clicked, headings:', headings.length, 'current:', current);
+                if (current > 0) {
+                    scrollToHeading(current - 1);
+                } else {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+
+            document.getElementById('nav-next').addEventListener('click', () => {
+                const headings = getHeadings();
+                const current = getCurrentHeadingIndex();
+                console.log('Next clicked, headings:', headings.length, 'current:', current);
+                if (current < headings.length - 1) {
+                    scrollToHeading(current + 1);
+                }
+            });
+
+            // Update button states on scroll
+            function updateNavState() {
+                const headings = getHeadings();
+                const current = getCurrentHeadingIndex();
+
+                const prevBtn = document.getElementById('nav-prev');
+                const nextBtn = document.getElementById('nav-next');
+                const topBtn = document.getElementById('nav-top');
+
+                if (prevBtn) prevBtn.disabled = (current <= 0 && window.scrollY < 100);
+                if (nextBtn) nextBtn.disabled = (headings.length === 0 || current >= headings.length - 1);
+                if (topBtn) topBtn.disabled = (window.scrollY < 100);
+            }
+
+            window.addEventListener('scroll', updateNavState);
+            // Re-check periodically for WASM-loaded content
+            setInterval(updateNavState, 1000);
+            updateNavState();
+        })();
+
+        // Handle anchor link clicks for dynamically loaded content
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('a');
+            if (link && link.getAttribute('href')?.startsWith('#')) {
+                e.preventDefault();
+                const targetId = link.getAttribute('href').substring(1);
+                let targetEl = document.getElementById(targetId);
+
+                // Fallback: search headings by text content if ID not found
+                if (!targetEl) {
+                    const searchText = targetId.replace(/-/g, ' ').toLowerCase();
+                    const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
+                    for (const h of headings) {
+                        // Normalize heading text: remove special chars, convert hyphens to spaces
+                        const headingText = h.textContent.toLowerCase()
+                            .replace(/[^a-z0-9\s-]/g, '')
+                            .replace(/-/g, ' ')
+                            .replace(/\s+/g, ' ')
+                            .trim();
+                        if (headingText.includes(searchText) || searchText.includes(headingText.split(' ').slice(0, 3).join(' '))) {
+                            targetEl = h;
+                            break;
+                        }
+                    }
+                }
+
+                if (targetEl) {
+                    const yOffset = -80; // Account for sticky nav
+                    const y = targetEl.getBoundingClientRect().top + window.pageYOffset + yOffset;
+                    window.scrollTo({ top: y, behavior: 'smooth' });
+                    history.pushState(null, '', '#' + targetId);
+                } else {
+                    console.warn('Anchor target not found:', targetId, 'Available IDs:',
+                        Array.from(document.querySelectorAll('[id]')).map(el => el.id).slice(0, 20));
+                }
+            }
+        });
+    </script>
     <div id="app">
         <nav>
             <a href="/" class="logo">too.foo/blog</a>
-            <div class="links">
-                <a href="/archive">Archive</a>
-                <a href="/about">About</a>
-                <a href="https://too.foo">Home</a>
-                <button id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle light/dark mode">
-                    <span class="icon-sun">&#9788;</span>
-                    <span class="icon-moon">&#9790;</span>
+            <a href="https://too.foo" class="nav-home">Home</a>
+            <button id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle light/dark mode">
+                    <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
+                        <circle cx="12" cy="12" r="4" fill="var(--accent)" stroke="var(--accent)"/>
+                        <!-- Rays that extend outward -->
+                        <line x1="12" y1="2" x2="12" y2="5" stroke="var(--accent)">
+                            <animate attributeName="y1" values="5;1;5" dur="3s" repeatCount="indefinite"/>
+                        </line>
+                        <line x1="12" y1="19" x2="12" y2="22" stroke="var(--accent)">
+                            <animate attributeName="y2" values="19;23;19" dur="3s" repeatCount="indefinite"/>
+                        </line>
+                        <line x1="2" y1="12" x2="5" y2="12" stroke="var(--accent)">
+                            <animate attributeName="x1" values="5;1;5" dur="3s" repeatCount="indefinite"/>
+                        </line>
+                        <line x1="19" y1="12" x2="22" y2="12" stroke="var(--accent)">
+                            <animate attributeName="x2" values="19;23;19" dur="3s" repeatCount="indefinite"/>
+                        </line>
+                        <line x1="4.93" y1="4.93" x2="6.76" y2="6.76" stroke="var(--accent)">
+                            <animate attributeName="x1" values="6.76;3.5;6.76" dur="3s" repeatCount="indefinite"/>
+                            <animate attributeName="y1" values="6.76;3.5;6.76" dur="3s" repeatCount="indefinite"/>
+                        </line>
+                        <line x1="17.24" y1="17.24" x2="19.07" y2="19.07" stroke="var(--accent)">
+                            <animate attributeName="x2" values="17.24;20.5;17.24" dur="3s" repeatCount="indefinite"/>
+                            <animate attributeName="y2" values="17.24;20.5;17.24" dur="3s" repeatCount="indefinite"/>
+                        </line>
+                        <line x1="4.93" y1="19.07" x2="6.76" y2="17.24" stroke="var(--accent)">
+                            <animate attributeName="x1" values="6.76;3.5;6.76" dur="3s" repeatCount="indefinite"/>
+                            <animate attributeName="y1" values="17.24;20.5;17.24" dur="3s" repeatCount="indefinite"/>
+                        </line>
+                        <line x1="17.24" y1="6.76" x2="19.07" y2="4.93" stroke="var(--accent)">
+                            <animate attributeName="x2" values="17.24;20.5;17.24" dur="3s" repeatCount="indefinite"/>
+                            <animate attributeName="y2" values="6.76;3.5;6.76" dur="3s" repeatCount="indefinite"/>
+                        </line>
+                    </svg>
+                    <svg class="icon-moon" viewBox="0 0 24 24">
+                        <path fill="var(--accent)" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z">
+                            <animate attributeName="opacity" values="0.7;1;0.7" dur="3s" repeatCount="indefinite"/>
+                        </path>
+                    </svg>
                 </button>
-            </div>
         </nav>
         <main id="blog-root">
             <!-- Rendered by WASM -->

@@ -9,9 +9,20 @@
 // Generates HTML elements from blog data
 
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
 use web_sys::{Document, Element};
 
 use crate::{BlogIndex, Post, PostMeta};
+
+fn render_mermaid() {
+    if let Some(window) = web_sys::window() {
+        if let Ok(func) = js_sys::Reflect::get(&window, &JsValue::from_str("renderMermaid")) {
+            if let Some(f) = func.dyn_ref::<js_sys::Function>() {
+                let _ = f.call0(&window);
+            }
+        }
+    }
+}
 
 pub struct BlogRenderer {
     document: Document,
@@ -126,6 +137,10 @@ impl BlogRenderer {
         ));
 
         self.root.append_child(&article)?;
+
+        // Render mermaid diagrams after content is in DOM
+        render_mermaid();
+
         Ok(())
     }
 

@@ -46,6 +46,4 @@ The blog engine parses markdown with frontmatter, handles client-side routing, a
 
 Find me on [X/Twitter](https://x.com/LazyShivam) or check out the [main site](https://too.foo).
 
----
-
 *First post done. Let's see where this goes.*

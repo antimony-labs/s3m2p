@@ -41,7 +41,7 @@ pub struct Post {
 }
 
 impl Post {
-    /// Render markdown content to HTML
+    /// Render markdown content to HTML with heading IDs for anchor links
     pub fn render_html(&self) -> String {
         let mut options = Options::empty();
         options.insert(Options::ENABLE_STRIKETHROUGH);
@@ -53,7 +53,39 @@ impl Post {
         let mut html_output = String::new();
         html::push_html(&mut html_output, parser);
 
-        html_output
+        // Post-process to add IDs to headings
+        let mut result = String::new();
+        let mut last_end = 0;
+
+        for (i, _) in html_output.match_indices("<h") {
+            if i + 3 < html_output.len() {
+                let level_char = html_output.chars().nth(i + 2);
+                if let Some(c) = level_char {
+                    if c.is_ascii_digit() && html_output[i..].starts_with(&format!("<h{}>", c)) {
+                        // Find the closing tag
+                        let close_tag = format!("</h{}>", c);
+                        if let Some(close_idx) = html_output[i..].find(&close_tag) {
+                            let heading_content = &html_output[i + 4..i + close_idx];
+                            let id = heading_content
+                                .to_lowercase()
+                                .chars()
+                                .filter(|ch| ch.is_alphanumeric() || *ch == ' ' || *ch == '-')
+                                .collect::<String>()
+                                .split_whitespace()
+                                .collect::<Vec<_>>()
+                                .join("-");
+
+                            result.push_str(&html_output[last_end..i]);
+                            result.push_str(&format!("<h{} id=\"{}\">", c, id));
+                            last_end = i + 4;
+                        }
+                    }
+                }
+            }
+        }
+        result.push_str(&html_output[last_end..]);
+
+        result
     }
 
     /// Extract reading time estimate

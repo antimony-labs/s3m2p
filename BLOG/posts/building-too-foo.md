@@ -16,7 +16,7 @@ Shivam Bhardwaj → Sb → Antimony (element 51). My parents gave me a periodic 
 
 So here we are. Antimony Labs. A one-person "lab" run by a guy who thinks naming things is harder than building them.
 
-I also bought the domain **too.foo** because it was available and I have poor impulse control. Turns out it's perfect—everything lives at `something.too.foo`. Solar system? [helios.too.foo](https://helios.too.foo). Wave patterns? [chladni.too.foo](https://chladni.too.foo). Linux tutorials? [ubuntu.too.foo](https://ubuntu.too.foo). This blog? You're on it. Easy to remember, fun to say, and only mildly confusing to type.
+I also bought the domain **too.foo** because it was available and I have poor impulse control. Turns out it's perfect-everything lives at `something.too.foo`. Solar system? [helios.too.foo](https://helios.too.foo). Wave patterns? [chladni.too.foo](https://chladni.too.foo). Linux tutorials? [ubuntu.too.foo](https://ubuntu.too.foo). This blog? You're on it. Easy to remember, fun to say, and only mildly confusing to type.
 
 ## What's This All About?
 
@@ -24,7 +24,7 @@ I'm an engineer who got tired of expensive, bloated software that crashes at the
 
 **too.foo** is my playground. It's where I experiment with building engineering tools from scratch using Rust, WebAssembly, and a healthy dose of AI assistance.
 
-Yes, AI assistance. I use Claude to help me code. A lot. I'm not pretending to be a one-person army—I'm experimenting with what's possible when you combine human intuition with AI capability. Sometimes it works beautifully. Sometimes I spend three hours debugging something an LLM confidently told me was correct.
+Yes, AI assistance. I use Claude to help me code. A lot. I'm not pretending to be a one-person army-I'm experimenting with what's possible when you combine human intuition with AI capability. Sometimes it works beautifully. Sometimes I spend three hours debugging something an LLM confidently told me was correct.
 
 That's the experiment.
 
@@ -32,9 +32,9 @@ That's the experiment.
 
 ### Tools
 
-- **MCAD** — Mechanical CAD with my own geometry kernel. Still early, but it's mine.
-- **ECAD** — PCB design without the Altium price tag.
-- **Simulations** — Physics toys. Orbital mechanics. Wave patterns. Things that move on screen and teach me something.
+- **MCAD** - Mechanical CAD with my own geometry kernel. Still early, but it's mine.
+- **ECAD** - PCB design without the Altium price tag.
+- **Simulations** - Physics toys. Orbital mechanics. Wave patterns. Things that move on screen and teach me something.
 
 ### Learning Platform
 
@@ -74,14 +74,12 @@ The rough plan:
 - Hardware projects documented here
 - Tutorials for everything I build
 
-This blog is where I'll document the journey—the wins, the failures, the "why did I think this was a good idea" moments.
+This blog is where I'll document the journey - the wins, the failures, the "why did I think this was a good idea" moments.
 
 If you're into engineering, tinkering, or watching someone build things in public with AI assistance, stick around.
 
 Welcome to Antimony Labs.
 
-— Shivam (Sb)
-
----
+- Shivam (Sb)
 
 *Check out [HELIOS](https://helios.too.foo) (solar system), [CHLADNI](https://chladni.too.foo) (wave patterns), or browse around [too.foo](https://too.foo).*
