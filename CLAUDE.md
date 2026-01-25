@@ -11,15 +11,31 @@ Deployed to **too.foo**
 | `cargo test --workspace` | Run all tests |
 | `trunk build HELIOS/index.html` | Build helios WASM |
 | `trunk build WELCOME/index.html` | Build WELCOME (too.foo) WASM |
-| `./SCRIPTS/dev-serve.sh <project>` | Dev server (auto-kills existing) |
+| `./SCRIPTS/dev up <project>` | Dev server (auto-kills existing) |
 | `./SCRIPTS/deploy.sh welcome --publish` | Deploy too.foo (WELCOME) |
 | `./SCRIPTS/worktree.sh create <issue>` | Create worktree for issue |
 | `./SCRIPTS/audit.sh` | Security audit |
 
+## Dev Server
+
+**IMPORTANT: Always use `./SCRIPTS/dev up <project>` to start dev servers. NEVER run `trunk serve` directly.**
+
+The dev script:
+- Binds to `0.0.0.0` for local network access (test on phones/tablets)
+- Auto-kills existing process on the port
+- Sets correct environment variables
+
+```bash
+# Correct
+./SCRIPTS/dev up blog
+
+# Wrong - don't do this
+trunk serve BLOG/index.html --port 8085
+```
+
 ## Dev Server Ports
 
 Each project has a dedicated port to allow multiple services to run simultaneously.
-Use `./SCRIPTS/dev-serve.sh <project>` to start - it auto-kills any existing process on that port.
 
 | Project | Port | URL | Description |
 |---------|------|-----|-------------|
