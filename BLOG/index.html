@@ -599,8 +599,8 @@ MODIFIED: 2025-11-29
         (function() {
             function getHeadings() {
                 // Query fresh each time since content is loaded by WASM
-                return Array.from(document.querySelectorAll('h1, h2, h3')).filter(h => {
-                    // Exclude the main blog title and only get content headings
+                return Array.from(document.querySelectorAll('.post-content h2')).filter(h => {
+                    // Only h2 (main sections) for navigation, exclude subsections
                     return h.closest('.post-content') || h.closest('article');
                 });
             }
