@@ -19,11 +19,12 @@
 - [9) Dictionaries](#9-dictionaries)
 - [10) Complexity + Memory Model](#10-complexity--memory-model)
 - [11) OOP Basics](#11-oop-basics)
-- [12) DSA Patterns Cheatsheet](#12-dsa-patterns-cheatsheet)
-- [13) LeetCode Practice Tracker](#13-leetcode-practice-tracker)
-- [14) Bug Journal](#14-bug-journal)
-- [15) Cheat Sheets](#15-cheat-sheets)
-- [16) Mini-Revision Drills (10–15 min)](#16-mini-revision-drills-1015-min)
+- [12) Python Core Advanced](#12-python-core-advanced)
+- [13) DSA Patterns Cheatsheet](#13-dsa-patterns-cheatsheet)
+- [14) LeetCode Practice Tracker](#14-leetcode-practice-tracker)
+- [15) Bug Journal](#15-bug-journal)
+- [16) Cheat Sheets](#16-cheat-sheets)
+- [17) Mini-Revision Drills (10–15 min)](#17-mini-revision-drills-1015-min)
 
 ---
 
@@ -162,9 +163,22 @@ s[::-1]  # reverse
 - Case: `lower`, `upper`, `title`, `capitalize`
 - Search: `find`, `index`, `count`
 - Match: `startswith`, `endswith`
-- Split/Join: `split`, `'sep'.join(...)`
+- Split/Join: `split`, `rsplit`, `splitlines`, `'sep'.join(...)`
 - Replace: `replace`
-- Check: `isalnum`, `isalpha`, `isdigit`, `isnumeric`
+- Check: `isalnum`, `isalpha`, `isdigit`, `isnumeric`, `isspace`
+
+### Formatting
+```python
+name = "Ada"
+age = 36
+print(f"{name} is {age}")
+```
+
+### Bytes vs str
+```python
+b = "hello".encode("utf-8")
+text = b.decode("utf-8")
+```
 
 ### Palindrome normalization
 ```python
@@ -193,6 +207,11 @@ nums.append(4)
 - `sort()` in place
 - `reverse()` in place
 - `copy()` shallow copy
+
+### List patterns
+- **Stack**: `append` + `pop`
+- **Queue**: use `collections.deque`
+- **Comprehension**: `[x*x for x in nums]`
 
 ### Tuples (immutable)
 ```python
@@ -228,6 +247,7 @@ fruits = {"apple", "banana"}
 - `discard(x)` (safe)
 - `pop()` (arbitrary)
 - `clear()`
+- `copy()`
 
 ### Set algebra
 ```python
@@ -237,23 +257,53 @@ A - B   # difference
 A ^ B   # symmetric difference
 ```
 
+### Subset / superset
+`A <= B`, `A < B`, `A >= B`
+
+### Frozenset
+`frozenset([1,2,3])`
+
 ---
 
 ## 9) Dictionaries
 ### Dict facts
 - key → value mapping
 - Fast lookup
+- Insertion order preserved (Py 3.7+)
 
 ```python
 person = {"name": "Ada", "age": 36}
 ```
 
-### Dict methods
+### Dict methods (core)
 - `get(k, d)` safe lookup
-- `keys()`, `values()`, `items()`
-- `update(...)`
-- `pop(k)`, `popitem()`
-- `setdefault(k, d)`
+- `keys()`, `values()`, `items()` (dynamic views)
+- `update(...)` merge/update
+- `pop(k)`, `popitem()` remove
+- `setdefault(k, d)` get or set
+- `copy()` shallow copy
+- `fromkeys(keys, v)` initialize
+
+### Adding / updating
+```python
+d = {}
+d["x"] = 1
+d.update({"y": 2})
+d.setdefault("z", 0)
+```
+
+### Removing
+```python
+del d["x"]
+d.pop("y")
+d.clear()
+```
+
+### Merge (Python 3.9+)
+```python
+merged = a | b
+a |= b
+```
 
 ### Frequency pattern
 ```python
@@ -264,16 +314,11 @@ def freq_count(nums):
     return counts
 ```
 
-### Two Sum pattern
-```python
-def two_sum(nums, target):
-    seen = {}
-    for i, x in enumerate(nums):
-        need = target - x
-        if need in seen:
-            return [seen[need], i]
-        seen[x] = i
-```
+### Dict internals (mental model)
+- Dictionary = **hash table**
+- Hash maps key → index
+- Collisions resolved by probing
+- Resizes as it grows to keep ~O(1) ops
 
 ---
 
@@ -313,7 +358,58 @@ class Player:
 
 ---
 
-## 12) DSA Patterns Cheatsheet
+## 12) Python Core Advanced
+### Iterables / iterators / generators
+```python
+itr = iter([1,2,3])
+next(itr)
+```
+
+```python
+def gen():
+    for i in range(3):
+        yield i
+```
+
+### Exceptions
+```python
+try:
+    x = int("abc")
+except ValueError:
+    pass
+```
+
+### File I/O
+```python
+with open("data.txt", "w") as f:
+    f.write("hello")
+```
+
+### Modules
+```python
+import math
+from collections import deque
+```
+
+### Typing
+```python
+def add(a: int, b: int) -> int:
+    return a + b
+```
+
+### Dataclasses
+```python
+from dataclasses import dataclass
+
+@dataclass
+class Point:
+    x: int
+    y: int
+```
+
+---
+
+## 13) DSA Patterns Cheatsheet
 ### Two pointers
 - Sorted arrays, pair from ends
 
@@ -331,7 +427,7 @@ class Player:
 
 ---
 
-## 13) LeetCode Practice Tracker
+## 14) LeetCode Practice Tracker
 | #  | Problem                        | Topic    | Status | Key Idea                 | My Mistake | Retry Date |
 | -- | ------------------------------ | -------- | ------ | ------------------------ | ---------- | ---------- |
 | 1  | Length of Last Word            | strings  |        | split/scan               |            |            |
@@ -348,7 +444,7 @@ class Player:
 
 ---
 
-## 14) Bug Journal
+## 15) Bug Journal
 Use this format whenever I get stuck.
 
 - Date:
@@ -364,7 +460,7 @@ Example:
 
 ---
 
-## 15) Cheat Sheets
+## 16) Cheat Sheets
 ### If you see X, think Y
 - “Unique elements” → `set`
 - “Count frequency” → `dict`
@@ -381,7 +477,7 @@ Example:
 
 ---
 
-## 16) Mini-Revision Drills (10–15 min)
+## 17) Mini-Revision Drills (10–15 min)
 ### Drill A — Type + operator rules
 - What is `type(3/2)`?
 - What is `7//2`?

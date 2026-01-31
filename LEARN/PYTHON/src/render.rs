@@ -4,7 +4,7 @@
 //! MODIFIED: 2026-01-31
 //! ═══════════════════════════════════════════════════════════════════════════════
 
-use crate::lessons::{Lesson, LESSONS, PHASES};
+use crate::lessons::{Lesson, LESSONS, PHASES, GLOSSARY};
 use wasm_bindgen::prelude::*;
 use web_sys::{Document, Element};
 
@@ -68,13 +68,44 @@ impl LessonRenderer {
         }
     }
 
+    /// Apply glossary tooltips - wrap technical terms with tooltip spans
+    fn apply_glossary(text: &str) -> String {
+        let mut result = text.to_string();
+        for term in GLOSSARY {
+            let pattern = term.word;
+            if let Some(pos) = result.to_lowercase().find(&pattern.to_lowercase()) {
+                let original = &result[pos..pos + pattern.len()];
+                let tooltip = format!(
+                    r#"<span class="glossary-term" data-tooltip="{}">{}</span>"#,
+                    term.short, original
+                );
+                result = format!(
+                    "{}{}{}",
+                    &result[..pos],
+                    tooltip,
+                    &result[pos + pattern.len()..]
+                );
+            }
+        }
+        result
+    }
+
+    fn glossary_tooltip_for(term: &str) -> Option<&'static str> {
+        for entry in GLOSSARY {
+            if entry.word.eq_ignore_ascii_case(term) {
+                return Some(entry.short);
+            }
+        }
+        None
+    }
+
     pub fn render_home(&self, _lessons: &[Lesson]) -> Result<(), JsValue> {
         let mut html = String::from(
             r#"
             <header class="hero">
                 <h1>Python + DSA</h1>
                 <p class="subtitle">Build Python fundamentals, then level up for interviews and LeetCode</p>
-                <p class="lesson-count">11 Lessons · Foundations to OOP</p>
+                <p class="lesson-count">12 Lessons · Foundations to Advanced Core</p>
             </header>
         "#,
         );
@@ -208,14 +239,21 @@ impl LessonRenderer {
         let concepts_html: String = lesson
             .key_concepts
             .iter()
-            .map(|c| format!(r#"<span class=\"concept\">{}</span>"#, c))
+            .map(|c| {
+                if let Some(def) = Self::glossary_tooltip_for(c) {
+                    format!(r#"<span class="concept" data-tooltip="{}">{}</span>"#, def, c)
+                } else {
+                    format!(r#"<span class="concept">{}</span>"#, c)
+                }
+            })
             .collect::<Vec<_>>()
             .join("");
 
         let progress_nav = self.render_lesson_progress(lesson.id, total_lessons);
 
-        let intuition_html = convert_markdown_to_html(lesson.intuition);
+        let intuition_html = Self::apply_glossary(&convert_markdown_to_html(lesson.intuition));
         let content_html = convert_markdown_to_html(lesson.content);
+        let why_it_matters = Self::apply_glossary(lesson.why_it_matters);
 
         let dos_donts_html = if !lesson.dos_and_donts.is_empty() {
             format!(
@@ -347,7 +385,7 @@ impl LessonRenderer {
             phase = lesson.phase,
             title = lesson.title,
             subtitle = lesson.subtitle,
-            why_it_matters = lesson.why_it_matters,
+            why_it_matters = why_it_matters,
             concepts = concepts_html,
             intuition = intuition_html,
             playground = Self::playground_html(),
