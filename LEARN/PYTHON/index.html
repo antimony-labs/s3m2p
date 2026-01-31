@@ -1,0 +1,397 @@
+<!--
+═══════════════════════════════════════════════════════════════════════════════
+FILE: index.html | PYTHON/index.html
+PURPOSE: Python fundamentals + DSA-ready learning platform
+MODIFIED: 2026-01-31
+═══════════════════════════════════════════════════════════════════════════════
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python | Fundamentals + DSA</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Rajdhani:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Universal Theme System -->
+    <link data-trunk rel="copy-file" href="../theme/learn-theme.css" />
+    <link data-trunk rel="copy-file" href="../theme/learn-theme.js" />
+    <link rel="stylesheet" href="learn-theme.css" />
+    <script src="learn-theme.js"></script>
+
+    <!-- Copy master notes into dist -->
+    <link data-trunk rel="copy-file" href="python_dsa_master_notes.md" />
+
+    <!-- Python accent colors -->
+    <style>
+        :root {
+            --accent: #3776AB;
+            --accent-dim: rgba(55, 118, 171, 0.18);
+            --border: rgba(55, 118, 171, 0.2);
+            --accent-gradient-end: #FFD43B;
+        }
+
+        :root[data-theme="light"] {
+            --accent: #1F5A93;
+            --accent-dim: rgba(31, 90, 147, 0.12);
+            --border: rgba(31, 90, 147, 0.2);
+            --accent-gradient-end: #F0C23B;
+        }
+
+        /* Playground */
+        .playground-section {
+            margin: 32px 0 48px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: var(--surface);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+
+        .playground-header {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .playground-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .playground-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .playground-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 900px) {
+            .playground-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .playground-editor textarea {
+            width: 100%;
+            min-height: 280px;
+            resize: vertical;
+            background: var(--canvas-bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .playground-output {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .output-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .output-console {
+            min-height: 280px;
+            background: #0b0b12;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            overflow: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        :root[data-theme="light"] .output-console {
+            background: #f1f3f7;
+        }
+
+        .output-line {
+            white-space: pre-wrap;
+        }
+
+        .output-line.error {
+            color: #ff6644;
+        }
+
+        .runtime-status {
+            margin-left: auto;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .btn {
+            background: var(--surface-hover);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: border-color 0.2s, color 0.2s, transform 0.1s;
+        }
+
+        .btn.primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-gradient-end));
+            color: #0b0b12;
+            border-color: transparent;
+        }
+
+        .btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .btn.primary:hover {
+            color: #0b0b12;
+            transform: translateY(-1px);
+        }
+
+        .playground-note {
+            margin-top: 12px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* Snippet run buttons */
+        .code-block {
+            position: relative;
+            margin: 18px 0;
+        }
+
+        .code-block pre {
+            padding-top: 28px;
+        }
+
+        .snippet-run-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            z-index: 2;
+            font-size: 0.8rem;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .snippet-run-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+    </style>
+
+    <!-- Python runtime loader (Pyodide) -->
+    <script>
+        (function () {
+            const PYODIDE_BASE = "https://cdn.jsdelivr.net/pyodide/v0.29.3/full/";
+            const PYODIDE_JS = PYODIDE_BASE + "pyodide.js";
+
+            let pyodideReady = null;
+            let pyodide = null;
+            let defaultCode = `print("Hello, Python!")\n\nnums = [3, 1, 4, 1, 5]\nprint("sum:", sum(nums))\nprint("unique:", set(nums))`;
+
+            function getEls() {
+                return {
+                    root: document.getElementById("python-playground"),
+                    code: document.getElementById("py-code"),
+                    output: document.getElementById("py-output"),
+                    runBtn: document.getElementById("py-run-btn"),
+                    clearBtn: document.getElementById("py-clear-btn"),
+                    resetBtn: document.getElementById("py-reset-btn"),
+                    status: document.getElementById("py-runtime-status"),
+                };
+            }
+
+            function setStatus(text) {
+                const { status } = getEls();
+                if (status) status.textContent = text;
+            }
+
+            function escapeHtml(text) {
+                return text
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;");
+            }
+
+            function appendOutput(text, isError = false) {
+                const { output } = getEls();
+                if (!output) return;
+                const line = document.createElement("div");
+                line.className = isError ? "output-line error" : "output-line";
+                line.innerHTML = escapeHtml(text);
+                output.appendChild(line);
+                output.scrollTop = output.scrollHeight;
+            }
+
+            function clearOutput() {
+                const { output } = getEls();
+                if (output) output.innerHTML = "";
+            }
+
+            async function loadScript(src) {
+                return new Promise((resolve, reject) => {
+                    const existing = document.querySelector(`script[src="${src}"]`);
+                    if (existing) {
+                        existing.addEventListener("load", () => resolve());
+                        existing.addEventListener("error", () => reject(new Error("Script load failed")));
+                        if (existing.dataset.loaded === "true") resolve();
+                        return;
+                    }
+                    const script = document.createElement("script");
+                    script.src = src;
+                    script.async = true;
+                    script.dataset.loaded = "false";
+                    script.onload = () => {
+                        script.dataset.loaded = "true";
+                        resolve();
+                    };
+                    script.onerror = () => reject(new Error("Script load failed"));
+                    document.head.appendChild(script);
+                });
+            }
+
+            function detectPackages(code) {
+                const packages = new Set();
+                if (/\b(import|from)\s+numpy\b/.test(code)) packages.add("numpy");
+                if (/\b(import|from)\s+pandas\b/.test(code)) packages.add("pandas");
+                if (/\b(import|from)\s+matplotlib\b/.test(code)) packages.add("matplotlib");
+                return Array.from(packages);
+            }
+
+            async function ensurePyodide() {
+                if (pyodideReady) return pyodideReady;
+
+                pyodideReady = (async () => {
+                    setStatus("Loading Python runtime...");
+                    await loadScript(PYODIDE_JS);
+                    pyodide = await loadPyodide({ indexURL: PYODIDE_BASE });
+
+                    pyodide.setStdout({
+                        batched: (text) => appendOutput(text),
+                    });
+                    pyodide.setStderr({
+                        batched: (text) => appendOutput(text, true),
+                    });
+                    pyodide.setStdin({
+                        stdin: () => window.prompt("Input:") || "",
+                    });
+
+                    setStatus("Runtime ready");
+                    return pyodide;
+                })().catch((err) => {
+                    setStatus("Runtime failed to load");
+                    appendOutput(String(err), true);
+                    throw err;
+                });
+
+                return pyodideReady;
+            }
+
+            async function runCode(code) {
+                const { code: codeEl } = getEls();
+                if (!code) code = codeEl ? codeEl.value : "";
+                clearOutput();
+                const py = await ensurePyodide();
+
+                const packages = detectPackages(code);
+                if (packages.length) {
+                    setStatus(`Loading packages: ${packages.join(", ")}`);
+                    await py.loadPackage(packages);
+                }
+
+                setStatus("Running...");
+                try {
+                    await py.runPythonAsync(code);
+                    setStatus("Done");
+                } catch (err) {
+                    appendOutput(String(err), true);
+                    setStatus("Error");
+                }
+            }
+
+            function ensureSnippetButtons() {
+                const blocks = document.querySelectorAll(".main-content pre");
+                blocks.forEach((pre) => {
+                    if (pre.parentElement && pre.parentElement.classList.contains("code-block")) return;
+                    const wrapper = document.createElement("div");
+                    wrapper.className = "code-block";
+                    const btn = document.createElement("button");
+                    btn.className = "snippet-run-btn";
+                    btn.textContent = "Run";
+                    btn.addEventListener("click", () => {
+                        const code = pre.innerText;
+                        const { code: codeEl } = getEls();
+                        if (codeEl) {
+                            codeEl.value = code;
+                            codeEl.focus();
+                        }
+                        runCode(code);
+                    });
+                    const parent = pre.parentNode;
+                    parent.insertBefore(wrapper, pre);
+                    wrapper.appendChild(btn);
+                    wrapper.appendChild(pre);
+                });
+            }
+
+            window.initPythonPlayground = function () {
+                const { root, code, runBtn, clearBtn, resetBtn } = getEls();
+                if (root && !root.dataset.bound) {
+                    if (code && !code.value) code.value = defaultCode;
+                    if (runBtn) runBtn.addEventListener("click", () => runCode());
+                    if (clearBtn) clearBtn.addEventListener("click", clearOutput);
+                    if (resetBtn) resetBtn.addEventListener("click", () => {
+                        if (code) code.value = defaultCode;
+                        clearOutput();
+                    });
+                    root.dataset.bound = "true";
+                    setStatus("Runtime idle");
+                }
+                ensureSnippetButtons();
+            };
+        })();
+    </script>
+
+    <!-- WASM Build -->
+    <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" />
+</head>
+<body>
+    <!-- Theme Toggle Button -->
+    <button id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle light/dark mode" style="position:fixed;top:1rem;right:1rem;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 12px;cursor:pointer;font-size:1rem;color:var(--text-muted);transition:border-color 0.2s,color 0.2s;">
+        <span class="icon-sun" style="display:none;">&#9788;</span>
+        <span class="icon-moon" style="display:none;">&#9790;</span>
+    </button>
+    <style>
+        :root[data-theme="dark"] .icon-sun { display: inline !important; }
+        :root[data-theme="light"] .icon-moon { display: inline !important; }
+        #theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+    </style>
+
+    <!-- App Container -->
+    <div id="app">
+        <div class="loading">Loading...</div>
+    </div>
+</body>
+</html>

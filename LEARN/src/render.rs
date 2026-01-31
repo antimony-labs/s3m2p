@@ -81,6 +81,21 @@ impl LessonRenderer {
 
         html.push_str(
             r#"
+            <section class="phase">
+                <h2>More Tutorials</h2>
+                <div class="lesson-grid">
+                    <div class="lesson-card" onclick="window.location.href='https://python.too.foo'">
+                        <span class="lesson-icon">🐍</span>
+                        <h3>Python</h3>
+                        <p class="lesson-subtitle">Fundamentals + DSA-ready patterns</p>
+                    </div>
+                </div>
+            </section>
+        "#,
+        );
+
+        html.push_str(
+            r#"
             <footer>
                 <a href="https://too.foo">← back to too.foo</a>
             </footer>

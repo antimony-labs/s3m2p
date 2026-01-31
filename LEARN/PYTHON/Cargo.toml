@@ -1,0 +1,25 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Cargo.toml | PYTHON/Cargo.toml
+# PURPOSE: Python fundamentals + DSA-ready tutorial (python.too.foo)
+# MODIFIED: 2026-01-31
+# ═══════════════════════════════════════════════════════════════════════════════
+[package]
+name = "python-learn"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "=0.2.93"
+console_error_panic_hook = "0.1"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = [
+    "console",
+    "Window",
+    "Document",
+    "Element",
+    "HtmlElement",
+] }

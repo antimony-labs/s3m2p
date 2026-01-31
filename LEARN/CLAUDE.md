@@ -30,6 +30,7 @@ LEARN/
 ├── OPENCV/                 # opencv.too.foo - Computer vision
 ├── SWARM_ROBOTICS/         # swarm.too.foo - Swarm robotics
 ├── SENSORS/                # sensors.too.foo - Sensor demos
+├── PYTHON/                 # python.too.foo - Python fundamentals + DSA
 └── ML/                     # ML fundamentals (core library)
 ```
 
@@ -95,4 +96,5 @@ Sensor testing and calibration demos
 | slam | 8106 | http://127.0.0.1:8106 |
 | git | 8107 | http://127.0.0.1:8107 |
 | ds | 8108 | http://127.0.0.1:8108 |
+| python | 8110 | http://127.0.0.1:8110 |
 | sensors | 8084 | http://127.0.0.1:8084 |

@@ -43,6 +43,7 @@ declare -A PROJECT_PORTS=(
     ["git"]="8107"
     ["ds"]="8108"
     ["coming_soon"]="8109"
+    ["python"]="8110"
     ["mcad"]="8088"
 
 )
@@ -70,6 +71,7 @@ declare -A PROJECT_DIRS=(
     ["git"]="LEARN/GIT"
     ["ds"]="LEARN/DATA_STRUCTURES"
     ["coming_soon"]="COMING_SOON"
+    ["python"]="LEARN/PYTHON"
     ["mcad"]="MCAD"
 
 )
@@ -96,6 +98,7 @@ declare -A PAGES_PROJECTS=(
     ["slam"]="slam-too-foo"
     ["git"]="git-too-foo"
     ["ds"]="ds-too-foo"
+    ["python"]="python-too-foo"
     ["power"]="power-too-foo"
     ["arch"]="arch-too-foo"
 )

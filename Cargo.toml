@@ -53,6 +53,7 @@ members = [
     "LEARN/SLAM",
     "LEARN/GIT",
     "LEARN/DATA_STRUCTURES",
+    "LEARN/PYTHON",
 
     # Learn CORE engines (shared crates)
     "LEARN/learn_core",
