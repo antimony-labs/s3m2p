@@ -1,11 +1,16 @@
 # Blog - Markdown Blog Engine
 
+> Codex CLI note: See `/AGENTS.md` for repo-wide instructions and best practices. This file is project-specific context.
+
 Rust/WASM blog engine with markdown support and AI-generated content indicators.
 
 ## Build & Run
 
 ```bash
-trunk serve BLOG/index.html --open
+# Development (hot reload) - from repo root
+./SCRIPTS/dev up blog
+
+# Production build
 trunk build --release BLOG/index.html
 ```
 
@@ -58,6 +63,14 @@ More content...
 | summary | No | Short description for cards |
 | draft | No | If true, not shown in listings |
 | ai_generated | No | Shows AI badge if true |
+| updated | No | Last updated date (YYYY-MM-DD) |
+| author | No | Author name override |
+| series | No | Series name for multi-part posts |
+| series_part | No | Series order number |
+| hero | No | Hero image URL |
+| hero_caption | No | Caption under hero image |
+| featured | No | Editor’s picks section |
+| start_here | No | “Start here” section |
 
 ## Style Guide
 

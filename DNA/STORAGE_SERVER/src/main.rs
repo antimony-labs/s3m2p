@@ -1,7 +1,7 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 //! FILE: main.rs | DNA/STORAGE_SERVER/src/main.rs
 //! PURPOSE: Application entry point and initialization
-//! MODIFIED: 2025-12-02
+//! MODIFIED: 2026-01-25
 //! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
@@ -21,9 +21,11 @@ use tracing::info;
 #[allow(unused_imports)]
 use dna::spatial::{DataLayer, SpatialKey};
 
+mod atlas;
+
 #[derive(Clone)]
-struct AppState {
-    data_dir: PathBuf,
+pub struct AppState {
+    pub data_dir: PathBuf,
 }
 
 #[tokio::main]
@@ -50,6 +52,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/v1/health", get(health_check))
         .route("/v1/chunk/:layer/:face/:level/:x/:y", get(get_chunk))
         .route("/v1/batch", post(batch_get_chunks))
+        // ATLAS map data endpoints
+        .route("/v1/atlas/health", get(atlas::atlas_health))
+        .route("/v1/atlas/layers", get(atlas::list_layers))
+        .route("/v1/atlas/:layer/:resolution", get(atlas::get_layer))
         .layer(cors)
         .with_state(state);
 

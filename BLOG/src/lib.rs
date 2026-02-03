@@ -25,12 +25,28 @@ pub struct PostMeta {
     pub title: String,
     pub slug: String,
     pub date: String,
+    #[serde(default)]
+    pub updated: Option<String>,
+    #[serde(default)]
+    pub author: Option<String>,
+    #[serde(default)]
+    pub series: Option<String>,
+    #[serde(default)]
+    pub series_part: Option<u32>,
     pub tags: Vec<String>,
     pub summary: String,
+    #[serde(default)]
+    pub hero: Option<String>,
+    #[serde(default)]
+    pub hero_caption: Option<String>,
     #[serde(default)]
     pub draft: bool,
     #[serde(default)]
     pub ai_generated: bool,
+    #[serde(default)]
+    pub featured: bool,
+    #[serde(default)]
+    pub start_here: bool,
 }
 
 /// Full blog post with content
@@ -164,10 +180,18 @@ pub fn parse_frontmatter(content: &str) -> Option<(PostMeta, String)> {
         title: String::new(),
         slug: String::new(),
         date: String::new(),
+        updated: None,
+        author: None,
+        series: None,
+        series_part: None,
         tags: Vec::new(),
         summary: String::new(),
+        hero: None,
+        hero_caption: None,
         draft: false,
         ai_generated: false,
+        featured: false,
+        start_here: false,
     };
 
     for line in frontmatter.lines() {
@@ -180,9 +204,19 @@ pub fn parse_frontmatter(content: &str) -> Option<(PostMeta, String)> {
                 "title" => meta.title = value.to_string(),
                 "slug" => meta.slug = value.to_string(),
                 "date" => meta.date = value.to_string(),
+                "updated" => meta.updated = Some(value.to_string()),
+                "author" => meta.author = Some(value.to_string()),
+                "series" => meta.series = Some(value.to_string()),
+                "series_part" => {
+                    meta.series_part = value.parse::<u32>().ok();
+                }
                 "summary" => meta.summary = value.to_string(),
+                "hero" => meta.hero = Some(value.to_string()),
+                "hero_caption" => meta.hero_caption = Some(value.to_string()),
                 "draft" => meta.draft = value == "true",
                 "ai_generated" => meta.ai_generated = value == "true",
+                "featured" => meta.featured = value == "true",
+                "start_here" => meta.start_here = value == "true",
                 "tags" => {
                     meta.tags = value
                         .trim_matches(|c| c == '[' || c == ']')
@@ -264,7 +298,7 @@ impl App {
             Route::Home => self.renderer.render_home(&self.index),
             Route::Post(slug) => {
                 if let Some(post) = self.posts.iter().find(|p| p.meta.slug == *slug) {
-                    self.renderer.render_post(post)
+                    self.renderer.render_post(post, &self.index)
                 } else {
                     self.renderer.render_404()
                 }

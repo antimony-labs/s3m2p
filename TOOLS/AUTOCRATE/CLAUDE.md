@@ -1,12 +1,17 @@
 # AutoCrate - ASTM Crate Generator
 
+> Codex CLI note: See `/AGENTS.md` for repo-wide instructions and best practices. This file is project-specific context.
+
 Parametric shipping crate design tool that generates crate specifications from product dimensions.
 
 ## Build & Run
 
 ```bash
-trunk serve autocrate/index.html --open
-trunk build --release autocrate/index.html
+# Development (hot reload) - from repo root
+./SCRIPTS/dev up autocrate
+
+# Production build
+trunk build --release TOOLS/AUTOCRATE/index.html
 ```
 
 ## Architecture

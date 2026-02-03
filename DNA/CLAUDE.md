@@ -1,5 +1,7 @@
 # DNA - Foundation Layer
 
+> Codex CLI note: See `/AGENTS.md` for repo-wide instructions and best practices. This file is project-specific context.
+
 Shared algorithms, physics, and math for all antimony-labs projects.
 Zero-allocation, cache-friendly design.
 

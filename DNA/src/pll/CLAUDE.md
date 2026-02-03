@@ -1,5 +1,7 @@
 # PLL Design Engine - Technical Documentation
 
+> Codex CLI note: See `/AGENTS.md` for repo-wide instructions and best practices. This file is project-specific context.
+
 Comprehensive Phase-Locked Loop (PLL) design algorithms for automatic circuit generation.
 
 ## Theory of Operation

@@ -45,7 +45,7 @@ declare -A PROJECT_PORTS=(
     ["coming_soon"]="8109"
     ["python"]="8110"
     ["mcad"]="8088"
-
+    ["atlas"]="8089"
 )
 
 # Project Directory Mappings (Relative to REPO_ROOT)
@@ -73,7 +73,7 @@ declare -A PROJECT_DIRS=(
     ["coming_soon"]="COMING_SOON"
     ["python"]="LEARN/PYTHON"
     ["mcad"]="MCAD"
-
+    ["atlas"]="ATLAS"
 )
 
 # Cloudflare Pages Project Names (Mapping from config keys)

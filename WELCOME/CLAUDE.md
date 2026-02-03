@@ -1,13 +1,15 @@
 # WELCOME - antimony-labs Landing Page
 
+> Codex CLI note: See `/AGENTS.md` for repo-wide instructions and best practices. This file is project-specific context.
+
 Interactive landing page constellation for antimony-labs (SbL) - "too.foo" domain.
 Displays project navigation with particle background simulation.
 
 ## Build & Run
 
 ```bash
-# Development (hot reload)
-trunk serve WELCOME/index.html --open
+# Development (hot reload) - from repo root
+./SCRIPTS/dev up welcome
 
 # Production build
 trunk build --release WELCOME/index.html

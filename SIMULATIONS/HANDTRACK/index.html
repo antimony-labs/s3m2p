@@ -352,39 +352,40 @@
         }
 
         /* ═══════════════════════════════════════════════════════════════════════════
-           MOBILE TOOLBAR & SLIDE-UP MENU
+           MOBILE RESPONSIVE STYLES
            ═══════════════════════════════════════════════════════════════════════════ */
 
-        /* Mobile bottom toolbar - hidden on desktop */
         #mobile-toolbar {
             display: none;
         }
 
-        /* Mobile slide-up menu - hidden on desktop */
+        #mobile-menu-overlay {
+            display: none;
+        }
+
         #mobile-menu {
             display: none;
         }
 
-        /* Mobile menu overlay */
-        #mobile-overlay {
+        #floating-status {
             display: none;
         }
 
         @media (max-width: 768px) {
             body {
-                overflow: hidden;
+                height: 100dvh;
             }
 
-            /* Full screen canvas on mobile */
             #container {
-                height: 100vh;
-                height: 100dvh; /* Dynamic viewport height for mobile browsers */
+                flex-direction: column;
+            }
+
+            #sidebar {
+                display: none;
             }
 
             #canvas-wrapper {
                 flex: 1;
-                width: 100%;
-                height: calc(100vh - 60px);
                 height: calc(100dvh - 60px);
             }
 
@@ -394,12 +395,26 @@
                 object-fit: cover;
             }
 
-            /* Hide desktop sidebar on mobile */
-            #sidebar {
-                display: none;
+            #no-camera {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
             }
 
-            /* Mobile bottom toolbar */
+            #no-camera[style*="display: block"] {
+                display: flex !important;
+            }
+
+            #no-camera[style*="display: none"] {
+                display: none !important;
+            }
+
+            /* Mobile Bottom Toolbar */
             #mobile-toolbar {
                 display: flex;
                 position: fixed;
@@ -407,22 +422,18 @@
                 left: 0;
                 right: 0;
                 height: 60px;
-                background: rgba(5, 5, 8, 0.95);
-                backdrop-filter: blur(10px);
+                background: var(--bg-alt);
                 border-top: 1px solid var(--border);
                 align-items: center;
                 justify-content: space-between;
-                padding: 0 12px;
+                padding: 0 16px;
                 z-index: 100;
-                gap: 8px;
             }
 
             .toolbar-mode {
                 display: flex;
                 align-items: center;
                 gap: 8px;
-                flex: 1;
-                min-width: 0;
             }
 
             .toolbar-mode-icon {
@@ -430,87 +441,70 @@
             }
 
             .toolbar-mode-name {
-                font-size: 14px;
+                font-family: 'Rajdhani', sans-serif;
                 font-weight: 600;
                 color: var(--accent);
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
             }
 
             .toolbar-btn {
                 width: 44px;
                 height: 44px;
-                min-width: 44px;
-                border-radius: 50%;
                 background: var(--surface);
                 border: 1px solid var(--border);
-                color: var(--text);
+                border-radius: 8px;
                 font-size: 20px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 cursor: pointer;
-                transition: all 0.2s;
                 padding: 0;
                 margin: 0;
             }
 
-            .toolbar-btn:hover, .toolbar-btn:active {
-                background: var(--accent-dim);
+            .toolbar-btn:active {
+                background: var(--accent-faint);
                 border-color: var(--accent);
             }
 
-            .toolbar-btn.active {
-                background: var(--accent);
-                color: var(--bg);
-                border-color: var(--accent);
+            .toolbar-actions {
+                display: flex;
+                gap: 8px;
             }
 
-            .toolbar-btn.camera-on {
-                background: var(--success);
-                border-color: var(--success);
-                color: var(--bg);
-            }
-
-            /* Mobile overlay */
-            #mobile-overlay {
+            /* Mobile Menu Overlay */
+            #mobile-menu-overlay {
                 display: none;
                 position: fixed;
                 top: 0;
                 left: 0;
                 right: 0;
                 bottom: 0;
-                background: rgba(0, 0, 0, 0.6);
-                z-index: 150;
-                opacity: 0;
-                transition: opacity 0.3s;
+                background: rgba(0, 0, 0, 0.7);
+                z-index: 200;
             }
 
-            #mobile-overlay.visible {
+            #mobile-menu-overlay.visible {
                 display: block;
-                opacity: 1;
             }
 
-            /* Mobile slide-up menu */
+            /* Mobile Slide-up Menu */
             #mobile-menu {
                 display: block;
                 position: fixed;
-                bottom: 0;
+                bottom: -100%;
                 left: 0;
                 right: 0;
                 max-height: 75vh;
                 background: var(--bg-alt);
-                border-top: 1px solid var(--accent);
-                border-radius: 20px 20px 0 0;
-                z-index: 200;
-                transform: translateY(100%);
-                transition: transform 0.3s ease-out;
-                overflow: hidden;
+                border-top: 2px solid var(--accent);
+                border-radius: 16px 16px 0 0;
+                z-index: 300;
+                transition: bottom 0.3s ease-out;
+                overflow-y: auto;
             }
 
             #mobile-menu.open {
-                transform: translateY(0);
+                bottom: 0;
             }
 
             .menu-handle {
@@ -523,151 +517,312 @@
 
             .menu-content {
                 padding: 0 16px 24px;
-                overflow-y: auto;
-                max-height: calc(75vh - 28px);
             }
 
-            /* Mode grid - all 6 visible */
+            .menu-section {
+                margin-bottom: 20px;
+            }
+
+            .menu-section-title {
+                font-family: 'Rajdhani', sans-serif;
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--accent);
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                margin-bottom: 12px;
+            }
+
+            /* Mobile Mode Grid - 3x2 */
             .mobile-mode-grid {
                 display: grid;
                 grid-template-columns: repeat(3, 1fr);
                 gap: 10px;
-                margin-bottom: 20px;
             }
 
             .mobile-mode-btn {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
                 padding: 12px 8px;
                 background: var(--surface);
                 border: 1px solid var(--border-dim);
-                border-radius: 12px;
-                color: var(--text-dim);
-                font-family: 'Rajdhani', sans-serif;
-                font-size: 11px;
-                font-weight: 600;
+                border-radius: 8px;
+                text-align: center;
                 cursor: pointer;
-                transition: all 0.2s;
-                min-height: 70px;
-            }
-
-            .mobile-mode-btn:active {
-                transform: scale(0.95);
             }
 
             .mobile-mode-btn.active {
                 background: var(--accent-faint);
                 border-color: var(--accent);
-                color: var(--accent);
-                box-shadow: 0 0 15px var(--glow);
             }
 
             .mobile-mode-btn .icon {
                 font-size: 24px;
+                display: block;
                 margin-bottom: 4px;
             }
 
-            /* Menu sections */
-            .menu-section {
-                margin-bottom: 16px;
-            }
-
-            .menu-section-title {
+            .mobile-mode-btn .label {
+                font-family: 'Rajdhani', sans-serif;
                 font-size: 12px;
                 font-weight: 600;
-                color: var(--accent-bright);
-                text-transform: uppercase;
-                letter-spacing: 1px;
-                margin-bottom: 8px;
+                color: var(--text);
             }
 
-            /* Camera button in menu */
+            .mobile-mode-btn.active .label {
+                color: var(--accent);
+            }
+
+            /* Mobile Camera Button */
             .menu-camera-btn {
                 width: 100%;
                 padding: 14px;
-                background: var(--accent-faint);
-                border: 1px solid var(--accent);
-                border-radius: 8px;
+                font-size: 16px;
+            }
+
+            /* Mobile Metrics */
+            .mobile-metrics {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+                margin-top: 12px;
+            }
+
+            .mobile-metric {
+                text-align: center;
+                padding: 8px;
+                background: var(--surface);
+                border-radius: 4px;
+            }
+
+            .mobile-metric-value {
+                font-family: 'JetBrains Mono', monospace;
+                font-size: 16px;
+                font-weight: bold;
                 color: var(--accent);
-                font-family: 'Rajdhani', sans-serif;
-                font-size: 14px;
-                font-weight: 600;
-                cursor: pointer;
-                margin-bottom: 12px;
             }
 
-            .menu-camera-btn.active {
-                background: var(--success);
-                border-color: var(--success);
-                color: var(--bg);
+            .mobile-metric-label {
+                font-size: 10px;
+                color: var(--text-dim);
             }
 
-            /* Mode-specific controls in menu */
-            .menu-mode-controls {
+            /* Mode-specific controls in mobile menu */
+            .mobile-mode-controls {
                 background: var(--surface);
                 border: 1px solid var(--border-dim);
                 border-radius: 8px;
                 padding: 12px;
             }
 
-            .menu-mode-controls h3 {
+            .mobile-mode-controls h4 {
+                font-family: 'Rajdhani', sans-serif;
                 font-size: 13px;
                 color: var(--accent);
                 margin-bottom: 8px;
             }
 
-            /* Touch-friendly controls */
-            .menu-mode-controls button {
-                padding: 12px;
-                font-size: 13px;
-                margin: 6px 0;
-                min-height: 44px;
-                border-radius: 8px;
+            .mobile-color-picker {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                margin-bottom: 8px;
             }
 
-            .menu-mode-controls .color-btn {
-                width: 40px;
-                height: 40px;
-                min-width: 40px;
+            .mobile-color-btn {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                border: 2px solid var(--border-dim);
+                cursor: pointer;
             }
 
-            .menu-mode-controls input[type="range"] {
-                height: 8px;
+            .mobile-color-btn.active {
+                border-color: #fff;
+                transform: scale(1.1);
             }
 
-            .menu-mode-controls input[type="range"]::-webkit-slider-thumb {
-                width: 24px;
-                height: 24px;
+            .mobile-slider {
+                margin: 8px 0;
             }
 
-            /* Compact metrics in menu */
-            .menu-metrics {
+            .mobile-slider label {
+                display: flex;
+                justify-content: space-between;
+                font-size: 11px;
+                color: var(--text-dim);
+                margin-bottom: 4px;
+            }
+
+            .mobile-slider input[type="range"] {
+                width: 100%;
+            }
+
+            .mobile-btn-group {
                 display: flex;
                 gap: 8px;
                 flex-wrap: wrap;
             }
 
-            .menu-metric {
+            .mobile-btn-group button {
                 flex: 1;
                 min-width: 80px;
-                padding: 8px 10px;
+                padding: 10px 8px;
+                font-size: 12px;
+                margin: 0;
+            }
+
+            /* Floating Controls */
+            #floating-controls {
+                display: flex;
+                position: fixed;
+                bottom: 70px;
+                left: 8px;
+                right: 8px;
+                z-index: 50;
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: center;
+                align-items: center;
+            }
+
+            .float-btn {
+                padding: 12px 16px;
                 background: var(--surface);
-                border: 1px solid var(--border-dim);
-                border-radius: 6px;
-                font-size: 11px;
-            }
-
-            .menu-metric-label {
-                color: var(--text-dim);
-                display: block;
-            }
-
-            .menu-metric-value {
-                font-family: 'JetBrains Mono', monospace;
-                color: var(--accent);
+                border: 1px solid var(--border);
+                border-radius: 25px;
+                color: var(--text);
+                font-family: 'Rajdhani', sans-serif;
+                font-size: 14px;
                 font-weight: 600;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                transition: all 0.2s;
+            }
+
+            .float-btn:active {
+                transform: scale(0.95);
+            }
+
+            .float-btn.primary {
+                background: var(--accent-faint);
+                border-color: var(--accent);
+                color: var(--accent);
+            }
+
+            .float-btn.danger {
+                background: rgba(255,68,68,0.2);
+                border-color: var(--danger);
+                color: var(--danger);
+            }
+
+            .float-btn.success {
+                background: rgba(0,255,136,0.2);
+                border-color: var(--success);
+                color: var(--success);
+            }
+
+            .float-btn.active {
+                background: var(--danger);
+                border-color: var(--danger);
+                color: #fff;
+                box-shadow: 0 0 20px rgba(255,68,68,0.5);
+            }
+
+            .float-color-picker {
+                display: flex;
+                gap: 6px;
+                background: var(--surface);
+                padding: 8px 12px;
+                border-radius: 25px;
+                border: 1px solid var(--border);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            }
+
+            .float-color {
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                border: 2px solid transparent;
+                cursor: pointer;
+            }
+
+            .float-color.active {
+                border-color: #fff;
+                transform: scale(1.15);
+            }
+
+            /* Floating RPS Game Display */
+            .float-rps-game {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                background: var(--surface);
+                padding: 12px 16px;
+                border-radius: 16px;
+                border: 1px solid var(--border);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                min-width: 160px;
+            }
+
+            .float-rps-moves {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .float-rps-player {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .float-rps-label {
+                font-size: 10px;
+                color: var(--text-dim);
+                font-weight: 600;
+            }
+
+            .float-rps-move {
+                font-size: 32px;
+                line-height: 1;
+            }
+
+            .float-rps-vs {
+                font-size: 12px;
+                color: var(--text-dim);
+                margin: 0 4px;
+            }
+
+            .float-rps-result {
+                font-size: 11px;
+                font-weight: 600;
+                color: var(--accent);
+                margin-top: 6px;
+                text-align: center;
+            }
+
+            /* Floating Status Indicator */
+            #floating-status {
+                display: block;
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                z-index: 50;
+                padding: 8px 12px;
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 20px;
+                font-family: 'JetBrains Mono', monospace;
+                font-size: 12px;
+                color: var(--accent);
+                box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            }
+
+            #floating-status #float-hands {
+                font-weight: bold;
+                color: var(--success);
             }
         }
     </style>
@@ -676,9 +831,9 @@
     <div id="container">
         <div id="canvas-wrapper">
             <canvas id="canvas"></canvas>
-            <div id="no-camera" style="display: flex; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 0; left: 0; right: 0; bottom: 0; color: var(--text-dim); text-align: center; padding: 20px;">
-                <p style="font-size: 64px; margin-bottom: 16px;">✋</p>
-                <p style="font-size: 18px; font-weight: 600; color: var(--accent);">Tap 📷 to Start Camera</p>
+            <div id="no-camera" style="display: block; color: #666; text-align: center; padding: 20px;">
+                <p style="font-size: 48px; margin-bottom: 10px;">✋</p>
+                <p>Click "Start Camera" to begin</p>
             </div>
         </div>
         <div id="sidebar">
@@ -770,7 +925,9 @@
             <!-- Theremin Mode Info -->
             <div class="mode-info" id="info-theremin">
                 <h2>Theremin</h2>
-                <button id="unlock-audio-btn" style="background: var(--accent); color: var(--bg); display: none;">🔊 Tap to Enable Sound</button>
+                <button id="audio-unlock-btn" style="background: var(--success); border-color: var(--success); color: #000; font-weight: bold; margin-bottom: 12px;">
+                    🔊 Tap to Enable Sound
+                </button>
                 <div class="metric">
                     <span class="metric-label">Frequency</span>
                     <span class="metric-value" id="theremin-freq">--</span>
@@ -906,78 +1063,65 @@
         </div>
     </div>
 
+    <!-- Floating Controls (mode-specific buttons above toolbar) -->
+    <div id="floating-controls">
+        <!-- Dynamically populated based on mode -->
+    </div>
+
     <!-- Mobile Bottom Toolbar -->
     <div id="mobile-toolbar">
         <div class="toolbar-mode">
             <span class="toolbar-mode-icon" id="toolbar-mode-icon">👆</span>
             <span class="toolbar-mode-name" id="toolbar-mode-name">Tracking</span>
         </div>
-        <button class="toolbar-btn" id="toolbar-camera" title="Toggle Camera">📷</button>
-        <button class="toolbar-btn" id="toolbar-menu" title="Open Menu">☰</button>
+        <div class="toolbar-actions">
+            <button class="toolbar-btn" id="toolbar-camera" title="Toggle Camera">📷</button>
+            <button class="toolbar-btn" id="toolbar-menu" title="Open Menu">☰</button>
+        </div>
     </div>
 
     <!-- Mobile Menu Overlay -->
-    <div id="mobile-overlay"></div>
+    <div id="mobile-menu-overlay"></div>
 
-    <!-- Mobile Slide-up Menu -->
+    <!-- Mobile Slide-up Menu (Mode Selection Only) -->
     <div id="mobile-menu">
         <div class="menu-handle"></div>
         <div class="menu-content">
-            <!-- Mode Selection Grid -->
             <div class="menu-section">
                 <div class="menu-section-title">Select Mode</div>
                 <div class="mobile-mode-grid">
-                    <button class="mobile-mode-btn active" data-mode="tracking">
+                    <div class="mobile-mode-btn active" data-mode="tracking">
                         <span class="icon">👆</span>
-                        Tracking
-                    </button>
-                    <button class="mobile-mode-btn" data-mode="particles">
+                        <span class="label">Tracking</span>
+                    </div>
+                    <div class="mobile-mode-btn" data-mode="particles">
                         <span class="icon">✨</span>
-                        Particles
-                    </button>
-                    <button class="mobile-mode-btn" data-mode="theremin">
+                        <span class="label">Particles</span>
+                    </div>
+                    <div class="mobile-mode-btn" data-mode="theremin">
                         <span class="icon">🎵</span>
-                        Theremin
-                    </button>
-                    <button class="mobile-mode-btn" data-mode="rps">
+                        <span class="label">Theremin</span>
+                    </div>
+                    <div class="mobile-mode-btn" data-mode="rps">
                         <span class="icon">✊</span>
-                        RPS Game
-                    </button>
-                    <button class="mobile-mode-btn" data-mode="drawing">
+                        <span class="label">RPS Game</span>
+                    </div>
+                    <div class="mobile-mode-btn" data-mode="drawing">
                         <span class="icon">🎨</span>
-                        Air Draw
-                    </button>
-                    <button class="mobile-mode-btn" data-mode="notes">
+                        <span class="label">Air Draw</span>
+                    </div>
+                    <div class="mobile-mode-btn" data-mode="notes">
                         <span class="icon">📝</span>
-                        Notes
-                    </button>
-                </div>
-            </div>
-
-            <!-- Camera Control -->
-            <div class="menu-section">
-                <button class="menu-camera-btn" id="mobile-camera-btn">📷 Start Camera</button>
-                <div class="menu-metrics">
-                    <div class="menu-metric">
-                        <span class="menu-metric-label">Hands</span>
-                        <span class="menu-metric-value" id="mobile-hands">0</span>
-                    </div>
-                    <div class="menu-metric">
-                        <span class="menu-metric-label">FPS</span>
-                        <span class="menu-metric-value" id="mobile-fps">--</span>
-                    </div>
-                    <div class="menu-metric">
-                        <span class="menu-metric-label">Gesture</span>
-                        <span class="menu-metric-value" id="mobile-gesture">--</span>
+                        <span class="label">Notes</span>
                     </div>
                 </div>
-            </div>
-
-            <!-- Mode-specific controls container -->
-            <div class="menu-section" id="mobile-mode-controls-section">
-                <!-- Dynamically populated based on current mode -->
             </div>
         </div>
+    </div>
+
+    <!-- Floating Status Indicator (top left) -->
+    <div id="floating-status">
+        <span id="float-hands">0</span> ✋ <span id="float-gesture">--</span>
     </div>
 
     <script type="module">
@@ -1073,48 +1217,66 @@
         let isThereminPlaying = false;
         let audioUnlocked = false;
 
-        // iOS/Safari requires user interaction to unlock audio
+        // iOS requires AudioContext to be created and resumed during a user gesture
         function unlockAudio() {
-            if (audioUnlocked) return;
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume().then(() => {
-                    audioUnlocked = true;
-                    console.log('Audio unlocked');
-                    hideUnlockButton();
-                });
-            } else if (audioCtx && audioCtx.state === 'running') {
+            if (audioUnlocked && audioCtx && audioCtx.state === 'running') return true;
+
+            try {
+                // Create fresh AudioContext on each attempt
+                if (!audioCtx || audioCtx.state === 'closed') {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+
+                // Resume must happen during user gesture
+                const resumePromise = audioCtx.resume();
+
+                // Play test tone immediately (don't wait for promise)
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.value = 880; // Higher pitch, easier to hear
+                gain.gain.setValueAtTime(0.5, audioCtx.currentTime); // Louder
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.start(audioCtx.currentTime);
+                osc.stop(audioCtx.currentTime + 0.2);
+
                 audioUnlocked = true;
-                hideUnlockButton();
+                updateAudioUnlockUI();
+
+                // Log for debugging
+                console.log('Audio unlock attempted. State:', audioCtx.state);
+
+                return true;
+            } catch (err) {
+                console.error('Audio unlock error:', err);
+                // Show error to user
+                const msg = 'Audio error: ' + err.message + '\n\nTips:\n1. Make sure silent mode is OFF (check side switch)\n2. Turn up volume\n3. Try with headphones';
+                alert(msg);
+                return false;
             }
         }
 
-        function showUnlockButton() {
-            const btn = document.getElementById('unlock-audio-btn');
-            if (btn && !audioUnlocked) {
-                btn.style.display = 'block';
+        function updateAudioUnlockUI() {
+            const unlockBtn = document.getElementById('audio-unlock-btn');
+            if (unlockBtn) {
+                unlockBtn.style.display = audioUnlocked ? 'none' : 'block';
+            }
+            // Also update floating controls if they exist
+            if (typeof updateFloatingControls === 'function') {
+                updateFloatingControls();
             }
         }
-
-        function hideUnlockButton() {
-            const btn = document.getElementById('unlock-audio-btn');
-            if (btn) {
-                btn.style.display = 'none';
-            }
-        }
-
-        // Add touch/click handlers to unlock audio on iOS
-        document.addEventListener('touchstart', unlockAudio, { once: false, passive: true });
-        document.addEventListener('touchend', unlockAudio, { once: false, passive: true });
-        document.addEventListener('click', unlockAudio, { once: false, passive: true });
 
         function initTheremin() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                // Try to resume immediately (may not work on iOS without gesture)
-                if (audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
+            // Try to unlock audio first
+            if (!unlockAudio()) {
+                // Audio not unlocked yet, show message
+                updateAudioUnlockUI();
+                return false;
             }
+
             if (!thereminOsc) {
                 thereminOsc = audioCtx.createOscillator();
                 thereminGain = audioCtx.createGain();
@@ -1125,32 +1287,8 @@
                 thereminGain.gain.value = 0;
                 thereminOsc.start();
             }
-            // Ensure audio is resumed
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-                // Show unlock button on iOS if audio is still suspended
-                setTimeout(() => {
-                    if (audioCtx.state === 'suspended') {
-                        showUnlockButton();
-                    }
-                }, 100);
-            } else {
-                audioUnlocked = true;
-                hideUnlockButton();
-            }
+            return true;
         }
-
-        // Unlock audio button click handler
-        document.getElementById('unlock-audio-btn')?.addEventListener('click', function() {
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume().then(() => {
-                    audioUnlocked = true;
-                    hideUnlockButton();
-                    // Re-init theremin to ensure it's working
-                    initTheremin();
-                });
-            }
-        });
 
         // Calculate hand openness (0 = closed/curled, 1 = fully open)
         function getHandOpenness(landmarks) {
@@ -1242,7 +1380,7 @@
         // ═══════════════════════════════════════════════════════════════════════════
         // ROCK PAPER SCISSORS
         // ═══════════════════════════════════════════════════════════════════════════
-        let rpsState = { wins: 0, ties: 0, losses: 0, playing: false, countdown: 0, result: '' };
+        let rpsState = { wins: 0, ties: 0, losses: 0, playing: false, countdown: 0, countdownTimer: null };
         const RPS_MOVES = ['rock', 'paper', 'scissors'];
         const RPS_EMOJI = { rock: '✊', paper: '✋', scissors: '✌️' };
 
@@ -1255,10 +1393,58 @@
             return null;
         }
 
+        // Helper to update RPS display (both desktop and floating)
+        function updateRPSDisplay(yourMove, compMove, resultText) {
+            // Desktop elements
+            document.getElementById('rps-your-move').textContent = yourMove;
+            document.getElementById('rps-computer-move').textContent = compMove;
+            document.getElementById('rps-result-text').textContent = resultText;
+            // Floating elements (mobile)
+            const floatYour = document.getElementById('float-your-move');
+            const floatComp = document.getElementById('float-comp-move');
+            const floatResult = document.getElementById('float-rps-result');
+            if (floatYour) floatYour.textContent = yourMove;
+            if (floatComp) floatComp.textContent = compMove;
+            if (floatResult) floatResult.textContent = resultText;
+        }
+
+        function startRPSCountdown() {
+            // Clear any existing countdown
+            if (rpsState.countdownTimer) {
+                clearInterval(rpsState.countdownTimer);
+            }
+
+            rpsState.countdown = 3;
+            rpsState.playing = false;
+            updateRPSDisplay('3', '?', 'Get ready...');
+            document.getElementById('rps-play-btn').disabled = true;
+
+            rpsState.countdownTimer = setInterval(() => {
+                rpsState.countdown--;
+                if (rpsState.countdown > 0) {
+                    updateRPSDisplay(rpsState.countdown.toString(), '?', 'Get ready...');
+                } else if (rpsState.countdown === 0) {
+                    updateRPSDisplay('👊', '?', 'SHOW YOUR HAND!');
+                    rpsState.playing = true;
+                    clearInterval(rpsState.countdownTimer);
+                    rpsState.countdownTimer = null;
+                    document.getElementById('rps-play-btn').disabled = false;
+
+                    // Auto-timeout after 3 seconds if no valid gesture detected
+                    setTimeout(() => {
+                        if (rpsState.playing) {
+                            updateRPSDisplay('👊', '?', 'Timed out! Try again.');
+                            rpsState.playing = false;
+                        }
+                    }, 3000);
+                }
+            }, 1000);
+        }
+
         function playRPS(playerMove) {
             const computerMove = RPS_MOVES[Math.floor(Math.random() * 3)];
-            document.getElementById('rps-your-move').textContent = RPS_EMOJI[playerMove];
-            document.getElementById('rps-computer-move').textContent = RPS_EMOJI[computerMove];
+            const yourEmoji = RPS_EMOJI[playerMove];
+            const compEmoji = RPS_EMOJI[computerMove];
 
             let result;
             if (playerMove === computerMove) {
@@ -1275,10 +1461,15 @@
                 result = "You lose!";
                 rpsState.losses++;
             }
-            document.getElementById('rps-result-text').textContent = result;
+
+            // Update both desktop and floating displays
+            updateRPSDisplay(yourEmoji, compEmoji, result);
+
+            // Update score displays
             document.getElementById('rps-wins').textContent = rpsState.wins;
             document.getElementById('rps-ties').textContent = rpsState.ties;
             document.getElementById('rps-losses').textContent = rpsState.losses;
+
             rpsState.playing = false;
         }
 
@@ -1479,6 +1670,9 @@
                 frameCount = 0;
                 lastFrameTime = now;
                 document.getElementById('fps').textContent = fps;
+                // Update mobile FPS
+                const mobileFps = document.getElementById('mobile-fps');
+                if (mobileFps) mobileFps.textContent = fps;
             }
 
             const w = results.image.width;
@@ -1537,6 +1731,9 @@
             // Process hands
             const numHands = results.multiHandLandmarks?.length || 0;
             document.getElementById('hands-count').textContent = numHands;
+            // Update floating status
+            const floatHands = document.getElementById('float-hands');
+            if (floatHands) floatHands.textContent = numHands;
 
             if (results.multiHandLandmarks && results.multiHandedness) {
                 for (let i = 0; i < results.multiHandLandmarks.length; i++) {
@@ -1552,6 +1749,12 @@
 
                     if (i === 0) {
                         document.getElementById('gesture').textContent = gesture;
+                        // Update mobile gesture
+                        const mobileGesture = document.getElementById('mobile-gesture');
+                        if (mobileGesture) mobileGesture.textContent = gesture;
+                        // Update floating status
+                        const floatGesture = document.getElementById('float-gesture');
+                        if (floatGesture) floatGesture.textContent = gesture;
                     }
 
                     // Mode-specific logic
@@ -1742,6 +1945,12 @@
                 }
             } else {
                 document.getElementById('gesture').textContent = '--';
+                // Update mobile gesture
+                const mobileGesture = document.getElementById('mobile-gesture');
+                if (mobileGesture) mobileGesture.textContent = '--';
+                // Update floating status
+                const floatGesture = document.getElementById('float-gesture');
+                if (floatGesture) floatGesture.textContent = '--';
                 lastDrawPoint = null;
                 lastNotesPoint = null;
                 // Stop theremin when no hand detected
@@ -1811,27 +2020,7 @@
             });
             hands.onResults(onResults);
 
-            // Mode selector
-            document.querySelectorAll('.mode-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-
-                    // Stop theremin when switching away from it
-                    if (currentMode === 'theremin') {
-                        stopTheremin();
-                    }
-
-                    currentMode = btn.dataset.mode;
-
-                    document.querySelectorAll('.mode-info').forEach(info => info.classList.remove('active'));
-                    document.getElementById(`info-${currentMode}`).classList.add('active');
-
-                    // Reset mode-specific state
-                    particles = [];
-                    lastDrawPoint = null;
-                });
-            });
+            // Mode selector is handled by selectMode() function defined later
 
             // Camera button
             document.getElementById('camera-btn').addEventListener('click', toggleCamera);
@@ -1881,12 +2070,9 @@
             // Clear drawing
             document.getElementById('clear-drawing-btn').addEventListener('click', clearDrawing);
 
-            // RPS play button
+            // RPS play button - starts countdown
             document.getElementById('rps-play-btn').addEventListener('click', () => {
-                rpsState.playing = true;
-                document.getElementById('rps-result-text').textContent = 'Show Rock, Paper, or Scissors!';
-                document.getElementById('rps-your-move').textContent = '?';
-                document.getElementById('rps-computer-move').textContent = '?';
+                startRPSCountdown();
             });
 
             // Notes controls
@@ -1939,131 +2125,502 @@
                 }
             });
 
+            // Audio unlock button - explicit user gesture for iOS
+            document.getElementById('audio-unlock-btn').addEventListener('click', () => {
+                unlockAudio();
+                // Force oscillator creation after unlock
+                if (audioUnlocked) {
+                    initTheremin();
+                    updateFloatingControls(); // Refresh to hide unlock button
+                }
+            });
+
+            // Also try to unlock audio on any user interaction (for iOS)
+            const tryUnlockAudio = () => {
+                if (!audioUnlocked && currentMode === 'theremin') {
+                    unlockAudio();
+                }
+            };
+            document.addEventListener('touchstart', tryUnlockAudio, { passive: true });
+            document.addEventListener('touchend', tryUnlockAudio, { passive: true });
+            document.addEventListener('click', tryUnlockAudio, { passive: true });
+
             // ═══════════════════════════════════════════════════════════════════════════
-            // MOBILE MENU CONTROLS
+            // MOBILE MENU FUNCTIONALITY
             // ═══════════════════════════════════════════════════════════════════════════
             const mobileMenu = document.getElementById('mobile-menu');
-            const mobileOverlay = document.getElementById('mobile-overlay');
-            const toolbarMenu = document.getElementById('toolbar-menu');
-            const toolbarCamera = document.getElementById('toolbar-camera');
-
-            const modeIcons = {
-                'tracking': '👆',
-                'particles': '✨',
-                'theremin': '🎵',
-                'rps': '✊',
-                'drawing': '🎨',
-                'notes': '📝'
-            };
-
-            const modeNames = {
-                'tracking': 'Tracking',
-                'particles': 'Particles',
-                'theremin': 'Theremin',
-                'rps': 'RPS Game',
-                'drawing': 'Air Draw',
-                'notes': 'Notes'
-            };
+            const mobileOverlay = document.getElementById('mobile-menu-overlay');
+            const menuBtn = document.getElementById('toolbar-menu');
 
             function openMobileMenu() {
                 mobileMenu.classList.add('open');
                 mobileOverlay.classList.add('visible');
-                toolbarMenu.classList.add('active');
+                updateMobileControls();
             }
 
             function closeMobileMenu() {
                 mobileMenu.classList.remove('open');
                 mobileOverlay.classList.remove('visible');
-                toolbarMenu.classList.remove('active');
             }
 
-            function updateMobileToolbar() {
-                document.getElementById('toolbar-mode-icon').textContent = modeIcons[currentMode];
-                document.getElementById('toolbar-mode-name').textContent = modeNames[currentMode];
+            menuBtn?.addEventListener('click', openMobileMenu);
+            mobileOverlay?.addEventListener('click', closeMobileMenu);
 
-                // Update camera button state
-                if (isRunning) {
-                    toolbarCamera.classList.add('camera-on');
-                } else {
-                    toolbarCamera.classList.remove('camera-on');
+            // Mobile camera button (toolbar)
+            document.getElementById('toolbar-camera')?.addEventListener('click', toggleCamera);
+
+            // Mobile camera button (in menu)
+            document.getElementById('mobile-camera-btn')?.addEventListener('click', () => {
+                toggleCamera();
+                updateMobileCameraBtn();
+            });
+
+            function updateMobileCameraBtn() {
+                const btn = document.getElementById('mobile-camera-btn');
+                if (btn) {
+                    btn.textContent = isRunning ? '📷 Stop Camera' : '📷 Start Camera';
                 }
-            }
-
-            // Menu toggle
-            if (toolbarMenu) {
-                toolbarMenu.addEventListener('click', () => {
-                    if (mobileMenu.classList.contains('open')) {
-                        closeMobileMenu();
-                    } else {
-                        openMobileMenu();
-                    }
-                });
-            }
-
-            // Overlay click to close
-            if (mobileOverlay) {
-                mobileOverlay.addEventListener('click', closeMobileMenu);
-            }
-
-            // Toolbar camera button
-            if (toolbarCamera) {
-                toolbarCamera.addEventListener('click', toggleCamera);
-            }
-
-            // Mobile camera button in menu
-            const mobileCameraBtn = document.getElementById('mobile-camera-btn');
-            if (mobileCameraBtn) {
-                mobileCameraBtn.addEventListener('click', toggleCamera);
             }
 
             // Mobile mode selection
             document.querySelectorAll('.mobile-mode-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    // Update mobile mode buttons
-                    document.querySelectorAll('.mobile-mode-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-
-                    // Also update desktop buttons
-                    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-                    const desktopBtn = document.querySelector(`.mode-btn[data-mode="${btn.dataset.mode}"]`);
-                    if (desktopBtn) desktopBtn.classList.add('active');
-
-                    // Stop theremin when switching away
-                    if (currentMode === 'theremin') {
-                        stopTheremin();
-                    }
-
-                    currentMode = btn.dataset.mode;
-
-                    // Update mode info panels
-                    document.querySelectorAll('.mode-info').forEach(info => info.classList.remove('active'));
-                    document.getElementById(`info-${currentMode}`).classList.add('active');
-
-                    // Reset state
-                    particles = [];
-                    lastDrawPoint = null;
-
-                    // Update toolbar
-                    updateMobileToolbar();
-
-                    // Close menu after selection
+                    const mode = btn.dataset.mode;
+                    selectMode(mode);
                     closeMobileMenu();
                 });
             });
 
-            // Update mobile metrics periodically
-            setInterval(() => {
-                const mobileHands = document.getElementById('mobile-hands');
-                const mobileFps = document.getElementById('mobile-fps');
-                const mobileGesture = document.getElementById('mobile-gesture');
-                const handCount = document.getElementById('hand-count');
-                const fpsDisplay = document.getElementById('fps-display');
-                const gestureDisplay = document.getElementById('gesture-display');
+            // Common mode selection function (updates both desktop and mobile)
+            function selectMode(mode) {
+                // Stop theremin when switching away
+                if (currentMode === 'theremin') {
+                    stopTheremin();
+                }
 
-                if (mobileHands && handCount) mobileHands.textContent = handCount.textContent;
-                if (mobileFps && fpsDisplay) mobileFps.textContent = fpsDisplay.textContent;
-                if (mobileGesture && gestureDisplay) mobileGesture.textContent = gestureDisplay.textContent;
-            }, 200);
+                currentMode = mode;
+
+                // Update desktop buttons
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector(`.mode-btn[data-mode="${mode}"]`)?.classList.add('active');
+
+                // Update desktop info panels
+                document.querySelectorAll('.mode-info').forEach(info => info.classList.remove('active'));
+                document.getElementById(`info-${mode}`)?.classList.add('active');
+
+                // Update mobile buttons
+                document.querySelectorAll('.mobile-mode-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector(`.mobile-mode-btn[data-mode="${mode}"]`)?.classList.add('active');
+
+                // Update toolbar
+                const modeIcons = { tracking: '👆', particles: '✨', theremin: '🎵', rps: '✊', drawing: '🎨', notes: '📝' };
+                const modeNames = { tracking: 'Tracking', particles: 'Particles', theremin: 'Theremin', rps: 'RPS Game', drawing: 'Air Draw', notes: 'Notes' };
+                document.getElementById('toolbar-mode-icon').textContent = modeIcons[mode] || '👆';
+                document.getElementById('toolbar-mode-name').textContent = modeNames[mode] || 'Tracking';
+
+                // Reset state
+                particles = [];
+                lastDrawPoint = null;
+                lastNotesPoint = null;
+
+                // Update floating controls (mobile)
+                updateFloatingControls();
+            }
+
+            // ═══════════════════════════════════════════════════════════════════════════
+            // FLOATING CONTROLS (mode-specific buttons on main screen)
+            // ═══════════════════════════════════════════════════════════════════════════
+            function updateFloatingControls() {
+                const container = document.getElementById('floating-controls');
+                if (!container) return;
+
+                let html = '';
+
+                switch (currentMode) {
+                    case 'theremin':
+                        if (!audioUnlocked) {
+                            html = `<button class="float-btn success" id="float-audio-unlock">🔊 TAP TO ENABLE SOUND</button>`;
+                        } else {
+                            html = `<span class="float-btn primary">🎵 Playing</span>`;
+                        }
+                        break;
+
+                    case 'rps':
+                        const yourMove = document.getElementById('rps-your-move')?.textContent || '?';
+                        const compMove = document.getElementById('rps-computer-move')?.textContent || '?';
+                        const resultText = document.getElementById('rps-result-text')?.textContent || 'Tap Play!';
+                        html = `
+                            <div class="float-rps-game">
+                                <div class="float-rps-moves">
+                                    <div class="float-rps-player">
+                                        <span class="float-rps-label">YOU</span>
+                                        <span class="float-rps-move" id="float-your-move">${yourMove}</span>
+                                    </div>
+                                    <span class="float-rps-vs">vs</span>
+                                    <div class="float-rps-player">
+                                        <span class="float-rps-label">CPU</span>
+                                        <span class="float-rps-move" id="float-comp-move">${compMove}</span>
+                                    </div>
+                                </div>
+                                <div class="float-rps-result" id="float-rps-result">${resultText}</div>
+                            </div>
+                            <button class="float-btn primary" id="float-rps-play">▶️ Play</button>
+                            <span class="float-btn">🏆 ${rpsState.wins}-${rpsState.ties}-${rpsState.losses}</span>
+                        `;
+                        break;
+
+                    case 'drawing':
+                        html = `
+                            <div class="float-color-picker">
+                                <div class="float-color ${drawingColor === '#00ffff' ? 'active' : ''}" data-color="#00ffff" style="background: #00ffff;"></div>
+                                <div class="float-color ${drawingColor === '#00ff88' ? 'active' : ''}" data-color="#00ff88" style="background: #00ff88;"></div>
+                                <div class="float-color ${drawingColor === '#ffff00' ? 'active' : ''}" data-color="#ffff00" style="background: #ffff00;"></div>
+                                <div class="float-color ${drawingColor === '#ff6600' ? 'active' : ''}" data-color="#ff6600" style="background: #ff6600;"></div>
+                                <div class="float-color ${drawingColor === '#ff44ff' ? 'active' : ''}" data-color="#ff44ff" style="background: #ff44ff;"></div>
+                                <div class="float-color ${drawingColor === '#ffffff' ? 'active' : ''}" data-color="#ffffff" style="background: #ffffff;"></div>
+                            </div>
+                            <button class="float-btn danger" id="float-clear-drawing">🗑️ Clear</button>
+                        `;
+                        break;
+
+                    case 'notes':
+                        html = `
+                            <div class="float-color-picker" id="float-notes-colors">
+                                <div class="float-color float-note-color ${notesColor === '#00ffff' ? 'active' : ''}" data-color="#00ffff" style="background: #00ffff;"></div>
+                                <div class="float-color float-note-color ${notesColor === '#00ff88' ? 'active' : ''}" data-color="#00ff88" style="background: #00ff88;"></div>
+                                <div class="float-color float-note-color ${notesColor === '#ffff00' ? 'active' : ''}" data-color="#ffff00" style="background: #ffff00;"></div>
+                                <div class="float-color float-note-color ${notesColor === '#ff6600' ? 'active' : ''}" data-color="#ff6600" style="background: #ff6600;"></div>
+                                <div class="float-color float-note-color ${notesColor === '#ffffff' ? 'active' : ''}" data-color="#ffffff" style="background: #ffffff;"></div>
+                            </div>
+                            <button class="float-btn ${notesTool === 'erase' ? 'active' : 'danger'}" id="float-erase-toggle">🧹 ${notesTool === 'erase' ? 'ERASING' : 'Erase'}</button>
+                            <button class="float-btn" id="float-clear-notes">🗑️</button>
+                            <button class="float-btn primary" id="float-save-notes">💾</button>
+                        `;
+                        break;
+
+                    case 'particles':
+                        html = `<span class="float-btn">✨ Make a fist for explosion!</span>`;
+                        break;
+
+                    default: // tracking
+                        html = ''; // No floating controls needed
+                }
+
+                container.innerHTML = html;
+                attachFloatingListeners();
+            }
+
+            function attachFloatingListeners() {
+                // Audio unlock
+                document.getElementById('float-audio-unlock')?.addEventListener('click', () => {
+                    unlockAudio();
+                    if (audioUnlocked) {
+                        initTheremin();
+                        updateFloatingControls();
+                    }
+                });
+
+                // RPS play
+                document.getElementById('float-rps-play')?.addEventListener('click', () => {
+                    startRPSCountdown();
+                });
+
+                // Drawing colors
+                document.querySelectorAll('#floating-controls .float-color:not(.float-note-color)').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        drawingColor = btn.dataset.color;
+                        updateFloatingControls();
+                        // Sync desktop
+                        document.querySelectorAll('#info-drawing .color-btn').forEach(b => {
+                            b.classList.toggle('active', b.dataset.color === drawingColor);
+                        });
+                    });
+                });
+
+                // Clear drawing
+                document.getElementById('float-clear-drawing')?.addEventListener('click', clearDrawing);
+
+                // Notes colors
+                document.querySelectorAll('.float-note-color').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        notesColor = btn.dataset.color;
+                        updateFloatingControls();
+                        // Sync desktop
+                        document.querySelectorAll('#notes-colors .color-btn').forEach(b => {
+                            b.classList.toggle('active', b.dataset.color === notesColor);
+                        });
+                    });
+                });
+
+                // Notes erase toggle
+                document.getElementById('float-erase-toggle')?.addEventListener('click', () => {
+                    notesTool = notesTool === 'erase' ? 'draw' : 'erase';
+                    lastNotesPoint = null;
+                    updateFloatingControls();
+                    // Sync desktop
+                    const desktopBtn = document.getElementById('notes-tool-erase');
+                    if (desktopBtn) {
+                        if (notesTool === 'erase') {
+                            desktopBtn.style.background = '#ff0000';
+                            desktopBtn.style.borderColor = '#ff0000';
+                            desktopBtn.textContent = '🧹 ERASE MODE ON';
+                        } else {
+                            desktopBtn.style.background = 'var(--danger)';
+                            desktopBtn.style.borderColor = 'var(--danger)';
+                            desktopBtn.textContent = '🧹 Toggle Erase Mode';
+                        }
+                    }
+                });
+
+                // Clear notes
+                document.getElementById('float-clear-notes')?.addEventListener('click', clearNotes);
+
+                // Save notes
+                document.getElementById('float-save-notes')?.addEventListener('click', downloadNotes);
+            }
+
+            // Mode-specific controls for mobile menu
+            function updateMobileControls() {
+                const container = document.getElementById('mobile-mode-controls-section');
+                if (!container) return;
+
+                let html = '';
+
+                switch (currentMode) {
+                    case 'theremin':
+                        html = `
+                            <div class="mobile-mode-controls">
+                                <h4>🎵 Theremin Controls</h4>
+                                <button id="mobile-audio-unlock" style="background: var(--success); border-color: var(--success); color: #000; margin-bottom: 10px;">
+                                    🔊 Tap to Enable Sound
+                                </button>
+                                <div class="mobile-slider">
+                                    <label><span>Min Frequency</span><span id="m-min-freq-val">${thereminSettings.minFreq}</span></label>
+                                    <input type="range" id="m-min-freq" min="50" max="300" value="${thereminSettings.minFreq}">
+                                </div>
+                                <div class="mobile-slider">
+                                    <label><span>Max Frequency</span><span id="m-max-freq-val">${thereminSettings.maxFreq}</span></label>
+                                    <input type="range" id="m-max-freq" min="400" max="2000" value="${thereminSettings.maxFreq}">
+                                </div>
+                            </div>`;
+                        break;
+
+                    case 'rps':
+                        html = `
+                            <div class="mobile-mode-controls">
+                                <h4>✊ Rock Paper Scissors</h4>
+                                <button id="mobile-rps-play" style="margin-bottom: 10px;">▶️ Play Round</button>
+                                <div style="display: flex; justify-content: space-around; text-align: center;">
+                                    <div><div style="font-size: 24px; color: var(--success);">${rpsState.wins}</div><div style="font-size: 10px; color: var(--text-dim);">Wins</div></div>
+                                    <div><div style="font-size: 24px; color: var(--accent);">${rpsState.ties}</div><div style="font-size: 10px; color: var(--text-dim);">Ties</div></div>
+                                    <div><div style="font-size: 24px; color: var(--danger);">${rpsState.losses}</div><div style="font-size: 10px; color: var(--text-dim);">Losses</div></div>
+                                </div>
+                            </div>`;
+                        break;
+
+                    case 'drawing':
+                        html = `
+                            <div class="mobile-mode-controls">
+                                <h4>🎨 Drawing Controls</h4>
+                                <div class="mobile-color-picker">
+                                    <div class="mobile-color-btn ${drawingColor === '#00ffff' ? 'active' : ''}" data-color="#00ffff" style="background: #00ffff;"></div>
+                                    <div class="mobile-color-btn ${drawingColor === '#00ff88' ? 'active' : ''}" data-color="#00ff88" style="background: #00ff88;"></div>
+                                    <div class="mobile-color-btn ${drawingColor === '#ffff00' ? 'active' : ''}" data-color="#ffff00" style="background: #ffff00;"></div>
+                                    <div class="mobile-color-btn ${drawingColor === '#ff6600' ? 'active' : ''}" data-color="#ff6600" style="background: #ff6600;"></div>
+                                    <div class="mobile-color-btn ${drawingColor === '#ff44ff' ? 'active' : ''}" data-color="#ff44ff" style="background: #ff44ff;"></div>
+                                    <div class="mobile-color-btn ${drawingColor === '#ffffff' ? 'active' : ''}" data-color="#ffffff" style="background: #ffffff;"></div>
+                                </div>
+                                <div class="mobile-slider">
+                                    <label><span>Brush Size</span><span id="m-brush-val">${brushSize}</span></label>
+                                    <input type="range" id="m-brush-size" min="2" max="30" value="${brushSize}">
+                                </div>
+                                <button id="mobile-clear-drawing" style="margin-top: 8px;">🗑️ Clear Canvas</button>
+                            </div>`;
+                        break;
+
+                    case 'notes':
+                        html = `
+                            <div class="mobile-mode-controls">
+                                <h4>📝 Notes Controls</h4>
+                                <div class="mobile-color-picker">
+                                    <div class="mobile-color-btn mobile-notes-color ${notesColor === '#00ffff' ? 'active' : ''}" data-color="#00ffff" style="background: #00ffff;"></div>
+                                    <div class="mobile-color-btn mobile-notes-color ${notesColor === '#00ff88' ? 'active' : ''}" data-color="#00ff88" style="background: #00ff88;"></div>
+                                    <div class="mobile-color-btn mobile-notes-color ${notesColor === '#ffff00' ? 'active' : ''}" data-color="#ffff00" style="background: #ffff00;"></div>
+                                    <div class="mobile-color-btn mobile-notes-color ${notesColor === '#ff6600' ? 'active' : ''}" data-color="#ff6600" style="background: #ff6600;"></div>
+                                    <div class="mobile-color-btn mobile-notes-color ${notesColor === '#ffffff' ? 'active' : ''}" data-color="#ffffff" style="background: #ffffff;"></div>
+                                </div>
+                                <div class="mobile-slider">
+                                    <label><span>Pen Size</span><span id="m-pen-val">${notesPenSize}</span></label>
+                                    <input type="range" id="m-pen-size" min="2" max="20" value="${notesPenSize}">
+                                </div>
+                                <button id="mobile-erase-toggle" style="background: ${notesTool === 'erase' ? '#ff0000' : 'var(--danger)'}; border-color: ${notesTool === 'erase' ? '#ff0000' : 'var(--danger)'}; margin-bottom: 8px;">
+                                    🧹 ${notesTool === 'erase' ? 'ERASE MODE ON' : 'Toggle Erase Mode'}
+                                </button>
+                                <div class="mobile-btn-group">
+                                    <button id="mobile-clear-notes">🗑️ Clear</button>
+                                    <button id="mobile-download-notes" style="background: var(--accent-dim); border-color: var(--accent-bright); color: var(--accent-bright);">💾 Save JPG</button>
+                                </div>
+                            </div>`;
+                        break;
+
+                    case 'particles':
+                        html = `
+                            <div class="mobile-mode-controls">
+                                <h4>✨ Particle Settings</h4>
+                                <div class="mobile-slider">
+                                    <label><span>Particle Count</span><span id="m-particle-val">${particleSettings.count}</span></label>
+                                    <input type="range" id="m-particle-count" min="10" max="200" value="${particleSettings.count}">
+                                </div>
+                                <div class="mobile-slider">
+                                    <label><span>Trail Length</span><span id="m-trail-val">${particleSettings.trailLength}</span></label>
+                                    <input type="range" id="m-trail-length" min="5" max="50" value="${particleSettings.trailLength}">
+                                </div>
+                            </div>`;
+                        break;
+
+                    default:
+                        html = `
+                            <div class="mobile-mode-controls">
+                                <h4>👆 Tracking Mode</h4>
+                                <p style="font-size: 12px; color: var(--text-dim);">Show your hands to see 21 landmarks tracked in real-time.</p>
+                            </div>`;
+                }
+
+                container.innerHTML = html;
+
+                // Attach event listeners to dynamically created elements
+                attachMobileControlListeners();
+            }
+
+            function attachMobileControlListeners() {
+                // Audio unlock
+                document.getElementById('mobile-audio-unlock')?.addEventListener('click', () => {
+                    unlockAudio();
+                    if (audioUnlocked) {
+                        initTheremin();
+                        document.getElementById('mobile-audio-unlock').style.display = 'none';
+                    }
+                });
+
+                // Theremin sliders
+                document.getElementById('m-min-freq')?.addEventListener('input', (e) => {
+                    thereminSettings.minFreq = parseInt(e.target.value);
+                    document.getElementById('m-min-freq-val').textContent = e.target.value;
+                    document.getElementById('min-freq').value = e.target.value;
+                    document.getElementById('min-freq-value').textContent = e.target.value;
+                });
+
+                document.getElementById('m-max-freq')?.addEventListener('input', (e) => {
+                    thereminSettings.maxFreq = parseInt(e.target.value);
+                    document.getElementById('m-max-freq-val').textContent = e.target.value;
+                    document.getElementById('max-freq').value = e.target.value;
+                    document.getElementById('max-freq-value').textContent = e.target.value;
+                });
+
+                // RPS play
+                document.getElementById('mobile-rps-play')?.addEventListener('click', () => {
+                    startRPSCountdown();
+                    closeMobileMenu();
+                });
+
+                // Drawing color
+                document.querySelectorAll('.mobile-color-btn:not(.mobile-notes-color)').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.mobile-color-btn:not(.mobile-notes-color)').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        drawingColor = btn.dataset.color;
+                        // Sync with desktop
+                        document.querySelectorAll('#info-drawing .color-btn').forEach(b => {
+                            b.classList.toggle('active', b.dataset.color === drawingColor);
+                        });
+                    });
+                });
+
+                // Drawing brush size
+                document.getElementById('m-brush-size')?.addEventListener('input', (e) => {
+                    brushSize = parseInt(e.target.value);
+                    document.getElementById('m-brush-val').textContent = e.target.value;
+                    document.getElementById('brush-size').value = e.target.value;
+                    document.getElementById('brush-size-value').textContent = e.target.value;
+                });
+
+                // Clear drawing
+                document.getElementById('mobile-clear-drawing')?.addEventListener('click', clearDrawing);
+
+                // Notes color
+                document.querySelectorAll('.mobile-notes-color').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.mobile-notes-color').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        notesColor = btn.dataset.color;
+                        // Sync with desktop
+                        document.querySelectorAll('#notes-colors .color-btn').forEach(b => {
+                            b.classList.toggle('active', b.dataset.color === notesColor);
+                        });
+                    });
+                });
+
+                // Notes pen size
+                document.getElementById('m-pen-size')?.addEventListener('input', (e) => {
+                    notesPenSize = parseInt(e.target.value);
+                    document.getElementById('m-pen-val').textContent = e.target.value;
+                    document.getElementById('notes-pen-size').value = e.target.value;
+                    document.getElementById('notes-pen-size-value').textContent = e.target.value;
+                });
+
+                // Notes erase toggle
+                document.getElementById('mobile-erase-toggle')?.addEventListener('click', () => {
+                    if (notesTool === 'erase') {
+                        notesTool = 'draw';
+                    } else {
+                        notesTool = 'erase';
+                    }
+                    lastNotesPoint = null;
+                    updateMobileControls();
+                    // Sync with desktop button
+                    const desktopBtn = document.getElementById('notes-tool-erase');
+                    if (desktopBtn) {
+                        if (notesTool === 'erase') {
+                            desktopBtn.style.background = '#ff0000';
+                            desktopBtn.style.borderColor = '#ff0000';
+                            desktopBtn.textContent = '🧹 ERASE MODE ON';
+                        } else {
+                            desktopBtn.style.background = 'var(--danger)';
+                            desktopBtn.style.borderColor = 'var(--danger)';
+                            desktopBtn.textContent = '🧹 Toggle Erase Mode';
+                        }
+                    }
+                });
+
+                // Clear notes
+                document.getElementById('mobile-clear-notes')?.addEventListener('click', clearNotes);
+
+                // Download notes
+                document.getElementById('mobile-download-notes')?.addEventListener('click', downloadNotes);
+
+                // Particle count
+                document.getElementById('m-particle-count')?.addEventListener('input', (e) => {
+                    particleSettings.count = parseInt(e.target.value);
+                    document.getElementById('m-particle-val').textContent = e.target.value;
+                    document.getElementById('particle-count').value = e.target.value;
+                    document.getElementById('particle-count-value').textContent = e.target.value;
+                });
+
+                // Trail length
+                document.getElementById('m-trail-length')?.addEventListener('input', (e) => {
+                    particleSettings.trailLength = parseInt(e.target.value);
+                    document.getElementById('m-trail-val').textContent = e.target.value;
+                    document.getElementById('trail-length').value = e.target.value;
+                    document.getElementById('trail-length-value').textContent = e.target.value;
+                });
+            }
+
+            // Update mode when desktop buttons are clicked (sync with mobile)
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    selectMode(btn.dataset.mode);
+                });
+            });
 
             console.log('Initialized');
         }
@@ -2073,13 +2630,6 @@
             const statusIndicator = document.getElementById('camera-status');
             const statusText = document.getElementById('camera-status-text');
             const noCamera = document.getElementById('no-camera');
-            const toolbarCamera = document.getElementById('toolbar-camera');
-            const mobileCameraBtn = document.getElementById('mobile-camera-btn');
-
-            // Resume AudioContext on iOS (requires user gesture)
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
 
             if (isRunning) {
                 if (camera) { camera.stop(); camera = null; }
@@ -2089,25 +2639,19 @@
                 statusText.textContent = 'Off';
                 noCamera.style.display = 'block';
                 canvas.style.display = 'none';
-
-                // Update mobile UI
-                if (toolbarCamera) toolbarCamera.classList.remove('camera-on');
-                if (mobileCameraBtn) {
-                    mobileCameraBtn.textContent = '📷 Start Camera';
-                    mobileCameraBtn.classList.remove('active');
-                }
+                // Update mobile camera button
+                const mobileCamBtn = document.getElementById('mobile-camera-btn');
+                if (mobileCamBtn) mobileCamBtn.textContent = '📷 Start Camera';
             } else {
                 try {
                     cameraBtn.disabled = true;
                     cameraBtn.textContent = 'Loading ML Model...';
                     statusText.textContent = 'Loading...';
-                    if (mobileCameraBtn) mobileCameraBtn.textContent = '⏳ Loading...';
 
                     camera = new Camera(video, {
                         onFrame: async () => { if (isRunning) await hands.send({ image: video }); },
                         width: 1280,
-                        height: 720,
-                        facingMode: 'user' // Front camera on mobile
+                        height: 720
                     });
 
                     await camera.start();
@@ -2119,20 +2663,15 @@
                     statusText.textContent = 'On';
                     noCamera.style.display = 'none';
                     canvas.style.display = 'block';
-
-                    // Update mobile UI
-                    if (toolbarCamera) toolbarCamera.classList.add('camera-on');
-                    if (mobileCameraBtn) {
-                        mobileCameraBtn.textContent = '🛑 Stop Camera';
-                        mobileCameraBtn.classList.add('active');
-                    }
+                    // Update mobile camera button
+                    const mobileCamBtn = document.getElementById('mobile-camera-btn');
+                    if (mobileCamBtn) mobileCamBtn.textContent = '📷 Stop Camera';
                 } catch (err) {
                     console.error('Camera error:', err);
                     alert('Failed to start camera: ' + err.message);
                     cameraBtn.textContent = 'Start Camera';
                     cameraBtn.disabled = false;
                     statusText.textContent = 'Error';
-                    if (mobileCameraBtn) mobileCameraBtn.textContent = '📷 Start Camera';
                 }
             }
         }

@@ -1,12 +1,14 @@
 # ARCH - Architecture Explorer
 
+> Codex CLI note: See `/AGENTS.md` for repo-wide instructions and best practices. This file is project-specific context.
+
 Interactive dependency graph visualization for the antimony-labs monorepo.
 
 ## Build & Run
 
 ```bash
-# Development (hot reload)
-trunk serve ARCH/index.html --open
+# Development (hot reload) - from repo root
+./SCRIPTS/dev up arch
 
 # Production build
 trunk build --release ARCH/index.html

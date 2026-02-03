@@ -1,15 +1,17 @@
 # Helios - Solar System Visualization
 
+> Codex CLI note: See `/AGENTS.md` for repo-wide instructions and best practices. This file is project-specific context.
+
 Interactive heliosphere visualization using Rust/WASM and HTML5 Canvas.
 
 ## Build & Run
 
 ```bash
-# Development (hot reload)
-trunk serve helios/index.html --open
+# Development (hot reload) - from repo root
+./SCRIPTS/dev up helios
 
 # Production build
-trunk build --release helios/index.html
+trunk build --release HELIOS/index.html
 
 # Output in helios/dist/
 ```

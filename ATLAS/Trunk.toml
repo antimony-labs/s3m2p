@@ -1,0 +1,23 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Trunk.toml | ATLAS/Trunk.toml
+# PURPOSE: Trunk build configuration for ATLAS interactive maps WASM bundling
+# MODIFIED: 2026-01-25
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[build]
+target = "index.html"
+dist = "dist"
+filehash = true
+
+[watch]
+ignore = ["dist"]
+watch = ["src", "index.html", "CORE/GEO_ENGINE/src"]
+
+[serve]
+addresses = ["0.0.0.0"]
+port = 8089
+
+[[hooks]]
+stage = "post_build"
+command = "sh"
+command_arguments = ["-c", "cp -r assets dist/ 2>/dev/null || true"]

@@ -1,17 +1,19 @@
 # Learn - Interactive Tutorial Platform
 
+> Codex CLI note: See `/AGENTS.md` for repo-wide instructions and best practices. This file is project-specific context.
+
 Multi-topic learning platform with interactive demos built in Rust/WASM. Each tutorial has its own subdomain on too.foo.
 
 ## Build & Run
 
 ```bash
-# Main learn hub
-trunk serve LEARN/index.html --open           # Port 8086
+# Main learn hub - from repo root
+./SCRIPTS/dev up learn                        # Port 8086
 
-# Individual tutorials (use dev-serve.sh)
-./SCRIPTS/dev-serve.sh slam                   # Port 8106
-./SCRIPTS/dev-serve.sh ai                     # Port 8100
-./SCRIPTS/dev-serve.sh esp32                  # Port 8104
+# Individual tutorials - from repo root
+./SCRIPTS/dev up slam                         # Port 8106
+./SCRIPTS/dev up ai                           # Port 8100
+./SCRIPTS/dev up esp32                        # Port 8104
 ```
 
 ## Architecture

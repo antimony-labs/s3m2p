@@ -13,16 +13,17 @@ MODIFIED: 2025-11-29
     <title>Learn | ML Fundamentals</title>
     <link data-trunk rel="rust" data-wasm-opt="z" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Rajdhani:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <!-- KaTeX for math rendering -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script>
-        // Theme Manager - Site-wide light/dark mode
+        // Theme Manager - Learn themes (match blog)
         (function() {
-            const THEME_KEY = 'toofoo_theme';
+            const THEME_KEY = 'toofoo_learn_theme';
+            const THEMES = ['editorial', 'studio', 'darkroom'];
             function getSystemTheme() {
-                return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'darkroom' : 'editorial';
             }
             function getStoredTheme() {
                 try { return localStorage.getItem(THEME_KEY); }
@@ -36,52 +37,99 @@ MODIFIED: 2025-11-29
             function initTheme() {
                 const theme = getStoredTheme() || getSystemTheme();
                 setTheme(theme);
-                window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
-                    if (!getStoredTheme()) setTheme(e.matches ? 'light' : 'dark');
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                    if (!getStoredTheme()) setTheme(e.matches ? 'darkroom' : 'editorial');
                 });
             }
-            window.toggleTheme = function() {
-                const current = document.documentElement.getAttribute('data-theme');
-                setTheme(current === 'light' ? 'dark' : 'light');
+            function updateThemeButtons(theme) {
+                document.querySelectorAll('.theme-switch button').forEach(btn => {
+                    const active = btn.dataset.theme === theme;
+                    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+                });
+            }
+            window.setLearnTheme = function(theme) {
+                if (THEMES.includes(theme)) {
+                    setTheme(theme);
+                    updateThemeButtons(theme);
+                }
             };
-            window.getCurrentTheme = () => document.documentElement.getAttribute('data-theme') || 'dark';
+            window.getCurrentTheme = () => document.documentElement.getAttribute('data-theme') || 'editorial';
             initTheme();
+
+            document.addEventListener('DOMContentLoaded', () => {
+                const current = window.getCurrentTheme();
+                updateThemeButtons(current);
+                document.querySelectorAll('.theme-switch button').forEach(btn => {
+                    btn.addEventListener('click', () => window.setLearnTheme(btn.dataset.theme));
+                });
+            });
         })();
     </script>
     <style>
         :root {
-            --bg: #050508;
-            --surface: #0a0a12;
-            --surface-hover: #12121a;
-            --accent: #00ffff;
-            --accent-dim: rgba(0, 255, 255, 0.2);
-            --text: #e0e0e0;
-            --text-muted: #888;
-            --border: rgba(0, 255, 255, 0.15);
-            --phase-1: #00ff88;
-            --phase-2: #00ccff;
-            --phase-3: #ff6600;
-            --phase-4: #ff00ff;
-            --heading: #ffffff;
-            --canvas-bg: #000000;
+            --bg: #f7f4ef;
+            --surface: #ffffff;
+            --surface-hover: #f3efe8;
+            --accent: #1d5c63;
+            --accent-soft: #2f6f72;
+            --accent-dim: rgba(29, 92, 99, 0.12);
+            --text: #2b2b2b;
+            --text-muted: #6b6760;
+            --border: rgba(29, 92, 99, 0.2);
+            --phase-1: #2b7a57;
+            --phase-2: #2f6f8f;
+            --phase-3: #b25c2f;
+            --phase-4: #6b4fa0;
+            --heading: #1e1c1a;
+            --canvas-bg: #f0ebe3;
+            --shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+            --font-body: 'Newsreader', serif;
+            --font-heading: 'Space Grotesk', sans-serif;
+            --font-mono: 'IBM Plex Mono', monospace;
         }
 
-        :root[data-theme="light"] {
-            --bg: #F5F5F7;
-            --surface: #FFFFFF;
-            --surface-hover: #F0F0F3;
-            --accent: #008B8B;
-            --accent-dim: rgba(0, 139, 139, 0.15);
-            --text: #1A1A2E;
-            --text-muted: #666677;
-            --border: rgba(0, 139, 139, 0.2);
-            --heading: #1A1A2E;
-            --canvas-bg: #E8E8EC;
-            /* Phase colors adjusted for light mode */
-            --phase-1: #00aa55;
-            --phase-2: #0088bb;
-            --phase-3: #dd5500;
-            --phase-4: #cc00cc;
+        :root[data-theme="studio"] {
+            --bg: #f5f7fa;
+            --surface: #ffffff;
+            --surface-hover: #f1f4f7;
+            --accent: #1f6d6f;
+            --accent-soft: #2f7f81;
+            --accent-dim: rgba(31, 109, 111, 0.12);
+            --text: #1b1f24;
+            --text-muted: #5c6570;
+            --border: rgba(31, 109, 111, 0.2);
+            --phase-1: #217c56;
+            --phase-2: #2a6f86;
+            --phase-3: #b35730;
+            --phase-4: #5f4fa0;
+            --heading: #101418;
+            --canvas-bg: #edf1f5;
+            --shadow: 0 16px 32px rgba(13, 24, 33, 0.08);
+            --font-body: 'Space Grotesk', sans-serif;
+            --font-heading: 'Space Grotesk', sans-serif;
+            --font-mono: 'IBM Plex Mono', monospace;
+        }
+
+        :root[data-theme="darkroom"] {
+            --bg: #0b0c0f;
+            --surface: #11131a;
+            --surface-hover: #181b24;
+            --accent: #c9a96a;
+            --accent-soft: #d9b97a;
+            --accent-dim: rgba(201, 169, 106, 0.16);
+            --text: #eae7df;
+            --text-muted: #a79f93;
+            --border: rgba(201, 169, 106, 0.28);
+            --phase-1: #6bbf84;
+            --phase-2: #6fb0c4;
+            --phase-3: #e0a060;
+            --phase-4: #9a8bd8;
+            --heading: #f3efe7;
+            --canvas-bg: #0f1118;
+            --shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+            --font-body: 'Newsreader', serif;
+            --font-heading: 'Space Grotesk', sans-serif;
+            --font-mono: 'IBM Plex Mono', monospace;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -89,9 +137,11 @@ MODIFIED: 2025-11-29
         body {
             background: var(--bg);
             color: var(--text);
-            font-family: 'Inter', sans-serif;
-            line-height: 1.6;
+            font-family: var(--font-body);
+            line-height: 1.7;
             min-height: 100vh;
+            font-size: 17px;
+            text-rendering: optimizeLegibility;
         }
 
         #app {
@@ -109,10 +159,10 @@ MODIFIED: 2025-11-29
         }
 
         .hero h1 {
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 3rem;
+            font-family: var(--font-heading);
+            font-size: clamp(2.2rem, 4vw, 3.2rem);
             font-weight: 700;
-            background: linear-gradient(135deg, var(--accent), #ff00ff);
+            background: linear-gradient(135deg, var(--accent), var(--accent-soft));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -130,7 +180,7 @@ MODIFIED: 2025-11-29
         }
 
         .phase h2 {
-            font-family: 'Rajdhani', sans-serif;
+            font-family: var(--font-heading);
             font-size: 1.5rem;
             color: var(--accent);
             margin-bottom: 20px;
@@ -148,10 +198,11 @@ MODIFIED: 2025-11-29
         .lesson-card {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 12px;
+            border-radius: 16px;
             padding: 24px;
             cursor: pointer;
             transition: all 0.2s ease;
+            box-shadow: var(--shadow);
         }
 
         .lesson-card:hover {
@@ -167,7 +218,7 @@ MODIFIED: 2025-11-29
         }
 
         .lesson-card h3 {
-            font-family: 'Rajdhani', sans-serif;
+            font-family: var(--font-heading);
             font-size: 1.2rem;
             color: var(--heading);
             margin-bottom: 4px;
@@ -202,7 +253,7 @@ MODIFIED: 2025-11-29
             padding: 8px 16px;
             border-radius: 6px;
             cursor: pointer;
-            font-family: 'Inter', sans-serif;
+            font-family: var(--font-heading);
             transition: all 0.2s;
         }
 
@@ -231,7 +282,7 @@ MODIFIED: 2025-11-29
         }
 
         .lesson-header h1 {
-            font-family: 'Rajdhani', sans-serif;
+            font-family: var(--font-heading);
             font-size: 2.5rem;
             color: var(--heading);
         }
@@ -247,7 +298,7 @@ MODIFIED: 2025-11-29
         }
 
         .lesson-content h3 {
-            font-family: 'Rajdhani', sans-serif;
+            font-family: var(--font-heading);
             font-size: 1.3rem;
             color: var(--accent);
             margin-bottom: 15px;
@@ -279,7 +330,7 @@ MODIFIED: 2025-11-29
         }
 
         .math {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: var(--font-mono);
             font-size: 1.1rem;
             color: var(--heading);
             text-align: center;
@@ -351,7 +402,7 @@ MODIFIED: 2025-11-29
 
         .control-row label span {
             color: var(--accent);
-            font-family: 'JetBrains Mono', monospace;
+            font-family: var(--font-mono);
         }
 
         .control-row input[type="range"] {
@@ -386,7 +437,7 @@ MODIFIED: 2025-11-29
             padding: 8px 16px;
             border-radius: 6px;
             cursor: pointer;
-            font-family: 'Inter', sans-serif;
+            font-family: var(--font-heading);
             font-size: 0.85rem;
             transition: all 0.2s;
         }
@@ -424,42 +475,66 @@ MODIFIED: 2025-11-29
             .hero h1 { font-size: 2rem; }
             .lesson-header { flex-direction: column; text-align: center; }
             .lesson-icon-large { font-size: 3rem; }
+            #app { padding: 28px 16px; }
+            .theme-switch {
+                top: 12px;
+                right: 12px;
+                padding: 6px;
+            }
+            .theme-switch button {
+                font-size: 0.6rem;
+                padding: 5px 8px;
+            }
         }
 
-        /* Theme Toggle */
-        #theme-toggle {
+        /* Theme Switch */
+        .theme-switch {
             position: fixed;
             top: 20px;
             right: 20px;
             z-index: 100;
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+            padding: 8px;
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 8px 12px;
-            cursor: pointer;
-            font-size: 1rem;
+            border-radius: 999px;
+            box-shadow: var(--shadow);
+        }
+
+        .theme-switch button {
+            font-family: var(--font-heading);
+            font-size: 0.7rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: var(--surface);
             color: var(--text-muted);
-            transition: border-color 0.2s, color 0.2s;
+            cursor: pointer;
+            transition: all 0.2s ease;
         }
 
-        #theme-toggle:hover {
+        .theme-switch button[aria-pressed="true"] {
+            color: var(--heading);
             border-color: var(--accent);
-            color: var(--accent);
+            background: var(--accent-dim);
         }
 
-        .icon-sun, .icon-moon {
-            display: none;
+        .theme-switch button:hover {
+            color: var(--heading);
+            border-color: var(--accent);
         }
-
-        :root[data-theme="dark"] .icon-sun { display: inline; }
-        :root[data-theme="light"] .icon-moon { display: inline; }
     </style>
 </head>
 <body>
-    <button id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle light/dark mode">
-        <span class="icon-sun">&#9788;</span>
-        <span class="icon-moon">&#9790;</span>
-    </button>
+    <div class="theme-switch" role="group" aria-label="Learn themes">
+        <button type="button" data-theme="editorial" aria-pressed="false">Editorial</button>
+        <button type="button" data-theme="studio" aria-pressed="false">Studio</button>
+        <button type="button" data-theme="darkroom" aria-pressed="false">Reading Room</button>
+    </div>
     <div id="app">
         <div class="loading">Loading...</div>
     </div>

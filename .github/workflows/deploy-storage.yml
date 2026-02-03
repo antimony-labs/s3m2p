@@ -1,0 +1,72 @@
+name: Deploy Storage Server
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'DNA/STORAGE_SERVER/**'
+      - 'ATLAS/assets/**'
+  workflow_dispatch:
+    inputs:
+      deploy_binary:
+        description: 'Deploy server binary'
+        type: boolean
+        default: false
+      sync_data:
+        description: 'Sync ATLAS data'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to VPS
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        if: github.event.inputs.deploy_binary == 'true' || contains(github.event.head_commit.modified, 'DNA/STORAGE_SERVER/')
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Storage Server
+        if: github.event.inputs.deploy_binary == 'true' || contains(github.event.head_commit.modified, 'DNA/STORAGE_SERVER/')
+        run: |
+          cargo build --release -p storage-server
+          ls -lh target/release/storage-server
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STORAGE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.STORAGE_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy Binary
+        if: github.event.inputs.deploy_binary == 'true' || contains(github.event.head_commit.modified, 'DNA/STORAGE_SERVER/')
+        run: |
+          scp target/release/storage-server ${{ secrets.STORAGE_USER }}@${{ secrets.STORAGE_HOST }}:/opt/atlas/bin/
+          ssh ${{ secrets.STORAGE_USER }}@${{ secrets.STORAGE_HOST }} "systemctl restart atlas-storage"
+
+      - name: Sync ATLAS Data
+        if: github.event.inputs.sync_data == 'true' || contains(github.event.head_commit.modified, 'ATLAS/assets/')
+        run: |
+          rsync -avz --progress \
+            --include='*.geojson' \
+            --include='*.geo' \
+            --exclude='*' \
+            ATLAS/assets/ \
+            ${{ secrets.STORAGE_USER }}@${{ secrets.STORAGE_HOST }}:/opt/atlas/data/atlas/
+
+          # List synced files
+          ssh ${{ secrets.STORAGE_USER }}@${{ secrets.STORAGE_HOST }} "ls -lh /opt/atlas/data/atlas/"
+
+      - name: Verify Deployment
+        run: |
+          sleep 2
+          curl -f http://${{ secrets.STORAGE_HOST }}:3000/v1/atlas/health || exit 1
+          echo "Storage server is healthy"

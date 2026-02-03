@@ -15,7 +15,7 @@ filehash = true
 watch = ["src", "index.html", "../DNA/src"]
 
 [serve]
-addresses = ["127.0.0.1"]
+addresses = ["0.0.0.0"]
 port = 8081
 
 [tools]

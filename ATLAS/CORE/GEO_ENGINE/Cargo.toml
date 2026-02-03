@@ -1,0 +1,18 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE: Cargo.toml | ATLAS/CORE/GEO_ENGINE/Cargo.toml
+# PURPOSE: Package manifest for GEO_ENGINE - vector map geometry and tile system
+# MODIFIED: 2026-01-25
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[package]
+name = "geo-engine"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+glam.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

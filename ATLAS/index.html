@@ -1,0 +1,437 @@
+<!--
+═══════════════════════════════════════════════════════════════════════════════
+FILE: index.html | ATLAS/index.html
+PURPOSE: Interactive vector maps web application entry point
+MODIFIED: 2026-01-25
+═══════════════════════════════════════════════════════════════════════════════
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ATLAS - Interactive Vector Maps</title>
+    <script>
+        // Define WASM callbacks BEFORE Trunk loads the WASM module
+        window.updateZoomDisplay = function(zoom) {
+            var el1 = document.getElementById('zoom-level');
+            var el2 = document.getElementById('status-zoom');
+            if (el1) el1.textContent = 'z' + Math.floor(zoom);
+            if (el2) el2.textContent = zoom.toFixed(1);
+        };
+        window.updateCenterDisplay = function(lon, lat) {
+            var el = document.getElementById('status-center');
+            if (el) el.textContent = lon.toFixed(2) + ', ' + lat.toFixed(2);
+        };
+        window.updateFeatureCount = function(count) {
+            var el = document.getElementById('status-features');
+            if (el) el.textContent = count;
+        };
+        window.updateCursorDisplay = function(lon, lat) {
+            var el = document.getElementById('status-cursor');
+            if (el) el.textContent = lon.toFixed(4) + ', ' + lat.toFixed(4);
+        };
+        window.showFeatureInfo = function(name, iso, population) {
+            var panel = document.getElementById('info-panel');
+            var title = document.getElementById('info-title');
+            var isoEl = document.getElementById('info-iso');
+            var popEl = document.getElementById('info-population');
+            if (title) title.textContent = name;
+            if (isoEl) isoEl.textContent = iso || '-';
+            if (popEl) popEl.textContent = population ? population.toLocaleString() : '-';
+            if (panel) panel.classList.add('visible');
+        };
+        window.hideFeatureInfo = function() {
+            var panel = document.getElementById('info-panel');
+            if (panel) panel.classList.remove('visible');
+        };
+        window.hideLoading = function() {
+            var el = document.getElementById('loading-overlay');
+            if (el) el.classList.add('hidden');
+        };
+        window.setLoadingText = function(text) {
+            var el = document.querySelector('.loading-text');
+            if (el) el.textContent = text;
+        };
+    </script>
+    <link data-trunk rel="copy-dir" href="assets" />
+    <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #1a3a5a;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            color: #e0e0e0;
+        }
+
+        .container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            background: rgba(10, 22, 40, 0.95);
+            border-bottom: 1px solid rgba(0, 200, 255, 0.15);
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            color: #00c8ff;
+            text-shadow: 0 0 20px rgba(0, 200, 255, 0.5);
+            font-weight: 600;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            color: #607080;
+            font-size: 0.75rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .zoom-controls {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .zoom-btn {
+            width: 32px;
+            height: 32px;
+            background: rgba(0, 200, 255, 0.1);
+            border: 1px solid rgba(0, 200, 255, 0.3);
+            border-radius: 6px;
+            color: #00c8ff;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .zoom-btn:hover {
+            background: rgba(0, 200, 255, 0.2);
+            border-color: #00c8ff;
+        }
+
+        .zoom-level {
+            padding: 0 0.5rem;
+            color: #a0b0c0;
+            font-size: 0.8rem;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .map-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #map-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            cursor: grab;
+        }
+
+        #map-canvas:active {
+            cursor: grabbing;
+        }
+
+        .info-panel {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(10, 22, 40, 0.95);
+            border: 1px solid rgba(0, 200, 255, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            min-width: 200px;
+            display: none;
+            z-index: 50;
+        }
+
+        .info-panel.visible {
+            display: block;
+        }
+
+        .info-title {
+            font-size: 1rem;
+            color: #00c8ff;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            margin: 0.25rem 0;
+        }
+
+        .info-label {
+            color: #607080;
+        }
+
+        .info-value {
+            color: #e0e0e0;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 1.5rem;
+            padding: 0.4rem 1rem;
+            background: rgba(10, 22, 40, 0.95);
+            border-top: 1px solid rgba(0, 200, 255, 0.1);
+            font-size: 0.7rem;
+            color: #607080;
+        }
+
+        .status-section {
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .status-label {
+            color: #506070;
+        }
+
+        .status-value {
+            color: #00c8ff;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 22, 40, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+
+        .loading-overlay.hidden {
+            display: none;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(0, 200, 255, 0.2);
+            border-top-color: #00c8ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-text {
+            margin-top: 1rem;
+            color: #a0b0c0;
+            font-size: 0.85rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Layer toggle */
+        .layer-toggle {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: rgba(10, 22, 40, 0.95);
+            border: 1px solid rgba(0, 200, 255, 0.2);
+            border-radius: 8px;
+            padding: 0.75rem;
+            z-index: 50;
+        }
+
+        .layer-toggle h3 {
+            font-size: 0.75rem;
+            color: #607080;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+
+        .layer-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0.25rem 0;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        .layer-option input {
+            accent-color: #00c8ff;
+        }
+
+        @media (max-width: 600px) {
+            header {
+                padding: 0.5rem 1rem;
+            }
+
+            h1 {
+                font-size: 1rem;
+            }
+
+            .subtitle {
+                display: none;
+            }
+
+            .layer-toggle {
+                top: auto;
+                bottom: 3rem;
+                left: 0.5rem;
+            }
+
+            .info-panel {
+                top: auto;
+                bottom: 3rem;
+                right: 0.5rem;
+                left: 0.5rem;
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <h1>ATLAS</h1>
+                <span class="subtitle">Interactive Vector Maps</span>
+            </div>
+            <div class="controls">
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="zoomIn()" title="Zoom In">+</button>
+                    <span id="zoom-level" class="zoom-level">z4</span>
+                    <button class="zoom-btn" onclick="zoomOut()" title="Zoom Out">-</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="map-container">
+            <canvas id="map-canvas"></canvas>
+
+            <div class="layer-toggle">
+                <h3>Base Layers</h3>
+                <label class="layer-option">
+                    <input type="checkbox" checked onchange="toggleLayer('countries', this.checked)">
+                    Countries
+                </label>
+                <label class="layer-option">
+                    <input type="checkbox" checked onchange="toggleLayer('states', this.checked)">
+                    States
+                </label>
+                <label class="layer-option">
+                    <input type="checkbox" checked onchange="toggleLayer('borders', this.checked)">
+                    Borders
+                </label>
+                <label class="layer-option">
+                    <input type="checkbox" checked onchange="toggleLayer('rivers', this.checked)">
+                    Rivers
+                </label>
+                <label class="layer-option">
+                    <input type="checkbox" checked onchange="toggleLayer('lakes', this.checked)">
+                    Lakes
+                </label>
+                <label class="layer-option">
+                    <input type="checkbox" checked onchange="toggleLayer('labels', this.checked)">
+                    Labels
+                </label>
+            </div>
+
+            <div id="info-panel" class="info-panel">
+                <div id="info-title" class="info-title">-</div>
+                <div class="info-row">
+                    <span class="info-label">ISO</span>
+                    <span id="info-iso" class="info-value">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Population</span>
+                    <span id="info-population" class="info-value">-</span>
+                </div>
+            </div>
+
+            <div id="loading-overlay" class="loading-overlay">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">Loading map data...</div>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-section">
+                <span class="status-label">Center:</span>
+                <span id="status-center" class="status-value">0.00, 0.00</span>
+            </div>
+            <div class="status-section">
+                <span class="status-label">Zoom:</span>
+                <span id="status-zoom" class="status-value">4.0</span>
+            </div>
+            <div class="status-section">
+                <span class="status-label">Features:</span>
+                <span id="status-features" class="status-value">0</span>
+            </div>
+            <div class="status-section">
+                <span class="status-label">Cursor:</span>
+                <span id="status-cursor" class="status-value">-</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // UI controls (callbacks defined in head)
+        function zoomIn() {
+            if (window.atlasZoomIn) window.atlasZoomIn();
+        }
+        function zoomOut() {
+            if (window.atlasZoomOut) window.atlasZoomOut();
+        }
+        function toggleLayer(layer, visible) {
+            if (window.atlasToggleLayer) window.atlasToggleLayer(layer, visible);
+        }
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === '=' || e.key === '+') zoomIn();
+            else if (e.key === '-') zoomOut();
+            else if (e.key === 'r' || e.key === 'R') {
+                if (window.atlasResetView) window.atlasResetView();
+            }
+        });
+    </script>
+</body>
+
+</html>

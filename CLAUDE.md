@@ -1,5 +1,7 @@
 # antimony-labs - AI-Native Development Platform
 
+> Codex CLI note: `/AGENTS.md` is now the primary instruction file. This document is kept for compatibility and extra context.
+
 Rust/WASM monorepo for simulations, visualizations, and full product development.
 Deployed to **too.foo**
 
@@ -37,28 +39,29 @@ trunk serve BLOG/index.html --port 8085
 
 Each project has a dedicated port to allow multiple services to run simultaneously.
 
-| Project | Port | URL | Description |
-|---------|------|-----|-------------|
-| welcome | 8080 | http://127.0.0.1:8080 | too.foo landing page |
-| helios | 8081 | http://127.0.0.1:8081 | Solar system |
-| chladni | 8082 | http://127.0.0.1:8082 | Chladni patterns |
-| autocrate | 8083 | http://127.0.0.1:8083 | Crate generator |
-| sensors | 8084 | http://127.0.0.1:8084 | Sensor test (LEARN) |
-| blog | 8085 | http://127.0.0.1:8085 | Blog platform |
-| learn | 8086 | http://127.0.0.1:8086 | Learning hub |
-| arch | 8087 | http://127.0.0.1:8087 | Architecture explorer |
-| mcad | 8088 | http://127.0.0.1:8088 | Mechanical CAD modeler |
-| pll | 8090 | http://127.0.0.1:8090 | PLL designer |
-| power | 8091 | http://127.0.0.1:8091 | Power circuits |
-| ai | 8100 | http://127.0.0.1:8100 | AI tutorials |
-| ubuntu | 8101 | http://127.0.0.1:8101 | Ubuntu tutorials |
-| opencv | 8102 | http://127.0.0.1:8102 | OpenCV tutorials |
-| arduino | 8103 | http://127.0.0.1:8103 | Arduino tutorials |
-| esp32 | 8104 | http://127.0.0.1:8104 | ESP32 tutorials |
-| swarm | 8105 | http://127.0.0.1:8105 | Swarm robotics |
-| slam | 8106 | http://127.0.0.1:8106 | SLAM tutorials |
-| git | 8107 | http://127.0.0.1:8107 | Git tutorials |
-| ds | 8108 | http://127.0.0.1:8108 | Data structures |
+| Project   | Port | URL                   | Description             |
+| --------- | ---- | --------------------- | ----------------------- |
+| welcome   | 8080 | http://127.0.0.1:8080 | too.foo landing page    |
+| helios    | 8081 | http://127.0.0.1:8081 | Solar system            |
+| chladni   | 8082 | http://127.0.0.1:8082 | Chladni patterns        |
+| autocrate | 8083 | http://127.0.0.1:8083 | Crate generator         |
+| sensors   | 8084 | http://127.0.0.1:8084 | Sensor test (LEARN)     |
+| blog      | 8085 | http://127.0.0.1:8085 | Blog platform           |
+| learn     | 8086 | http://127.0.0.1:8086 | Learning hub            |
+| arch      | 8087 | http://127.0.0.1:8087 | Architecture explorer   |
+| mcad      | 8088 | http://127.0.0.1:8088 | Mechanical CAD modeler  |
+| atlas     | 8089 | http://127.0.0.1:8089 | Interactive vector maps |
+| pll       | 8090 | http://127.0.0.1:8090 | PLL designer            |
+| power     | 8091 | http://127.0.0.1:8091 | Power circuits          |
+| ai        | 8100 | http://127.0.0.1:8100 | AI tutorials            |
+| ubuntu    | 8101 | http://127.0.0.1:8101 | Ubuntu tutorials        |
+| opencv    | 8102 | http://127.0.0.1:8102 | OpenCV tutorials        |
+| arduino   | 8103 | http://127.0.0.1:8103 | Arduino tutorials       |
+| esp32     | 8104 | http://127.0.0.1:8104 | ESP32 tutorials         |
+| swarm     | 8105 | http://127.0.0.1:8105 | Swarm robotics          |
+| slam      | 8106 | http://127.0.0.1:8106 | SLAM tutorials          |
+| git       | 8107 | http://127.0.0.1:8107 | Git tutorials           |
+| ds        | 8108 | http://127.0.0.1:8108 | Data structures         |
 
 ## Agent Protocol
 
@@ -81,6 +84,7 @@ S3M2P/
 ├── SIMULATION/             # Simulations (e.g., chladni.too.foo)
 ├── TOOLS/                  # User-facing tools (autocrate.too.foo, etc.)
 ├── MCAD/                   # Mechanical CAD (mcad.too.foo)
+├── ATLAS/                  # Interactive maps (atlas.too.foo)
 ├── LEARN/                  # Learning tutorials (ai.too.foo, slam.too.foo, etc.)
 └── BLOG/                   # Blog platform (blog.too.foo)
 ```

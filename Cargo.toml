@@ -15,6 +15,7 @@ members = [
     "DNA/SECURITY_CLI",
 
     # CORE - Domain-specific engines
+    "ATLAS/CORE/GEO_ENGINE",
     "SIMULATION/CORE/SIMULATION_ENGINE",
     "SIMULATION/CORE/SPICE_ENGINE",
     "TOOLS/CORE/PLL_ENGINE",
@@ -25,6 +26,7 @@ members = [
     "MCAD/CORE/CAD_ENGINE",
 
     # L1 Bubbles (deployed)
+    "ATLAS",
     "WELCOME",
     "HELIOS",
     "HELIOS/server",

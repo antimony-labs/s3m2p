@@ -1,12 +1,17 @@
 # Chladni - Wave Pattern Visualization
 
+> Codex CLI note: See `/AGENTS.md` for repo-wide instructions and best practices. This file is project-specific context.
+
 Rust/WASM port of Chladni plate pattern simulation with particle-based sand visualization.
 
 ## Build & Run
 
 ```bash
-trunk serve chladni/index.html --open
-trunk build --release chladni/index.html
+# Development (hot reload) - from repo root
+./SCRIPTS/dev up chladni
+
+# Production build
+trunk build --release SIMULATION/CHLADNI/index.html
 ```
 
 ## Architecture
