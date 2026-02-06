@@ -47,7 +47,13 @@ impl Activation {
     #[inline]
     pub fn derivative(&self, x: f32, output: f32) -> f32 {
         match self {
-            Activation::ReLU => if x > 0.0 { 1.0 } else { 0.0 },
+            Activation::ReLU => {
+                if x > 0.0 {
+                    1.0
+                } else {
+                    0.0
+                }
+            }
             Activation::Sigmoid => output * (1.0 - output),
             Activation::Tanh => 1.0 - output * output,
             Activation::Linear => 1.0,
@@ -104,9 +110,9 @@ pub struct NNDataPoint {
 /// Dense layer with weights and biases
 #[derive(Clone, Debug)]
 pub struct Layer {
-    pub weights: Vec<Vec<f32>>, // [output_size][input_size]
-    pub biases: Vec<f32>,       // [output_size]
-    pub activations: Vec<f32>,  // [output_size] - cached for visualization
+    pub weights: Vec<Vec<f32>>,    // [output_size][input_size]
+    pub biases: Vec<f32>,          // [output_size]
+    pub activations: Vec<f32>,     // [output_size] - cached for visualization
     pub pre_activations: Vec<f32>, // [output_size] - before activation
 }
 
@@ -128,7 +134,12 @@ impl Layer {
         let activations = vec![0.0; output_size];
         let pre_activations = vec![0.0; output_size];
 
-        Self { weights, biases, activations, pre_activations }
+        Self {
+            weights,
+            biases,
+            activations,
+            pre_activations,
+        }
     }
 
     fn forward(&mut self, inputs: &[f32], activation: Activation) {
@@ -204,7 +215,8 @@ impl NeuralNetworkDemo {
         for i in 0..self.layer_sizes.len() - 1 {
             let input_size = self.layer_sizes[i];
             let output_size = self.layer_sizes[i + 1];
-            self.layers.push(Layer::new(input_size, output_size, &mut self.rng));
+            self.layers
+                .push(Layer::new(input_size, output_size, &mut self.rng));
         }
     }
 
@@ -325,7 +337,11 @@ impl NeuralNetworkDemo {
 
         for (i, layer) in self.layers.iter_mut().enumerate() {
             let is_output = i == num_layers - 1;
-            let act = if is_output { Activation::Tanh } else { self.activation };
+            let act = if is_output {
+                Activation::Tanh
+            } else {
+                self.activation
+            };
             layer.forward(&inputs, act);
             inputs = layer.activations.clone();
         }
@@ -343,7 +359,11 @@ impl NeuralNetworkDemo {
 
         for (i, layer) in self.layers.iter().enumerate() {
             let is_output = i == self.layers.len() - 1;
-            let act = if is_output { Activation::Tanh } else { self.activation };
+            let act = if is_output {
+                Activation::Tanh
+            } else {
+                self.activation
+            };
 
             let mut outputs = Vec::with_capacity(layer.weights.len());
             for (w_row, bias) in layer.weights.iter().zip(layer.biases.iter()) {
@@ -382,10 +402,14 @@ impl NeuralNetworkDemo {
             return 0.0;
         }
 
-        let correct: usize = self.points.iter().filter(|p| {
-            let pred = self.predict(p.x, p.y);
-            (pred > 0.0 && p.label > 0) || (pred <= 0.0 && p.label <= 0)
-        }).count();
+        let correct: usize = self
+            .points
+            .iter()
+            .filter(|p| {
+                let pred = self.predict(p.x, p.y);
+                (pred > 0.0 && p.label > 0) || (pred <= 0.0 && p.label <= 0)
+            })
+            .count();
 
         correct as f32 / self.points.len() as f32
     }
@@ -396,11 +420,15 @@ impl NeuralNetworkDemo {
             return 0.0;
         }
 
-        let sum: f32 = self.points.iter().map(|p| {
-            let pred = self.predict(p.x, p.y);
-            let target = p.label as f32;
-            (pred - target) * (pred - target)
-        }).sum();
+        let sum: f32 = self
+            .points
+            .iter()
+            .map(|p| {
+                let pred = self.predict(p.x, p.y);
+                let target = p.label as f32;
+                (pred - target) * (pred - target)
+            })
+            .sum();
 
         sum / self.points.len() as f32
     }
@@ -477,10 +505,14 @@ impl Demo for NeuralNetworkDemo {
             .collect();
 
         // Gradient accumulators
-        let mut weight_grads: Vec<Vec<Vec<f32>>> = self.layers.iter()
+        let mut weight_grads: Vec<Vec<Vec<f32>>> = self
+            .layers
+            .iter()
             .map(|l| l.weights.iter().map(|row| vec![0.0; row.len()]).collect())
             .collect();
-        let mut bias_grads: Vec<Vec<f32>> = self.layers.iter()
+        let mut bias_grads: Vec<Vec<f32>> = self
+            .layers
+            .iter()
             .map(|l| vec![0.0; l.biases.len()])
             .collect();
 
@@ -517,7 +549,9 @@ impl Demo for NeuralNetworkDemo {
                         sum += next_layer.weights[k][j] * next_delta;
                     }
                     let act_out = self.layers[i].activations[j];
-                    let d_act = self.activation.derivative(self.layers[i].pre_activations[j], act_out);
+                    let d_act = self
+                        .activation
+                        .derivative(self.layers[i].pre_activations[j], act_out);
                     layer_deltas.push(sum * d_act);
                 }
                 deltas[i] = layer_deltas;

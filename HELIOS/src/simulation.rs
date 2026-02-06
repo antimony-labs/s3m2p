@@ -471,12 +471,12 @@ pub struct SimulationState {
     pub moon_orbits: [OrbitalElements; MAX_MOONS],
     pub moon_radii_km: [f64; MAX_MOONS],
     pub moon_colors: [&'static str; MAX_MOONS],
-    
+
     // Pre-computed moon positions (updated each frame) - relative to parent planet
     pub moon_x: [f64; MAX_MOONS],
     pub moon_y: [f64; MAX_MOONS],
     pub moon_z: [f64; MAX_MOONS],
-    
+
     // World-space moon positions (planet position + moon offset)
     pub moon_world_x: [f64; MAX_MOONS],
     pub moon_world_y: [f64; MAX_MOONS],
@@ -525,7 +525,7 @@ pub struct SimulationState {
     pub asteroid_angles: [f64; MAX_ASTEROIDS], // Current angular positions
     pub asteroid_distances: [f64; MAX_ASTEROIDS], // Distances from Sun (AU)
     pub asteroid_inclinations: [f64; MAX_ASTEROIDS], // Orbital inclinations
-    
+
     // === OORT CLOUD ===
     pub oort_count: usize,
     pub oort_seeds: [u32; MAX_OORT_PARTICLES], // Random seeds
@@ -549,7 +549,7 @@ impl SimulationState {
         // This means one full solar cycle takes 100 seconds - slow enough to observe
         let one_percent_solar_cycle_per_sec = SOLAR_CYCLE_DAYS / 100.0; // ~40.18 days/sec
         let mut state = Self {
-            julian_date: J2000_EPOCH + 8766.0,       // ~2024
+            julian_date: J2000_EPOCH + 8766.0,           // ~2024
             time_scale: one_percent_solar_cycle_per_sec, // 1% solar cycle per second
             paused: false,
 
@@ -633,31 +633,32 @@ impl SimulationState {
     fn init_moons(&mut self) {
         // Earth: Moon
         self.add_moon(2, "Moon", 0.00257, 27.32, 0.0549, 5.145, "#C0C0C0"); // Earth index = 2
-        
+
         // Mars: Phobos, Deimos
         self.add_moon(3, "Phobos", 0.000011, 0.319, 0.0151, 1.08, "#888888"); // Mars index = 3
         self.add_moon(3, "Deimos", 0.000006, 1.263, 0.0002, 1.79, "#666666");
-        
+
         // Jupiter: Io, Europa, Ganymede, Callisto
         self.add_moon(4, "Io", 0.000286, 1.769, 0.0041, 0.05, "#FFD700"); // Jupiter index = 4
         self.add_moon(4, "Europa", 0.000245, 3.551, 0.009, 0.47, "#E6E6FA");
         self.add_moon(4, "Ganymede", 0.000413, 7.155, 0.0013, 0.20, "#B0C4DE");
         self.add_moon(4, "Callisto", 0.000378, 16.689, 0.0074, 0.192, "#708090");
-        
+
         // Saturn: Titan, Rhea, Iapetus
         self.add_moon(5, "Titan", 0.000404, 15.945, 0.0288, 0.33, "#FFA500"); // Saturn index = 5
         self.add_moon(5, "Rhea", 0.000153, 4.518, 0.001, 0.35, "#D3D3D3");
         self.add_moon(5, "Iapetus", 0.000146, 79.330, 0.0283, 15.47, "#A0A0A0");
-        
+
         // Uranus: Miranda, Ariel, Umbriel, Titania, Oberon
         self.add_moon(6, "Miranda", 0.000024, 1.413, 0.0013, 4.34, "#C0C0C0"); // Uranus index = 6
         self.add_moon(6, "Ariel", 0.000059, 2.520, 0.0012, 0.04, "#E0E0E0");
         self.add_moon(6, "Umbriel", 0.000059, 4.144, 0.0039, 0.13, "#808080");
         self.add_moon(6, "Titania", 0.000123, 8.706, 0.0011, 0.08, "#A0A0A0");
         self.add_moon(6, "Oberon", 0.000119, 13.463, 0.0014, 0.07, "#606060");
-        
+
         // Neptune: Triton
-        self.add_moon(7, "Triton", 0.000212, 5.877, 0.000016, 157.345, "#4A90E2"); // Neptune index = 7
+        self.add_moon(7, "Triton", 0.000212, 5.877, 0.000016, 157.345, "#4A90E2");
+        // Neptune index = 7
     }
 
     fn add_moon(
@@ -677,33 +678,33 @@ impl SimulationState {
         if parent_planet_idx >= self.planet_count || parent_planet_idx >= MAX_PLANETS {
             return;
         }
-        
+
         let i = self.moon_count;
         self.moon_names[i] = name;
         self.moon_parent_planet[i] = parent_planet_idx;
-        
+
         // Simplified circular orbit around parent planet
         // Semi-major axis in AU (very small compared to planet orbits)
         let a = radius_au;
-        
+
         // Create orbital elements relative to parent planet
         // For simplicity, assume circular orbits with small inclination
         self.moon_orbits[i] = OrbitalElements::new(
             a,
             eccentricity,
             inclination_deg,
-            0.0, // Longitude of ascending node
-            0.0, // Argument of perihelion
-            0.0, // Mean anomaly at epoch
+            0.0,                  // Longitude of ascending node
+            0.0,                  // Argument of perihelion
+            0.0,                  // Mean anomaly at epoch
             period_days / 365.25, // Period in years
         );
-        
+
         // Moon physical radius (approximate - using a small fraction of orbital distance)
         // Real moon radii are much smaller, but for visualization we use a scaled value
         let moon_physical_radius_km = (radius_au * AU_KM * 0.01).max(100.0); // At least 100km
         self.moon_radii_km[i] = moon_physical_radius_km;
         self.moon_colors[i] = color;
-        
+
         self.moon_count += 1;
     }
 
@@ -715,23 +716,25 @@ impl SimulationState {
             seed = seed.wrapping_mul(1103515245).wrapping_add(12345);
             seed
         };
-        
+
         let count = MAX_ASTEROIDS.min(1000); // Limit to 1000 for performance
         self.asteroid_count = count;
-        
+
         for i in 0..count {
             self.asteroid_seeds[i] = next_seed();
-            
+
             // Distance: 2.1 to 3.3 AU with some clustering
             let r = (next_seed() as f64 / u32::MAX as f64);
             let r_squared = r * r; // Bias toward inner belt
             self.asteroid_distances[i] = 2.1 + r_squared * 1.2;
-            
+
             // Initial angle
-            self.asteroid_angles[i] = (next_seed() as f64 / u32::MAX as f64) * 2.0 * std::f64::consts::PI;
-            
+            self.asteroid_angles[i] =
+                (next_seed() as f64 / u32::MAX as f64) * 2.0 * std::f64::consts::PI;
+
             // Small inclination (0-10 degrees)
-            self.asteroid_inclinations[i] = ((next_seed() as f64 / u32::MAX as f64) * 10.0).to_radians();
+            self.asteroid_inclinations[i] =
+                ((next_seed() as f64 / u32::MAX as f64) * 10.0).to_radians();
         }
     }
 
@@ -743,25 +746,26 @@ impl SimulationState {
             seed = seed.wrapping_mul(1103515245).wrapping_add(12345);
             seed
         };
-        
+
         let count = MAX_OORT_PARTICLES.min(1000); // Limit for performance
         self.oort_count = count;
-        
+
         for i in 0..count {
             self.oort_seeds[i] = next_seed();
-            
+
             // Radial distribution: uniform in volume -> r^3 distribution
             // Sample r^3 uniformly, then take cube root
             let r3 = (next_seed() as f64 / u32::MAX as f64);
             let r_cubed = 2000.0_f64.powi(3) + r3 * (100000.0_f64.powi(3) - 2000.0_f64.powi(3));
             self.oort_distances[i] = r_cubed.cbrt();
-            
+
             // Spherical angles
             self.oort_theta[i] = (next_seed() as f64 / u32::MAX as f64) * std::f64::consts::PI; // 0 to PI
             self.oort_phi[i] = (next_seed() as f64 / u32::MAX as f64) * 2.0 * std::f64::consts::PI; // 0 to 2PI
-            
+
             // Initial orbital angle
-            self.oort_angles[i] = (next_seed() as f64 / u32::MAX as f64) * 2.0 * std::f64::consts::PI;
+            self.oort_angles[i] =
+                (next_seed() as f64 / u32::MAX as f64) * 2.0 * std::f64::consts::PI;
         }
     }
 
@@ -960,11 +964,12 @@ impl SimulationState {
             let parent_idx = self.moon_parent_planet[i];
             if parent_idx < self.planet_count && parent_idx < MAX_PLANETS {
                 // Moon position relative to parent planet
-                let (moon_rel_x, moon_rel_y, moon_rel_z) = self.moon_orbits[i].position_3d(self.julian_date);
+                let (moon_rel_x, moon_rel_y, moon_rel_z) =
+                    self.moon_orbits[i].position_3d(self.julian_date);
                 self.moon_x[i] = moon_rel_x;
                 self.moon_y[i] = moon_rel_y;
                 self.moon_z[i] = moon_rel_z;
-                
+
                 // Convert to world space (add parent planet position)
                 self.moon_world_x[i] = self.planet_x[parent_idx] + moon_rel_x;
                 self.moon_world_y[i] = self.planet_y[parent_idx] + moon_rel_y;
@@ -1089,19 +1094,20 @@ impl SimulationState {
 
         // Check planets
         for i in 0..self.planet_count {
-            let (sx, sy, depth) = self.project_3d(self.planet_x[i], self.planet_y[i], self.planet_z[i]);
-            
+            let (sx, sy, depth) =
+                self.project_3d(self.planet_x[i], self.planet_y[i], self.planet_z[i]);
+
             // Only check if closer than current hit
             if depth < min_depth {
                 let dx = screen_x - sx;
                 let dy = screen_y - sy;
                 let dist = (dx * dx + dy * dy).sqrt();
-                
+
                 // Calculate visual radius for hit testing
                 let radius_au = self.planet_radii_km[i] / AU_KM;
                 let visual_radius = (radius_au / self.view.zoom).max(4.0).min(500.0);
                 let hit_radius = visual_radius.max(15.0); // Minimum 15px hit target
-                
+
                 if dist < hit_radius {
                     best_hit = Some(ObjectId::Planet(i));
                     min_depth = depth;

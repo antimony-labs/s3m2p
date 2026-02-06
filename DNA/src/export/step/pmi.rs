@@ -27,7 +27,11 @@ impl StepEntity for DimensionalLocation {
         } else {
             write!(w, "$")?;
         }
-        write!(w, ",{},{}", self.relating_shape_aspect, self.related_shape_aspect)
+        write!(
+            w,
+            ",{},{}",
+            self.relating_shape_aspect, self.related_shape_aspect
+        )
     }
 }
 
@@ -73,11 +77,11 @@ impl StepEntity for PlusMinusTolerance {
 
     fn write_attributes(&self, w: &mut dyn Write) -> io::Result<()> {
         write_step_string(&self.name, w)?;
-        write!(w, ",{:.6},{:.6},{:.6},{}",
-               self.nominal_value,
-               self.upper_bound,
-               self.lower_bound,
-               self.unit)
+        write!(
+            w,
+            ",{:.6},{:.6},{:.6},{}",
+            self.nominal_value, self.upper_bound, self.lower_bound, self.unit
+        )
     }
 }
 
@@ -97,10 +101,11 @@ impl StepEntity for LimitsAndFits {
 
     fn write_attributes(&self, w: &mut dyn Write) -> io::Result<()> {
         write_step_string(&self.name, w)?;
-        write!(w, ",{:.6},{:.6},{}",
-               self.upper_limit,
-               self.lower_limit,
-               self.unit)
+        write!(
+            w,
+            ",{:.6},{:.6},{}",
+            self.upper_limit, self.lower_limit, self.unit
+        )
     }
 }
 

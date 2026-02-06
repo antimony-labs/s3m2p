@@ -32,8 +32,16 @@ impl LessonRenderer {
 
     /// Render the section selector header
     fn render_section_selector(&self, active_section: usize) -> String {
-        let learn_class = if active_section == 0 { "section-tab active" } else { "section-tab" };
-        let practice_class = if active_section == 1 { "section-tab active" } else { "section-tab" };
+        let learn_class = if active_section == 0 {
+            "section-tab active"
+        } else {
+            "section-tab"
+        };
+        let practice_class = if active_section == 1 {
+            "section-tab active"
+        } else {
+            "section-tab"
+        };
 
         format!(
             r#"
@@ -566,8 +574,7 @@ impl LessonRenderer {
                 </div>
                 "#.to_string()
             }
-            _ => {
-                r#"
+            _ => r#"
                 <div class="demo-controls" id="demo-controls">
                     <div class="control-group">
                         <h4>Interactive Demo</h4>
@@ -579,8 +586,8 @@ impl LessonRenderer {
                         <strong>Coming soon:</strong> Interactive visualization for this lesson.
                     </div>
                 </div>
-                "#.to_string()
-            }
+                "#
+            .to_string(),
         }
     }
 
@@ -593,9 +600,8 @@ impl LessonRenderer {
 
         // Render problems grouped by pattern
         for pattern in ALL_PATTERNS {
-            let pattern_problems: Vec<_> = problems.iter()
-                .filter(|p| p.pattern == *pattern)
-                .collect();
+            let pattern_problems: Vec<_> =
+                problems.iter().filter(|p| p.pattern == *pattern).collect();
 
             if pattern_problems.is_empty() {
                 continue;
@@ -666,14 +672,18 @@ impl LessonRenderer {
 
         // Build examples section
         let examples_section = if !problem.examples.is_empty() {
-            let examples_html: String = problem.examples.iter().enumerate().map(|(idx, ex)| {
-                let explanation_html = if let Some(expl) = ex.explanation {
-                    format!(r#"<p class="example-explanation">{}</p>"#, expl)
-                } else {
-                    String::new()
-                };
-                format!(
-                    r#"
+            let examples_html: String = problem
+                .examples
+                .iter()
+                .enumerate()
+                .map(|(idx, ex)| {
+                    let explanation_html = if let Some(expl) = ex.explanation {
+                        format!(r#"<p class="example-explanation">{}</p>"#, expl)
+                    } else {
+                        String::new()
+                    };
+                    format!(
+                        r#"
                     <div class="example-item">
                         <div class="example-header">
                             <span class="example-label">Example {}</span>
@@ -689,13 +699,15 @@ impl LessonRenderer {
                         </div>
                     </div>
                     "#,
-                    idx + 1,
-                    ex.input,
-                    ex.output,
-                    explanation_html
-                )
-            }).collect::<Vec<_>>().join("");
-            
+                        idx + 1,
+                        ex.input,
+                        ex.output,
+                        explanation_html
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("");
+
             format!(
                 r#"
                 <section class="examples-section">

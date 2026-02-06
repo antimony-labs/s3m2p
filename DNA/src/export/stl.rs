@@ -97,7 +97,7 @@ pub fn write_stl_ascii(mesh: &TriangleMesh, name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cad::{primitives::make_box, mesh::solid_to_mesh};
+    use crate::cad::{mesh::solid_to_mesh, primitives::make_box};
 
     #[test]
     fn test_binary_stl_format() {

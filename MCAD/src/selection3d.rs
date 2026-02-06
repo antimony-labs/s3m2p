@@ -5,7 +5,7 @@
 //! LAYER: MCAD (application)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
-use cad_engine::{FaceId, EdgeId, VertexId};
+use cad_engine::{EdgeId, FaceId, VertexId};
 
 /// Selection mode for 3D picking
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]

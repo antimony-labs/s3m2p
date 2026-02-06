@@ -155,7 +155,11 @@ pub fn generate_bom(design: &CrateDesign) -> Vec<BomRow> {
     for (key, (qty, note)) in counts {
         rows.push(BomRow {
             item: key.item,
-            size: if key.size.is_empty() { None } else { Some(key.size) },
+            size: if key.size.is_empty() {
+                None
+            } else {
+                Some(key.size)
+            },
             quantity: qty,
             material: key.material,
             note,
@@ -277,7 +281,10 @@ pub fn bom_to_csv(rows: &[BomRow]) -> String {
         let qty = r.quantity.to_string();
         let material = csv_escape(&r.material);
         let note = csv_escape(r.note.as_deref().unwrap_or(""));
-        out.push_str(&format!("{},{},{},{},{}\n", item, size, qty, material, note));
+        out.push_str(&format!(
+            "{},{},{},{},{}\n",
+            item, size, qty, material, note
+        ));
     }
     out
 }
@@ -289,18 +296,9 @@ pub fn cut_list_to_csv(rows: &[CutListRow]) -> String {
         let item = csv_escape(&r.item);
         let material = csv_escape(&r.material);
         let nominal = csv_escape(r.nominal.as_deref().unwrap_or(""));
-        let length = r
-            .length_in
-            .map(|v| format!("{:.2}", v))
-            .unwrap_or_default();
-        let width = r
-            .width_in
-            .map(|v| format!("{:.2}", v))
-            .unwrap_or_default();
-        let height = r
-            .height_in
-            .map(|v| format!("{:.2}", v))
-            .unwrap_or_default();
+        let length = r.length_in.map(|v| format!("{:.2}", v)).unwrap_or_default();
+        let width = r.width_in.map(|v| format!("{:.2}", v)).unwrap_or_default();
+        let height = r.height_in.map(|v| format!("{:.2}", v)).unwrap_or_default();
         let thickness = r
             .thickness_in
             .map(|v| format!("{:.3}", v))
@@ -340,5 +338,3 @@ mod tests {
         assert!(bom_csv.contains("HANDLING_SYMBOLS"));
     }
 }
-
-

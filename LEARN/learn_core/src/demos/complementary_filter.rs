@@ -65,21 +65,21 @@ pub struct ComplementaryFilterDemo {
     pub alpha: f32, // 0-1, higher = trust gyro more
 
     // Noise parameters
-    pub accel_noise: f32,  // Standard deviation of accelerometer noise
-    pub gyro_drift: f32,   // Gyroscope drift rate
-    pub gyro_noise: f32,   // Gyroscope noise
+    pub accel_noise: f32, // Standard deviation of accelerometer noise
+    pub gyro_drift: f32,  // Gyroscope drift rate
+    pub gyro_noise: f32,  // Gyroscope noise
 
     // Internal state
-    gyro_bias: f32,        // Accumulated gyro drift
-    integrated_gyro: f32,  // Pure gyro integration (for comparison)
+    gyro_bias: f32,       // Accumulated gyro drift
+    integrated_gyro: f32, // Pure gyro integration (for comparison)
 
     // History for plotting
     pub history: SensorHistory,
     max_history: usize,
 
     // Motion parameters
-    pub motion_frequency: f32,  // How fast the angle changes
-    pub motion_amplitude: f32,  // How much the angle changes
+    pub motion_frequency: f32, // How fast the angle changes
+    pub motion_amplitude: f32, // How much the angle changes
 
     // Time
     time: f32,
@@ -93,10 +93,10 @@ impl Default for ComplementaryFilterDemo {
         Self {
             true_angle: 0.0,
             reading: ImuReading::default(),
-            alpha: 0.98,           // Optimal blend - best of both worlds
-            accel_noise: 1.0,      // BEST: minimum noise
-            gyro_drift: 0.0,       // BEST: no drift
-            gyro_noise: 0.5,       // degrees per second of noise
+            alpha: 0.98,      // Optimal blend - best of both worlds
+            accel_noise: 1.0, // BEST: minimum noise
+            gyro_drift: 0.0,  // BEST: no drift
+            gyro_noise: 0.5,  // degrees per second of noise
             gyro_bias: 0.0,
             integrated_gyro: 0.0,
             history: SensorHistory::default(),
@@ -124,7 +124,8 @@ impl ComplementaryFilterDemo {
 
         // Smooth motion with occasional direction changes
         let base = self.motion_amplitude * (self.time * self.motion_frequency).sin();
-        let secondary = (self.motion_amplitude * 0.3) * (self.time * self.motion_frequency * 2.3).cos();
+        let secondary =
+            (self.motion_amplitude * 0.3) * (self.time * self.motion_frequency * 2.3).cos();
 
         self.true_angle = base + secondary;
     }
@@ -270,7 +271,7 @@ impl Demo for ComplementaryFilterDemo {
                 min: 0.5,
                 max: 0.995,
                 step: 0.005,
-                default: 0.98,  // Optimal value
+                default: 0.98, // Optimal value
             },
             ParamMeta {
                 name: "accel_noise",
@@ -278,7 +279,7 @@ impl Demo for ComplementaryFilterDemo {
                 min: 1.0,
                 max: 20.0,
                 step: 1.0,
-                default: 1.0,   // BEST: minimum noise
+                default: 1.0, // BEST: minimum noise
             },
             ParamMeta {
                 name: "gyro_drift",
@@ -286,7 +287,7 @@ impl Demo for ComplementaryFilterDemo {
                 min: 0.0,
                 max: 2.0,
                 step: 0.1,
-                default: 0.0,   // BEST: no drift
+                default: 0.0, // BEST: no drift
             },
             ParamMeta {
                 name: "motion_speed",
@@ -334,7 +335,8 @@ mod tests {
         assert!(
             fused_error < gyro_error,
             "Fused error {} should be less than gyro error {}",
-            fused_error, gyro_error
+            fused_error,
+            gyro_error
         );
     }
 

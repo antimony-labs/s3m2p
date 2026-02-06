@@ -31,8 +31,8 @@
 //! println!("Efficiency: {:.1}%", design.efficiency.total_efficiency * 100.0);
 //! ```
 
-pub mod buck;
 pub mod boost;
+pub mod buck;
 pub mod components;
 pub mod control;
 pub mod ldo;
@@ -46,26 +46,23 @@ pub mod types;
 pub use types::*;
 
 // Re-export design functions
-pub use buck::design_buck;
 pub use boost::design_boost;
+pub use buck::design_buck;
 pub use ldo::design_ldo;
 
 // Re-export component utilities
 pub use components::{
-    format_capacitance, format_current, format_frequency, format_inductance,
-    format_percent, format_power, format_resistance, format_voltage,
-    nearest_capacitor, nearest_e12, nearest_e24, nearest_e96, nearest_e6,
-    nearest_inductor, next_higher_capacitor, next_higher_inductor,
-    E12, E24, E6, E96, STANDARD_CERAMICS_UF, STANDARD_ELECTROLYTICS_UF,
-    STANDARD_INDUCTORS_UH,
+    format_capacitance, format_current, format_frequency, format_inductance, format_percent,
+    format_power, format_resistance, format_voltage, nearest_capacitor, nearest_e12, nearest_e24,
+    nearest_e6, nearest_e96, nearest_inductor, next_higher_capacitor, next_higher_inductor, E12,
+    E24, E6, E96, STANDARD_CERAMICS_UF, STANDARD_ELECTROLYTICS_UF, STANDARD_INDUCTORS_UH,
 };
 
 // Re-export simulation types
 pub use state_space::{Matrix1x2, Matrix2x1, Matrix2x2, StateSpace2, SwitchedConverter};
 pub use transient::{
-    buck_duty_for_vout, buck_steady_state_vout, boost_duty_for_vout,
-    boost_steady_state_vout, simulate_boost, simulate_buck, SimulationStats,
-    TransientConfig, TransientResult,
+    boost_duty_for_vout, boost_steady_state_vout, buck_duty_for_vout, buck_steady_state_vout,
+    simulate_boost, simulate_buck, SimulationStats, TransientConfig, TransientResult,
 };
 
 // ============================================================================
@@ -154,29 +151,43 @@ pub fn recommend_topology(
 
     // Calculate LDO efficiency if applicable
     let ldo_efficiency = if is_step_down { vout / vin } else { 0.0 };
-    let ldo_dissipation = if is_step_down { headroom * iout } else { f64::INFINITY };
+    let ldo_dissipation = if is_step_down {
+        headroom * iout
+    } else {
+        f64::INFINITY
+    };
 
     // Decision logic
     let recommended = if is_step_up {
         // Must use boost for step-up
-        alternatives.push((TopologyType::BuckBoost, "Buck-boost for wide Vin range".to_string()));
+        alternatives.push((
+            TopologyType::BuckBoost,
+            "Buck-boost for wide Vin range".to_string(),
+        ));
         TopologyType::Boost
     } else if is_step_down {
         match priority {
             DesignPriority::Noise => {
                 // LDO has best noise performance
                 if ldo_efficiency > 0.6 && ldo_dissipation < 2.0 {
-                    alternatives.push((TopologyType::Buck, "Buck for higher efficiency".to_string()));
+                    alternatives
+                        .push((TopologyType::Buck, "Buck for higher efficiency".to_string()));
                     TopologyType::LDO
                 } else {
-                    alternatives.push((TopologyType::LDO, "LDO for lower noise (but thermal concerns)".to_string()));
+                    alternatives.push((
+                        TopologyType::LDO,
+                        "LDO for lower noise (but thermal concerns)".to_string(),
+                    ));
                     TopologyType::Buck
                 }
             }
             DesignPriority::Efficiency => {
                 // Buck is most efficient for step-down
                 if ldo_efficiency > 0.85 {
-                    alternatives.push((TopologyType::LDO, "LDO acceptable at >85% efficiency".to_string()));
+                    alternatives.push((
+                        TopologyType::LDO,
+                        "LDO acceptable at >85% efficiency".to_string(),
+                    ));
                 }
                 TopologyType::Buck
             }
@@ -189,15 +200,24 @@ pub fn recommend_topology(
                     alternatives.push((TopologyType::Buck, "Buck for better thermal".to_string()));
                     TopologyType::LDO
                 } else {
-                    alternatives.push((TopologyType::LDO, "LDO if thermal solution available".to_string()));
+                    alternatives.push((
+                        TopologyType::LDO,
+                        "LDO if thermal solution available".to_string(),
+                    ));
                     TopologyType::Buck
                 }
             }
         }
     } else {
         // Vin ≈ Vout
-        alternatives.push((TopologyType::Buck, "Buck if Vin slightly higher".to_string()));
-        alternatives.push((TopologyType::Boost, "Boost if Vin slightly lower".to_string()));
+        alternatives.push((
+            TopologyType::Buck,
+            "Buck if Vin slightly higher".to_string(),
+        ));
+        alternatives.push((
+            TopologyType::Boost,
+            "Boost if Vin slightly lower".to_string(),
+        ));
         TopologyType::BuckBoost
     };
 
@@ -210,16 +230,21 @@ pub fn recommend_topology(
         TopologyType::Boost => format!(
             "Boost converter: {:.1}V to {:.1}V at {:.2}A. \
             Step-up requires boost topology. Watch for high input current ({:.2}A).",
-            vin, vout, iout, iout * vout / vin
+            vin,
+            vout,
+            iout,
+            iout * vout / vin
         ),
         TopologyType::LDO => format!(
             "LDO regulator: {:.1}V to {:.1}V at {:.2}A. \
             Efficiency {:.0}%, dissipation {:.2}W. Low noise solution.",
-            vin, vout, iout, ldo_efficiency * 100.0, ldo_dissipation
+            vin,
+            vout,
+            iout,
+            ldo_efficiency * 100.0,
+            ldo_dissipation
         ),
-        TopologyType::BuckBoost => format!(
-            "Buck-boost for Vin ≈ Vout or wide input range.",
-        ),
+        TopologyType::BuckBoost => format!("Buck-boost for Vin ≈ Vout or wide input range.",),
         _ => "See alternatives".to_string(),
     };
 

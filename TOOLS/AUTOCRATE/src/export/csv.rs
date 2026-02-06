@@ -27,7 +27,9 @@ pub fn export_cut_list_csv(cut_list: &[CutListEntry]) -> String {
 
 /// Export BOM to CSV format
 pub fn export_bom_csv(bom: &BillOfMaterials) -> String {
-    let mut csv = String::from("Item,Part Number,Description,Quantity,Unit,Material Specification,Dimensions,Notes\n");
+    let mut csv = String::from(
+        "Item,Part Number,Description,Quantity,Unit,Material Specification,Dimensions,Notes\n",
+    );
 
     for entry in &bom.entries {
         csv.push_str(&format!(
@@ -87,9 +89,9 @@ fn escape_csv(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::geometry::*;
     use crate::assembly::*;
     use crate::constants::LumberSize;
+    use crate::geometry::*;
 
     #[test]
     fn test_csv_escaping() {
@@ -100,19 +102,17 @@ mod tests {
 
     #[test]
     fn test_cut_list_csv_format() {
-        let cut_list = vec![
-            CutListEntry {
-                part_number: "SKD-4X4-001".to_string(),
-                description: "Skid".to_string(),
-                lumber_size: LumberSize::L4x4,
-                length: Tolerance::lumber(120.0, 0.125, 0.0625, 1.0),
-                quantity: 3,
-                lumber_grade: LumberGrade::No2,
-                straightness_tolerance: 0.0625,
-                perpendicularity_tolerance: 1.0,
-                notes: vec!["Test note".to_string()],
-            },
-        ];
+        let cut_list = vec![CutListEntry {
+            part_number: "SKD-4X4-001".to_string(),
+            description: "Skid".to_string(),
+            lumber_size: LumberSize::L4x4,
+            length: Tolerance::lumber(120.0, 0.125, 0.0625, 1.0),
+            quantity: 3,
+            lumber_grade: LumberGrade::No2,
+            straightness_tolerance: 0.0625,
+            perpendicularity_tolerance: 1.0,
+            notes: vec!["Test note".to_string()],
+        }];
 
         let csv = export_cut_list_csv(&cut_list);
 
@@ -130,22 +130,20 @@ mod tests {
     #[test]
     fn test_bom_csv_format() {
         let bom = BillOfMaterials {
-            entries: vec![
-                BomEntry {
-                    item_number: 1,
-                    part_number: "SKD-4X4-001".to_string(),
-                    description: "Skid Member".to_string(),
-                    quantity: 3,
-                    unit: "EA".to_string(),
-                    material: MaterialSpec::Lumber {
-                        size: LumberSize::L4x4,
-                        grade: LumberGrade::No2,
-                        species: WoodSpecies::SouthernPine,
-                    },
-                    dimensions: "3.5\"x3.5\"x120\"".to_string(),
-                    notes: vec![],
+            entries: vec![BomEntry {
+                item_number: 1,
+                part_number: "SKD-4X4-001".to_string(),
+                description: "Skid Member".to_string(),
+                quantity: 3,
+                unit: "EA".to_string(),
+                material: MaterialSpec::Lumber {
+                    size: LumberSize::L4x4,
+                    grade: LumberGrade::No2,
+                    species: WoodSpecies::SouthernPine,
                 },
-            ],
+                dimensions: "3.5\"x3.5\"x120\"".to_string(),
+                notes: vec![],
+            }],
         };
 
         let csv = export_bom_csv(&bom);
@@ -160,18 +158,20 @@ mod tests {
 
     #[test]
     fn test_nailing_csv_format() {
-        let coords = vec![
-            NailingCoordinate {
-                nail_id: "NAIL-001".to_string(),
-                position: Point3 { x: 12.0, y: 0.0, z: 4.25 },
-                direction: [0.0, 0.0, -1.0],
-                datum_references: DatumReference::default(),
-                position_tolerance: 0.25,
-                source_part: "FLR-2X6-001".to_string(),
-                target_part: "SKD-4X4-001".to_string(),
-                notes: "Floor to skid".to_string(),
+        let coords = vec![NailingCoordinate {
+            nail_id: "NAIL-001".to_string(),
+            position: Point3 {
+                x: 12.0,
+                y: 0.0,
+                z: 4.25,
             },
-        ];
+            direction: [0.0, 0.0, -1.0],
+            datum_references: DatumReference::default(),
+            position_tolerance: 0.25,
+            source_part: "FLR-2X6-001".to_string(),
+            target_part: "SKD-4X4-001".to_string(),
+            notes: "Floor to skid".to_string(),
+        }];
 
         let csv = export_nailing_csv(&coords);
 

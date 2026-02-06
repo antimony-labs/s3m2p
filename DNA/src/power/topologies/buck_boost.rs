@@ -89,7 +89,7 @@ impl Default for BuckBoostRequirements {
     fn default() -> Self {
         Self {
             vin: VoltageRange::range(9.0, 16.0), // Automotive 12V nominal
-            vout: 12.0, // Inverted -12V output
+            vout: 12.0,                          // Inverted -12V output
             iout_max: 1.0,
             iout_min: 0.1,
             ripple_pp: 0.12, // 1% of output
@@ -302,16 +302,17 @@ pub fn design_buck_boost(req: &BuckBoostRequirements) -> Result<BuckBoostDesign,
 
     // Select MOSFET
     let vds_margin = vds_max * 1.25;
-    let mosfet_candidates = find_suitable_mosfets(
-        vds_margin,
-        id_rms,
-        id_peak,
-        MOSFETPreference::LowLosses,
-    );
+    let mosfet_candidates =
+        find_suitable_mosfets(vds_margin, id_rms, id_peak, MOSFETPreference::LowLosses);
 
     let selected_mosfet = mosfet_candidates
         .first()
-        .ok_or_else(|| format!("No suitable MOSFET found for Vds={:.0}V, Id={:.2}A", vds_margin, id_peak))
+        .ok_or_else(|| {
+            format!(
+                "No suitable MOSFET found for Vds={:.0}V, Id={:.2}A",
+                vds_margin, id_peak
+            )
+        })
         .map(|m| (*m).clone())?;
 
     // Calculate MOSFET losses
@@ -338,12 +339,8 @@ pub fn design_buck_boost(req: &BuckBoostRequirements) -> Result<BuckBoostDesign,
     let if_avg = iout;
     let _if_rms = il_rms * (1.0 - duty_nom).sqrt(); // For RMS rating validation
 
-    let diode_candidates = find_suitable_diodes(
-        vr_diode * 1.3,
-        if_avg,
-        il_peak,
-        DiodePreference::LowVf,
-    );
+    let diode_candidates =
+        find_suitable_diodes(vr_diode * 1.3, if_avg, il_peak, DiodePreference::LowVf);
 
     let selected_diode = diode_candidates
         .first()
@@ -508,7 +505,7 @@ mod tests {
     fn test_buck_boost_basic_design() {
         let req = BuckBoostRequirements {
             vin: VoltageRange::range(9.0, 16.0), // 12V automotive
-            vout: 12.0, // -12V output
+            vout: 12.0,                          // -12V output
             iout_max: 0.5,
             iout_min: 0.05,
             ripple_pp: 0.12,
@@ -530,7 +527,11 @@ mod tests {
         assert!(design.duty_cycle_max < 0.7);
 
         // Check efficiency is reasonable
-        assert!(design.efficiency > 0.75, "Efficiency {:.1}% too low", design.efficiency * 100.0);
+        assert!(
+            design.efficiency > 0.75,
+            "Efficiency {:.1}% too low",
+            design.efficiency * 100.0
+        );
         assert!(design.efficiency < 0.98);
 
         // Inductor should have reasonable value
@@ -555,7 +556,11 @@ mod tests {
         };
 
         let result = design_buck_boost(&req);
-        assert!(result.is_ok(), "Step-down design should succeed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Step-down design should succeed: {:?}",
+            result.err()
+        );
 
         let design = result.unwrap();
 
@@ -581,7 +586,11 @@ mod tests {
         };
 
         let result = design_buck_boost(&req);
-        assert!(result.is_ok(), "Step-up design should succeed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Step-up design should succeed: {:?}",
+            result.err()
+        );
 
         let design = result.unwrap();
 
@@ -609,7 +618,11 @@ mod tests {
         };
 
         let result = design_buck_boost(&req);
-        assert!(result.is_ok(), "DCM design should succeed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "DCM design should succeed: {:?}",
+            result.err()
+        );
 
         let design = result.unwrap();
         assert_eq!(design.mode, BuckBoostMode::DCM);

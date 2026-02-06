@@ -41,40 +41,16 @@ impl FilterType {
 
     pub fn kernel(&self) -> [[f32; 3]; 3] {
         match self {
-            FilterType::EdgeHorizontal => [
-                [-1.0, -2.0, -1.0],
-                [ 0.0,  0.0,  0.0],
-                [ 1.0,  2.0,  1.0],
-            ],
-            FilterType::EdgeVertical => [
-                [-1.0, 0.0, 1.0],
-                [-2.0, 0.0, 2.0],
-                [-1.0, 0.0, 1.0],
-            ],
-            FilterType::EdgeAll => [
-                [-1.0, -1.0, -1.0],
-                [-1.0,  8.0, -1.0],
-                [-1.0, -1.0, -1.0],
-            ],
-            FilterType::Sharpen => [
-                [ 0.0, -1.0,  0.0],
-                [-1.0,  5.0, -1.0],
-                [ 0.0, -1.0,  0.0],
-            ],
+            FilterType::EdgeHorizontal => [[-1.0, -2.0, -1.0], [0.0, 0.0, 0.0], [1.0, 2.0, 1.0]],
+            FilterType::EdgeVertical => [[-1.0, 0.0, 1.0], [-2.0, 0.0, 2.0], [-1.0, 0.0, 1.0]],
+            FilterType::EdgeAll => [[-1.0, -1.0, -1.0], [-1.0, 8.0, -1.0], [-1.0, -1.0, -1.0]],
+            FilterType::Sharpen => [[0.0, -1.0, 0.0], [-1.0, 5.0, -1.0], [0.0, -1.0, 0.0]],
             FilterType::Blur => {
                 let v = 1.0 / 9.0;
                 [[v, v, v], [v, v, v], [v, v, v]]
-            },
-            FilterType::Emboss => [
-                [-2.0, -1.0, 0.0],
-                [-1.0,  1.0, 1.0],
-                [ 0.0,  1.0, 2.0],
-            ],
-            FilterType::Custom => [
-                [0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0],
-                [0.0, 0.0, 0.0],
-            ],
+            }
+            FilterType::Emboss => [[-2.0, -1.0, 0.0], [-1.0, 1.0, 1.0], [0.0, 1.0, 2.0]],
+            FilterType::Custom => [[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]],
         }
     }
 
@@ -244,9 +220,14 @@ impl CnnFilterDemo {
                         let on_left = (rel_x - left_edge).abs() < 0.08;
                         let on_right = (rel_x - right_edge).abs() < 0.08;
                         // Horizontal bar
-                        let on_bar = rel_y > 0.45 && rel_y < 0.55 && rel_x > left_edge && rel_x < right_edge;
+                        let on_bar =
+                            rel_y > 0.45 && rel_y < 0.55 && rel_x > left_edge && rel_x < right_edge;
 
-                        self.input[y][x] = if (on_left || on_right || on_bar) && rel_y > 0.1 { 1.0 } else { 0.0 };
+                        self.input[y][x] = if (on_left || on_right || on_bar) && rel_y > 0.1 {
+                            1.0
+                        } else {
+                            0.0
+                        };
                     }
                 }
             }
@@ -337,9 +318,10 @@ impl CnnFilterDemo {
 
         let range = (max_val - min_val).max(1e-6);
 
-        self.output.iter().map(|row| {
-            row.iter().map(|&val| (val - min_val) / range).collect()
-        }).collect()
+        self.output
+            .iter()
+            .map(|row| row.iter().map(|&val| (val - min_val) / range).collect())
+            .collect()
     }
 
     /// Get kernel as flat array for display
@@ -486,7 +468,8 @@ mod tests {
                 assert!(
                     (demo.output[y][x] - expected).abs() < 1e-5,
                     "Identity failed at ({}, {})",
-                    x, y
+                    x,
+                    y
                 );
             }
         }
@@ -500,8 +483,14 @@ mod tests {
         demo.reset(42);
 
         // Edge detection should have non-zero values at transitions
-        let has_edges = demo.output.iter().any(|row| row.iter().any(|&v| v.abs() > 0.1));
-        assert!(has_edges, "Edge detection should find edges in checkerboard");
+        let has_edges = demo
+            .output
+            .iter()
+            .any(|row| row.iter().any(|&v| v.abs() > 0.1));
+        assert!(
+            has_edges,
+            "Edge detection should find edges in checkerboard"
+        );
     }
 
     #[test]

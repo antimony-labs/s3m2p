@@ -362,9 +362,7 @@ async fn fetch_geojson(url: &str) -> Result<FeatureCollection, String> {
         .await
         .map_err(|e| format!("fetch failed: {:?}", e))?;
 
-    let resp: web_sys::Response = resp_value
-        .dyn_into()
-        .map_err(|_| "response cast failed")?;
+    let resp: web_sys::Response = resp_value.dyn_into().map_err(|_| "response cast failed")?;
 
     if !resp.ok() {
         return Err(format!("HTTP error: {}", resp.status()));
@@ -545,7 +543,7 @@ fn render() {
         }
 
         // Render country labels at low zoom
-        if s.show_labels && zoom >= 2.0 && zoom < 6.0 {
+        if s.show_labels && (2.0..6.0).contains(&zoom) {
             let countries = if s.countries_50m_loaded {
                 Some(&s.countries_50m)
             } else if s.countries_110m_loaded {
@@ -848,7 +846,11 @@ fn render_polygon(
     }
 }
 
-fn render_polygon_outline(ctx: &CanvasRenderingContext2d, poly: &Polygon, viewport: &ViewportTransform) {
+fn render_polygon_outline(
+    ctx: &CanvasRenderingContext2d,
+    poly: &Polygon,
+    viewport: &ViewportTransform,
+) {
     if poly.exterior.coords.len() < 3 {
         return;
     }

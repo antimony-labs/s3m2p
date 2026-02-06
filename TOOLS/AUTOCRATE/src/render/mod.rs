@@ -6,17 +6,17 @@
 //! - `textures` - Procedural wood grain generation
 //! - `materials` - Visual material properties (lumber, plywood, metal)
 
-pub mod webgl;
 pub mod canvas2d;
-pub mod textures;
 pub mod materials;
 pub mod mesh;
+pub mod textures;
+pub mod webgl;
 
-pub use webgl::{WebGLRenderer, Camera, RenderMode, ProjectionType};
 pub use canvas2d::Canvas2DRenderer;
-pub use textures::{WoodTexture, generate_wood_grain};
 pub use materials::{Material, MaterialType};
 pub use mesh::{Mesh, MeshBuffer};
+pub use textures::{generate_wood_grain, WoodTexture};
+pub use webgl::{Camera, ProjectionType, RenderMode, WebGLRenderer};
 
 /// View mode toggle
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

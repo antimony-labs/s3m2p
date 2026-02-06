@@ -40,9 +40,9 @@ impl NodeHandle {
 /// Node properties
 #[derive(Clone, Copy, Debug)]
 pub struct NodeProperties {
-    pub fitness: f32,     // Attractiveness for attachment (default 1.0)
-    pub capacity: u16,    // Max outgoing connections
-    pub resilience: f32,  // Resistance to cascade (default 1.0)
+    pub fitness: f32,    // Attractiveness for attachment (default 1.0)
+    pub capacity: u16,   // Max outgoing connections
+    pub resilience: f32, // Resistance to cascade (default 1.0)
 }
 
 impl Default for NodeProperties {

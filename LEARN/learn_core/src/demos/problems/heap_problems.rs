@@ -5,8 +5,8 @@
 //! LAYER: LEARN -> learn_core -> demos -> problems
 //! ===============================================================================
 
+use crate::demos::pseudocode::{CodeLine, Pseudocode};
 use crate::Demo;
-use crate::demos::pseudocode::{Pseudocode, CodeLine};
 
 // Static pseudocode for each variant
 static KTH_LARGEST_CODE: &[CodeLine] = &[
@@ -275,7 +275,10 @@ impl HeapProblemsDemo {
         if self.min_heap.len() > self.k {
             let removed = Self::heap_pop(&mut self.min_heap).unwrap();
             self.pseudocode.current_line = Some(4);
-            self.message = format!("Heap size > {}, pop {}: {:?}", self.k, removed, self.min_heap);
+            self.message = format!(
+                "Heap size > {}, pop {}: {:?}",
+                self.k, removed, self.min_heap
+            );
         }
 
         self.pos += 1;
@@ -291,10 +294,7 @@ impl HeapProblemsDemo {
         }
 
         // Simulate: add elements in sorted order
-        let candidates: Vec<i32> = self.arr[self.pos..].iter()
-            .take(3)
-            .copied()
-            .collect();
+        let candidates: Vec<i32> = self.arr[self.pos..].iter().take(3).copied().collect();
 
         if let Some(&min_val) = candidates.iter().min() {
             self.result.push(min_val);

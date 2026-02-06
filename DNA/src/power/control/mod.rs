@@ -59,11 +59,11 @@
 //! println!("Phase margin: {:.1}°", comp.phase_margin_deg);
 //! ```
 
-pub mod small_signal;
 pub mod compensator;
+pub mod small_signal;
 pub mod stability;
 
 // Re-export main types
-pub use small_signal::*;
 pub use compensator::*;
+pub use small_signal::*;
 pub use stability::*;

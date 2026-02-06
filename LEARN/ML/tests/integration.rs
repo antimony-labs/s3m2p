@@ -16,11 +16,11 @@ fn test_lesson_json_files_exist_after_run() {
     // Note: In a real CI, we'd run the binary first
     let expected_files = [
         "lesson_00.json",
-        "lesson_01.json", 
+        "lesson_01.json",
         "lesson_02.json",
         "lesson_03.json",
     ];
-    
+
     for file in expected_files {
         let path = Path::new(file);
         // Files should exist if cargo run was executed
@@ -36,14 +36,14 @@ fn test_lesson_json_files_exist_after_run() {
 fn test_vega_lite_schema_structure() {
     // Validate that generated JSON follows Vega-Lite schema
     let files = ["lesson_00.json", "lesson_01.json", "lesson_02.json", "lesson_03.json"];
-    
+
     for file in files {
         let path = Path::new(file);
         if path.exists() {
             let content = std::fs::read_to_string(path).unwrap();
             let json: serde_json::Value = serde_json::from_str(&content)
                 .expect(&format!("Invalid JSON in {}", file));
-            
+
             // Check required Vega-Lite fields
             assert!(json.get("$schema").is_some(), "{} missing $schema", file);
             assert!(json.get("data").is_some(), "{} missing data", file);

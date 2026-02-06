@@ -196,11 +196,11 @@ The capstone power budget (rough estimate):
   Active mode: 80mA × 2s = 160mAs per reading
   Deep sleep: 10µA × 298s = 2.98mAs per cycle
   Total per 5min cycle: ~163mAs
-  
+
   For a 2000mAh battery:
   Cycles = (2000mAh × 3600s/h) / 163mAs ≈ 44,000 cycles
   Lifetime ≈ 44,000 × 5min ≈ 153 days
-  
+
   (Real-world will be less due to Wi‑Fi connection overhead, but this shows the math.)
         "#,
         implementation: r#"
@@ -510,16 +510,16 @@ Series resistors:
 
 Parallel resistors:
   1/R_total = 1/R1 + 1/R2 + 1/R3 + ...
-  
+
   For two resistors:
   R_total = (R1 × R2) / (R1 + R2)
 
 Voltage divider:
   V_out = V_in × (R2 / (R1 + R2))
-  
+
   Current through divider:
   I = V_in / (R1 + R2)
-  
+
   Power in each resistor:
   P_R1 = I² × R1
   P_R2 = I² × R2
@@ -606,10 +606,10 @@ through divider exceeds 1mA (wasteful for battery-powered devices)."</pre>
         math_details: r#"
 Voltage is always relative:
   V_AB = V_A - V_B
-  
+
   If B is ground (0V):
   V_AB = V_A - 0 = V_A
-  
+
   So "voltage at point A" means "voltage relative to ground"
 
 Example:
@@ -706,7 +706,7 @@ Example:
         math_details: r#"
 RC charging equation:
   V(t) = V_final × (1 - e^(-t/τ))
-  
+
   Where:
   τ = R × C (time constant in seconds)
   t = time
@@ -722,7 +722,7 @@ Example:
   R = 10kΩ = 10,000Ω
   C = 100µF = 0.0001F
   τ = 10,000 × 0.0001 = 1 second
-  
+
   After 1 second: ~63% charged
   After 5 seconds: ~99% charged
         "#,
@@ -806,9 +806,9 @@ Example calculations:
   V_supply = 3.3V
   V_LED = 2V (red LED)
   I_desired = 15mA = 0.015A
-  
+
   R = (3.3V - 2V) / 0.015A = 1.3V / 0.015A = 87Ω
-  
+
   Use standard value: 100Ω (slightly safer, I = 13mA)
 
 Power in resistor:
@@ -899,7 +899,7 @@ MOSFET as switch:
 
 Power dissipation in MOSFET:
   P = I² × R_ds(on)
-  
+
   Example:
   I = 1A (motor current)
   R_ds(on) = 0.1Ω (typical for logic-level MOSFET)
@@ -907,7 +907,7 @@ Power dissipation in MOSFET:
 
 Gate current (MOSFET):
   I_gate ≈ 0 (voltage-controlled, negligible current)
-  
+
   vs BJT base current:
   I_base = I_collector / β (β = current gain, typically 100-300)
   I_base = 1A / 100 = 10mA (needs base resistor!)
@@ -1789,7 +1789,7 @@ I²C pull-up calculation:
   V_CC = 3.3V
   I_max = 3mA (I²C spec)
   R_min = V_CC / I_max = 3.3V / 0.003A = 1100Ω
-  
+
   Use 10kΩ (standard value, provides ~330µA current)
 
 Capacitance limit:
@@ -2091,7 +2091,7 @@ Handle errors gracefully — log and continue to sleep."</pre>
         math_details: r#"
 Power budget formula:
   E_cycle = (I_active × t_active) + (I_sleep × t_sleep)
-  
+
   Where:
   E_cycle = energy per cycle (mAs)
   I_active = active current (mA)
@@ -2107,7 +2107,7 @@ Example:
   I_active = 80mA, t_active = 3s → 240mAs
   I_sleep = 10µA = 0.01mA, t_sleep = 297s → 2.97mAs
   E_cycle = 243mAs
-  
+
   Battery: 2000mAh = 7,200,000mAs
   Cycles = 7,200,000 / 243 = 29,600
   Lifetime = 29,600 × 5min = 148,000min = 103 days

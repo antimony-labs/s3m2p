@@ -23,14 +23,14 @@
 //! writer.write_to_file("output.step")?;
 //! ```
 
-pub mod entities;
-pub mod writer;
-pub mod primitives;
-pub mod topology;
 pub mod brep;
-pub mod product;
-pub mod pmi;
+pub mod entities;
 pub mod gdt;
+pub mod pmi;
+pub mod primitives;
+pub mod product;
+pub mod topology;
+pub mod writer;
 
 pub use entities::{EntityId, EntityIdGenerator, StepEntity};
 pub use writer::StepWriter;

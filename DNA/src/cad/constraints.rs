@@ -5,8 +5,8 @@
 //! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
-use super::sketch::{Sketch, SketchPointId, SketchEntityId, SketchEntity, Point2};
-use serde::{Serialize, Deserialize};
+use super::sketch::{Point2, Sketch, SketchEntity, SketchEntityId, SketchPointId};
+use serde::{Deserialize, Serialize};
 
 /// Geometric constraint (maintains relationships)
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -80,16 +80,10 @@ pub enum DimensionalConstraint {
     },
 
     /// Radius of arc or circle
-    Radius {
-        entity: SketchEntityId,
-        value: f32,
-    },
+    Radius { entity: SketchEntityId, value: f32 },
 
     /// Diameter of arc or circle
-    Diameter {
-        entity: SketchEntityId,
-        value: f32,
-    },
+    Diameter { entity: SketchEntityId, value: f32 },
 }
 
 /// Unified constraint type
@@ -131,7 +125,7 @@ fn evaluate_geometric(constraint: &GeometricConstraint, sketch: &Sketch) -> f32 
             if let Some(SketchEntity::Line { start, end, .. }) = sketch.entity(*line) {
                 if let (Some(p1), Some(p2)) = (sketch.point(*start), sketch.point(*end)) {
                     let dy = p2.position.y - p1.position.y;
-                    return dy * dy;  // Squared error
+                    return dy * dy; // Squared error
                 }
             }
             0.0
@@ -154,7 +148,7 @@ fn evaluate_geometric(constraint: &GeometricConstraint, sketch: &Sketch) -> f32 
             0.0
         }
 
-        _ => 0.0,  // Other constraints not yet implemented
+        _ => 0.0, // Other constraints not yet implemented
     }
 }
 
@@ -195,11 +189,14 @@ fn evaluate_dimensional(constraint: &DimensionalConstraint, sketch: &Sketch) -> 
             0.0
         }
 
-        _ => 0.0,  // Other constraints not yet implemented
+        _ => 0.0, // Other constraints not yet implemented
     }
 }
 
-fn gradient_geometric(constraint: &GeometricConstraint, sketch: &Sketch) -> Vec<(SketchPointId, Point2)> {
+fn gradient_geometric(
+    constraint: &GeometricConstraint,
+    sketch: &Sketch,
+) -> Vec<(SketchPointId, Point2)> {
     match constraint {
         GeometricConstraint::Horizontal { line } => {
             if let Some(SketchEntity::Line { start, end, .. }) = sketch.entity(*line) {
@@ -246,7 +243,10 @@ fn gradient_geometric(constraint: &GeometricConstraint, sketch: &Sketch) -> Vec<
     }
 }
 
-fn gradient_dimensional(constraint: &DimensionalConstraint, sketch: &Sketch) -> Vec<(SketchPointId, Point2)> {
+fn gradient_dimensional(
+    constraint: &DimensionalConstraint,
+    sketch: &Sketch,
+) -> Vec<(SketchPointId, Point2)> {
     match constraint {
         DimensionalConstraint::Distance { p1, p2, value } => {
             if let (Some(pt1), Some(pt2)) = (sketch.point(*p1), sketch.point(*p2)) {
@@ -255,7 +255,7 @@ fn gradient_dimensional(constraint: &DimensionalConstraint, sketch: &Sketch) -> 
                 let dist = (dx * dx + dy * dy).sqrt();
 
                 if dist < 1e-8 {
-                    return Vec::new();  // Degenerate
+                    return Vec::new(); // Degenerate
                 }
 
                 let error = dist - value;

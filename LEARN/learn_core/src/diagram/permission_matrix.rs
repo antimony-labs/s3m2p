@@ -58,19 +58,82 @@ impl Diagram for PermissionMatrix {
 
     fn render(&self, r: &mut dyn DiagramRenderer) {
         // Draw header
-        r.draw_text("File", 20.0, 25.0, "bold 14px Rajdhani", "#64ffda", TextAlign::Left);
-        r.draw_text("Owner", 180.0, 25.0, "bold 14px Rajdhani", "#64ffda", TextAlign::Left);
-        r.draw_text("Group", 280.0, 25.0, "bold 14px Rajdhani", "#64ffda", TextAlign::Left);
+        r.draw_text(
+            "File",
+            20.0,
+            25.0,
+            "bold 14px Rajdhani",
+            "#64ffda",
+            TextAlign::Left,
+        );
+        r.draw_text(
+            "Owner",
+            180.0,
+            25.0,
+            "bold 14px Rajdhani",
+            "#64ffda",
+            TextAlign::Left,
+        );
+        r.draw_text(
+            "Group",
+            280.0,
+            25.0,
+            "bold 14px Rajdhani",
+            "#64ffda",
+            TextAlign::Left,
+        );
 
         // Permission headers
         let perm_x = 380.0;
-        r.draw_text("r", perm_x, 25.0, "bold 12px JetBrains Mono", "#64ffda", TextAlign::Center);
-        r.draw_text("w", perm_x + 30.0, 25.0, "bold 12px JetBrains Mono", "#64ffda", TextAlign::Center);
-        r.draw_text("x", perm_x + 60.0, 25.0, "bold 12px JetBrains Mono", "#64ffda", TextAlign::Center);
+        r.draw_text(
+            "r",
+            perm_x,
+            25.0,
+            "bold 12px JetBrains Mono",
+            "#64ffda",
+            TextAlign::Center,
+        );
+        r.draw_text(
+            "w",
+            perm_x + 30.0,
+            25.0,
+            "bold 12px JetBrains Mono",
+            "#64ffda",
+            TextAlign::Center,
+        );
+        r.draw_text(
+            "x",
+            perm_x + 60.0,
+            25.0,
+            "bold 12px JetBrains Mono",
+            "#64ffda",
+            TextAlign::Center,
+        );
 
-        r.draw_text("r", perm_x + 100.0, 25.0, "bold 12px JetBrains Mono", "#64ffda", TextAlign::Center);
-        r.draw_text("w", perm_x + 130.0, 25.0, "bold 12px JetBrains Mono", "#64ffda", TextAlign::Center);
-        r.draw_text("x", perm_x + 160.0, 25.0, "bold 12px JetBrains Mono", "#64ffda", TextAlign::Center);
+        r.draw_text(
+            "r",
+            perm_x + 100.0,
+            25.0,
+            "bold 12px JetBrains Mono",
+            "#64ffda",
+            TextAlign::Center,
+        );
+        r.draw_text(
+            "w",
+            perm_x + 130.0,
+            25.0,
+            "bold 12px JetBrains Mono",
+            "#64ffda",
+            TextAlign::Center,
+        );
+        r.draw_text(
+            "x",
+            perm_x + 160.0,
+            25.0,
+            "bold 12px JetBrains Mono",
+            "#64ffda",
+            TextAlign::Center,
+        );
 
         // Header line
         r.draw_line(10.0, 35.0, 590.0, 35.0, "#333", 1.0);
@@ -78,9 +141,20 @@ impl Diagram for PermissionMatrix {
         let mut y = 60.0;
         for file in &self.files {
             // File name
-            let icon = if file.name.ends_with('/') { "📁" } else { "📄" };
+            let icon = if file.name.ends_with('/') {
+                "📁"
+            } else {
+                "📄"
+            };
             r.draw_text(icon, 20.0, y, "14px Arial", "#888", TextAlign::Left);
-            r.draw_text(&file.name, 45.0, y, "12px JetBrains Mono", "#e0e0e0", TextAlign::Left);
+            r.draw_text(
+                &file.name,
+                45.0,
+                y,
+                "12px JetBrains Mono",
+                "#e0e0e0",
+                TextAlign::Left,
+            );
 
             // Owner and group
             r.draw_text(&file.owner, 180.0, y, "12px Inter", "#888", TextAlign::Left);
@@ -93,13 +167,33 @@ impl Diagram for PermissionMatrix {
 
             // Permission bits (group)
             self.draw_perm_bit(r, perm_x + 90.0, y - 12.0, (file.permissions >> 5) & 1 == 1);
-            self.draw_perm_bit(r, perm_x + 120.0, y - 12.0, (file.permissions >> 4) & 1 == 1);
-            self.draw_perm_bit(r, perm_x + 150.0, y - 12.0, (file.permissions >> 3) & 1 == 1);
+            self.draw_perm_bit(
+                r,
+                perm_x + 120.0,
+                y - 12.0,
+                (file.permissions >> 4) & 1 == 1,
+            );
+            self.draw_perm_bit(
+                r,
+                perm_x + 150.0,
+                y - 12.0,
+                (file.permissions >> 3) & 1 == 1,
+            );
 
             // Permission bits (other)
-            self.draw_perm_bit(r, perm_x + 190.0, y - 12.0, (file.permissions >> 2) & 1 == 1);
-            self.draw_perm_bit(r, perm_x + 220.0, y - 12.0, (file.permissions >> 1) & 1 == 1);
-            self.draw_perm_bit(r, perm_x + 250.0, y - 12.0, (file.permissions >> 0) & 1 == 1);
+            self.draw_perm_bit(
+                r,
+                perm_x + 190.0,
+                y - 12.0,
+                (file.permissions >> 2) & 1 == 1,
+            );
+            self.draw_perm_bit(
+                r,
+                perm_x + 220.0,
+                y - 12.0,
+                (file.permissions >> 1) & 1 == 1,
+            );
+            self.draw_perm_bit(r, perm_x + 250.0, y - 12.0, file.permissions & 1 == 1);
 
             y += 30.0;
         }

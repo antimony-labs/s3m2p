@@ -45,11 +45,11 @@ impl WoodTexture {
     /// Get base color for species
     fn base_color(&self) -> (u8, u8, u8) {
         match self.species {
-            WoodSpecies::Pine => (220, 190, 150),      // Light tan
-            WoodSpecies::Fir => (210, 180, 140),       // Slightly darker tan
-            WoodSpecies::Spruce => (230, 200, 160),    // Pale yellow
-            WoodSpecies::Oak => (180, 140, 100),       // Brown
-            WoodSpecies::Maple => (200, 170, 130),     // Light brown
+            WoodSpecies::Pine => (220, 190, 150),   // Light tan
+            WoodSpecies::Fir => (210, 180, 140),    // Slightly darker tan
+            WoodSpecies::Spruce => (230, 200, 160), // Pale yellow
+            WoodSpecies::Oak => (180, 140, 100),    // Brown
+            WoodSpecies::Maple => (200, 170, 130),  // Light brown
         }
     }
 
@@ -96,8 +96,8 @@ pub fn generate_wood_grain(texture: &WoodTexture) -> Vec<u8> {
             let ring_pattern = ((dist * ring_freq + ring_noise) * std::f32::consts::PI).sin();
 
             // Grain direction (vertical stripes with slight wave)
-            let grain_noise = (nx * 100.0 * texture.grain_scale).sin() * 0.1 +
-                              (ny * 50.0).sin() * 0.05;
+            let grain_noise =
+                (nx * 100.0 * texture.grain_scale).sin() * 0.1 + (ny * 50.0).sin() * 0.05;
             let grain_pattern = ((ny * 200.0 + grain_noise) * std::f32::consts::PI).sin();
 
             // Combine patterns
@@ -138,7 +138,7 @@ pub fn generate_plywood_edge(width: u32, height: u32) -> Vec<u8> {
         let is_dark = layer_index % 2 == 1;
 
         let (r, g, b) = if is_dark {
-            (140, 110, 80)  // Dark layer
+            (140, 110, 80) // Dark layer
         } else {
             (200, 170, 130) // Light layer
         };

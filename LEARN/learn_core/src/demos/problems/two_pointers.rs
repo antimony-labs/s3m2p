@@ -5,8 +5,8 @@
 //! LAYER: LEARN -> learn_core -> demos -> problems
 //! ===============================================================================
 
+use crate::demos::pseudocode::{CodeLine, Pseudocode};
 use crate::Demo;
-use crate::demos::pseudocode::{Pseudocode, CodeLine};
 
 // Static pseudocode for each variant
 static TWO_SUM_CODE: &[CodeLine] = &[
@@ -269,12 +269,18 @@ impl TwoPointersDemo {
 
         if self.arr[self.left] < self.arr[self.right] {
             self.left += 1;
-            self.message = format!("Left height {} < right {}, move left",
-                self.arr[self.left.saturating_sub(1)], self.arr[self.right]);
+            self.message = format!(
+                "Left height {} < right {}, move left",
+                self.arr[self.left.saturating_sub(1)],
+                self.arr[self.right]
+            );
         } else {
             self.right -= 1;
-            self.message = format!("Right height {} <= left {}, move right",
-                self.arr[self.right + 1], self.arr[self.left]);
+            self.message = format!(
+                "Right height {} <= left {}, move right",
+                self.arr[self.right + 1],
+                self.arr[self.left]
+            );
         }
     }
 
@@ -282,11 +288,11 @@ impl TwoPointersDemo {
     pub fn is_highlighted(&self, idx: usize) -> bool {
         match self.variant {
             TwoPointerVariant::TwoSumSorted => {
-                idx == self.left || idx == self.right || self.solution.map_or(false, |(l, r)| idx == l || idx == r)
+                idx == self.left
+                    || idx == self.right
+                    || self.solution.is_some_and(|(l, r)| idx == l || idx == r)
             }
-            TwoPointerVariant::RemoveDuplicates => {
-                idx == self.left || idx == self.right
-            }
+            TwoPointerVariant::RemoveDuplicates => idx == self.left || idx == self.right,
             TwoPointerVariant::ContainerWithMostWater | TwoPointerVariant::TrappingRainWater => {
                 idx >= self.left && idx <= self.right
             }

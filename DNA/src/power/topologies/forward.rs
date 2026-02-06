@@ -63,9 +63,9 @@ impl ResetMethod {
                 // D_max = Np / (Np + Nr) = 1 / (1 + Nr/Np)
                 1.0 / (1.0 + turns_ratio_reset)
             }
-            ResetMethod::RCD => 0.65, // Higher than third winding
+            ResetMethod::RCD => 0.65,         // Higher than third winding
             ResetMethod::ActiveClamp => 0.70, // Can go higher with ZVS
-            ResetMethod::TwoSwitch => 0.48, // Slightly less than 0.5 for margin
+            ResetMethod::TwoSwitch => 0.48,   // Slightly less than 0.5 for margin
         }
     }
 
@@ -391,7 +391,12 @@ pub fn design_forward(req: &ForwardRequirements) -> Result<ForwardDesign, String
 
     let selected_mosfet = mosfet_candidates
         .first()
-        .ok_or_else(|| format!("No suitable MOSFET found for Vds={:.0}V, Id={:.2}A", vds_margin, i_pri_peak))
+        .ok_or_else(|| {
+            format!(
+                "No suitable MOSFET found for Vds={:.0}V, Id={:.2}A",
+                vds_margin, i_pri_peak
+            )
+        })
         .map(|m| (*m).clone())?;
 
     // Calculate MOSFET losses
@@ -846,8 +851,16 @@ mod tests {
         assert!(design.duty_cycle_min > 0.05);
 
         // Check efficiency is reasonable
-        assert!(design.efficiency > 0.75, "Efficiency {:.1}% too low", design.efficiency * 100.0);
-        assert!(design.efficiency < 0.98, "Efficiency {:.1}% unrealistically high", design.efficiency * 100.0);
+        assert!(
+            design.efficiency > 0.75,
+            "Efficiency {:.1}% too low",
+            design.efficiency * 100.0
+        );
+        assert!(
+            design.efficiency < 0.98,
+            "Efficiency {:.1}% unrealistically high",
+            design.efficiency * 100.0
+        );
 
         // Check inductor is designed correctly
         assert!(design.output_inductor.inductance > 1e-6); // At least 1µH
@@ -874,7 +887,11 @@ mod tests {
         };
 
         let result = design_forward(&req);
-        assert!(result.is_ok(), "48V to 3.3V design should succeed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "48V to 3.3V design should succeed: {:?}",
+            result.err()
+        );
 
         let design = result.unwrap();
 
@@ -905,7 +922,11 @@ mod tests {
         };
 
         let result = design_forward(&req);
-        assert!(result.is_ok(), "RCD reset design should succeed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "RCD reset design should succeed: {:?}",
+            result.err()
+        );
 
         let design = result.unwrap();
 
@@ -937,7 +958,11 @@ mod tests {
         };
 
         let result = design_forward(&req);
-        assert!(result.is_ok(), "Active clamp design should succeed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Active clamp design should succeed: {:?}",
+            result.err()
+        );
 
         let design = result.unwrap();
 
@@ -967,7 +992,11 @@ mod tests {
         };
 
         let result = design_forward(&req);
-        assert!(result.is_ok(), "Two-switch design should succeed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Two-switch design should succeed: {:?}",
+            result.err()
+        );
 
         let design = result.unwrap();
 

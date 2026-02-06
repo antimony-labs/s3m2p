@@ -5,17 +5,20 @@
 //! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
-use super::sketch::{Sketch, SketchEntity, SketchEntityId, Point2};
-use super::topology::{Solid, Vertex, Edge, Face, Shell, Loop, EdgeId, VertexId, FaceId, ShellId, CurveType, SurfaceType, FaceOrientation};
 use super::geometry::{Point3, Vector3};
-use serde::{Serialize, Deserialize};
+use super::sketch::{Point2, Sketch, SketchEntity, SketchEntityId};
+use super::topology::{
+    CurveType, Edge, EdgeId, Face, FaceId, FaceOrientation, Loop, Shell, ShellId, Solid,
+    SurfaceType, Vertex, VertexId,
+};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 /// Extrusion parameters
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ExtrudeParams {
     pub distance: f32,
-    pub symmetric: bool,  // Extrude both directions from sketch plane
+    pub symmetric: bool, // Extrude both directions from sketch plane
 }
 
 impl Default for ExtrudeParams {
@@ -153,7 +156,7 @@ pub fn extrude_sketch(sketch: &Sketch, params: &ExtrudeParams) -> Result<Solid, 
     solid.faces.push(Face {
         id: bottom_face_id,
         surface: SurfaceType::Planar {
-            normal: Vector3::new(0.0, 0.0, -1.0),  // Points down
+            normal: Vector3::new(0.0, 0.0, -1.0), // Points down
         },
         outer_loop: Loop {
             edges: bottom_edges.clone(),
@@ -169,7 +172,7 @@ pub fn extrude_sketch(sketch: &Sketch, params: &ExtrudeParams) -> Result<Solid, 
     solid.faces.push(Face {
         id: top_face_id,
         surface: SurfaceType::Planar {
-            normal: Vector3::new(0.0, 0.0, 1.0),  // Points up
+            normal: Vector3::new(0.0, 0.0, 1.0), // Points up
         },
         outer_loop: Loop {
             edges: top_edges.clone(),
@@ -188,7 +191,7 @@ pub fn extrude_sketch(sketch: &Sketch, params: &ExtrudeParams) -> Result<Solid, 
         solid.faces.push(Face {
             id: face_id,
             surface: SurfaceType::Planar {
-                normal: Vector3::new(1.0, 0.0, 0.0),  // Simplified
+                normal: Vector3::new(1.0, 0.0, 0.0), // Simplified
             },
             outer_loop: Loop {
                 edges: vec![
@@ -197,7 +200,7 @@ pub fn extrude_sketch(sketch: &Sketch, params: &ExtrudeParams) -> Result<Solid, 
                     top_edges[i],
                     vertical_edges[i],
                 ],
-                directions: vec![true, true, false, false],  // Forward, forward, reverse, reverse
+                directions: vec![true, true, false, false], // Forward, forward, reverse, reverse
             },
             inner_loops: Vec::new(),
             orientation: FaceOrientation::Outward,

@@ -9,17 +9,17 @@
 use crate::{assembly::*, constants::LumberSize, geometry::Point3};
 use serde::{Deserialize, Serialize};
 
-pub mod part_numbers;
 pub mod bom;
+pub mod cnc;
 pub mod cut_list;
 pub mod nailing;
-pub mod cnc;
+pub mod part_numbers;
 
 // Re-exports
-pub use bom::{BillOfMaterials, BomEntry, generate_bom};
-pub use cut_list::{CutListEntry, generate_cut_list};
-pub use nailing::{NailingCoordinate, DatumReference, generate_nailing_coordinates};
-pub use cnc::{CncCutProgram, CncOperation, CncOperationType, generate_cnc_program};
+pub use bom::{generate_bom, BillOfMaterials, BomEntry};
+pub use cnc::{generate_cnc_program, CncCutProgram, CncOperation, CncOperationType};
+pub use cut_list::{generate_cut_list, CutListEntry};
+pub use nailing::{generate_nailing_coordinates, DatumReference, NailingCoordinate};
 
 /// Complete manufacturing data package
 #[derive(Clone, Debug)]
@@ -33,12 +33,12 @@ pub struct ManufacturingData {
 /// Lumber grade classifications per ASTM D245
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum LumberGrade {
-    Select,        // Highest quality, minimal defects
-    No1,           // #1 grade structural lumber
-    No2,           // #2 grade structural lumber (most common)
-    No3,           // #3 grade utility lumber
-    Stud,          // Stud grade (2x4, 2x6)
-    Construction,  // Construction grade
+    Select,       // Highest quality, minimal defects
+    No1,          // #1 grade structural lumber
+    No2,          // #2 grade structural lumber (most common)
+    No3,          // #3 grade utility lumber
+    Stud,         // Stud grade (2x4, 2x6)
+    Construction, // Construction grade
 }
 
 impl LumberGrade {
@@ -77,9 +77,9 @@ impl WoodSpecies {
 /// Plywood grade classifications
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PlywoodGrade {
-    ACExterior,    // A-C Exterior grade
-    BCExterior,    // B-C Exterior grade
-    CDXSheathing,  // CDX Sheathing grade
+    ACExterior,   // A-C Exterior grade
+    BCExterior,   // B-C Exterior grade
+    CDXSheathing, // CDX Sheathing grade
 }
 
 impl PlywoodGrade {
@@ -131,13 +131,20 @@ pub enum MaterialSpec {
 impl MaterialSpec {
     pub fn format_spec(&self) -> String {
         match self {
-            MaterialSpec::Lumber { size, grade, species } => {
+            MaterialSpec::Lumber {
+                size,
+                grade,
+                species,
+            } => {
                 format!("{} {} {}", size.name(), grade.as_str(), species.as_str())
             }
             MaterialSpec::Plywood { thickness, grade } => {
                 format!("{:.2}\" {} Plywood", thickness, grade.as_str())
             }
-            MaterialSpec::Fastener { fastener_type, size } => {
+            MaterialSpec::Fastener {
+                fastener_type,
+                size,
+            } => {
                 format!("{} {}", size, fastener_type.as_str())
             }
         }
@@ -147,10 +154,10 @@ impl MaterialSpec {
 /// Tolerance specification for dimensions
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Tolerance {
-    pub nominal: f32,           // Nominal dimension (inches)
-    pub plus: f32,              // Upper tolerance (inches)
-    pub minus: f32,             // Lower tolerance (inches)
-    pub straightness: Option<f32>, // Straightness tolerance (in/ft)
+    pub nominal: f32,                  // Nominal dimension (inches)
+    pub plus: f32,                     // Upper tolerance (inches)
+    pub minus: f32,                    // Lower tolerance (inches)
+    pub straightness: Option<f32>,     // Straightness tolerance (in/ft)
     pub perpendicularity: Option<f32>, // Perpendicularity tolerance (degrees)
 }
 
@@ -179,7 +186,10 @@ impl Tolerance {
 }
 
 /// Generate complete manufacturing data from assembly
-pub fn generate_manufacturing_data(assembly: &CrateAssembly, product_weight: f32) -> ManufacturingData {
+pub fn generate_manufacturing_data(
+    assembly: &CrateAssembly,
+    product_weight: f32,
+) -> ManufacturingData {
     ManufacturingData {
         bom: generate_bom(assembly, product_weight),
         cut_list: generate_cut_list(assembly, product_weight),

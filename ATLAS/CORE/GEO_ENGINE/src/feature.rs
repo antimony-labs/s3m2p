@@ -34,6 +34,7 @@ impl From<u32> for FeatureId {
 /// Feature type classification
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[repr(u8)]
+#[derive(Default)]
 pub enum FeatureType {
     Country = 0,
     Province = 1,
@@ -43,6 +44,7 @@ pub enum FeatureType {
     Coastline = 5,
     Road = 6,
     Boundary = 7,
+    #[default]
     Unknown = 255,
 }
 
@@ -103,12 +105,6 @@ impl Properties {
     }
 }
 
-impl Default for FeatureType {
-    fn default() -> Self {
-        Self::Unknown
-    }
-}
-
 /// A geographic feature with geometry and properties
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Feature {
@@ -131,10 +127,7 @@ impl Feature {
 
     /// Get the display name or a fallback
     pub fn name(&self) -> &str {
-        self.properties
-            .name
-            .as_deref()
-            .unwrap_or("Unknown")
+        self.properties.name.as_deref().unwrap_or("Unknown")
     }
 
     /// Check if this feature should be visible at a given scalerank threshold
@@ -180,7 +173,10 @@ impl FeatureCollection {
     }
 
     /// Iterate features that intersect the given bounds
-    pub fn query_bounds<'a>(&'a self, bounds: &'a BoundingBox) -> impl Iterator<Item = &'a Feature> {
+    pub fn query_bounds<'a>(
+        &'a self,
+        bounds: &'a BoundingBox,
+    ) -> impl Iterator<Item = &'a Feature> {
         self.features
             .iter()
             .filter(move |f| f.bounds.intersects(bounds))

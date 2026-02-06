@@ -1,11 +1,13 @@
 //! STEP Part 21 file writer
 
 use super::entities::*;
-use super::primitives::{CartesianPoint, Direction, Axis2Placement3D, Vector, Line, Plane};
-use super::topology::{VertexPoint, EdgeCurve, OrientedEdge, FaceBound, AdvancedFace, ClosedShell, ManifoldSolidBrep};
-use super::product::*;
 use super::gdt::*;
 use super::pmi::*;
+use super::primitives::{Axis2Placement3D, CartesianPoint, Direction, Line, Plane, Vector};
+use super::product::*;
+use super::topology::{
+    AdvancedFace, ClosedShell, EdgeCurve, FaceBound, ManifoldSolidBrep, OrientedEdge, VertexPoint,
+};
 use std::io::{self, Write};
 
 pub struct StepWriter {
@@ -34,7 +36,13 @@ impl StepWriter {
     }
 
     /// Add an axis2_placement_3d and return its ID
-    pub fn add_axis2_placement_3d(&mut self, name: Option<&str>, location: EntityId, axis: Option<EntityId>, ref_direction: Option<EntityId>) -> EntityId {
+    pub fn add_axis2_placement_3d(
+        &mut self,
+        name: Option<&str>,
+        location: EntityId,
+        axis: Option<EntityId>,
+        ref_direction: Option<EntityId>,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let axis2_placement_3d = Axis2Placement3D {
             id,
@@ -60,7 +68,12 @@ impl StepWriter {
     }
 
     /// Add a vector and return its ID
-    pub fn add_vector(&mut self, name: Option<&str>, orientation: EntityId, magnitude: f64) -> EntityId {
+    pub fn add_vector(
+        &mut self,
+        name: Option<&str>,
+        orientation: EntityId,
+        magnitude: f64,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let vec = Vector {
             id,
@@ -110,7 +123,14 @@ impl StepWriter {
     }
 
     /// Add an edge curve and return its ID
-    pub fn add_edge_curve(&mut self, name: Option<&str>, edge_start: EntityId, edge_end: EntityId, edge_geometry: EntityId, same_sense: bool) -> EntityId {
+    pub fn add_edge_curve(
+        &mut self,
+        name: Option<&str>,
+        edge_start: EntityId,
+        edge_end: EntityId,
+        edge_geometry: EntityId,
+        same_sense: bool,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let edge_curve = EdgeCurve {
             id,
@@ -125,7 +145,12 @@ impl StepWriter {
     }
 
     /// Add an oriented edge and return its ID
-    pub fn add_oriented_edge(&mut self, name: Option<&str>, edge_element: EntityId, orientation: bool) -> EntityId {
+    pub fn add_oriented_edge(
+        &mut self,
+        name: Option<&str>,
+        edge_element: EntityId,
+        orientation: bool,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let oriented_edge = OrientedEdge {
             id,
@@ -138,7 +163,12 @@ impl StepWriter {
     }
 
     /// Add a face bound and return its ID
-    pub fn add_face_bound(&mut self, name: Option<&str>, bound: Vec<EntityId>, orientation: bool) -> EntityId {
+    pub fn add_face_bound(
+        &mut self,
+        name: Option<&str>,
+        bound: Vec<EntityId>,
+        orientation: bool,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let face_bound = FaceBound {
             id,
@@ -151,7 +181,12 @@ impl StepWriter {
     }
 
     /// Add an advanced face and return its ID
-    pub fn add_advanced_face(&mut self, name: Option<&str>, face_geometry: EntityId, face_bounds: Vec<EntityId>) -> EntityId {
+    pub fn add_advanced_face(
+        &mut self,
+        name: Option<&str>,
+        face_geometry: EntityId,
+        face_bounds: Vec<EntityId>,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let advanced_face = AdvancedFace {
             id,
@@ -201,7 +236,12 @@ impl StepWriter {
     }
 
     /// Add a PRODUCT_CONTEXT
-    pub fn add_product_context(&mut self, name: &str, frame_of_reference: EntityId, discipline_type: &str) -> EntityId {
+    pub fn add_product_context(
+        &mut self,
+        name: &str,
+        frame_of_reference: EntityId,
+        discipline_type: &str,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let ctx = ProductContext {
             id,
@@ -214,7 +254,13 @@ impl StepWriter {
     }
 
     /// Add a PRODUCT
-    pub fn add_product(&mut self, id_string: &str, name: &str, description: &str, frame_of_reference: Vec<EntityId>) -> EntityId {
+    pub fn add_product(
+        &mut self,
+        id_string: &str,
+        name: &str,
+        description: &str,
+        frame_of_reference: Vec<EntityId>,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let product = Product {
             id,
@@ -228,7 +274,12 @@ impl StepWriter {
     }
 
     /// Add a PRODUCT_DEFINITION_FORMATION
-    pub fn add_product_definition_formation(&mut self, id_string: &str, description: Option<String>, of_product: EntityId) -> EntityId {
+    pub fn add_product_definition_formation(
+        &mut self,
+        id_string: &str,
+        description: Option<String>,
+        of_product: EntityId,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let formation = ProductDefinitionFormation {
             id,
@@ -241,7 +292,12 @@ impl StepWriter {
     }
 
     /// Add a PRODUCT_DEFINITION_CONTEXT
-    pub fn add_product_definition_context(&mut self, name: &str, frame_of_reference: EntityId, life_cycle_stage: &str) -> EntityId {
+    pub fn add_product_definition_context(
+        &mut self,
+        name: &str,
+        frame_of_reference: EntityId,
+        life_cycle_stage: &str,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let ctx = ProductDefinitionContext {
             id,
@@ -254,7 +310,13 @@ impl StepWriter {
     }
 
     /// Add a PRODUCT_DEFINITION
-    pub fn add_product_definition(&mut self, id_string: &str, description: Option<String>, formation: EntityId, frame_of_reference: EntityId) -> EntityId {
+    pub fn add_product_definition(
+        &mut self,
+        id_string: &str,
+        description: Option<String>,
+        formation: EntityId,
+        frame_of_reference: EntityId,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let def = ProductDefinition {
             id,
@@ -268,7 +330,12 @@ impl StepWriter {
     }
 
     /// Add a PRODUCT_DEFINITION_SHAPE
-    pub fn add_product_definition_shape(&mut self, name: Option<String>, description: Option<String>, definition: EntityId) -> EntityId {
+    pub fn add_product_definition_shape(
+        &mut self,
+        name: Option<String>,
+        description: Option<String>,
+        definition: EntityId,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let shape = ProductDefinitionShape {
             id,
@@ -281,7 +348,12 @@ impl StepWriter {
     }
 
     /// Add a SHAPE_REPRESENTATION
-    pub fn add_shape_representation(&mut self, name: &str, items: Vec<EntityId>, context_of_items: EntityId) -> EntityId {
+    pub fn add_shape_representation(
+        &mut self,
+        name: &str,
+        items: Vec<EntityId>,
+        context_of_items: EntityId,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let rep = ShapeRepresentation {
             id,
@@ -294,7 +366,11 @@ impl StepWriter {
     }
 
     /// Add a SHAPE_DEFINITION_REPRESENTATION
-    pub fn add_shape_definition_representation(&mut self, definition: EntityId, used_representation: EntityId) -> EntityId {
+    pub fn add_shape_definition_representation(
+        &mut self,
+        definition: EntityId,
+        used_representation: EntityId,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let sdr = ShapeDefinitionRepresentation {
             id,
@@ -306,7 +382,11 @@ impl StepWriter {
     }
 
     /// Add a GEOMETRIC_REPRESENTATION_CONTEXT
-    pub fn add_geometric_representation_context(&mut self, context_identifier: &str, context_type: &str) -> EntityId {
+    pub fn add_geometric_representation_context(
+        &mut self,
+        context_identifier: &str,
+        context_type: &str,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let ctx = GeometricRepresentationContext {
             id,
@@ -320,7 +400,13 @@ impl StepWriter {
     // ===== GD&T Helpers =====
 
     /// Add a SHAPE_ASPECT
-    pub fn add_shape_aspect(&mut self, name: &str, description: Option<String>, of_shape: EntityId, product_definitional: bool) -> EntityId {
+    pub fn add_shape_aspect(
+        &mut self,
+        name: &str,
+        description: Option<String>,
+        of_shape: EntityId,
+        product_definitional: bool,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let aspect = ShapeAspect {
             id,
@@ -334,7 +420,13 @@ impl StepWriter {
     }
 
     /// Add a DATUM (datum feature for GD&T)
-    pub fn add_datum(&mut self, name: &str, description: Option<String>, of_shape: EntityId, identification: &str) -> EntityId {
+    pub fn add_datum(
+        &mut self,
+        name: &str,
+        description: Option<String>,
+        of_shape: EntityId,
+        identification: &str,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let datum = Datum {
             id,
@@ -361,7 +453,13 @@ impl StepWriter {
     }
 
     /// Add a DATUM_SYSTEM
-    pub fn add_datum_system(&mut self, name: &str, description: Option<String>, of_shape: EntityId, constituents: Vec<EntityId>) -> EntityId {
+    pub fn add_datum_system(
+        &mut self,
+        name: &str,
+        description: Option<String>,
+        of_shape: EntityId,
+        constituents: Vec<EntityId>,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let system = DatumSystem {
             id,
@@ -378,17 +476,18 @@ impl StepWriter {
     /// Add a LENGTH_MEASURE_WITH_UNIT
     pub fn add_length_measure_with_unit(&mut self, value: f64, unit: EntityId) -> EntityId {
         let id = self.id_gen.next();
-        let measure = LengthMeasureWithUnit {
-            id,
-            value,
-            unit,
-        };
+        let measure = LengthMeasureWithUnit { id, value, unit };
         self.entities.push((id, Box::new(measure)));
         id
     }
 
     /// Add a FLATNESS_TOLERANCE
-    pub fn add_flatness_tolerance(&mut self, name: &str, magnitude: EntityId, toleranced_shape_aspect: EntityId) -> EntityId {
+    pub fn add_flatness_tolerance(
+        &mut self,
+        name: &str,
+        magnitude: EntityId,
+        toleranced_shape_aspect: EntityId,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let tolerance = FlatnessTolerance {
             id,
@@ -404,7 +503,12 @@ impl StepWriter {
     }
 
     /// Add a STRAIGHTNESS_TOLERANCE
-    pub fn add_straightness_tolerance(&mut self, name: &str, magnitude: EntityId, toleranced_shape_aspect: EntityId) -> EntityId {
+    pub fn add_straightness_tolerance(
+        &mut self,
+        name: &str,
+        magnitude: EntityId,
+        toleranced_shape_aspect: EntityId,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let tolerance = StraightnessTolerance {
             id,
@@ -420,7 +524,13 @@ impl StepWriter {
     }
 
     /// Add a PERPENDICULARITY_TOLERANCE
-    pub fn add_perpendicularity_tolerance(&mut self, name: &str, magnitude: EntityId, toleranced_shape_aspect: EntityId, datum_system: EntityId) -> EntityId {
+    pub fn add_perpendicularity_tolerance(
+        &mut self,
+        name: &str,
+        magnitude: EntityId,
+        toleranced_shape_aspect: EntityId,
+        datum_system: EntityId,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let tolerance = PerpendicularityTolerance {
             id,
@@ -437,7 +547,14 @@ impl StepWriter {
     }
 
     /// Add a POSITION_TOLERANCE
-    pub fn add_position_tolerance(&mut self, name: &str, description: Option<String>, magnitude: EntityId, toleranced_shape_aspect: EntityId, datum_system: EntityId) -> EntityId {
+    pub fn add_position_tolerance(
+        &mut self,
+        name: &str,
+        description: Option<String>,
+        magnitude: EntityId,
+        toleranced_shape_aspect: EntityId,
+        datum_system: EntityId,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let tolerance = PositionTolerance {
             id,
@@ -468,7 +585,14 @@ impl StepWriter {
     }
 
     /// Add a PLUS_MINUS_TOLERANCE
-    pub fn add_plus_minus_tolerance(&mut self, name: &str, nominal_value: f64, upper_bound: f64, lower_bound: f64, unit: EntityId) -> EntityId {
+    pub fn add_plus_minus_tolerance(
+        &mut self,
+        name: &str,
+        nominal_value: f64,
+        upper_bound: f64,
+        lower_bound: f64,
+        unit: EntityId,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let tolerance = PlusMinusTolerance {
             id,
@@ -483,7 +607,12 @@ impl StepWriter {
     }
 
     /// Add a DIMENSIONAL_SIZE
-    pub fn add_dimensional_size(&mut self, name: &str, description: Option<String>, applies_to: EntityId) -> EntityId {
+    pub fn add_dimensional_size(
+        &mut self,
+        name: &str,
+        description: Option<String>,
+        applies_to: EntityId,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let dim = DimensionalSize {
             id,
@@ -496,7 +625,13 @@ impl StepWriter {
     }
 
     /// Add a DIMENSIONAL_LOCATION
-    pub fn add_dimensional_location(&mut self, name: &str, description: Option<String>, relating_shape_aspect: EntityId, related_shape_aspect: EntityId) -> EntityId {
+    pub fn add_dimensional_location(
+        &mut self,
+        name: &str,
+        description: Option<String>,
+        relating_shape_aspect: EntityId,
+        related_shape_aspect: EntityId,
+    ) -> EntityId {
         let id = self.id_gen.next();
         let dim = DimensionalLocation {
             id,
@@ -527,9 +662,15 @@ impl StepWriter {
         // Header
         writeln!(writer, "ISO-10303-21;")?;
         writeln!(writer, "HEADER;")?;
-        writeln!(writer, "FILE_DESCRIPTION(('AutoCrate ASTM D6039 Crate'),'2;1');")?;
+        writeln!(
+            writer,
+            "FILE_DESCRIPTION(('AutoCrate ASTM D6039 Crate'),'2;1');"
+        )?;
         writeln!(writer, "FILE_NAME('crate.step','2025-12-02T00:00:00',('AutoCrate'),('Antimony Labs'),'','','');")?;
-        writeln!(writer, "FILE_SCHEMA(('AP242_MANAGED_MODEL_BASED_3D_ENGINEERING_MIM_LF'));")?;
+        writeln!(
+            writer,
+            "FILE_SCHEMA(('AP242_MANAGED_MODEL_BASED_3D_ENGINEERING_MIM_LF'));"
+        )?;
         writeln!(writer, "ENDSEC;")?;
 
         // Data section

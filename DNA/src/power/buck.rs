@@ -159,9 +159,21 @@ pub fn design_buck(requirements: &BuckRequirements) -> Result<BuckDesign, String
     // Calculate duty cycles at different input voltages
     // Use 90% efficiency estimate for initial duty cycle calculation
     let efficiency_estimate = 0.90;
-    let duty_max = calculate_duty_cycle(requirements.vin.min_v, requirements.vout, efficiency_estimate);
-    let duty_nom = calculate_duty_cycle(requirements.vin.nom_v, requirements.vout, efficiency_estimate);
-    let duty_min = calculate_duty_cycle(requirements.vin.max_v, requirements.vout, efficiency_estimate);
+    let duty_max = calculate_duty_cycle(
+        requirements.vin.min_v,
+        requirements.vout,
+        efficiency_estimate,
+    );
+    let duty_nom = calculate_duty_cycle(
+        requirements.vin.nom_v,
+        requirements.vout,
+        efficiency_estimate,
+    );
+    let duty_min = calculate_duty_cycle(
+        requirements.vin.max_v,
+        requirements.vout,
+        efficiency_estimate,
+    );
 
     // Check duty cycle limits
     if duty_max > 0.90 {
@@ -211,11 +223,8 @@ pub fn design_buck(requirements: &BuckRequirements) -> Result<BuckDesign, String
     let cout_selected = next_higher_capacitor(cout_ideal);
 
     // Calculate actual output ripple
-    let actual_ripple_mv = calculate_output_ripple(
-        delta_il,
-        requirements.switching_freq_hz,
-        cout_selected,
-    );
+    let actual_ripple_mv =
+        calculate_output_ripple(delta_il, requirements.switching_freq_hz, cout_selected);
 
     if actual_ripple_mv > requirements.ripple.voltage_mv * 1.1 {
         warnings.push(DesignWarning::HighRipple {
@@ -236,10 +245,7 @@ pub fn design_buck(requirements: &BuckRequirements) -> Result<BuckDesign, String
     // Create component selections
     let inductor = SelectedComponent::new("L1", l_ideal, l_selected, "H")
         .with_tolerance(20.0)
-        .with_note(&format!(
-            "Isat > {:.2}A, DCR < 50mOhm",
-            il_peak * 1.2
-        ));
+        .with_note(&format!("Isat > {:.2}A, DCR < 50mOhm", il_peak * 1.2));
 
     let output_capacitor = SelectedComponent::new("Cout", cout_ideal, cout_selected, "F")
         .with_tolerance(20.0)
@@ -389,7 +395,11 @@ mod tests {
         // With 10uH inductor (closer to calculated value)
         // delta_IL = (12-5) * 0.417 / (500e3 * 10e-6) = 0.58A
         let delta_il = calculate_inductor_ripple(12.0, 5.0, 500e3, 10e-6);
-        assert!(delta_il > 0.4 && delta_il < 0.8, "delta_IL = {:.2}A", delta_il);
+        assert!(
+            delta_il > 0.4 && delta_il < 0.8,
+            "delta_IL = {:.2}A",
+            delta_il
+        );
     }
 
     #[test]
@@ -420,16 +430,26 @@ mod tests {
 
         let design = result.unwrap();
         assert!(design.duty_cycle_nom > 0.3 && design.duty_cycle_nom < 0.6);
-        assert!(design.inductor.selected_value > 1e-6, "L = {:.2}uH", design.inductor.selected_value * 1e6);
+        assert!(
+            design.inductor.selected_value > 1e-6,
+            "L = {:.2}uH",
+            design.inductor.selected_value * 1e6
+        );
         assert!(design.output_capacitor.selected_value > 1e-6);
         assert!(design.efficiency.total_efficiency > 0.8);
 
         println!("Buck Design Summary:");
         println!("  Duty cycle: {:.1}%", design.duty_cycle_nom * 100.0);
-        println!("  Inductor: {}", format_inductance(design.inductor.selected_value));
+        println!(
+            "  Inductor: {}",
+            format_inductance(design.inductor.selected_value)
+        );
         println!("  IL ripple: {:.2}A", design.inductor_current_ripple_a);
         println!("  IL peak: {:.2}A", design.inductor_peak_current_a);
-        println!("  Efficiency: {:.1}%", design.efficiency.total_efficiency * 100.0);
+        println!(
+            "  Efficiency: {:.1}%",
+            design.efficiency.total_efficiency * 100.0
+        );
     }
 
     #[test]

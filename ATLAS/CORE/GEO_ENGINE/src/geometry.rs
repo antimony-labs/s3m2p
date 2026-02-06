@@ -64,7 +64,10 @@ impl BoundingBox {
     };
 
     pub const WORLD: Self = Self {
-        min: Coord { x: -180.0, y: -90.0 },
+        min: Coord {
+            x: -180.0,
+            y: -90.0,
+        },
         max: Coord { x: 180.0, y: 90.0 },
     };
 

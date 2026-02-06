@@ -17,14 +17,14 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MOSFETPackage {
     TO220,
-    TO220F,    // Isolated tab
+    TO220F, // Isolated tab
     TO247,
     D2PAK,
     DPAK,
     SO8,
-    PowerPAK,  // 5x6mm or 3x3mm
-    QFN,       // Various sizes
-    LFPAK,     // NXP/Nexperia
+    PowerPAK, // 5x6mm or 3x3mm
+    QFN,      // Various sizes
+    LFPAK,    // NXP/Nexperia
 }
 
 impl MOSFETPackage {
@@ -274,8 +274,8 @@ pub struct SelectedMOSFET {
     pub operating_point: MOSFETOperatingPoint,
     pub losses: MOSFETLosses,
     pub junction_temp: f64,
-    pub derating_voltage: f64,  // Actual Vds / Vds_max
-    pub derating_current: f64,  // Actual Id_rms / Id_cont
+    pub derating_voltage: f64, // Actual Vds / Vds_max
+    pub derating_current: f64, // Actual Id_rms / Id_cont
 }
 
 // ============================================================================
@@ -481,14 +481,14 @@ pub fn mosfet_database() -> Vec<MOSFETSpec> {
             id_continuous_100c: 23.0,
             id_pulsed: 63.0,
             rds_on_25c: 0.065,
-            rds_on_100c: 0.080,  // SiC has lower temp coefficient
+            rds_on_100c: 0.080, // SiC has lower temp coefficient
             qg_total: 37e-9,
             qgd: 6.4e-9,
             qgs: 11e-9,
-            qrr: 50e-9,  // Very low for SiC
+            qrr: 50e-9, // Very low for SiC
             coss: 54e-12,
             vgs_th: 2.5,
-            vgs_max: 15.0,  // Lower for SiC
+            vgs_max: 15.0, // Lower for SiC
             package: MOSFETPackage::TO247,
             rth_jc: 0.24,
             rth_ja: 40.0,

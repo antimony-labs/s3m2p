@@ -33,10 +33,10 @@ impl StepEntity for VertexPoint {
 pub struct EdgeCurve {
     pub id: EntityId,
     pub name: Option<String>,
-    pub edge_start: EntityId, // VERTEX_POINT
-    pub edge_end: EntityId,   // VERTEX_POINT
+    pub edge_start: EntityId,    // VERTEX_POINT
+    pub edge_end: EntityId,      // VERTEX_POINT
     pub edge_geometry: EntityId, // CURVE (e.g., LINE)
-    pub same_sense: bool,     // Orientation relative to curve
+    pub same_sense: bool,        // Orientation relative to curve
 }
 
 impl StepEntity for EdgeCurve {
@@ -50,7 +50,9 @@ impl StepEntity for EdgeCurve {
         } else {
             write!(w, "$")?;
         }
-        write!(w, ",{},{},{},.{}",
+        write!(
+            w,
+            ",{},{},{},.{}",
             self.edge_start,
             self.edge_end,
             self.edge_geometry,
@@ -82,7 +84,9 @@ impl StepEntity for OrientedEdge {
         } else {
             write!(w, "$")?;
         }
-        write!(w, ",{},.{}",
+        write!(
+            w,
+            ",{},.{}",
             self.edge_element,
             if self.orientation { "T" } else { "F" }
         )
@@ -131,7 +135,7 @@ impl StepEntity for FaceBound {
 pub struct AdvancedFace {
     pub id: EntityId,
     pub name: Option<String>,
-    pub face_geometry: EntityId, // SURFACE (e.g., PLANE)
+    pub face_geometry: EntityId,    // SURFACE (e.g., PLANE)
     pub face_bounds: Vec<EntityId>, // List of FACE_BOUNDs
 }
 

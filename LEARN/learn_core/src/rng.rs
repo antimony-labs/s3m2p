@@ -200,11 +200,7 @@ mod tests {
 
         let mean = sum / n as f32;
         // Mean should be close to 0 for standard normal
-        assert!(
-            mean.abs() < 0.1,
-            "Mean too far from 0: {}",
-            mean
-        );
+        assert!(mean.abs() < 0.1, "Mean too far from 0: {}", mean);
     }
 
     #[test]

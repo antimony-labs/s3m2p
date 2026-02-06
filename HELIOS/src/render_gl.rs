@@ -12,8 +12,8 @@ use crate::heliosphere::{HeliosphereMorphology, HeliosphereParameters, Heliosphe
 use crate::simulation::{SimulationState, ORBIT_SEGMENTS};
 use js_sys::Float32Array;
 use web_sys::{
-    WebGl2RenderingContext, WebGlBuffer, WebGlProgram, WebGlTexture,
-    WebGlUniformLocation, WebGlVertexArrayObject
+    WebGl2RenderingContext, WebGlBuffer, WebGlProgram, WebGlTexture, WebGlUniformLocation,
+    WebGlVertexArrayObject,
 };
 
 const PI: f32 = std::f32::consts::PI;
@@ -592,40 +592,88 @@ impl RenderQuality {
 impl RendererGl {
     pub fn new(gl: WebGl2RenderingContext) -> Result<Self, String> {
         let quality = if let Some(window) = web_sys::window() {
-            let width = window.inner_width().ok().and_then(|w| w.as_f64()).unwrap_or(1920.0);
-            if width < 768.0 { RenderQuality::Low }
-            else if width < 1920.0 { RenderQuality::Medium }
-            else { RenderQuality::High }
-        } else { RenderQuality::Medium };
+            let width = window
+                .inner_width()
+                .ok()
+                .and_then(|w| w.as_f64())
+                .unwrap_or(1920.0);
+            if width < 768.0 {
+                RenderQuality::Low
+            } else if width < 1920.0 {
+                RenderQuality::Medium
+            } else {
+                RenderQuality::High
+            }
+        } else {
+            RenderQuality::Medium
+        };
 
         gl.enable(WebGl2RenderingContext::BLEND);
-        gl.blend_func(WebGl2RenderingContext::SRC_ALPHA, WebGl2RenderingContext::ONE_MINUS_SRC_ALPHA);
+        gl.blend_func(
+            WebGl2RenderingContext::SRC_ALPHA,
+            WebGl2RenderingContext::ONE_MINUS_SRC_ALPHA,
+        );
         gl.clear_color(0.0, 0.0, 0.02, 1.0);
 
         let heliosphere_params = HeliosphereParameters::new(
-            121.0, 0.78, vec![-1.0, 0.0, 0.0], 0.1, 6300.0, 0.2, 1.0, 400.0,
-            HeliosphereMorphology::Croissant, vec![1.5, 0.7, 0.3],
+            121.0,
+            0.78,
+            vec![-1.0, 0.0, 0.0],
+            0.1,
+            6300.0,
+            0.2,
+            1.0,
+            400.0,
+            HeliosphereMorphology::Croissant,
+            vec![1.5, 0.7, 0.3],
         );
 
         let mut renderer = Self {
             gl,
-            point_program: None, point_vao: None, point_vbo: None,
-            point_u_matrix: None, point_u_point_scale: None,
-            line_program: None, line_vao: None, line_vbo: None,
-            line_u_matrix: None, line_u_color: None,
-            circle_program: None, circle_vao: None, circle_vbo: None,
-            circle_u_matrix: None, circle_u_center: None, circle_u_radius: None,
-            circle_u_color: None, circle_u_glow: None,
-            helio_program: None, helio_vao: None, helio_vbo: None, helio_texture: None,
-            helio_u_boundary_tex: None, helio_u_resolution: None, helio_u_time: None,
-            helio_u_max_radius: None, helio_u_zoom: None, helio_u_center: None,
-            helio_u_tilt: None, helio_u_rotation: None, helio_u_steps: None,
+            point_program: None,
+            point_vao: None,
+            point_vbo: None,
+            point_u_matrix: None,
+            point_u_point_scale: None,
+            line_program: None,
+            line_vao: None,
+            line_vbo: None,
+            line_u_matrix: None,
+            line_u_color: None,
+            circle_program: None,
+            circle_vao: None,
+            circle_vbo: None,
+            circle_u_matrix: None,
+            circle_u_center: None,
+            circle_u_radius: None,
+            circle_u_color: None,
+            circle_u_glow: None,
+            helio_program: None,
+            helio_vao: None,
+            helio_vbo: None,
+            helio_texture: None,
+            helio_u_boundary_tex: None,
+            helio_u_resolution: None,
+            helio_u_time: None,
+            helio_u_max_radius: None,
+            helio_u_zoom: None,
+            helio_u_center: None,
+            helio_u_tilt: None,
+            helio_u_rotation: None,
+            helio_u_steps: None,
             helio_u_solar_cycle: None,
-            milkyway_program: None, milkyway_vao: None, milkyway_vbo: None,
-            milkyway_u_resolution: None, milkyway_u_time: None,
-            milkyway_u_camera_azimuth: None, milkyway_u_camera_elevation: None,
+            milkyway_program: None,
+            milkyway_vao: None,
+            milkyway_vbo: None,
+            milkyway_u_resolution: None,
+            milkyway_u_time: None,
+            milkyway_u_camera_azimuth: None,
+            milkyway_u_camera_elevation: None,
             milkyway_u_zoom: None,
-            heliosphere_params, quality, last_solar_cycle: -1.0, texture_dirty: true,
+            heliosphere_params,
+            quality,
+            last_solar_cycle: -1.0,
+            texture_dirty: true,
             orbit_buffer: Vec::with_capacity(ORBIT_SEGMENTS * 2 * 8),
             point_buffer: Vec::with_capacity(10000 * 6),
         };
@@ -647,7 +695,9 @@ impl RendererGl {
         self.point_u_matrix = gl.get_uniform_location(&program, "u_matrix");
         self.point_u_point_scale = gl.get_uniform_location(&program, "u_point_scale");
 
-        let vao = gl.create_vertex_array().ok_or("Failed to create point VAO")?;
+        let vao = gl
+            .create_vertex_array()
+            .ok_or("Failed to create point VAO")?;
         let vbo = gl.create_buffer().ok_or("Failed to create point VBO")?;
 
         gl.bind_vertex_array(Some(&vao));
@@ -660,11 +710,32 @@ impl RendererGl {
         let color_loc = gl.get_attrib_location(&program, "a_color") as u32;
 
         gl.enable_vertex_attrib_array(pos_loc);
-        gl.vertex_attrib_pointer_with_i32(pos_loc, 2, WebGl2RenderingContext::FLOAT, false, stride, 0);
+        gl.vertex_attrib_pointer_with_i32(
+            pos_loc,
+            2,
+            WebGl2RenderingContext::FLOAT,
+            false,
+            stride,
+            0,
+        );
         gl.enable_vertex_attrib_array(size_loc);
-        gl.vertex_attrib_pointer_with_i32(size_loc, 1, WebGl2RenderingContext::FLOAT, false, stride, 8);
+        gl.vertex_attrib_pointer_with_i32(
+            size_loc,
+            1,
+            WebGl2RenderingContext::FLOAT,
+            false,
+            stride,
+            8,
+        );
         gl.enable_vertex_attrib_array(color_loc);
-        gl.vertex_attrib_pointer_with_i32(color_loc, 3, WebGl2RenderingContext::FLOAT, false, stride, 12);
+        gl.vertex_attrib_pointer_with_i32(
+            color_loc,
+            3,
+            WebGl2RenderingContext::FLOAT,
+            false,
+            stride,
+            12,
+        );
 
         gl.bind_vertex_array(None);
 
@@ -681,7 +752,9 @@ impl RendererGl {
         self.line_u_matrix = gl.get_uniform_location(&program, "u_matrix");
         self.line_u_color = gl.get_uniform_location(&program, "u_color");
 
-        let vao = gl.create_vertex_array().ok_or("Failed to create line VAO")?;
+        let vao = gl
+            .create_vertex_array()
+            .ok_or("Failed to create line VAO")?;
         let vbo = gl.create_buffer().ok_or("Failed to create line VBO")?;
 
         gl.bind_vertex_array(Some(&vao));
@@ -709,7 +782,9 @@ impl RendererGl {
         self.circle_u_color = gl.get_uniform_location(&program, "u_color");
         self.circle_u_glow = gl.get_uniform_location(&program, "u_glow");
 
-        let vao = gl.create_vertex_array().ok_or("Failed to create circle VAO")?;
+        let vao = gl
+            .create_vertex_array()
+            .ok_or("Failed to create circle VAO")?;
         let vbo = gl.create_buffer().ok_or("Failed to create circle VBO")?;
 
         gl.bind_vertex_array(Some(&vao));
@@ -717,13 +792,14 @@ impl RendererGl {
 
         // Unit circle quad (-1 to 1)
         let vertices: [f32; 12] = [
-            -1.0, -1.0, 1.0, -1.0, 1.0, 1.0,
-            -1.0, -1.0, 1.0, 1.0, -1.0, 1.0,
+            -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0,
         ];
         unsafe {
             let arr = Float32Array::view(&vertices);
             gl.buffer_data_with_array_buffer_view(
-                WebGl2RenderingContext::ARRAY_BUFFER, &arr, WebGl2RenderingContext::STATIC_DRAW
+                WebGl2RenderingContext::ARRAY_BUFFER,
+                &arr,
+                WebGl2RenderingContext::STATIC_DRAW,
             );
         }
 
@@ -754,7 +830,9 @@ impl RendererGl {
         self.helio_u_steps = gl.get_uniform_location(&program, "u_steps");
         self.helio_u_solar_cycle = gl.get_uniform_location(&program, "u_solar_cycle");
 
-        let vao = gl.create_vertex_array().ok_or("Failed to create helio VAO")?;
+        let vao = gl
+            .create_vertex_array()
+            .ok_or("Failed to create helio VAO")?;
         let vbo = gl.create_buffer().ok_or("Failed to create helio VBO")?;
 
         gl.bind_vertex_array(Some(&vao));
@@ -765,7 +843,9 @@ impl RendererGl {
         unsafe {
             let arr = Float32Array::view(&vertices);
             gl.buffer_data_with_array_buffer_view(
-                WebGl2RenderingContext::ARRAY_BUFFER, &arr, WebGl2RenderingContext::STATIC_DRAW
+                WebGl2RenderingContext::ARRAY_BUFFER,
+                &arr,
+                WebGl2RenderingContext::STATIC_DRAW,
             );
         }
 
@@ -776,12 +856,30 @@ impl RendererGl {
         gl.bind_vertex_array(None);
 
         // Boundary texture
-        let texture = gl.create_texture().ok_or("Failed to create helio texture")?;
+        let texture = gl
+            .create_texture()
+            .ok_or("Failed to create helio texture")?;
         gl.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(&texture));
-        gl.tex_parameteri(WebGl2RenderingContext::TEXTURE_2D, WebGl2RenderingContext::TEXTURE_MIN_FILTER, WebGl2RenderingContext::LINEAR as i32);
-        gl.tex_parameteri(WebGl2RenderingContext::TEXTURE_2D, WebGl2RenderingContext::TEXTURE_MAG_FILTER, WebGl2RenderingContext::LINEAR as i32);
-        gl.tex_parameteri(WebGl2RenderingContext::TEXTURE_2D, WebGl2RenderingContext::TEXTURE_WRAP_S, WebGl2RenderingContext::REPEAT as i32);
-        gl.tex_parameteri(WebGl2RenderingContext::TEXTURE_2D, WebGl2RenderingContext::TEXTURE_WRAP_T, WebGl2RenderingContext::CLAMP_TO_EDGE as i32);
+        gl.tex_parameteri(
+            WebGl2RenderingContext::TEXTURE_2D,
+            WebGl2RenderingContext::TEXTURE_MIN_FILTER,
+            WebGl2RenderingContext::LINEAR as i32,
+        );
+        gl.tex_parameteri(
+            WebGl2RenderingContext::TEXTURE_2D,
+            WebGl2RenderingContext::TEXTURE_MAG_FILTER,
+            WebGl2RenderingContext::LINEAR as i32,
+        );
+        gl.tex_parameteri(
+            WebGl2RenderingContext::TEXTURE_2D,
+            WebGl2RenderingContext::TEXTURE_WRAP_S,
+            WebGl2RenderingContext::REPEAT as i32,
+        );
+        gl.tex_parameteri(
+            WebGl2RenderingContext::TEXTURE_2D,
+            WebGl2RenderingContext::TEXTURE_WRAP_T,
+            WebGl2RenderingContext::CLAMP_TO_EDGE as i32,
+        );
         gl.bind_texture(WebGl2RenderingContext::TEXTURE_2D, None);
 
         self.helio_program = Some(program);
@@ -799,7 +897,7 @@ impl RendererGl {
             Ok(p) => {
                 web_sys::console::log_1(&"Milky Way shader compiled successfully".into());
                 p
-            },
+            }
             Err(e) => {
                 web_sys::console::error_1(&format!("Milky Way shader FAILED: {}", e).into());
                 return Err(e);
@@ -812,7 +910,9 @@ impl RendererGl {
         self.milkyway_u_camera_elevation = gl.get_uniform_location(&program, "u_camera_elevation");
         self.milkyway_u_zoom = gl.get_uniform_location(&program, "u_zoom");
 
-        let vao = gl.create_vertex_array().ok_or("Failed to create milkyway VAO")?;
+        let vao = gl
+            .create_vertex_array()
+            .ok_or("Failed to create milkyway VAO")?;
         let vbo = gl.create_buffer().ok_or("Failed to create milkyway VBO")?;
 
         gl.bind_vertex_array(Some(&vao));
@@ -823,7 +923,9 @@ impl RendererGl {
         unsafe {
             let arr = Float32Array::view(&vertices);
             gl.buffer_data_with_array_buffer_view(
-                WebGl2RenderingContext::ARRAY_BUFFER, &arr, WebGl2RenderingContext::STATIC_DRAW
+                WebGl2RenderingContext::ARRAY_BUFFER,
+                &arr,
+                WebGl2RenderingContext::STATIC_DRAW,
             );
         }
 
@@ -846,7 +948,8 @@ impl RendererGl {
         let (width, height) = self.quality.texture_size();
 
         self.heliosphere_params.r_hp_nose = state.heliopause_au as f32;
-        self.heliosphere_params.r_ts_over_hp = (state.termination_shock_au / state.heliopause_au) as f32;
+        self.heliosphere_params.r_ts_over_hp =
+            (state.termination_shock_au / state.heliopause_au) as f32;
 
         let surface = HeliosphereSurface::new(self.heliosphere_params.clone());
         let mut data: Vec<u8> = Vec::with_capacity((width * height * 4) as usize);
@@ -869,10 +972,17 @@ impl RendererGl {
         if let Some(texture) = &self.helio_texture {
             gl.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(texture));
             gl.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
-                WebGl2RenderingContext::TEXTURE_2D, 0, WebGl2RenderingContext::RGBA as i32,
-                width as i32, height as i32, 0, WebGl2RenderingContext::RGBA,
-                WebGl2RenderingContext::UNSIGNED_BYTE, Some(&data)
-            ).map_err(|e| format!("Texture upload failed: {:?}", e))?;
+                WebGl2RenderingContext::TEXTURE_2D,
+                0,
+                WebGl2RenderingContext::RGBA as i32,
+                width as i32,
+                height as i32,
+                0,
+                WebGl2RenderingContext::RGBA,
+                WebGl2RenderingContext::UNSIGNED_BYTE,
+                Some(&data),
+            )
+            .map_err(|e| format!("Texture upload failed: {:?}", e))?;
             gl.bind_texture(WebGl2RenderingContext::TEXTURE_2D, None);
         }
 
@@ -898,10 +1008,22 @@ impl RendererGl {
         let cos_t = tilt.cos();
 
         [
-            sx, 0.0, 0.0, 0.0,
-            0.0, sy * cos_t, 0.0, 0.0,
-            0.0, 0.0, 1.0, 0.0,
-            -cx * sx, -cy * sy * cos_t, 0.0, 1.0,
+            sx,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            sy * cos_t,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            -cx * sx,
+            -cy * sy * cos_t,
+            0.0,
+            1.0,
         ]
     }
 
@@ -912,7 +1034,9 @@ impl RendererGl {
     pub fn render(&mut self, state: &SimulationState, time: f64) {
         let gl = &self.gl;
 
-        let dpr = web_sys::window().map(|w| w.device_pixel_ratio()).unwrap_or(1.0) as f32;
+        let dpr = web_sys::window()
+            .map(|w| w.device_pixel_ratio())
+            .unwrap_or(1.0) as f32;
         let width = (state.view.width as f32 * dpr) as i32;
         let height = (state.view.height as f32 * dpr) as i32;
 
@@ -920,7 +1044,8 @@ impl RendererGl {
         gl.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT);
 
         let matrix = self.build_matrix(state);
-        let is_helio_view = state.camera.scale_level == crate::cca_projection::ScaleLevel::Heliosphere;
+        let is_helio_view =
+            state.camera.scale_level == crate::cca_projection::ScaleLevel::Heliosphere;
 
         // Update heliosphere texture if needed
         if is_helio_view {
@@ -958,11 +1083,14 @@ impl RendererGl {
         static mut LAST_LOG: f64 = 0.0;
         unsafe {
             if time - LAST_LOG > 1.0 {
-                web_sys::console::log_1(&format!(
-                    "render_milkyway called: program={}, vao={}",
-                    self.milkyway_program.is_some(),
-                    self.milkyway_vao.is_some()
-                ).into());
+                web_sys::console::log_1(
+                    &format!(
+                        "render_milkyway called: program={}, vao={}",
+                        self.milkyway_program.is_some(),
+                        self.milkyway_vao.is_some()
+                    )
+                    .into(),
+                );
                 LAST_LOG = time;
             }
         }
@@ -978,11 +1106,17 @@ impl RendererGl {
             gl.uniform2f(
                 self.milkyway_u_resolution.as_ref(),
                 state.view.width as f32,
-                state.view.height as f32
+                state.view.height as f32,
             );
             gl.uniform1f(self.milkyway_u_time.as_ref(), time as f32);
-            gl.uniform1f(self.milkyway_u_camera_azimuth.as_ref(), state.camera.azimuth as f32);
-            gl.uniform1f(self.milkyway_u_camera_elevation.as_ref(), state.camera.elevation as f32);
+            gl.uniform1f(
+                self.milkyway_u_camera_azimuth.as_ref(),
+                state.camera.azimuth as f32,
+            );
+            gl.uniform1f(
+                self.milkyway_u_camera_elevation.as_ref(),
+                state.camera.elevation as f32,
+            );
             gl.uniform1f(self.milkyway_u_zoom.as_ref(), state.view.zoom as f32);
 
             // Draw fullscreen triangle
@@ -1001,7 +1135,9 @@ impl RendererGl {
         let gl = &self.gl;
 
         let stars = state.star_mgr.visible_instances();
-        if stars.is_empty() { return; }
+        if stars.is_empty() {
+            return;
+        }
 
         // Sky dome radius - scales with zoom so stars always appear at "infinity"
         // This ensures stars are visible at any zoom level
@@ -1010,8 +1146,11 @@ impl RendererGl {
         self.point_buffer.clear();
         for star in stars {
             // Normalize position to get direction (unit vector)
-            let len = (star.position.x.powi(2) + star.position.y.powi(2) + star.position.z.powi(2)).sqrt();
-            if len < 0.001 { continue; } // Skip degenerate positions
+            let len = (star.position.x.powi(2) + star.position.y.powi(2) + star.position.z.powi(2))
+                .sqrt();
+            if len < 0.001 {
+                continue;
+            } // Skip degenerate positions
 
             let dir_x = star.position.x / len;
             let dir_y = star.position.y / len;
@@ -1033,10 +1172,13 @@ impl RendererGl {
             let g = star.color_rgb[1] as f32 / 255.0;
             let b = star.color_rgb[2] as f32 / 255.0;
 
-            self.point_buffer.extend_from_slice(&[ax as f32, ay as f32, size, r, g, b]);
+            self.point_buffer
+                .extend_from_slice(&[ax as f32, ay as f32, size, r, g, b]);
         }
 
-        if let (Some(program), Some(vao), Some(vbo)) = (&self.point_program, &self.point_vao, &self.point_vbo) {
+        if let (Some(program), Some(vao), Some(vbo)) =
+            (&self.point_program, &self.point_vao, &self.point_vbo)
+        {
             gl.use_program(Some(program));
             gl.bind_vertex_array(Some(vao));
             gl.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(vbo));
@@ -1044,14 +1186,23 @@ impl RendererGl {
             unsafe {
                 let arr = Float32Array::view(&self.point_buffer);
                 gl.buffer_data_with_array_buffer_view(
-                    WebGl2RenderingContext::ARRAY_BUFFER, &arr, WebGl2RenderingContext::DYNAMIC_DRAW
+                    WebGl2RenderingContext::ARRAY_BUFFER,
+                    &arr,
+                    WebGl2RenderingContext::DYNAMIC_DRAW,
                 );
             }
 
             gl.uniform_matrix4fv_with_f32_array(self.point_u_matrix.as_ref(), false, matrix);
-            gl.uniform1f(self.point_u_point_scale.as_ref(), 1.0 / state.view.zoom as f32);
+            gl.uniform1f(
+                self.point_u_point_scale.as_ref(),
+                1.0 / state.view.zoom as f32,
+            );
 
-            gl.draw_arrays(WebGl2RenderingContext::POINTS, 0, (self.point_buffer.len() / 6) as i32);
+            gl.draw_arrays(
+                WebGl2RenderingContext::POINTS,
+                0,
+                (self.point_buffer.len() / 6) as i32,
+            );
             gl.bind_vertex_array(None);
         }
     }
@@ -1059,7 +1210,9 @@ impl RendererGl {
     fn render_orbits(&mut self, state: &SimulationState, matrix: &[f32; 16]) {
         let gl = &self.gl;
 
-        if let (Some(program), Some(vao), Some(vbo)) = (&self.line_program, &self.line_vao, &self.line_vbo) {
+        if let (Some(program), Some(vao), Some(vbo)) =
+            (&self.line_program, &self.line_vao, &self.line_vbo)
+        {
             gl.use_program(Some(program));
             gl.bind_vertex_array(Some(vao));
             gl.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(vbo));
@@ -1081,12 +1234,14 @@ impl RendererGl {
 
             for i in 0..state.planet_count {
                 let orbit = &state.planet_orbits[i];
-                let (base_r, base_g, base_b) = orbit_colors.get(i).copied().unwrap_or((0.4, 0.4, 0.5));
+                let (base_r, base_g, base_b) =
+                    orbit_colors.get(i).copied().unwrap_or((0.4, 0.4, 0.5));
 
                 // Draw BACK half first (dimmer) - from PI to 2*PI
                 self.orbit_buffer.clear();
                 for j in 0..=ORBIT_SEGMENTS / 2 {
-                    let angle = std::f64::consts::PI + (j as f64 / (ORBIT_SEGMENTS / 2) as f64) * std::f64::consts::PI;
+                    let angle = std::f64::consts::PI
+                        + (j as f64 / (ORBIT_SEGMENTS / 2) as f64) * std::f64::consts::PI;
                     let r = orbit.a * (1.0 - orbit.e * orbit.e) / (1.0 + orbit.e * angle.cos());
                     let x = r * angle.cos();
                     let z = r * angle.sin();
@@ -1097,12 +1252,24 @@ impl RendererGl {
                 unsafe {
                     let arr = Float32Array::view(&self.orbit_buffer);
                     gl.buffer_data_with_array_buffer_view(
-                        WebGl2RenderingContext::ARRAY_BUFFER, &arr, WebGl2RenderingContext::DYNAMIC_DRAW
+                        WebGl2RenderingContext::ARRAY_BUFFER,
+                        &arr,
+                        WebGl2RenderingContext::DYNAMIC_DRAW,
                     );
                 }
                 // Back half is dimmer (0.15 alpha)
-                gl.uniform4f(self.line_u_color.as_ref(), base_r * 0.5, base_g * 0.5, base_b * 0.5, 0.25);
-                gl.draw_arrays(WebGl2RenderingContext::LINE_STRIP, 0, (ORBIT_SEGMENTS / 2 + 1) as i32);
+                gl.uniform4f(
+                    self.line_u_color.as_ref(),
+                    base_r * 0.5,
+                    base_g * 0.5,
+                    base_b * 0.5,
+                    0.25,
+                );
+                gl.draw_arrays(
+                    WebGl2RenderingContext::LINE_STRIP,
+                    0,
+                    (ORBIT_SEGMENTS / 2 + 1) as i32,
+                );
 
                 // Draw FRONT half (brighter) - from 0 to PI
                 self.orbit_buffer.clear();
@@ -1118,12 +1285,18 @@ impl RendererGl {
                 unsafe {
                     let arr = Float32Array::view(&self.orbit_buffer);
                     gl.buffer_data_with_array_buffer_view(
-                        WebGl2RenderingContext::ARRAY_BUFFER, &arr, WebGl2RenderingContext::DYNAMIC_DRAW
+                        WebGl2RenderingContext::ARRAY_BUFFER,
+                        &arr,
+                        WebGl2RenderingContext::DYNAMIC_DRAW,
                     );
                 }
                 // Front half is brighter (0.5 alpha)
                 gl.uniform4f(self.line_u_color.as_ref(), base_r, base_g, base_b, 0.5);
-                gl.draw_arrays(WebGl2RenderingContext::LINE_STRIP, 0, (ORBIT_SEGMENTS / 2 + 1) as i32);
+                gl.draw_arrays(
+                    WebGl2RenderingContext::LINE_STRIP,
+                    0,
+                    (ORBIT_SEGMENTS / 2 + 1) as i32,
+                );
             }
 
             gl.bind_vertex_array(None);
@@ -1197,7 +1370,9 @@ impl RendererGl {
 
             for i in 0..state.moon_count {
                 let parent_idx = state.moon_parent_planet[i];
-                if parent_idx >= state.planet_count { continue; }
+                if parent_idx >= state.planet_count {
+                    continue;
+                }
 
                 // Use pre-computed world coordinates
                 let mx = state.moon_world_x[i] as f32;
@@ -1222,13 +1397,21 @@ impl RendererGl {
         let gl = &self.gl;
 
         // Only render when zoomed in enough to see the belt
-        if state.view.zoom > 0.5 { return; }
+        if state.view.zoom > 0.5 {
+            return;
+        }
 
         self.point_buffer.clear();
         let cos_tilt = state.view.tilt.cos() as f32;
 
         // Sample subset for performance
-        let step = if state.view.zoom > 0.05 { 4 } else if state.view.zoom > 0.01 { 2 } else { 1 };
+        let step = if state.view.zoom > 0.05 {
+            4
+        } else if state.view.zoom > 0.01 {
+            2
+        } else {
+            1
+        };
 
         for i in (0..state.asteroid_count).step_by(step) {
             let r = state.asteroid_distances[i] as f32;
@@ -1252,12 +1435,17 @@ impl RendererGl {
             let g_col = 0.45 + v * 0.15;
             let b_col = 0.35 + v * 0.1;
 
-            self.point_buffer.extend_from_slice(&[x, y, size, r_col, g_col, b_col]);
+            self.point_buffer
+                .extend_from_slice(&[x, y, size, r_col, g_col, b_col]);
         }
 
-        if self.point_buffer.is_empty() { return; }
+        if self.point_buffer.is_empty() {
+            return;
+        }
 
-        if let (Some(program), Some(vao), Some(vbo)) = (&self.point_program, &self.point_vao, &self.point_vbo) {
+        if let (Some(program), Some(vao), Some(vbo)) =
+            (&self.point_program, &self.point_vao, &self.point_vbo)
+        {
             gl.use_program(Some(program));
             gl.bind_vertex_array(Some(vao));
             gl.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(vbo));
@@ -1265,7 +1453,9 @@ impl RendererGl {
             unsafe {
                 let arr = Float32Array::view(&self.point_buffer);
                 gl.buffer_data_with_array_buffer_view(
-                    WebGl2RenderingContext::ARRAY_BUFFER, &arr, WebGl2RenderingContext::DYNAMIC_DRAW
+                    WebGl2RenderingContext::ARRAY_BUFFER,
+                    &arr,
+                    WebGl2RenderingContext::DYNAMIC_DRAW,
                 );
             }
 
@@ -1273,7 +1463,11 @@ impl RendererGl {
             // Fixed small point scale - asteroids are tiny!
             gl.uniform1f(self.point_u_point_scale.as_ref(), 1.0);
 
-            gl.draw_arrays(WebGl2RenderingContext::POINTS, 0, (self.point_buffer.len() / 6) as i32);
+            gl.draw_arrays(
+                WebGl2RenderingContext::POINTS,
+                0,
+                (self.point_buffer.len() / 6) as i32,
+            );
             gl.bind_vertex_array(None);
         }
     }
@@ -1282,7 +1476,9 @@ impl RendererGl {
         let gl = &self.gl;
 
         // Only render at far zoom levels
-        if state.view.zoom < 10.0 { return; }
+        if state.view.zoom < 10.0 {
+            return;
+        }
 
         self.point_buffer.clear();
 
@@ -1296,12 +1492,23 @@ impl RendererGl {
 
             // Fade with distance
             let alpha = (1.0 - r / 100000.0).max(0.1);
-            self.point_buffer.extend_from_slice(&[x, y, 1.0, 0.3 * alpha, 0.3 * alpha, 0.4 * alpha]);
+            self.point_buffer.extend_from_slice(&[
+                x,
+                y,
+                1.0,
+                0.3 * alpha,
+                0.3 * alpha,
+                0.4 * alpha,
+            ]);
         }
 
-        if self.point_buffer.is_empty() { return; }
+        if self.point_buffer.is_empty() {
+            return;
+        }
 
-        if let (Some(program), Some(vao), Some(vbo)) = (&self.point_program, &self.point_vao, &self.point_vbo) {
+        if let (Some(program), Some(vao), Some(vbo)) =
+            (&self.point_program, &self.point_vao, &self.point_vbo)
+        {
             gl.use_program(Some(program));
             gl.bind_vertex_array(Some(vao));
             gl.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(vbo));
@@ -1309,14 +1516,23 @@ impl RendererGl {
             unsafe {
                 let arr = Float32Array::view(&self.point_buffer);
                 gl.buffer_data_with_array_buffer_view(
-                    WebGl2RenderingContext::ARRAY_BUFFER, &arr, WebGl2RenderingContext::DYNAMIC_DRAW
+                    WebGl2RenderingContext::ARRAY_BUFFER,
+                    &arr,
+                    WebGl2RenderingContext::DYNAMIC_DRAW,
                 );
             }
 
             gl.uniform_matrix4fv_with_f32_array(self.point_u_matrix.as_ref(), false, matrix);
-            gl.uniform1f(self.point_u_point_scale.as_ref(), 0.5 / state.view.zoom as f32);
+            gl.uniform1f(
+                self.point_u_point_scale.as_ref(),
+                0.5 / state.view.zoom as f32,
+            );
 
-            gl.draw_arrays(WebGl2RenderingContext::POINTS, 0, (self.point_buffer.len() / 6) as i32);
+            gl.draw_arrays(
+                WebGl2RenderingContext::POINTS,
+                0,
+                (self.point_buffer.len() / 6) as i32,
+            );
             gl.bind_vertex_array(None);
         }
     }
@@ -1324,7 +1540,9 @@ impl RendererGl {
     fn render_heliosphere(&self, state: &SimulationState, time: f64) {
         let gl = &self.gl;
 
-        if let (Some(program), Some(vao), Some(texture)) = (&self.helio_program, &self.helio_vao, &self.helio_texture) {
+        if let (Some(program), Some(vao), Some(texture)) =
+            (&self.helio_program, &self.helio_vao, &self.helio_texture)
+        {
             gl.use_program(Some(program));
             gl.bind_vertex_array(Some(vao));
 
@@ -1332,15 +1550,29 @@ impl RendererGl {
             gl.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(texture));
             gl.uniform1i(self.helio_u_boundary_tex.as_ref(), 0);
 
-            gl.uniform2f(self.helio_u_resolution.as_ref(), state.view.width as f32, state.view.height as f32);
+            gl.uniform2f(
+                self.helio_u_resolution.as_ref(),
+                state.view.width as f32,
+                state.view.height as f32,
+            );
             gl.uniform1f(self.helio_u_time.as_ref(), time as f32);
-            gl.uniform1f(self.helio_u_max_radius.as_ref(), (state.heliopause_au * 1.9) as f32);
+            gl.uniform1f(
+                self.helio_u_max_radius.as_ref(),
+                (state.heliopause_au * 1.9) as f32,
+            );
             gl.uniform1f(self.helio_u_zoom.as_ref(), state.view.zoom as f32);
-            gl.uniform2f(self.helio_u_center.as_ref(), state.view.center_x as f32, state.view.center_y as f32);
+            gl.uniform2f(
+                self.helio_u_center.as_ref(),
+                state.view.center_x as f32,
+                state.view.center_y as f32,
+            );
             gl.uniform1f(self.helio_u_tilt.as_ref(), state.view.tilt as f32);
             gl.uniform1f(self.helio_u_rotation.as_ref(), state.view.rotation as f32);
             gl.uniform1i(self.helio_u_steps.as_ref(), self.quality.raymarch_steps());
-            gl.uniform1f(self.helio_u_solar_cycle.as_ref(), state.solar_cycle_phase as f32);
+            gl.uniform1f(
+                self.helio_u_solar_cycle.as_ref(),
+                state.solar_cycle_phase as f32,
+            );
 
             gl.draw_arrays(WebGl2RenderingContext::TRIANGLES, 0, 3);
 
@@ -1363,18 +1595,32 @@ impl RendererGl {
 // HELPER FUNCTIONS
 // ============================================================================
 
-fn create_program(gl: &WebGl2RenderingContext, vert_src: &str, frag_src: &str) -> Result<WebGlProgram, String> {
+fn create_program(
+    gl: &WebGl2RenderingContext,
+    vert_src: &str,
+    frag_src: &str,
+) -> Result<WebGlProgram, String> {
     let vert = compile_shader(gl, WebGl2RenderingContext::VERTEX_SHADER, vert_src)?;
     let frag = compile_shader(gl, WebGl2RenderingContext::FRAGMENT_SHADER, frag_src)?;
     link_program(gl, &vert, &frag)
 }
 
-fn compile_shader(gl: &WebGl2RenderingContext, shader_type: u32, source: &str) -> Result<web_sys::WebGlShader, String> {
-    let shader = gl.create_shader(shader_type).ok_or("Failed to create shader")?;
+fn compile_shader(
+    gl: &WebGl2RenderingContext,
+    shader_type: u32,
+    source: &str,
+) -> Result<web_sys::WebGlShader, String> {
+    let shader = gl
+        .create_shader(shader_type)
+        .ok_or("Failed to create shader")?;
     gl.shader_source(&shader, source);
     gl.compile_shader(&shader);
 
-    if gl.get_shader_parameter(&shader, WebGl2RenderingContext::COMPILE_STATUS).as_bool().unwrap_or(false) {
+    if gl
+        .get_shader_parameter(&shader, WebGl2RenderingContext::COMPILE_STATUS)
+        .as_bool()
+        .unwrap_or(false)
+    {
         Ok(shader)
     } else {
         let log = gl.get_shader_info_log(&shader).unwrap_or_default();
@@ -1383,13 +1629,21 @@ fn compile_shader(gl: &WebGl2RenderingContext, shader_type: u32, source: &str) -
     }
 }
 
-fn link_program(gl: &WebGl2RenderingContext, vert: &web_sys::WebGlShader, frag: &web_sys::WebGlShader) -> Result<WebGlProgram, String> {
+fn link_program(
+    gl: &WebGl2RenderingContext,
+    vert: &web_sys::WebGlShader,
+    frag: &web_sys::WebGlShader,
+) -> Result<WebGlProgram, String> {
     let program = gl.create_program().ok_or("Failed to create program")?;
     gl.attach_shader(&program, vert);
     gl.attach_shader(&program, frag);
     gl.link_program(&program);
 
-    if gl.get_program_parameter(&program, WebGl2RenderingContext::LINK_STATUS).as_bool().unwrap_or(false) {
+    if gl
+        .get_program_parameter(&program, WebGl2RenderingContext::LINK_STATUS)
+        .as_bool()
+        .unwrap_or(false)
+    {
         Ok(program)
     } else {
         let log = gl.get_program_info_log(&program).unwrap_or_default();

@@ -429,7 +429,7 @@ pub fn powder_core_database() -> Vec<CoreMaterial> {
             steinmetz_alpha: 1.1,
             steinmetz_beta: 2.1,
             steinmetz_freq_range: (10e3, 200e3),
-            temp_coeff_permeability: 0.04,  // Positive for iron powder!
+            temp_coeff_permeability: 0.04, // Positive for iron powder!
             density: 6.2,
         },
         CoreMaterial {
@@ -986,10 +986,7 @@ mod tests {
         );
 
         // With DC bias, efficiency priority → MPP
-        assert_eq!(
-            recommend_material(100e3, true, true),
-            MaterialType::MPP
-        );
+        assert_eq!(recommend_material(100e3, true, true), MaterialType::MPP);
 
         // Very high frequency → NiZn
         assert_eq!(

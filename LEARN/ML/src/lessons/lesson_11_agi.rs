@@ -40,29 +40,29 @@ impl MultimodalEncoder {
     fn new(d_model: usize) -> Self {
         let mut rng = rand::rng();
         let mut text_embedding = HashMap::new();
-        
+
         // Pre-compute embeddings for common words
-        let words = ["cat", "dog", "food", "water", "move", "left", "right", 
-                     "up", "down", "find", "eat", "drink", "goal", "hungry", 
+        let words = ["cat", "dog", "food", "water", "move", "left", "right",
+                     "up", "down", "find", "eat", "drink", "goal", "hungry",
                      "thirsty", "explore", "remember", "think", "plan", "act"];
-        
+
         for word in words {
             let embedding: Vec<f64> = (0..d_model)
                 .map(|_| rng.random_range(-1.0..1.0))
                 .collect();
             text_embedding.insert(word.to_string(), embedding);
         }
-        
+
         Self { d_model, text_embedding, rng }
     }
-    
+
     fn encode(&mut self, modality: &Modality) -> Vec<f64> {
         match modality {
             Modality::Text(text) => {
                 let words: Vec<&str> = text.split_whitespace().collect();
                 let mut combined = vec![0.0; self.d_model];
                 let mut count = 0;
-                
+
                 for word in words {
                     if let Some(emb) = self.text_embedding.get(word) {
                         for (i, &e) in emb.iter().enumerate() {
@@ -71,13 +71,13 @@ impl MultimodalEncoder {
                         count += 1;
                     }
                 }
-                
+
                 if count > 0 {
                     for v in &mut combined {
                         *v /= count as f64;
                     }
                 }
-                
+
                 combined
             }
             Modality::Vision(grid) => {
@@ -85,12 +85,12 @@ impl MultimodalEncoder {
                 let mut features = vec![0.0; self.d_model];
                 let total: f64 = grid.iter().flat_map(|r| r.iter()).sum();
                 let avg = total / (grid.len() * grid[0].len()) as f64;
-                
+
                 // Encode basic statistics
                 features[0] = avg;
                 features[1] = grid.len() as f64 / 10.0;
                 features[2] = grid[0].len() as f64 / 10.0;
-                
+
                 // Add some hash-based features
                 for (i, row) in grid.iter().enumerate().take(4) {
                     for (j, &val) in row.iter().enumerate().take(4) {
@@ -99,7 +99,7 @@ impl MultimodalEncoder {
                         }
                     }
                 }
-                
+
                 features
             }
             Modality::Action(action) => {
@@ -125,23 +125,23 @@ struct WorkingMemory {
 
 impl WorkingMemory {
     fn new(capacity: usize) -> Self {
-        Self { 
+        Self {
             capacity,
             buffer: VecDeque::with_capacity(capacity),
         }
     }
-    
+
     fn push(&mut self, item: Modality, embedding: Vec<f64>) {
         if self.buffer.len() >= self.capacity {
             self.buffer.pop_front();
         }
         self.buffer.push_back((item, embedding));
     }
-    
+
     fn attend(&self, query: &[f64]) -> Vec<f64> {
         // Attention over working memory
         let mut scores = Vec::new();
-        
+
         for (_, embedding) in &self.buffer {
             let dot: f64 = query.iter()
                 .zip(embedding.iter())
@@ -149,27 +149,27 @@ impl WorkingMemory {
                 .sum();
             scores.push(dot);
         }
-        
+
         // Softmax
         let max = scores.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
         let exp: Vec<f64> = scores.iter().map(|&s| (s - max).exp()).collect();
         let sum: f64 = exp.iter().sum();
         let weights: Vec<f64> = exp.iter().map(|&e| e / (sum + 1e-8)).collect();
-        
+
         // Weighted sum
-        let d = if self.buffer.is_empty() { 
-            query.len() 
-        } else { 
-            self.buffer[0].1.len() 
+        let d = if self.buffer.is_empty() {
+            query.len()
+        } else {
+            self.buffer[0].1.len()
         };
         let mut result = vec![0.0; d];
-        
+
         for (w, (_, emb)) in weights.iter().zip(self.buffer.iter()) {
             for (i, &e) in emb.iter().enumerate() {
                 result[i] += w * e;
             }
         }
-        
+
         result
     }
 }
@@ -192,7 +192,7 @@ impl LongTermMemory {
     fn new(max_episodes: usize) -> Self {
         Self { episodes: Vec::new(), max_episodes }
     }
-    
+
     fn store(&mut self, context: Vec<f64>, action: String, outcome: f64, timestamp: usize) {
         if self.episodes.len() >= self.max_episodes {
             // Remove oldest or least useful
@@ -200,7 +200,7 @@ impl LongTermMemory {
         }
         self.episodes.push(Episode { context, action, outcome, timestamp });
     }
-    
+
     fn recall(&self, query: &[f64], k: usize) -> Vec<&Episode> {
         // Retrieve k most similar episodes
         let mut scored: Vec<(&Episode, f64)> = self.episodes.iter()
@@ -212,7 +212,7 @@ impl LongTermMemory {
                 (ep, sim)
             })
             .collect();
-        
+
         scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
         scored.into_iter().take(k).map(|(ep, _)| ep).collect()
     }
@@ -230,21 +230,21 @@ impl ReasoningEngine {
         let w_reason: Vec<Vec<f64>> = (0..d_model)
             .map(|_| (0..d_model).map(|_| rng.random_range(-0.3..0.3)).collect())
             .collect();
-        
+
         Self { d_model, w_reason }
     }
-    
+
     fn reason(&self, state: &[f64], goal: &[f64], memory_context: &[f64]) -> Vec<f64> {
         // Combine state, goal, and memory for reasoning
         let mut combined = vec![0.0; self.d_model];
-        
+
         for i in 0..self.d_model {
             let s = state.get(i).copied().unwrap_or(0.0);
             let g = goal.get(i).copied().unwrap_or(0.0);
             let m = memory_context.get(i).copied().unwrap_or(0.0);
             combined[i] = s + g * 0.5 + m * 0.3;
         }
-        
+
         // Transform through reasoning layer
         let mut output = vec![0.0; self.d_model];
         for o in 0..self.d_model {
@@ -253,7 +253,7 @@ impl ReasoningEngine {
             }
             output[o] = output[o].tanh();
         }
-        
+
         output
     }
 }
@@ -276,15 +276,15 @@ impl ActionGenerator {
             "think".to_string(),
             "remember".to_string(),
         ];
-        
+
         let mut rng = rand::rng();
         let w_action: Vec<Vec<f64>> = (0..d_model)
             .map(|_| (0..actions.len()).map(|_| rng.random_range(-0.3..0.3)).collect())
             .collect();
-        
+
         Self { actions, w_action }
     }
-    
+
     fn generate(&self, reasoning_output: &[f64], rng: &mut impl Rng) -> String {
         // Compute action logits
         let mut logits = vec![0.0; self.actions.len()];
@@ -293,13 +293,13 @@ impl ActionGenerator {
                 *logit += self.w_action[i][a] * r;
             }
         }
-        
+
         // Softmax and sample
         let max = logits.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
         let exp: Vec<f64> = logits.iter().map(|&l| (l - max).exp()).collect();
         let sum: f64 = exp.iter().sum();
         let probs: Vec<f64> = exp.iter().map(|&e| e / sum).collect();
-        
+
         let r: f64 = rng.random();
         let mut cumsum = 0.0;
         for (i, &p) in probs.iter().enumerate() {
@@ -308,7 +308,7 @@ impl ActionGenerator {
                 return self.actions[i].clone();
             }
         }
-        
+
         self.actions.last().unwrap().clone()
     }
 }
@@ -337,25 +337,25 @@ impl AGIAgent {
             timestep: 0,
         }
     }
-    
+
     fn set_goal(&mut self, goal: &str) {
         let goal_modality = Modality::Goal(goal.to_string());
         let goal_embedding = self.encoder.encode(&goal_modality);
         self.current_goal = Some(goal_embedding);
         println!("AGI Goal set: {}", goal);
     }
-    
+
     fn perceive(&mut self, input: Modality) -> Vec<f64> {
         let embedding = self.encoder.encode(&input);
         self.working_memory.push(input, embedding.clone());
         embedding
     }
-    
+
     fn think(&mut self, rng: &mut impl Rng) -> String {
         // Get current state from working memory
         let goal = self.current_goal.clone().unwrap_or_else(|| vec![0.0; 32]);
         let state = self.working_memory.attend(&goal);
-        
+
         // Recall relevant past experiences
         let past = self.long_term_memory.recall(&state, 3);
         let memory_context: Vec<f64> = if past.is_empty() {
@@ -369,13 +369,13 @@ impl AGIAgent {
             }
             ctx
         };
-        
+
         // Reason
         let reasoning_output = self.reasoning.reason(&state, &goal, &memory_context);
-        
+
         // Generate action
         let action = self.action_gen.generate(&reasoning_output, rng);
-        
+
         // Store experience
         self.long_term_memory.store(
             state,
@@ -383,11 +383,11 @@ impl AGIAgent {
             0.5, // Neutral outcome initially
             self.timestep,
         );
-        
+
         self.timestep += 1;
         action
     }
-    
+
     fn get_memory_stats(&self) -> (usize, usize) {
         (self.working_memory.buffer.len(), self.long_term_memory.episodes.len())
     }
@@ -396,19 +396,19 @@ impl AGIAgent {
 pub fn run() {
     println!("--- Lesson 11: AGI Architecture ---");
     println!("Building a simple AGI agent with multimodal processing and memory.\n");
-    
+
     let mut rng = rand::rng();
     let mut agent = AGIAgent::new();
-    
+
     // Set a goal
     agent.set_goal("find food");
-    
+
     // Simulation
     println!("\n--- AGI Simulation ---");
-    
+
     let mut actions_taken = Vec::new();
     let mut memory_history = Vec::new();
-    
+
     for step in 0..20 {
         // Simulate environment perception
         let perception = if step % 3 == 0 {
@@ -422,34 +422,34 @@ pub fn run() {
         } else {
             Modality::Text("food nearby".to_string())
         };
-        
+
         // Agent perceives
         let _ = agent.perceive(perception.clone());
-        
+
         // Agent thinks and acts
         let action = agent.think(&mut rng);
-        
+
         let (wm, ltm) = agent.get_memory_stats();
-        
-        println!("Step {}: Perceived {:?} -> Action: {}", 
-                 step, 
+
+        println!("Step {}: Perceived {:?} -> Action: {}",
+                 step,
                  match &perception {
                      Modality::Text(t) => format!("Text(\"{}\")", t),
                      Modality::Vision(_) => "Vision".to_string(),
                      _ => "?".to_string(),
                  },
                  action);
-        
+
         actions_taken.push((step, action.clone()));
         memory_history.push((step, wm, ltm));
     }
-    
+
     // Print final stats
     let (wm, ltm) = agent.get_memory_stats();
     println!("\n--- Final Memory State ---");
     println!("Working Memory: {} items", wm);
     println!("Long-Term Memory: {} episodes", ltm);
-    
+
     // Explain architecture
     println!("\n--- AGI Architecture Components ---");
     println!("1. Multimodal Encoder: Unified embedding space for text, vision, actions");
@@ -457,10 +457,10 @@ pub fn run() {
     println!("3. Long-Term Memory: Episodic memory for past experiences");
     println!("4. Reasoning Engine: Combines state, goal, and memory for decision making");
     println!("5. Action Generator: Produces actions based on reasoning output");
-    
+
     // Generate visualization
     let mut viz_data = Vec::new();
-    
+
     // Action distribution
     let mut action_counts: HashMap<String, i32> = HashMap::new();
     for (_, action) in &actions_taken {
@@ -473,7 +473,7 @@ pub fn run() {
             "type": "action_dist"
         }));
     }
-    
+
     // Memory growth
     for (step, wm, ltm) in &memory_history {
         viz_data.push(json!({
@@ -483,7 +483,7 @@ pub fn run() {
             "type": "memory"
         }));
     }
-    
+
     // Architecture diagram data
     let components = vec![
         ("Perception", 0, 1),
@@ -494,7 +494,7 @@ pub fn run() {
         ("Action Gen", 4, 1),
         ("Output", 5, 1),
     ];
-    
+
     for (name, x, y) in components {
         viz_data.push(json!({
             "component": name,
@@ -503,7 +503,7 @@ pub fn run() {
             "type": "architecture"
         }));
     }
-    
+
     let spec = json!({
         "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
         "description": "AGI Architecture Visualization",
@@ -577,7 +577,7 @@ pub fn run() {
             }
         ]
     });
-    
+
     let filename = "lesson_11.json";
     std::fs::write(filename, spec.to_string()).unwrap();
     println!("\nVisualization saved to: {}", filename);
@@ -590,10 +590,10 @@ mod tests {
     #[test]
     fn test_multimodal_encoder() {
         let mut encoder = MultimodalEncoder::new(16);
-        
+
         let text_emb = encoder.encode(&Modality::Text("find food".to_string()));
         assert_eq!(text_emb.len(), 16);
-        
+
         let vision = vec![vec![0.0, 1.0], vec![1.0, 0.0]];
         let vision_emb = encoder.encode(&Modality::Vision(vision));
         assert_eq!(vision_emb.len(), 16);
@@ -602,13 +602,13 @@ mod tests {
     #[test]
     fn test_working_memory() {
         let mut wm = WorkingMemory::new(3);
-        
+
         wm.push(Modality::Text("a".to_string()), vec![1.0, 0.0]);
         wm.push(Modality::Text("b".to_string()), vec![0.0, 1.0]);
         wm.push(Modality::Text("c".to_string()), vec![1.0, 1.0]);
-        
+
         assert_eq!(wm.buffer.len(), 3);
-        
+
         // Adding one more should remove the oldest
         wm.push(Modality::Text("d".to_string()), vec![0.0, 0.0]);
         assert_eq!(wm.buffer.len(), 3);
@@ -617,13 +617,13 @@ mod tests {
     #[test]
     fn test_long_term_memory_recall() {
         let mut ltm = LongTermMemory::new(10);
-        
+
         ltm.store(vec![1.0, 0.0], "action1".to_string(), 1.0, 0);
         ltm.store(vec![0.0, 1.0], "action2".to_string(), 0.5, 1);
-        
+
         let query = vec![0.9, 0.1];
         let recalled = ltm.recall(&query, 1);
-        
+
         assert_eq!(recalled.len(), 1);
         assert_eq!(recalled[0].action, "action1"); // Should recall most similar
     }
@@ -632,13 +632,13 @@ mod tests {
     fn test_agi_agent_cycle() {
         let mut agent = AGIAgent::new();
         let mut rng = rand::rng();
-        
+
         agent.set_goal("explore");
         agent.perceive(Modality::Text("room".to_string()));
-        
+
         let action = agent.think(&mut rng);
         assert!(!action.is_empty());
-        
+
         let (wm, ltm) = agent.get_memory_stats();
         assert!(wm > 0);
         assert!(ltm > 0);

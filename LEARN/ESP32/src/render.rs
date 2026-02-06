@@ -5,7 +5,7 @@
 //! LAYER: LEARN → ESP32
 //! ═══════════════════════════════════════════════════════════════════════════════
 
-use crate::lessons::{Lesson, GLOSSARY, DemoType};
+use crate::lessons::{DemoType, Lesson, GLOSSARY};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element};
@@ -62,13 +62,14 @@ impl LessonRenderer {
         };
 
         // Group lessons by phase (preserve order)
-        let mut phases: std::collections::HashMap<&str, Vec<&Lesson>> = std::collections::HashMap::new();
+        let mut phases: std::collections::HashMap<&str, Vec<&Lesson>> =
+            std::collections::HashMap::new();
         let mut phase_order: Vec<&str> = Vec::new();
         for lesson in lessons {
             if !phases.contains_key(lesson.phase) {
                 phase_order.push(lesson.phase);
             }
-            phases.entry(lesson.phase).or_insert_with(Vec::new).push(lesson);
+            phases.entry(lesson.phase).or_default().push(lesson);
         }
 
         // Define correct phase order
@@ -84,7 +85,10 @@ impl LessonRenderer {
         // Render phases in correct order
         for phase_name in &ordered_phases {
             if let Some(phase_lessons) = phases.get(phase_name) {
-                html.push_str(&format!(r#"<section class="phase"><h2>{}</h2><div class="lesson-grid">"#, phase_name));
+                html.push_str(&format!(
+                    r#"<section class="phase"><h2>{}</h2><div class="lesson-grid">"#,
+                    phase_name
+                ));
                 // Sort lessons within phase by ID to ensure correct order
                 let mut sorted_lessons = phase_lessons.clone();
                 sorted_lessons.sort_by_key(|l| l.id);
@@ -120,12 +124,7 @@ impl LessonRenderer {
                         r#"<span class="term" data-tooltip="{}">{}</span>"#,
                         term.short, original
                     );
-                    s = format!(
-                        "{}{}{}",
-                        &s[..pos],
-                        tooltip,
-                        &s[pos + term.word.len()..]
-                    );
+                    s = format!("{}{}{}", &s[..pos], tooltip, &s[pos + term.word.len()..]);
                 }
             }
             s
@@ -401,7 +400,8 @@ impl LessonRenderer {
                         <p>Use the interactive calculator above to explore different values.</p>
                     </div>
                 </div>
-                "#.to_string()
+                "#
+                .to_string()
             }
             (DemoType::Static, _) => {
                 // No demo controls for static lessons
@@ -412,7 +412,8 @@ impl LessonRenderer {
 
         // Canvas visibility based on demo_type
         let canvas_html = match lesson.demo_type {
-            DemoType::Canvas => r#"
+            DemoType::Canvas => {
+                r#"
                     <section class="visualization">
                         <h3>🎮 Try It Yourself</h3>
                         <canvas id="lesson-canvas" width="800" height="450"></canvas>
@@ -421,8 +422,10 @@ impl LessonRenderer {
                         </div>
                         {controls}
                     </section>
-            "#,
-            DemoType::Calculator => r#"
+            "#
+            }
+            DemoType::Calculator => {
+                r#"
                     <section class="visualization">
                         <h3>🧮 Interactive Calculator</h3>
                         <div class="calculator-widget">
@@ -433,14 +436,17 @@ impl LessonRenderer {
                             {controls}
                         </div>
                     </section>
-            "#,
-            DemoType::Static => r#"
+            "#
+            }
+            DemoType::Static => {
+                r#"
                     <section class="visualization">
                         <div class="demo-explanation">
                             <p>{demo_explanation}</p>
                         </div>
                     </section>
-            "#,
+            "#
+            }
         };
 
         let intuition_html = Self::apply_glossary(lesson.intuition);

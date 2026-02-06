@@ -17,19 +17,19 @@
 //! - O(1) or O(log n) operations where possible
 
 pub mod arena;
-pub mod edges;
-pub mod sampling;
 pub mod attachment;
 pub mod cascade;
 pub mod criticality;
 pub mod distribution;
+pub mod edges;
 pub mod metrics;
+pub mod sampling;
 
 pub use arena::{NetworkArena, NodeHandle, NodeProperties};
-pub use edges::EdgeArena;
-pub use sampling::{AliasTable, PowerLawSampler};
 pub use attachment::BarabasiAlbert;
 pub use cascade::{CascadeArena, CascadeState};
-pub use criticality::{Sandpile, ForestFire, CellState};
+pub use criticality::{CellState, ForestFire, Sandpile};
 pub use distribution::{Pareto, Zipf};
+pub use edges::EdgeArena;
 pub use metrics::NetworkMetrics;
+pub use sampling::{AliasTable, PowerLawSampler};

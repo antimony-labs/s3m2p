@@ -1,9 +1,11 @@
 //! Bill of Materials (BOM) generation
 
+use super::part_numbers::generate_part_number;
+use super::{
+    determine_lumber_grade, FastenerType, LumberGrade, MaterialSpec, PlywoodGrade, WoodSpecies,
+};
 use crate::assembly::*;
 use crate::constants::LumberSize;
-use super::{MaterialSpec, LumberGrade, WoodSpecies, PlywoodGrade, FastenerType, determine_lumber_grade};
-use super::part_numbers::generate_part_number;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -14,9 +16,9 @@ pub struct BomEntry {
     pub part_number: String,
     pub description: String,
     pub quantity: u32,
-    pub unit: String,              // "EA" (each), "LF" (linear feet), "SF" (square feet)
+    pub unit: String, // "EA" (each), "LF" (linear feet), "SF" (square feet)
     pub material: MaterialSpec,
-    pub dimensions: String,        // Human-readable dimensions
+    pub dimensions: String, // Human-readable dimensions
     pub notes: Vec<String>,
 }
 
@@ -41,96 +43,113 @@ pub fn generate_bom(assembly: &CrateAssembly, product_weight: f32) -> BillOfMate
         let part_number = generate_part_number(&node.component_type, 0);
 
         // Group by part number
-        parts_map.entry(part_number)
+        parts_map
+            .entry(part_number)
             .and_modify(|(_, count, _)| *count += 1)
             .or_insert((node.component_type.clone(), 1, Vec::new()));
     }
 
     // Convert to BOM entries
-    let mut entries: Vec<BomEntry> = parts_map.into_iter().enumerate().map(|(idx, (part_number, (component_type, quantity, notes)))| {
-        let (description, unit, material, dimensions, mut notes) = match &component_type {
-            ComponentType::Skid { dimensions } => (
-                "Skid Member".to_string(),
-                "EA".to_string(),
-                MaterialSpec::Lumber {
-                    size: LumberSize::L4x4,
-                    grade: lumber_grade,
-                    species: WoodSpecies::SouthernPine,
-                },
-                format!("3.5\"x3.5\"x{:.1}\"", dimensions[2]),
-                vec!["Pressure treated recommended".to_string()],
-            ),
-
-            ComponentType::Floorboard { dimensions } => (
-                "Floor Board".to_string(),
-                "EA".to_string(),
-                MaterialSpec::Lumber {
-                    size: LumberSize::L2x6,
-                    grade: lumber_grade,
-                    species: WoodSpecies::SouthernPine,
-                },
-                format!("1.5\"x5.5\"x{:.1}\"", dimensions[2]),
-                vec![],
-            ),
-
-            ComponentType::Cleat { dimensions, is_vertical } => {
-                let desc = if *is_vertical {
-                    "Vertical Cleat"
-                } else {
-                    "Horizontal Cleat"
-                };
-                (
-                    desc.to_string(),
+    let mut entries: Vec<BomEntry> = parts_map
+        .into_iter()
+        .enumerate()
+        .map(|(idx, (part_number, (component_type, quantity, notes)))| {
+            let (description, unit, material, dimensions, mut notes) = match &component_type {
+                ComponentType::Skid { dimensions } => (
+                    "Skid Member".to_string(),
                     "EA".to_string(),
                     MaterialSpec::Lumber {
-                        size: LumberSize::L2x4,
+                        size: LumberSize::L4x4,
                         grade: lumber_grade,
                         species: WoodSpecies::SouthernPine,
                     },
-                    format!("1.5\"x3.5\"x{:.1}\"", dimensions[2]),
+                    format!("3.5\"x3.5\"x{:.1}\"", dimensions[2]),
+                    vec!["Pressure treated recommended".to_string()],
+                ),
+
+                ComponentType::Floorboard { dimensions } => (
+                    "Floor Board".to_string(),
+                    "EA".to_string(),
+                    MaterialSpec::Lumber {
+                        size: LumberSize::L2x6,
+                        grade: lumber_grade,
+                        species: WoodSpecies::SouthernPine,
+                    },
+                    format!("1.5\"x5.5\"x{:.1}\"", dimensions[2]),
                     vec![],
-                )
-            },
+                ),
 
-            ComponentType::Panel { thickness, width, height, .. } => (
-                "Plywood Panel".to_string(),
-                "EA".to_string(),
-                MaterialSpec::Plywood {
-                    thickness: *thickness,
-                    grade: PlywoodGrade::CDXSheathing,
-                },
-                format!("{:.2}\"x{:.1}\"x{:.1}\"", thickness, width, height),
-                vec!["Exterior grade".to_string()],
-            ),
+                ComponentType::Cleat {
+                    dimensions,
+                    is_vertical,
+                } => {
+                    let desc = if *is_vertical {
+                        "Vertical Cleat"
+                    } else {
+                        "Horizontal Cleat"
+                    };
+                    (
+                        desc.to_string(),
+                        "EA".to_string(),
+                        MaterialSpec::Lumber {
+                            size: LumberSize::L2x4,
+                            grade: lumber_grade,
+                            species: WoodSpecies::SouthernPine,
+                        },
+                        format!("1.5\"x3.5\"x{:.1}\"", dimensions[2]),
+                        vec![],
+                    )
+                }
 
-            ComponentType::Nail { diameter, length, .. } => (
-                "16d Common Nail".to_string(),
-                "EA".to_string(),
-                MaterialSpec::Fastener {
-                    fastener_type: FastenerType::CommonNail,
-                    size: "16d".to_string(),
-                },
-                format!("{:.3}\" dia x {:.2}\" length", diameter, length),
-                vec!["Galvanized steel".to_string(), "Ring shank preferred".to_string()],
-            ),
+                ComponentType::Panel {
+                    thickness,
+                    width,
+                    height,
+                    ..
+                } => (
+                    "Plywood Panel".to_string(),
+                    "EA".to_string(),
+                    MaterialSpec::Plywood {
+                        thickness: *thickness,
+                        grade: PlywoodGrade::CDXSheathing,
+                    },
+                    format!("{:.2}\"x{:.1}\"x{:.1}\"", thickness, width, height),
+                    vec!["Exterior grade".to_string()],
+                ),
 
-            // Skip assembly nodes
-            _ => return None,
-        };
+                ComponentType::Nail {
+                    diameter, length, ..
+                } => (
+                    "16d Common Nail".to_string(),
+                    "EA".to_string(),
+                    MaterialSpec::Fastener {
+                        fastener_type: FastenerType::CommonNail,
+                        size: "16d".to_string(),
+                    },
+                    format!("{:.3}\" dia x {:.2}\" length", diameter, length),
+                    vec![
+                        "Galvanized steel".to_string(),
+                        "Ring shank preferred".to_string(),
+                    ],
+                ),
 
-        Some(BomEntry {
-            item_number: (idx + 1) as u32,
-            part_number,
-            description,
-            quantity: quantity as u32,
-            unit,
-            material,
-            dimensions,
-            notes,
+                // Skip assembly nodes
+                _ => return None,
+            };
+
+            Some(BomEntry {
+                item_number: (idx + 1) as u32,
+                part_number,
+                description,
+                quantity: quantity as u32,
+                unit,
+                material,
+                dimensions,
+                notes,
+            })
         })
-    })
-    .filter_map(|x| x)
-    .collect();
+        .filter_map(|x| x)
+        .collect();
 
     // Sort by item number
     entries.sort_by_key(|e| e.item_number);
@@ -151,7 +170,9 @@ mod tests {
         for i in 0..3 {
             let id = assembly.create_node(
                 format!("Skid {}", i + 1),
-                ComponentType::Skid { dimensions: [3.5, 3.5, 120.0] },
+                ComponentType::Skid {
+                    dimensions: [3.5, 3.5, 120.0],
+                },
                 LocalTransform::identity(),
                 BoundingBox::default(),
             );
@@ -162,7 +183,9 @@ mod tests {
         for i in 0..2 {
             let id = assembly.create_node(
                 format!("Floorboard {}", i + 1),
-                ComponentType::Floorboard { dimensions: [1.5, 5.5, 48.0] },
+                ComponentType::Floorboard {
+                    dimensions: [1.5, 5.5, 48.0],
+                },
                 LocalTransform::identity(),
                 BoundingBox::default(),
             );
@@ -175,7 +198,9 @@ mod tests {
         assert_eq!(bom.entries.len(), 2);
 
         // Find skid entry
-        let skid_entry = bom.entries.iter()
+        let skid_entry = bom
+            .entries
+            .iter()
             .find(|e| e.part_number.starts_with("SKD"))
             .expect("Skid entry not found");
 
@@ -183,7 +208,9 @@ mod tests {
         assert_eq!(skid_entry.unit, "EA");
 
         // Find floorboard entry
-        let floorboard_entry = bom.entries.iter()
+        let floorboard_entry = bom
+            .entries
+            .iter()
             .find(|e| e.part_number.starts_with("FLR"))
             .expect("Floorboard entry not found");
 

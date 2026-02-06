@@ -208,7 +208,9 @@ mod tests {
 
         // Weights: [10, 1, 1] -> should sample 0 most often
         let weights = vec![10.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-        let mask = vec![true, true, true, false, false, false, false, false, false, false];
+        let mask = vec![
+            true, true, true, false, false, false, false, false, false, false,
+        ];
 
         alias.rebuild(&weights, &mask);
         assert!(!alias.dirty);

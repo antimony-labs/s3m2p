@@ -5,7 +5,7 @@
 //! LAYER: MCAD (L1 Bubble)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
-use cad_engine::{SketchPointId, SketchEntityId};
+use cad_engine::{SketchEntityId, SketchPointId};
 
 /// Commands for undo/redo system
 #[derive(Clone, Debug)]
@@ -16,9 +16,7 @@ pub enum SketchCommand {
         entity_ids: Vec<SketchEntityId>,
     },
     /// Added a constraint
-    AddConstraint {
-        index: usize,
-    },
+    AddConstraint { index: usize },
     /// Toggled construction mode on points
     ToggleConstruction {
         point_ids: Vec<SketchPointId>,
@@ -266,7 +264,10 @@ mod tests {
 
         let cmd = history.pop_undo().unwrap();
         match cmd {
-            SketchCommand::ToggleConstruction { point_ids, prev_states } => {
+            SketchCommand::ToggleConstruction {
+                point_ids,
+                prev_states,
+            } => {
                 assert_eq!(point_ids.len(), 2);
                 assert_eq!(prev_states, vec![false, true]);
             }

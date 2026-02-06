@@ -6,17 +6,17 @@
 //! ===============================================================================
 #![allow(unexpected_cfgs)]
 
+use std::cell::RefCell;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use std::cell::RefCell;
 
 pub mod demo_runner;
 pub mod lessons;
 pub mod render;
 
+use learn_core::demos::problems::PROBLEMS;
 use lessons::LESSONS;
 use render::LessonRenderer;
-use learn_core::demos::problems::PROBLEMS;
 
 /// Total number of lessons
 pub const LESSON_COUNT: usize = 10;
@@ -49,12 +49,10 @@ fn expose_to_window() -> Result<(), JsValue> {
     }) as Box<dyn Fn()>);
 
     // Section switching
-    let go_to_section_fn = Closure::wrap(Box::new(|section: usize| {
-        match section {
-            0 => switch_section(Section::Learn),
-            1 => switch_section(Section::Practice),
-            _ => {}
-        }
+    let go_to_section_fn = Closure::wrap(Box::new(|section: usize| match section {
+        0 => switch_section(Section::Learn),
+        1 => switch_section(Section::Practice),
+        _ => {}
     }) as Box<dyn Fn(usize)>);
 
     // Practice section navigation
@@ -95,7 +93,7 @@ pub fn start() -> Result<(), JsValue> {
 pub fn go_to_lesson(idx: usize) {
     // Scroll to top of page
     if let Some(window) = web_sys::window() {
-        let _ = window.scroll_to_with_x_and_y(0.0, 0.0);
+        window.scroll_to_with_x_and_y(0.0, 0.0);
     }
 
     // Stop any running demo
@@ -165,7 +163,8 @@ fn setup_demo_controls(lesson_idx: usize) {
                     }
                 }
             }) as Box<dyn Fn(web_sys::Event)>);
-            let _ = slider.add_event_listener_with_callback("input", closure.as_ref().unchecked_ref());
+            let _ =
+                slider.add_event_listener_with_callback("input", closure.as_ref().unchecked_ref());
             closure.forget();
         }
     }
@@ -359,7 +358,7 @@ fn setup_demo_controls(lesson_idx: usize) {
 pub fn go_home() {
     // Scroll to top of page
     if let Some(window) = web_sys::window() {
-        let _ = window.scroll_to_with_x_and_y(0.0, 0.0);
+        window.scroll_to_with_x_and_y(0.0, 0.0);
     }
 
     demo_runner::stop_demo();
@@ -383,7 +382,7 @@ pub fn go_home() {
 pub fn switch_section(section: Section) {
     // Scroll to top of page
     if let Some(window) = web_sys::window() {
-        let _ = window.scroll_to_with_x_and_y(0.0, 0.0);
+        window.scroll_to_with_x_and_y(0.0, 0.0);
     }
 
     demo_runner::stop_demo();
@@ -407,7 +406,7 @@ pub fn switch_section(section: Section) {
 pub fn go_to_problem(idx: usize) {
     // Scroll to top of page
     if let Some(window) = web_sys::window() {
-        let _ = window.scroll_to_with_x_and_y(0.0, 0.0);
+        window.scroll_to_with_x_and_y(0.0, 0.0);
     }
 
     demo_runner::stop_demo();
@@ -497,10 +496,12 @@ fn auto_play_toggle() {
             }) as Box<dyn Fn()>);
 
             if let Some(window) = web_sys::window() {
-                let id = window.set_interval_with_callback_and_timeout_and_arguments_0(
-                    callback.as_ref().unchecked_ref(),
-                    500,
-                ).ok();
+                let id = window
+                    .set_interval_with_callback_and_timeout_and_arguments_0(
+                        callback.as_ref().unchecked_ref(),
+                        500,
+                    )
+                    .ok();
                 *interval_ref = id;
             }
             callback.forget();

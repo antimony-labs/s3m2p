@@ -149,10 +149,7 @@ pub fn visvalingam_whyatt(coords: &[Coord], min_area: f32) -> Vec<Coord> {
         return coords.to_vec();
     }
 
-    let mut points: Vec<(Coord, f32)> = coords
-        .iter()
-        .map(|c| (*c, f32::INFINITY))
-        .collect();
+    let mut points: Vec<(Coord, f32)> = coords.iter().map(|c| (*c, f32::INFINITY)).collect();
 
     // Calculate initial triangle areas
     for i in 1..points.len() - 1 {
@@ -177,7 +174,10 @@ pub fn visvalingam_whyatt(coords: &[Coord], min_area: f32) -> Vec<Coord> {
         if min_idx > 1 && min_idx < points.len() {
             let prev = min_idx - 1;
             points[prev].1 = triangle_area(
-                points.get(prev.wrapping_sub(1)).map(|p| p.0).unwrap_or(points[prev].0),
+                points
+                    .get(prev.wrapping_sub(1))
+                    .map(|p| p.0)
+                    .unwrap_or(points[prev].0),
                 points[prev].0,
                 points[min_idx].0,
             );
@@ -186,7 +186,10 @@ pub fn visvalingam_whyatt(coords: &[Coord], min_area: f32) -> Vec<Coord> {
             points[min_idx].1 = triangle_area(
                 points[min_idx - 1].0,
                 points[min_idx].0,
-                points.get(min_idx + 1).map(|p| p.0).unwrap_or(points[min_idx].0),
+                points
+                    .get(min_idx + 1)
+                    .map(|p| p.0)
+                    .unwrap_or(points[min_idx].0),
             );
         }
     }
@@ -247,10 +250,7 @@ mod tests {
         let simplified = simplify_ring(&ring, 0.5);
         assert!(simplified.coords.len() <= ring.coords.len());
         // Should still be closed
-        assert_eq!(
-            simplified.coords.first(),
-            simplified.coords.last()
-        );
+        assert_eq!(simplified.coords.first(), simplified.coords.last());
     }
 
     #[test]

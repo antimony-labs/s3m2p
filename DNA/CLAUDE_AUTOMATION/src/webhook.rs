@@ -87,7 +87,7 @@ pub async fn handler(
 
             if label.name == "claude-auto" {
                 info!("Webhook: Issue #{} labeled 'claude-auto'", issue.number);
-                
+
                 if state.db.automation_exists(issue.number).unwrap_or(false) {
                     info!("Automation already exists for issue #{}", issue.number);
                     return StatusCode::OK;
@@ -274,7 +274,7 @@ mod tests {
         assert!(event.issue.is_some());
         assert!(event.comment.is_some());
     }
-    
+
     #[test]
     fn test_deserialize_unknown_action() {
         let payload = json!({

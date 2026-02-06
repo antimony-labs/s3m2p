@@ -241,8 +241,7 @@ impl BlogRenderer {
             start_here_posts = index.recent(3);
         }
 
-        let mut editor_picks: Vec<&PostMeta> =
-            index.posts.iter().filter(|m| m.featured).collect();
+        let mut editor_picks: Vec<&PostMeta> = index.posts.iter().filter(|m| m.featured).collect();
         if editor_picks.is_empty() {
             editor_picks = index
                 .recent(8)
@@ -359,7 +358,10 @@ impl BlogRenderer {
         let author = author_for(meta);
         let topic = topic_for(meta);
         let topic_html = if !meta.tags.is_empty() {
-            format!(r#"<a href="/tag/{}" class="topic-link">#{}</a>"#, meta.tags[0], topic)
+            format!(
+                r#"<a href="/tag/{}" class="topic-link">#{}</a>"#,
+                meta.tags[0], topic
+            )
         } else {
             format!(r#"<span class="topic-link">#{}</span>"#, topic)
         };
@@ -454,10 +456,16 @@ impl BlogRenderer {
                     {}
                 </div>
             "#,
-                prev.map(|p| format!(r#"<a href="/post/{}" class="series-link">← {}</a>"#, p.slug, p.title))
-                    .unwrap_or_default(),
-                next.map(|p| format!(r#"<a href="/post/{}" class="series-link">{} →</a>"#, p.slug, p.title))
-                    .unwrap_or_default(),
+                prev.map(|p| format!(
+                    r#"<a href="/post/{}" class="series-link">← {}</a>"#,
+                    p.slug, p.title
+                ))
+                .unwrap_or_default(),
+                next.map(|p| format!(
+                    r#"<a href="/post/{}" class="series-link">{} →</a>"#,
+                    p.slug, p.title
+                ))
+                .unwrap_or_default(),
             );
 
             format!(

@@ -19,9 +19,9 @@
 //! - NACK: SDA HIGH
 //!
 //! This demo intentionally visualizes I2C at a slowed-down timescale.
- 
+
 use crate::{Demo, ParamMeta, Rng};
- 
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum I2cPhase {
     Idle,
@@ -30,7 +30,7 @@ pub enum I2cPhase {
     Ack,
     Stop,
 }
- 
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum I2cStage {
     /// Address byte (7-bit address + R/W)
@@ -40,58 +40,58 @@ pub enum I2cStage {
     /// Data byte read from slave
     ReadData,
 }
- 
+
 /// I2C bus demo for visualizing SDA/SCL + start/stop + ACK/NAK
 #[derive(Clone)]
 pub struct I2cBusDemo {
     pub time: f32,
- 
+
     /// Live line states
     pub scl: bool,
     pub sda: bool,
- 
+
     /// History for plotting
     pub scl_history: Vec<bool>,
     pub sda_history: Vec<bool>,
- 
+
     pub phase: I2cPhase,
     pub stage: I2cStage,
- 
+
     /// Parameters
-    pub address: u8,       // 7-bit
-    pub rw: bool,          // false=write, true=read
-    pub clock_khz: f32,    // conceptual (visualized); treated as Hz internally
-    pub nak_chance: f32,   // probability of NACK at ACK phases (address/data write)
+    pub address: u8, // 7-bit
+    pub rw: bool,            // false=write, true=read
+    pub clock_khz: f32,      // conceptual (visualized); treated as Hz internally
+    pub nak_chance: f32,     // probability of NACK at ACK phases (address/data write)
     pub stretch_chance: f32, // probability of extra-long SCL low phase
- 
+
     /// Current byte being transferred (address byte or data byte)
     pub current_byte: u8,
- 
+
     /// Bit index within current byte (0..7, MSB first)
     pub bit_index: u8,
- 
+
     /// Last ACK result (true=ACK, false=NACK)
     pub ack: bool,
- 
+
     pub transactions: u32,
- 
+
     history_len: usize,
     sample_rate: f32,
     sample_timer: f32,
- 
+
     // Half-period timing (seconds)
     half_period: f32,
     phase_timer: f32,
- 
+
     // Idle delay between transactions (seconds)
     idle_timer: f32,
- 
+
     // Stop sequence step
     stop_step: u8,
- 
+
     rng: Rng,
 }
- 
+
 impl Default for I2cBusDemo {
     fn default() -> Self {
         let mut demo = Self {
@@ -124,7 +124,7 @@ impl Default for I2cBusDemo {
         demo
     }
 }
- 
+
 impl I2cBusDemo {
     fn recompute_timing(&mut self) {
         // Visualized kHz -> internally treated as Hz (slowed down so you can see it)
@@ -132,13 +132,13 @@ impl I2cBusDemo {
         self.half_period = 0.5 / hz;
         self.sample_rate = (hz * 40.0).clamp(300.0, 8000.0);
     }
- 
+
     fn bit_of(byte: u8, bit_index: u8) -> bool {
         // MSB first
         let shift = 7u8.saturating_sub(bit_index);
         ((byte >> shift) & 1) != 0
     }
- 
+
     fn begin_start(&mut self) {
         self.phase = I2cPhase::Start;
         self.stage = I2cStage::Address;
@@ -146,29 +146,29 @@ impl I2cBusDemo {
         self.sda = false; // START (SDA falls while SCL high)
         self.phase_timer = self.half_period;
     }
- 
+
     fn begin_bits(&mut self, stage: I2cStage) {
         self.phase = I2cPhase::Bits;
         self.stage = stage;
         self.bit_index = 0;
         self.ack = true;
- 
+
         self.current_byte = match stage {
             I2cStage::Address => (self.address << 1) | (self.rw as u8),
             I2cStage::WriteData => 0xA5, // arbitrary data byte
             I2cStage::ReadData => (self.rng.next_u32() & 0xFF) as u8, // slave returns a byte
         };
- 
+
         // After START, SCL goes low and first bit is placed on SDA
         self.scl = false;
         self.sda = Self::bit_of(self.current_byte, self.bit_index);
         self.phase_timer = self.next_low_duration();
     }
- 
+
     fn begin_ack(&mut self) {
         self.phase = I2cPhase::Ack;
         self.bit_index = 0;
- 
+
         // Who sends ACK depends on direction, but we just visualize the bit on SDA.
         let ack_bit_is_low = match self.stage {
             I2cStage::ReadData => {
@@ -180,14 +180,14 @@ impl I2cBusDemo {
                 !self.rng.chance(self.nak_chance.clamp(0.0, 1.0))
             }
         };
- 
+
         self.ack = ack_bit_is_low;
         self.sda = !ack_bit_is_low; // SDA low => ACK, high => NACK
-        // SCL should currently be LOW (we enter ACK after a falling edge)
+                                    // SCL should currently be LOW (we enter ACK after a falling edge)
         self.scl = false;
         self.phase_timer = self.next_low_duration();
     }
- 
+
     fn begin_stop(&mut self) {
         self.phase = I2cPhase::Stop;
         self.stop_step = 0;
@@ -196,7 +196,7 @@ impl I2cBusDemo {
         self.sda = false;
         self.phase_timer = self.half_period;
     }
- 
+
     fn next_low_duration(&mut self) -> f32 {
         let base = self.half_period.max(1e-4);
         if self.stretch_chance > 0.0 && self.rng.chance(self.stretch_chance.clamp(0.0, 1.0)) {
@@ -205,7 +205,7 @@ impl I2cBusDemo {
             base
         }
     }
- 
+
     fn on_half_period_end(&mut self) {
         match self.phase {
             I2cPhase::Start => {
@@ -221,7 +221,7 @@ impl I2cBusDemo {
                     // Falling edge: advance bit index and prepare next bit (while SCL low)
                     self.scl = false;
                     self.bit_index += 1;
- 
+
                     if self.bit_index < 8 {
                         self.sda = Self::bit_of(self.current_byte, self.bit_index);
                         self.phase_timer = self.next_low_duration();
@@ -239,7 +239,7 @@ impl I2cBusDemo {
                 } else {
                     // Falling edge: decide next stage
                     self.scl = false;
- 
+
                     match self.stage {
                         I2cStage::Address => {
                             if !self.ack {
@@ -274,7 +274,7 @@ impl I2cBusDemo {
                         // Raise SDA while SCL high (STOP)
                         self.scl = true;
                         self.sda = true;
- 
+
                         self.transactions += 1;
                         self.phase = I2cPhase::Idle;
                         self.idle_timer = 0.35;
@@ -285,7 +285,7 @@ impl I2cBusDemo {
             I2cPhase::Idle => { /* handled elsewhere */ }
         }
     }
- 
+
     fn advance(&mut self, dt: f32) {
         let mut remaining = dt;
         while remaining > 0.0 {
@@ -299,12 +299,12 @@ impl I2cBusDemo {
                 }
                 break;
             }
- 
+
             // Prevent infinite loops if timing ever hits 0
             if self.phase_timer <= 0.0 {
                 break;
             }
- 
+
             if self.phase_timer > remaining {
                 self.phase_timer -= remaining;
                 remaining = 0.0;
@@ -315,11 +315,11 @@ impl I2cBusDemo {
             }
         }
     }
- 
+
     fn record_sample(&mut self) {
         self.scl_history.push(self.scl);
         self.sda_history.push(self.sda);
- 
+
         while self.scl_history.len() > self.history_len {
             self.scl_history.remove(0);
         }
@@ -328,7 +328,7 @@ impl I2cBusDemo {
         }
     }
 }
- 
+
 impl Demo for I2cBusDemo {
     fn reset(&mut self, seed: u64) {
         self.rng = Rng::new(seed);
@@ -336,49 +336,49 @@ impl Demo for I2cBusDemo {
         self.sample_timer = 0.0;
         self.phase_timer = 0.0;
         self.transactions = 0;
- 
+
         self.address = self.address.clamp(0x08, 0x77);
         self.clock_khz = self.clock_khz.clamp(10.0, 400.0);
         self.nak_chance = self.nak_chance.clamp(0.0, 1.0);
         self.stretch_chance = self.stretch_chance.clamp(0.0, 1.0);
         self.recompute_timing();
- 
+
         self.phase = I2cPhase::Idle;
         self.stage = I2cStage::Address;
         self.scl = true;
         self.sda = true;
         self.idle_timer = 0.2;
         self.stop_step = 0;
- 
+
         self.scl_history.clear();
         self.sda_history.clear();
         self.scl_history.reserve(self.history_len);
         self.sda_history.reserve(self.history_len);
- 
+
         for _ in 0..self.history_len {
             self.scl_history.push(true);
             self.sda_history.push(true);
         }
     }
- 
+
     fn step(&mut self, dt: f32) {
         // Slow down time progression for better visibility (0.2x speed)
         // This makes the I²C waveforms easier to observe
         let time_scale = 0.2;
         let scaled_dt = (dt * time_scale).max(0.0);
-        
+
         self.time += scaled_dt;
 
         let interval = 1.0 / self.sample_rate.max(1.0);
         self.sample_timer += scaled_dt;
- 
+
         while self.sample_timer >= interval {
             self.sample_timer -= interval;
             self.advance(interval);
             self.record_sample();
         }
     }
- 
+
     fn set_param(&mut self, name: &str, value: f32) -> bool {
         match name {
             "address" => {
@@ -405,7 +405,7 @@ impl Demo for I2cBusDemo {
             _ => false,
         }
     }
- 
+
     fn params() -> &'static [ParamMeta] {
         &[
             ParamMeta {
@@ -451,11 +451,11 @@ impl Demo for I2cBusDemo {
         ]
     }
 }
- 
+
 #[cfg(test)]
 mod tests {
     use super::*;
- 
+
     #[test]
     fn test_deterministic_for_same_seed() {
         let mut a = I2cBusDemo::default();
@@ -466,17 +466,17 @@ mod tests {
         b.stretch_chance = 0.2;
         a.reset(42);
         b.reset(42);
- 
+
         for _ in 0..200 {
             a.step(0.02);
             b.step(0.02);
         }
- 
+
         assert_eq!(a.scl_history, b.scl_history);
         assert_eq!(a.sda_history, b.sda_history);
         assert_eq!(a.transactions, b.transactions);
     }
- 
+
     #[test]
     fn test_address_clamped() {
         let mut d = I2cBusDemo::default();

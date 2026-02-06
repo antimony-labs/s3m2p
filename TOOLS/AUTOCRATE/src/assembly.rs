@@ -1,8 +1,8 @@
 //! Assembly tree structure for crate components
 
-use crate::{geometry::*, constants::LumberSize};
-use serde::{Deserialize, Serialize};
+use crate::{constants::LumberSize, geometry::*};
 use glam::Quat;
+use serde::{Deserialize, Serialize};
 
 /// Unique identifier for assembly components
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -46,13 +46,32 @@ pub enum ComponentType {
     WallAssembly(PanelType),
 
     // Parts
-    Skid { dimensions: [f32; 3] },
-    Floorboard { dimensions: [f32; 3] },
-    Cleat { dimensions: [f32; 3], is_vertical: bool },
-    Panel { thickness: f32, width: f32, height: f32, panel_type: PanelType },
+    Skid {
+        dimensions: [f32; 3],
+    },
+    Floorboard {
+        dimensions: [f32; 3],
+    },
+    Cleat {
+        dimensions: [f32; 3],
+        is_vertical: bool,
+    },
+    Panel {
+        thickness: f32,
+        width: f32,
+        height: f32,
+        panel_type: PanelType,
+    },
 
     // Fasteners
-    Nail { x: f32, y: f32, z: f32, diameter: f32, length: f32, direction: [f32; 3] },
+    Nail {
+        x: f32,
+        y: f32,
+        z: f32,
+        diameter: f32,
+        length: f32,
+        direction: [f32; 3],
+    },
 }
 
 /// Assembly node in the tree

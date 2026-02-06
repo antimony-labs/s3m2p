@@ -15,26 +15,21 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{window, HtmlCanvasElement, WebGl2RenderingContext};
 
-pub mod renderer;
 pub mod audio;
+pub mod renderer;
 
+pub use audio::{calculate_plate_constant, frequency_to_mode, AudioAnalyzer};
 pub use renderer::WaveRenderer;
 pub use wave_engine::{ChladniMode, DrivenWaveSolver2D, PlateMode, WaveSimulation};
-pub use audio::{AudioAnalyzer, frequency_to_mode, calculate_plate_constant};
 
 /// Simulation mode: Demo uses static eigenmodes, Live uses driven physics
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Default)]
 pub enum SimulationMode {
     /// Classic eigenmode-based visualization (static patterns)
+    #[default]
     Demo,
     /// Driven plate simulation with real-time audio input
     Live,
-}
-
-impl Default for SimulationMode {
-    fn default() -> Self {
-        SimulationMode::Demo
-    }
 }
 
 /// Audio driver parameters passed from JavaScript.
@@ -134,12 +129,8 @@ impl ChladniSimulation {
         let grid_size = config.grid_size as usize;
         let wave = WaveSimulation::new(grid_size);
         // Initialize driven solver with physics parameters
-        let driven_solver = DrivenWaveSolver2D::new(
-            grid_size,
-            grid_size,
-            config.wave_speed,
-            config.damping,
-        );
+        let driven_solver =
+            DrivenWaveSolver2D::new(grid_size, grid_size, config.wave_speed, config.damping);
         // Start with 50,000 particles for high-performance simulation
         let particles = Self::spawn_particles(config.grid_size, 50000);
         // Pre-allocate motion grid
@@ -174,12 +165,8 @@ impl ChladniSimulation {
     pub fn with_particle_count(config: SimConfig, particle_count: usize) -> Self {
         let grid_size = config.grid_size as usize;
         let wave = WaveSimulation::new(grid_size);
-        let driven_solver = DrivenWaveSolver2D::new(
-            grid_size,
-            grid_size,
-            config.wave_speed,
-            config.damping,
-        );
+        let driven_solver =
+            DrivenWaveSolver2D::new(grid_size, grid_size, config.wave_speed, config.damping);
         let particles = Self::spawn_particles(config.grid_size, particle_count);
         let motion_grid = vec![0.0; grid_size * grid_size];
 
@@ -462,7 +449,7 @@ impl ChladniSimulation {
         self.audio_analyzer = Some(analyzer);
         Ok(())
     }
-    
+
     /// Set audio analyzer (for internal use)
     pub fn set_audio_analyzer(&mut self, analyzer: AudioAnalyzer) {
         self.audio_analyzer = Some(analyzer);
@@ -477,7 +464,7 @@ impl ChladniSimulation {
 
     /// Check if audio is active
     pub fn is_audio_active(&self) -> bool {
-        self.audio_analyzer.as_ref().map_or(false, |a| a.is_active())
+        self.audio_analyzer.as_ref().is_some_and(|a| a.is_active())
     }
 
     /// Get current audio frequency (if available)
@@ -544,7 +531,8 @@ impl ChladniSimulation {
             // Clamp force magnitude to prevent particles from shooting off
             // Optimized: Use length_squared for comparison
             let force_mag_sq = force.length_squared();
-            if force_mag_sq > 250000.0 { // 500^2
+            if force_mag_sq > 250000.0 {
+                // 500^2
                 force = force.normalize() * 500.0;
             }
 
@@ -553,7 +541,8 @@ impl ChladniSimulation {
 
             // Clamp velocity for stability
             let vel_mag_sq = particle.vel.length_squared();
-            if vel_mag_sq > 40000.0 { // 200^2
+            if vel_mag_sq > 40000.0 {
+                // 200^2
                 particle.vel = particle.vel.normalize() * 200.0;
             }
 
@@ -907,9 +896,8 @@ pub fn start() -> Result<(), JsValue> {
     disable_audio_fn.forget();
 
     // Export isAudioActive to JavaScript
-    let is_audio_active_fn = Closure::wrap(Box::new(|| {
-        is_chladni_audio_active()
-    }) as Box<dyn Fn() -> bool>);
+    let is_audio_active_fn =
+        Closure::wrap(Box::new(|| is_chladni_audio_active()) as Box<dyn Fn() -> bool>);
 
     js_sys::Reflect::set(
         &window,
@@ -919,9 +907,9 @@ pub fn start() -> Result<(), JsValue> {
     is_audio_active_fn.forget();
 
     // Export getAudioFrequency to JavaScript
-    let get_freq_fn = Closure::wrap(Box::new(|| {
-        get_chladni_audio_frequency().unwrap_or(-1.0)
-    }) as Box<dyn Fn() -> f32>);
+    let get_freq_fn = Closure::wrap(
+        Box::new(|| get_chladni_audio_frequency().unwrap_or(-1.0)) as Box<dyn Fn() -> f32>
+    );
 
     js_sys::Reflect::set(
         &window,
@@ -967,9 +955,8 @@ pub fn start() -> Result<(), JsValue> {
     set_speaker_fn.forget();
 
     // Export getSimulationMode to JavaScript
-    let get_mode_fn = Closure::wrap(Box::new(|| {
-        get_chladni_simulation_mode()
-    }) as Box<dyn Fn() -> bool>);
+    let get_mode_fn =
+        Closure::wrap(Box::new(|| get_chladni_simulation_mode()) as Box<dyn Fn() -> bool>);
 
     js_sys::Reflect::set(
         &window,
@@ -979,9 +966,8 @@ pub fn start() -> Result<(), JsValue> {
     get_mode_fn.forget();
 
     // Export getDriverParams to JavaScript (for visualization)
-    let get_params_fn = Closure::wrap(Box::new(|| {
-        get_chladni_driver_params()
-    }) as Box<dyn Fn() -> Vec<f32>>);
+    let get_params_fn =
+        Closure::wrap(Box::new(|| get_chladni_driver_params()) as Box<dyn Fn() -> Vec<f32>>);
 
     js_sys::Reflect::set(
         &window,
@@ -1003,9 +989,8 @@ pub fn start() -> Result<(), JsValue> {
     set_plate_const_fn.forget();
 
     // Export getPlateConstant to JavaScript
-    let get_plate_const_fn = Closure::wrap(Box::new(|| {
-        get_chladni_plate_constant()
-    }) as Box<dyn Fn() -> f32>);
+    let get_plate_const_fn =
+        Closure::wrap(Box::new(|| get_chladni_plate_constant()) as Box<dyn Fn() -> f32>);
 
     js_sys::Reflect::set(
         &window,
@@ -1015,9 +1000,8 @@ pub fn start() -> Result<(), JsValue> {
     get_plate_const_fn.forget();
 
     // Export getCurrentMode to JavaScript
-    let get_mode_fn2 = Closure::wrap(Box::new(|| {
-        get_chladni_current_mode()
-    }) as Box<dyn Fn() -> Vec<u32>>);
+    let get_mode_fn2 =
+        Closure::wrap(Box::new(|| get_chladni_current_mode()) as Box<dyn Fn() -> Vec<u32>>);
 
     js_sys::Reflect::set(
         &window,
@@ -1086,8 +1070,9 @@ pub fn enable_chladni_audio() {
             let mut analyzer = AudioAnalyzer::new()?;
             analyzer.start_microphone().await?;
             Ok::<AudioAnalyzer, JsValue>(analyzer)
-        }.await;
-        
+        }
+        .await;
+
         match result {
             Ok(analyzer) => {
                 APP.with(|cell| {
@@ -1148,9 +1133,7 @@ pub fn set_chladni_simulation_mode(is_live: bool) {
                 SimulationMode::Demo
             };
             app.simulation.set_simulation_mode(mode);
-            web_sys::console::log_1(
-                &format!("Simulation mode set to {:?}", mode).into(),
-            );
+            web_sys::console::log_1(&format!("Simulation mode set to {:?}", mode).into());
         }
     });
 }
@@ -1184,7 +1167,9 @@ pub fn set_chladni_speaker_position(x: f32, y: f32) {
     APP.with(|cell| {
         if let Some(ref mut app) = *cell.borrow_mut() {
             app.simulation.set_speaker_position(x, y);
-            web_sys::console::log_1(&format!("Speaker position set to ({:.2}, {:.2})", x, y).into());
+            web_sys::console::log_1(
+                &format!("Speaker position set to ({:.2}, {:.2})", x, y).into(),
+            );
         }
     });
 }

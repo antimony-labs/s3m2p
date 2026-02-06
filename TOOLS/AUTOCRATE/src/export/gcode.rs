@@ -21,8 +21,10 @@ pub fn export_cnc_gcode(program: &CncCutProgram, units: GcodeUnits) -> String {
     // Tool list
     gcode.push_str("(Tool List)\n");
     for tool in &program.tool_list {
-        gcode.push_str(&format!("(T{} - {} - {:.3}\" dia)\n",
-            tool.tool_number, tool.tool_type, tool.diameter));
+        gcode.push_str(&format!(
+            "(T{} - {} - {:.3}\" dia)\n",
+            tool.tool_number, tool.tool_type, tool.diameter
+        ));
     }
     gcode.push_str("\n");
 
@@ -36,19 +38,30 @@ pub fn export_cnc_gcode(program: &CncCutProgram, units: GcodeUnits) -> String {
 
     // Process each operation
     for op in &program.operations {
-        gcode.push_str(&format!("(Operation {}: {})\n", op.operation_number, op.description));
+        gcode.push_str(&format!(
+            "(Operation {}: {})\n",
+            op.operation_number, op.description
+        ));
         gcode.push_str(&format!("M6 {} (Tool change)\n", op.tool));
-        gcode.push_str(&format!("S{} M3 (Spindle on at {} RPM)\n", op.spindle_speed, op.spindle_speed));
+        gcode.push_str(&format!(
+            "S{} M3 (Spindle on at {} RPM)\n",
+            op.spindle_speed, op.spindle_speed
+        ));
         gcode.push_str("G4 P2.0 (Dwell 2 seconds for spindle to reach speed)\n\n");
 
         if let Some(first_point) = op.path.first() {
             // Rapid to start position above workpiece
-            gcode.push_str(&format!("G0 X{:.3} Y{:.3} Z10.000 (Rapid to start position)\n",
-                first_point.x, first_point.y));
+            gcode.push_str(&format!(
+                "G0 X{:.3} Y{:.3} Z10.000 (Rapid to start position)\n",
+                first_point.x, first_point.y
+            ));
             gcode.push_str("G0 Z2.000 (Approach height)\n");
 
             // Plunge to cutting depth
-            gcode.push_str(&format!("G1 Z-{:.3} F20.0 (Plunge to cutting depth)\n", op.cut_depth));
+            gcode.push_str(&format!(
+                "G1 Z-{:.3} F20.0 (Plunge to cutting depth)\n",
+                op.cut_depth
+            ));
 
             // Cut the path
             for (idx, point) in op.path.iter().enumerate().skip(1) {
@@ -58,8 +71,13 @@ pub fn export_cnc_gcode(program: &CncCutProgram, units: GcodeUnits) -> String {
                     op.feed_rate
                 };
 
-                gcode.push_str(&format!("G1 X{:.3} Y{:.3} F{:.1} (Cut to point {})\n",
-                    point.x, point.y, feed_rate, idx + 1));
+                gcode.push_str(&format!(
+                    "G1 X{:.3} Y{:.3} F{:.1} (Cut to point {})\n",
+                    point.x,
+                    point.y,
+                    feed_rate,
+                    idx + 1
+                ));
             }
 
             // Retract
@@ -82,31 +100,47 @@ mod tests {
 
     fn create_test_program() -> CncCutProgram {
         CncCutProgram {
-            operations: vec![
-                CncOperation {
-                    operation_number: 1,
-                    operation_type: CncOperationType::OutlineProfile,
-                    tool: "T1".to_string(),
-                    feed_rate: 60.0,
-                    spindle_speed: 12000,
-                    cut_depth: 0.75,
-                    path: vec![
-                        Point3 { x: 0.0, y: 0.0, z: 0.0 },
-                        Point3 { x: 48.0, y: 0.0, z: 0.0 },
-                        Point3 { x: 48.0, y: 36.0, z: 0.0 },
-                        Point3 { x: 0.0, y: 36.0, z: 0.0 },
-                        Point3 { x: 0.0, y: 0.0, z: 0.0 },
-                    ],
-                    description: "Front Panel - 48.0\" x 36.0\"".to_string(),
-                },
-            ],
-            tool_list: vec![
-                CncTool {
-                    tool_number: 1,
-                    tool_type: "1/4\" End Mill".to_string(),
-                    diameter: 0.25,
-                },
-            ],
+            operations: vec![CncOperation {
+                operation_number: 1,
+                operation_type: CncOperationType::OutlineProfile,
+                tool: "T1".to_string(),
+                feed_rate: 60.0,
+                spindle_speed: 12000,
+                cut_depth: 0.75,
+                path: vec![
+                    Point3 {
+                        x: 0.0,
+                        y: 0.0,
+                        z: 0.0,
+                    },
+                    Point3 {
+                        x: 48.0,
+                        y: 0.0,
+                        z: 0.0,
+                    },
+                    Point3 {
+                        x: 48.0,
+                        y: 36.0,
+                        z: 0.0,
+                    },
+                    Point3 {
+                        x: 0.0,
+                        y: 36.0,
+                        z: 0.0,
+                    },
+                    Point3 {
+                        x: 0.0,
+                        y: 0.0,
+                        z: 0.0,
+                    },
+                ],
+                description: "Front Panel - 48.0\" x 36.0\"".to_string(),
+            }],
+            tool_list: vec![CncTool {
+                tool_number: 1,
+                tool_type: "1/4\" End Mill".to_string(),
+                diameter: 0.25,
+            }],
             material_setup: "3/4\" Plywood".to_string(),
         }
     }

@@ -290,7 +290,11 @@ fn calculate_panel_cleats(
     // (We want cleats positioned deterministically relative to panel geometry.)
     let bounds = match panel_type {
         PanelType::Front | PanelType::Back => BoundingBox::new(
-            Point3::new(center.x - panel_width / 2.0, center.y - panel_thickness / 2.0, center.z),
+            Point3::new(
+                center.x - panel_width / 2.0,
+                center.y - panel_thickness / 2.0,
+                center.z,
+            ),
             Point3::new(
                 center.x + panel_width / 2.0,
                 center.y + panel_thickness / 2.0,
@@ -298,7 +302,11 @@ fn calculate_panel_cleats(
             ),
         ),
         PanelType::Left | PanelType::Right => BoundingBox::new(
-            Point3::new(center.x - panel_thickness / 2.0, center.y - panel_width / 2.0, center.z),
+            Point3::new(
+                center.x - panel_thickness / 2.0,
+                center.y - panel_width / 2.0,
+                center.z,
+            ),
             Point3::new(
                 center.x + panel_thickness / 2.0,
                 center.y + panel_width / 2.0,
@@ -567,7 +575,10 @@ fn calculate_panel_cleats(
                     continue;
                 }
                 cleats.push(CleatGeometry {
-                    bounds: BoundingBox::new(Point3::new(cx0, y_min, z0), Point3::new(cx1, y_max, z1)),
+                    bounds: BoundingBox::new(
+                        Point3::new(cx0, y_min, z0),
+                        Point3::new(cx1, y_max, z1),
+                    ),
                     lumber_size: spec.cleat_size,
                     panel: panel_type,
                     is_vertical: true,

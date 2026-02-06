@@ -67,21 +67,22 @@ impl PowerBudgetDemo {
         // Energy per cycle = (I_active × t_active) + (I_sleep × t_sleep)
         // Convert sleep current from µA to mA
         let sleep_current_ma = self.sleep_current / 1000.0;
-        self.energy_per_cycle = (self.active_current * self.active_time) + (sleep_current_ma * self.sleep_time);
-        
+        self.energy_per_cycle =
+            (self.active_current * self.active_time) + (sleep_current_ma * self.sleep_time);
+
         // Cycle time
         self.cycle_time = self.active_time + self.sleep_time;
-        
+
         // Battery capacity in mAs
         let capacity_mas = self.battery_capacity * 3600.0;
-        
+
         // Number of cycles
         if self.energy_per_cycle > 0.0 {
             self.cycles = capacity_mas / self.energy_per_cycle;
         } else {
             self.cycles = 0.0;
         }
-        
+
         // Lifetime in days
         if self.cycle_time > 0.0 {
             let lifetime_seconds = self.cycles * self.cycle_time;
@@ -189,4 +190,3 @@ impl Demo for PowerBudgetDemo {
         ]
     }
 }
-

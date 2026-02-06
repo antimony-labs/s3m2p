@@ -10,7 +10,7 @@ use std::ops::{Add, Mul, Neg, Sub};
 use std::rc::Rc;
 
 // The core building block: A Value stores data and its gradient.
-// We use Rc<RefCell<...>> to allow shared ownership and mutation, 
+// We use Rc<RefCell<...>> to allow shared ownership and mutation,
 // which is necessary for building a computation graph (DAG).
 #[derive(Clone)]
 pub struct Value(Rc<RefCell<ValueInternal>>);
@@ -56,7 +56,7 @@ impl Value {
     pub fn backward(&self) {
         let mut topo = vec![];
         let mut visited = std::collections::HashSet::new();
-        
+
         fn build_topo(v: &Value, visited: &mut std::collections::HashSet<usize>, topo: &mut Vec<Value>) {
             let ptr = v.0.as_ptr() as usize;
             if !visited.contains(&ptr) {
@@ -86,9 +86,9 @@ impl Value {
 
     pub fn pow(&self, other: f64) -> Value {
         let out = Value::new(self.data().powf(other));
-        
+
         let self_clone = self.clone();
-        
+
         out.0.borrow_mut()._prev = vec![self.clone()];
         out.0.borrow_mut()._op = format!("^{}", other);
         out.0.borrow_mut()._backward = Some(Box::new(move |out_int| {
@@ -96,7 +96,7 @@ impl Value {
             // d/dx (x^n) = n * x^(n-1)
             self_int.grad += other * self_int.data.powf(other - 1.0) * out_int.grad;
         }));
-        
+
         out
     }
 
@@ -106,7 +106,7 @@ impl Value {
         let out = Value::new(t);
 
         let self_clone = self.clone();
-        
+
         out.0.borrow_mut()._prev = vec![self.clone()];
         out.0.borrow_mut()._op = "tanh".to_string();
         out.0.borrow_mut()._backward = Some(Box::new(move |out_int| {
@@ -117,11 +117,11 @@ impl Value {
 
         out
     }
-    
+
     pub fn relu(&self) -> Value {
         let out = Value::new(if self.data() < 0.0 { 0.0 } else { self.data() });
         let self_clone = self.clone();
-        
+
         out.0.borrow_mut()._prev = vec![self.clone()];
         out.0.borrow_mut()._op = "ReLU".to_string();
         out.0.borrow_mut()._backward = Some(Box::new(move |out_int| {
@@ -130,14 +130,14 @@ impl Value {
                 self_int.grad += out_int.grad;
             }
         }));
-        
+
         out
     }
 
     pub fn exp(&self) -> Value {
         let out = Value::new(self.data().exp());
         let self_clone = self.clone();
-        
+
         out.0.borrow_mut()._prev = vec![self.clone()];
         out.0.borrow_mut()._op = "exp".to_string();
         out.0.borrow_mut()._backward = Some(Box::new(move |out_int| {
@@ -145,14 +145,14 @@ impl Value {
             // d/dx e^x = e^x
             self_int.grad += out_int.data * out_int.grad;
         }));
-        
+
         out
     }
 
     pub fn log(&self) -> Value {
         let out = Value::new(self.data().ln());
         let self_clone = self.clone();
-        
+
         out.0.borrow_mut()._prev = vec![self.clone()];
         out.0.borrow_mut()._op = "log".to_string();
         out.0.borrow_mut()._backward = Some(Box::new(move |out_int| {
@@ -160,7 +160,7 @@ impl Value {
             // d/dx ln(x) = 1/x
             self_int.grad += (1.0 / self_int.data) * out_int.grad;
         }));
-        
+
         out
     }
 
@@ -169,7 +169,7 @@ impl Value {
         let s = 1.0 / (1.0 + (-self.data()).exp());
         let out = Value::new(s);
         let self_clone = self.clone();
-        
+
         out.0.borrow_mut()._prev = vec![self.clone()];
         out.0.borrow_mut()._op = "sigmoid".to_string();
         out.0.borrow_mut()._backward = Some(Box::new(move |out_int| {
@@ -177,7 +177,7 @@ impl Value {
             // d/dx σ(x) = σ(x) * (1 - σ(x))
             self_int.grad += out_int.data * (1.0 - out_int.data) * out_int.grad;
         }));
-        
+
         out
     }
 
@@ -194,17 +194,17 @@ impl Add for Value {
 
     fn add(self, other: Value) -> Value {
         let out = Value::new(self.data() + other.data());
-        
+
         let self_clone = self.clone();
         let other_clone = other.clone();
-        
+
         out.0.borrow_mut()._prev = vec![self.clone(), other.clone()];
         out.0.borrow_mut()._op = "+".to_string();
         out.0.borrow_mut()._backward = Some(Box::new(move |out_int| {
             self_clone.0.borrow_mut().grad += out_int.grad;
             other_clone.0.borrow_mut().grad += out_int.grad;
         }));
-        
+
         out
     }
 }
@@ -221,10 +221,10 @@ impl Mul for Value {
 
     fn mul(self, other: Value) -> Value {
         let out = Value::new(self.data() * other.data());
-        
+
         let self_clone = self.clone();
         let other_clone = other.clone();
-        
+
         out.0.borrow_mut()._prev = vec![self.clone(), other.clone()];
         out.0.borrow_mut()._op = "*".to_string();
         let self_data = self_clone.data();
@@ -233,7 +233,7 @@ impl Mul for Value {
             self_clone.0.borrow_mut().grad += other_data * out_int.grad;
             other_clone.0.borrow_mut().grad += self_data * out_int.grad;
         }));
-        
+
         out
     }
 }
@@ -329,7 +329,7 @@ mod tests {
         let a = Value::new(0.0);
         let b = a.tanh();
         assert!(approx_eq(b.data(), 0.0));
-        
+
         let c = Value::new(1.0);
         let d = c.tanh();
         assert!(d.data() > 0.7 && d.data() < 0.8); // tanh(1) ≈ 0.7616
@@ -340,7 +340,7 @@ mod tests {
         let a = Value::new(-5.0);
         let b = a.relu();
         assert!(approx_eq(b.data(), 0.0));
-        
+
         let c = Value::new(5.0);
         let d = c.relu();
         assert!(approx_eq(d.data(), 5.0));
@@ -353,12 +353,12 @@ mod tests {
         let a = Value::new(2.0);
         let b = Value::new(3.0);
         let c = Value::new(4.0);
-        
+
         let ab = a.clone() * b.clone();
         let f = ab + c.clone();
-        
+
         f.backward();
-        
+
         assert!(approx_eq(a.grad(), 3.0), "da = {} expected 3.0", a.grad());
         assert!(approx_eq(b.grad(), 2.0), "db = {} expected 2.0", b.grad());
         assert!(approx_eq(c.grad(), 1.0), "dc = {} expected 1.0", c.grad());
@@ -371,12 +371,12 @@ mod tests {
         let a = Value::new(2.0);
         let b = Value::new(3.0);
         let c = Value::new(4.0);
-        
+
         let sum = a.clone() + b.clone();
         let f = sum * c.clone();
-        
+
         f.backward();
-        
+
         assert!(approx_eq(a.grad(), 4.0), "da = {} expected 4.0", a.grad());
         assert!(approx_eq(b.grad(), 4.0), "db = {} expected 4.0", b.grad());
         assert!(approx_eq(c.grad(), 5.0), "dc = {} expected 5.0", c.grad());
@@ -388,9 +388,9 @@ mod tests {
         // df/da = 2a
         let a = Value::new(3.0);
         let f = a.clone().pow(2.0);
-        
+
         f.backward();
-        
+
         assert!(approx_eq(f.data(), 9.0));
         assert!(approx_eq(a.grad(), 6.0), "da = {} expected 6.0", a.grad());
     }
@@ -401,11 +401,11 @@ mod tests {
         // df/da = 1 - tanh(a)^2
         let a = Value::new(1.0);
         let f = a.clone().tanh();
-        
+
         f.backward();
-        
+
         let expected_grad = 1.0 - f.data().powi(2);
-        assert!(approx_eq(a.grad(), expected_grad), 
+        assert!(approx_eq(a.grad(), expected_grad),
                 "da = {} expected {}", a.grad(), expected_grad);
     }
 
@@ -415,9 +415,9 @@ mod tests {
         let b = Value::new(3.0);
         let c = a.clone() * b.clone();
         c.backward();
-        
+
         assert!(approx_eq(a.grad(), 3.0));
-        
+
         a.zero_grad();
         assert!(approx_eq(a.grad(), 0.0));
     }
@@ -425,20 +425,20 @@ mod tests {
     #[test]
     fn test_gradient_descent_step() {
         let w = Value::new(5.0);
-        
+
         // Simulate: loss = (w - 3)^2, we want w -> 3
         let target = Value::new(3.0);
         let diff = w.clone() - target;
         let loss = diff.pow(2.0);
-        
+
         loss.backward();
-        
+
         // grad = 2 * (w - 3) = 2 * 2 = 4
         assert!(approx_eq(w.grad(), 4.0));
-        
+
         // Apply gradient descent: w = w - lr * grad
         w.apply_gradient_descent(0.1);
-        
+
         // new_w = 5 - 0.1 * 4 = 4.6
         assert!(approx_eq(w.data(), 4.6), "w = {} expected 4.6", w.data());
     }
@@ -452,18 +452,18 @@ mod tests {
         let b1 = Value::new(0.1);
         let w2 = Value::new(0.3);
         let b2 = Value::new(0.2);
-        
+
         // Forward
         let hidden = (x.clone() * w1.clone() + b1.clone()).tanh();
         let output = hidden.clone() * w2.clone() + b2.clone();
-        
+
         // Loss (simple MSE with target 1.0)
         let target = Value::new(1.0);
         let loss = (output - target).pow(2.0);
-        
+
         // Backward
         loss.backward();
-        
+
         // All weights should have gradients
         assert!(w1.grad() != 0.0, "w1 should have gradient");
         assert!(b1.grad() != 0.0, "b1 should have gradient");

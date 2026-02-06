@@ -42,7 +42,8 @@ impl LessonRenderer {
 
         // Group lessons by phase
         for phase in PHASES.iter() {
-            let phase_lessons: Vec<&Lesson> = LESSONS.iter().filter(|l| l.phase == *phase).collect();
+            let phase_lessons: Vec<&Lesson> =
+                LESSONS.iter().filter(|l| l.phase == *phase).collect();
 
             if phase_lessons.is_empty() {
                 continue;
@@ -68,9 +69,7 @@ impl LessonRenderer {
 
             for lesson in phase_lessons {
                 let demo_badge = match lesson.demo_type {
-                    DemoType::Camera => {
-                        r##"<span class="badge badge-camera">📷 Camera</span>"##
-                    }
+                    DemoType::Camera => r##"<span class="badge badge-camera">📷 Camera</span>"##,
                     DemoType::Canvas => {
                         r##"<span class="badge badge-canvas">🎨 Interactive</span>"##
                     }
@@ -129,9 +128,8 @@ impl LessonRenderer {
 
         // Demo section based on type
         let demo_section = match lesson.demo_type {
-            DemoType::Camera => {
-                String::from(
-                    r##"
+            DemoType::Camera => String::from(
+                r##"
                 <section class="demo-section camera-demo">
                     <h3>Live Demo</h3>
                     <div class="demo-container">
@@ -155,11 +153,9 @@ impl LessonRenderer {
                     </div>
                 </section>
                 "##,
-                )
-            }
-            DemoType::Canvas => {
-                String::from(
-                    r##"
+            ),
+            DemoType::Canvas => String::from(
+                r##"
                 <section class="demo-section canvas-demo">
                     <h3>Interactive Demo</h3>
                     <div class="canvas-solo-container">
@@ -170,11 +166,9 @@ impl LessonRenderer {
                     </div>
                 </section>
                 "##,
-                )
-            }
-            DemoType::SideBySide => {
-                String::from(
-                    r##"
+            ),
+            DemoType::SideBySide => String::from(
+                r##"
                 <section class="demo-section sidebyside-demo">
                     <h3>Before & After</h3>
                     <div class="sidebyside-container">
@@ -192,8 +186,7 @@ impl LessonRenderer {
                     </div>
                 </section>
                 "##,
-                )
-            }
+            ),
             DemoType::Static => String::new(),
         };
 

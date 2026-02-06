@@ -6,25 +6,25 @@
 //! ===============================================================================
 
 // Problem visualization demos
-pub mod two_pointers;
-pub mod sliding_window;
 pub mod binary_search;
-pub mod stack_problems;
-pub mod fast_slow;
-pub mod tree_problems;
-pub mod heap_problems;
-pub mod graph_problems;
 pub mod dp_problems;
+pub mod fast_slow;
+pub mod graph_problems;
+pub mod heap_problems;
+pub mod sliding_window;
+pub mod stack_problems;
+pub mod tree_problems;
+pub mod two_pointers;
 
-pub use two_pointers::{TwoPointersDemo, TwoPointerVariant};
-pub use sliding_window::{SlidingWindowDemo, SlidingWindowVariant};
 pub use binary_search::{BinarySearchDemo, BinarySearchVariant};
-pub use stack_problems::{StackProblemsDemo, StackProblemVariant, StackItem};
+pub use dp_problems::{DPProblemVariant, DPProblemsDemo};
 pub use fast_slow::{FastSlowDemo, FastSlowVariant, ListNode};
-pub use tree_problems::{TreeProblemsDemo, TreeProblemVariant, TreeNode};
-pub use heap_problems::{HeapProblemsDemo, HeapProblemVariant};
-pub use graph_problems::{GraphProblemsDemo, GraphProblemVariant, Cell};
-pub use dp_problems::{DPProblemsDemo, DPProblemVariant};
+pub use graph_problems::{Cell, GraphProblemVariant, GraphProblemsDemo};
+pub use heap_problems::{HeapProblemVariant, HeapProblemsDemo};
+pub use sliding_window::{SlidingWindowDemo, SlidingWindowVariant};
+pub use stack_problems::{StackItem, StackProblemVariant, StackProblemsDemo};
+pub use tree_problems::{TreeNode, TreeProblemVariant, TreeProblemsDemo};
+pub use two_pointers::{TwoPointerVariant, TwoPointersDemo};
 
 /// Difficulty level for algorithm problems
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -45,9 +45,9 @@ impl Difficulty {
 
     pub fn color(&self) -> &'static str {
         match self {
-            Difficulty::Easy => "#00d4aa",    // Teal
-            Difficulty::Medium => "#ffc107",  // Amber
-            Difficulty::Hard => "#ff6b6b",    // Red
+            Difficulty::Easy => "#00d4aa",   // Teal
+            Difficulty::Medium => "#ffc107", // Amber
+            Difficulty::Hard => "#ff6b6b",   // Red
         }
     }
 }

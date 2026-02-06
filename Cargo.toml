@@ -36,6 +36,8 @@ members = [
 
     # Simulations (L2 under Simulations bubble)
     "SIMULATION/CHLADNI",
+    "SIMULATION/HANDTRACK",
+    "SIMULATION/POWERLAW",
 
     # Tools (L2 under Tools bubble)
     "TOOLS/AUTOCRATE",
@@ -62,7 +64,7 @@ members = [
     "LEARN/learn_web",
 ]
 # Excluded - different build targets/dependencies
-exclude = ["HW/*"]
+exclude = ["LEARN/ML"]
 
 [workspace.package]
 version = "0.1.0"
@@ -88,3 +90,9 @@ unsafe_code = "warn"
 
 [workspace.lints.clippy]
 all = "warn"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true

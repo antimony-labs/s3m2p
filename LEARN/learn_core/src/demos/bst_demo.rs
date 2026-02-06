@@ -5,8 +5,8 @@
 //! LAYER: LEARN -> learn_core -> demos
 //! ===============================================================================
 
+use super::pseudocode::{bst as pc_bst, Pseudocode};
 use crate::{Demo, ParamMeta, Rng, Vec2};
-use super::pseudocode::{Pseudocode, bst as pc_bst};
 
 /// A node in the BST
 #[derive(Clone, Debug)]
@@ -22,19 +22,33 @@ pub struct BstNode {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HighlightState {
     None,
-    Searching,  // Currently being examined
-    Found,      // Search target found
-    Path,       // Part of search path
-    Inserting,  // Being inserted
+    Searching, // Currently being examined
+    Found,     // Search target found
+    Path,      // Part of search path
+    Inserting, // Being inserted
 }
 
 /// Animation state for BST operations
 #[derive(Clone, Debug, PartialEq)]
 pub enum BstAnimation {
     Idle,
-    Searching { target: i32, path: Vec<usize>, step: usize, progress: f32 },
-    Inserting { value: i32, path: Vec<usize>, step: usize, progress: f32 },
-    Deleting { target: i32, step: usize, progress: f32 },
+    Searching {
+        target: i32,
+        path: Vec<usize>,
+        step: usize,
+        progress: f32,
+    },
+    Inserting {
+        value: i32,
+        path: Vec<usize>,
+        step: usize,
+        progress: f32,
+    },
+    Deleting {
+        target: i32,
+        step: usize,
+        progress: f32,
+    },
 }
 
 /// Binary Search Tree visualization demo
@@ -82,7 +96,9 @@ impl BstDemo {
     }
 
     fn position_subtree(&mut self, idx: usize, x: f32, y: f32, spread: f32, depth: usize) {
-        if depth > 5 { return; }
+        if depth > 5 {
+            return;
+        }
 
         self.nodes[idx].position = Vec2::new(x, y);
 
@@ -185,7 +201,12 @@ impl BstDemo {
 
         let status = if found { "will find" } else { "not in tree" };
         self.message = format!("Searching for {} ({}) - O(log n)", target, status);
-        self.animation = BstAnimation::Searching { target, path, step: 0, progress: 0.0 };
+        self.animation = BstAnimation::Searching {
+            target,
+            path,
+            step: 0,
+            progress: 0.0,
+        };
     }
 
     /// Start insert animation
@@ -213,7 +234,12 @@ impl BstDemo {
         }
 
         self.message = format!("Inserting {} - O(log n)", value);
-        self.animation = BstAnimation::Inserting { value, path, step: 0, progress: 0.0 };
+        self.animation = BstAnimation::Inserting {
+            value,
+            path,
+            step: 0,
+            progress: 0.0,
+        };
     }
 
     /// Get tree height
@@ -270,7 +296,12 @@ impl Demo for BstDemo {
 
         match &mut self.animation {
             BstAnimation::Idle => {}
-            BstAnimation::Searching { target, path, step, progress } => {
+            BstAnimation::Searching {
+                target,
+                path,
+                step,
+                progress,
+            } => {
                 *progress += speed * 0.5;
                 if *progress >= 1.0 {
                     if *step < path.len() {
@@ -286,7 +317,8 @@ impl Demo for BstDemo {
 
                         if self.nodes[idx].value == *target {
                             self.nodes[idx].highlight = HighlightState::Found;
-                            self.message = format!("Found {} after {} comparisons", target, self.comparisons);
+                            self.message =
+                                format!("Found {} after {} comparisons", target, self.comparisons);
                             self.animation = BstAnimation::Idle;
                         } else {
                             self.nodes[idx].highlight = HighlightState::Searching;
@@ -294,12 +326,20 @@ impl Demo for BstDemo {
                             *progress = 0.0;
                         }
                     } else {
-                        self.message = format!("{} not found after {} comparisons", target, self.comparisons);
+                        self.message = format!(
+                            "{} not found after {} comparisons",
+                            target, self.comparisons
+                        );
                         self.animation = BstAnimation::Idle;
                     }
                 }
             }
-            BstAnimation::Inserting { value, path, step, progress } => {
+            BstAnimation::Inserting {
+                value,
+                path,
+                step,
+                progress,
+            } => {
                 *progress += speed * 0.5;
                 if *progress >= 1.0 {
                     if *step < path.len() {
@@ -319,7 +359,8 @@ impl Demo for BstDemo {
                         let new_idx = self.nodes.len() - 1;
                         self.nodes[new_idx].highlight = HighlightState::Inserting;
 
-                        self.message = format!("Inserted {} after {} comparisons", val, self.comparisons);
+                        self.message =
+                            format!("Inserted {} after {} comparisons", val, self.comparisons);
                         self.animation = BstAnimation::Idle;
                     }
                 }
@@ -335,22 +376,23 @@ impl Demo for BstDemo {
 
     fn set_param(&mut self, name: &str, value: f32) -> bool {
         match name {
-            "speed" => { self.speed = value; true }
+            "speed" => {
+                self.speed = value;
+                true
+            }
             _ => false,
         }
     }
 
     fn params() -> &'static [ParamMeta] {
-        &[
-            ParamMeta {
-                name: "speed",
-                label: "Animation Speed",
-                min: 0.25,
-                max: 4.0,
-                step: 0.25,
-                default: 1.0,
-            },
-        ]
+        &[ParamMeta {
+            name: "speed",
+            label: "Animation Speed",
+            min: 0.25,
+            max: 4.0,
+            step: 0.25,
+            default: 1.0,
+        }]
     }
 }
 
@@ -377,7 +419,8 @@ mod tests {
                 None => true,
                 Some(i) => {
                     let val = demo.nodes[i].value;
-                    val > min && val < max
+                    val > min
+                        && val < max
                         && check_bst(demo, demo.nodes[i].left, min, val)
                         && check_bst(demo, demo.nodes[i].right, val, max)
                 }

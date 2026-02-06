@@ -724,7 +724,9 @@ fn create_bubble_label(
 ) -> Option<web_sys::Element> {
     // Create container div
     let container = document.create_element("div").ok()?;
-    container.set_attribute("class", "bubble-label-container").ok();
+    container
+        .set_attribute("class", "bubble-label-container")
+        .ok();
 
     // Create label span
     let label_el = document.create_element("span").ok()?;
@@ -914,11 +916,7 @@ fn render_bubbles(document: &Document, bubbles: &[Bubble], show_back: bool) {
         if let Some(label_el) = create_bubble_label(document, bubble.label, bubble.description) {
             // Position label below the bubble
             let label_top = bubble_y + layout.bubble_radius + 8.0; // 8px gap below bubble
-            let label_style = format!(
-                "left: {:.1}px; top: {:.1}px;",
-                bubble_x,
-                label_top
-            );
+            let label_style = format!("left: {:.1}px; top: {:.1}px;", bubble_x, label_top);
             label_el.set_attribute("style", &label_style).ok();
             constellation.append_child(&label_el).ok();
         }
@@ -955,7 +953,8 @@ fn handle_route_change(document: &Document) {
         if matches!(route, Route::Architecture) {
             container.set_attribute("style", "display: flex; position: fixed; inset: 0; background: rgba(5, 5, 8, 0.95); z-index: 5000; justify-content: center; align-items: center;").ok();
             if let Some(btn) = back_button.as_ref() {
-                btn.set_attribute("style", "display: flex; z-index: 5001;").ok();
+                btn.set_attribute("style", "display: flex; z-index: 5001;")
+                    .ok();
             }
         } else {
             container.set_attribute("style", "display: none;").ok();
@@ -967,7 +966,8 @@ fn handle_route_change(document: &Document) {
         if matches!(route, Route::About) {
             container.set_attribute("style", "display: flex;").ok();
             if let Some(btn) = back_button.as_ref() {
-                btn.set_attribute("style", "display: flex; z-index: 5001;").ok();
+                btn.set_attribute("style", "display: flex; z-index: 5001;")
+                    .ok();
             }
         } else {
             container.set_attribute("style", "display: none;").ok();
@@ -979,7 +979,8 @@ fn handle_route_change(document: &Document) {
         if matches!(route, Route::Profile) {
             container.set_attribute("style", "display: flex;").ok();
             if let Some(btn) = back_button.as_ref() {
-                btn.set_attribute("style", "display: flex; z-index: 5001;").ok();
+                btn.set_attribute("style", "display: flex; z-index: 5001;")
+                    .ok();
             }
         } else {
             container.set_attribute("style", "display: none;").ok();
@@ -1328,7 +1329,8 @@ fn render_case_study(document: &Document, project_id: &str) {
 
     // Generate content based on project
     let content = match project_id {
-        "autocrate" => r##"
+        "autocrate" => {
+            r##"
         <button id="case-study-close">&times;</button>
         <div class="case-study-header">
             <h1>AutoCrate Design Engine</h1>
@@ -1376,9 +1378,11 @@ fn render_case_study(document: &Document, project_id: &str) {
             <span class="case-study-tag">Parametric CAD</span>
             <span class="case-study-tag">MBD</span>
         </div>
-        "##,
+        "##
+        }
 
-        "surgical" => r##"
+        "surgical" => {
+            r##"
         <button id="case-study-close">&times;</button>
         <div class="case-study-header">
             <h1>Surgical Robot Registration</h1>
@@ -1431,9 +1435,11 @@ fn render_case_study(document: &Document, project_id: &str) {
             <span class="case-study-tag">Kuka Robot</span>
             <span class="case-study-tag">Beckhoff PLC</span>
         </div>
-        "##,
+        "##
+        }
 
-        "forensics" => r##"
+        "forensics" => {
+            r##"
         <button id="case-study-close">&times;</button>
         <div class="case-study-header">
             <h1>Multi-Modal Robotic Forensics</h1>
@@ -1501,7 +1507,8 @@ fn render_case_study(document: &Document, project_id: &str) {
             <span class="case-study-tag">End Effector Design</span>
             <span class="case-study-tag">Meta</span>
         </div>
-        "##,
+        "##
+        }
 
         _ => return, // Unknown project
     };
@@ -1513,7 +1520,9 @@ fn render_case_study(document: &Document, project_id: &str) {
     if let Some(close_btn) = document.get_element_by_id("case-study-close") {
         let container_clone = container.clone();
         let closure = Closure::wrap(Box::new(move |_: web_sys::Event| {
-            container_clone.set_attribute("style", "display: none;").ok();
+            container_clone
+                .set_attribute("style", "display: none;")
+                .ok();
         }) as Box<dyn FnMut(_)>);
         close_btn
             .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
@@ -1526,7 +1535,9 @@ fn render_case_study(document: &Document, project_id: &str) {
     let closure = Closure::wrap(Box::new(move |e: web_sys::Event| {
         if let Some(target) = e.target() {
             if target == container_clone.clone().into() {
-                container_clone.set_attribute("style", "display: none;").ok();
+                container_clone
+                    .set_attribute("style", "display: none;")
+                    .ok();
             }
         }
     }) as Box<dyn FnMut(_)>);
@@ -1933,7 +1944,9 @@ fn main() {
 
         // === FOUNTAIN OF LIFE ===
         // Spawn new boids from the circle edge periodically (mode-tuned)
-        if s.arena.alive_count < last_tuning.max_boids && frame_count % spawn_interval_frames == 0 {
+        if s.arena.alive_count < last_tuning.max_boids
+            && frame_count.is_multiple_of(spawn_interval_frames)
+        {
             if let Some(chakravyu) = s.chakravyu {
                 use rand::Rng;
                 let mut rng = rand::thread_rng();

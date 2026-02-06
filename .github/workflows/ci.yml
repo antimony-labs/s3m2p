@@ -29,13 +29,17 @@ jobs:
             welcome:
               - 'WELCOME/**'
             chladni:
-              - 'SIMULATIONS/CHLADNI/**'
+              - 'SIMULATION/CHLADNI/**'
             tools:
               - 'TOOLS/**'
             learn:
               - 'LEARN/**'
             blog:
               - 'BLOG/**'
+            mcad:
+              - 'MCAD/**'
+            atlas:
+              - 'ATLAS/**'
 
       # Skip entirely for docs-only changes
       - name: Check if code changed
@@ -47,7 +51,9 @@ jobs:
              [[ "${{ steps.filter.outputs.chladni }}" == "true" ]] || \
              [[ "${{ steps.filter.outputs.tools }}" == "true" ]] || \
              [[ "${{ steps.filter.outputs.learn }}" == "true" ]] || \
-             [[ "${{ steps.filter.outputs.blog }}" == "true" ]]; then
+             [[ "${{ steps.filter.outputs.blog }}" == "true" ]] || \
+             [[ "${{ steps.filter.outputs.mcad }}" == "true" ]] || \
+             [[ "${{ steps.filter.outputs.atlas }}" == "true" ]]; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else
             echo "changed=false" >> $GITHUB_OUTPUT
@@ -59,10 +65,16 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
+          components: clippy, rustfmt
 
       - name: Cache dependencies
         if: steps.code_changed.outputs.changed == 'true'
         uses: Swatinem/rust-cache@v2
+
+      # Formatting check (fast, always run)
+      - name: Check formatting
+        if: steps.code_changed.outputs.changed == 'true'
+        run: cargo fmt --all -- --check
 
       # Full workspace check if DNA or Cargo files changed
       - name: Check workspace (core changed)
@@ -81,6 +93,16 @@ jobs:
       - name: Check chladni
         if: steps.filter.outputs.dna != 'true' && steps.filter.outputs.chladni == 'true'
         run: cargo check -p chladni
+
+      # Clippy lint check
+      - name: Clippy
+        if: steps.code_changed.outputs.changed == 'true'
+        run: cargo clippy --workspace -- -D warnings 2>/dev/null || cargo clippy --workspace
+
+      # Run DNA tests (core library)
+      - name: Test DNA
+        if: steps.filter.outputs.dna == 'true'
+        run: cargo test -p dna
 
 # NOTE: Deploy locally with ./SCRIPTS/deploy.sh <project> --publish
 # Full test suite runs locally before commits

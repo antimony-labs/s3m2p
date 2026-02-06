@@ -147,7 +147,8 @@ impl LessonRenderer {
                     <button id="step-btn" class="demo-btn">⏭ Step</button>
                 </div>
             </div>
-            "#.to_string()
+            "#
+            .to_string()
         } else {
             r#"<p class="canvas-hint">Coming soon: interactive visualization</p>"#.to_string()
         };

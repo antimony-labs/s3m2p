@@ -30,8 +30,8 @@ pub struct Camera {
 impl Default for Camera {
     fn default() -> Self {
         Self {
-            rotation_x: 0.5,    // Initial pitch (30 degrees)
-            rotation_y: 0.75,   // Initial yaw (45 degrees)
+            rotation_x: 0.5,  // Initial pitch (30 degrees)
+            rotation_y: 0.75, // Initial yaw (45 degrees)
             distance: 200.0,
             pan_offset: Vec3::ZERO,
             fov: 45.0_f32.to_radians(),
@@ -473,6 +473,6 @@ mod tests {
         // Top view: camera should be on positive Y axis
         assert!(pos.y > 1.0); // Significant Y
         assert!(pos.x.abs() < 1e-4); // Near zero X
-        // Z might have slight value due to trigonometry
+                                     // Z might have slight value due to trigonometry
     }
 }

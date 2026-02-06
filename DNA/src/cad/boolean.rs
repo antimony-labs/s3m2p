@@ -5,9 +5,11 @@
 //! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
-use super::geometry::{Point3, Vector3, BoundingBox3};
-use super::topology::{Solid, Vertex, Edge, Face, Shell, Loop, EdgeId, VertexId, FaceId, SurfaceType, CurveType};
+use super::geometry::{BoundingBox3, Point3, Vector3};
 use super::intersect::Classification;
+use super::topology::{
+    CurveType, Edge, EdgeId, Face, FaceId, Loop, Shell, Solid, SurfaceType, Vertex, VertexId,
+};
 
 /// Boolean operation type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -102,7 +104,11 @@ pub fn intersection(a: &Solid, b: &Solid) -> Result<Solid, BooleanError> {
     let width = max_x - min_x;
     let height = max_y - min_y;
     let depth = max_z - min_z;
-    let center = Point3::new((min_x + max_x) / 2.0, (min_y + max_y) / 2.0, (min_z + max_z) / 2.0);
+    let center = Point3::new(
+        (min_x + max_x) / 2.0,
+        (min_y + max_y) / 2.0,
+        (min_z + max_z) / 2.0,
+    );
 
     Ok(make_box_at(center, width, height, depth))
 }
@@ -126,7 +132,11 @@ fn merge_solids(a: &Solid, b: &Solid) -> Solid {
         new_edge.start.0 += offset_b;
         new_edge.end.0 += offset_b;
         // Update face references
-        new_edge.faces = edge.faces.iter().map(|&fid| FaceId(fid.0 + a.faces.len() as u32)).collect();
+        new_edge.faces = edge
+            .faces
+            .iter()
+            .map(|&fid| FaceId(fid.0 + a.faces.len() as u32))
+            .collect();
         result.edges.push(new_edge);
     }
 
@@ -136,11 +146,16 @@ fn merge_solids(a: &Solid, b: &Solid) -> Solid {
     // Copy faces from B with offset edge indices
     for face in &b.faces {
         let mut new_face = face.clone();
-        new_face.outer_loop.edges = face.outer_loop.edges.iter()
+        new_face.outer_loop.edges = face
+            .outer_loop
+            .edges
+            .iter()
             .map(|&eid| EdgeId(eid.0 + edge_offset))
             .collect();
         for inner in &mut new_face.inner_loops {
-            inner.edges = inner.edges.iter()
+            inner.edges = inner
+                .edges
+                .iter()
                 .map(|&eid| EdgeId(eid.0 + edge_offset))
                 .collect();
         }

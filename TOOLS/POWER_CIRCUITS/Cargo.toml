@@ -32,7 +32,3 @@ web-sys = { version = "0.3", features = [
     "MouseEvent",
     "WheelEvent",
 ] }
-
-[profile.release]
-opt-level = "z"
-lto = true

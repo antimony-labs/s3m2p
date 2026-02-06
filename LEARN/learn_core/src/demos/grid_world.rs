@@ -225,10 +225,18 @@ impl GridWorldDemo {
 
         // Maze walls
         let walls = [
-            (1, 0), (1, 1), (1, 2),
-            (3, 2), (3, 3), (3, 4), (3, 5),
-            (1, 4), (1, 5),
-            (5, 1), (5, 2), (5, 3),
+            (1, 0),
+            (1, 1),
+            (1, 2),
+            (3, 2),
+            (3, 3),
+            (3, 4),
+            (3, 5),
+            (1, 4),
+            (1, 5),
+            (5, 1),
+            (5, 2),
+            (5, 3),
         ];
         for (y, x) in walls {
             if y < self.height && x < self.width {
@@ -302,9 +310,11 @@ impl GridWorldDemo {
 
     /// Check if position is valid
     fn is_valid(&self, x: i32, y: i32) -> bool {
-        x >= 0 && y >= 0 &&
-        (x as usize) < self.width && (y as usize) < self.height &&
-        self.grid[y as usize][x as usize] != Cell::Wall
+        x >= 0
+            && y >= 0
+            && (x as usize) < self.width
+            && (y as usize) < self.height
+            && self.grid[y as usize][x as usize] != Cell::Wall
     }
 
     /// Take action and return (new_x, new_y, reward, done)
@@ -345,7 +355,10 @@ impl GridWorldDemo {
 
     /// Get value (max Q) for a state
     pub fn state_value(&self, x: usize, y: usize) -> f32 {
-        self.q_table[y][x].iter().cloned().fold(f32::NEG_INFINITY, f32::max)
+        self.q_table[y][x]
+            .iter()
+            .cloned()
+            .fold(f32::NEG_INFINITY, f32::max)
     }
 
     /// Select action with epsilon-greedy
@@ -374,7 +387,8 @@ impl GridWorldDemo {
             self.state_value(new_x, new_y)
         };
 
-        let new_q = current_q + self.learning_rate * (reward + self.discount * next_max_q - current_q);
+        let new_q =
+            current_q + self.learning_rate * (reward + self.discount * next_max_q - current_q);
         self.q_table[y][x][action as usize] = new_q;
 
         self.total_reward += reward;
@@ -412,33 +426,41 @@ impl GridWorldDemo {
 
         let range = (max_v - min_v).max(0.01);
 
-        (0..self.height).map(|y| {
-            (0..self.width).map(|x| {
-                if self.grid[y][x] == Cell::Wall {
-                    0.5
-                } else {
-                    let v = self.state_value(x, y);
-                    if v.is_finite() {
-                        (v - min_v) / range
-                    } else {
-                        0.5
-                    }
-                }
-            }).collect()
-        }).collect()
+        (0..self.height)
+            .map(|y| {
+                (0..self.width)
+                    .map(|x| {
+                        if self.grid[y][x] == Cell::Wall {
+                            0.5
+                        } else {
+                            let v = self.state_value(x, y);
+                            if v.is_finite() {
+                                (v - min_v) / range
+                            } else {
+                                0.5
+                            }
+                        }
+                    })
+                    .collect()
+            })
+            .collect()
     }
 
     /// Get policy for each cell
     pub fn policy(&self) -> Vec<Vec<Option<Action>>> {
-        (0..self.height).map(|y| {
-            (0..self.width).map(|x| {
-                if self.grid[y][x] == Cell::Wall || self.grid[y][x].is_terminal() {
-                    None
-                } else {
-                    Some(self.best_action(x, y))
-                }
-            }).collect()
-        }).collect()
+        (0..self.height)
+            .map(|y| {
+                (0..self.width)
+                    .map(|x| {
+                        if self.grid[y][x] == Cell::Wall || self.grid[y][x].is_terminal() {
+                            None
+                        } else {
+                            Some(self.best_action(x, y))
+                        }
+                    })
+                    .collect()
+            })
+            .collect()
     }
 
     /// Average recent reward
@@ -559,7 +581,11 @@ mod tests {
         }
 
         // Should have completed some episodes
-        assert!(demo.episode > 100, "Should complete episodes: {}", demo.episode);
+        assert!(
+            demo.episode > 100,
+            "Should complete episodes: {}",
+            demo.episode
+        );
 
         // Average reward should be positive (reaching goal)
         let avg = demo.avg_reward();
@@ -570,7 +596,12 @@ mod tests {
     fn test_grid_generation() {
         let mut demo = GridWorldDemo::default();
 
-        for layout in [GridLayout::Simple, GridLayout::Maze, GridLayout::CliffWalk, GridLayout::FourRooms] {
+        for layout in [
+            GridLayout::Simple,
+            GridLayout::Maze,
+            GridLayout::CliffWalk,
+            GridLayout::FourRooms,
+        ] {
             demo.layout = layout;
             demo.generate_grid();
 
@@ -580,7 +611,12 @@ mod tests {
             assert_eq!(demo.grid[0].len(), demo.width);
 
             // Should have exactly one goal
-            let goals: usize = demo.grid.iter().flatten().filter(|&&c| c == Cell::Goal).count();
+            let goals: usize = demo
+                .grid
+                .iter()
+                .flatten()
+                .filter(|&&c| c == Cell::Goal)
+                .count();
             assert_eq!(goals, 1, "Layout {:?} should have exactly one goal", layout);
         }
     }

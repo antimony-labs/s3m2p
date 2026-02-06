@@ -17,7 +17,7 @@ use learn_web::{AnimationLoop, Canvas};
 
 // Thread-local state for the currently running demo
 thread_local! {
-    static CURRENT_DEMO: RefCell<Option<LinearRegressionDemoRunner>> = RefCell::new(None);
+    static CURRENT_DEMO: RefCell<Option<LinearRegressionDemoRunner>> = const { RefCell::new(None) };
 }
 
 /// Linear Regression demo runner
@@ -94,7 +94,8 @@ impl LinearRegressionDemoRunner {
                     }
                 }
             }) as Box<dyn FnMut(_)>);
-            lr_slider.add_event_listener_with_callback("input", closure.as_ref().unchecked_ref())?;
+            lr_slider
+                .add_event_listener_with_callback("input", closure.as_ref().unchecked_ref())?;
             closure.forget();
         }
 
@@ -112,7 +113,8 @@ impl LinearRegressionDemoRunner {
                     }
                 }
             }) as Box<dyn FnMut(_)>);
-            noise_slider.add_event_listener_with_callback("input", closure.as_ref().unchecked_ref())?;
+            noise_slider
+                .add_event_listener_with_callback("input", closure.as_ref().unchecked_ref())?;
             closure.forget();
         }
 
@@ -148,7 +150,11 @@ impl LinearRegressionDemoRunner {
                             .and_then(|w| w.document())
                             .and_then(|d| d.get_element_by_id("pause-btn"))
                         {
-                            btn.set_text_content(Some(if runner.paused { "▶ Play" } else { "⏸ Pause" }));
+                            btn.set_text_content(Some(if runner.paused {
+                                "▶ Play"
+                            } else {
+                                "⏸ Pause"
+                            }));
                         }
                     }
                 });
@@ -246,7 +252,10 @@ impl LinearRegressionDemoRunner {
         let (target_w, target_b) = self.demo.target();
         ctx.set_stroke_style(&JsValue::from_str("rgba(0, 255, 100, 0.4)"));
         ctx.set_line_width(2.0);
-        let _ = ctx.set_line_dash(&js_sys::Array::of2(&JsValue::from(5.0), &JsValue::from(5.0)));
+        let _ = ctx.set_line_dash(&js_sys::Array::of2(
+            &JsValue::from(5.0),
+            &JsValue::from(5.0),
+        ));
         ctx.begin_path();
         ctx.move_to(to_screen_x(-1.5), to_screen_y(target_w * -1.5 + target_b));
         ctx.line_to(to_screen_x(1.5), to_screen_y(target_w * 1.5 + target_b));
@@ -257,13 +266,20 @@ impl LinearRegressionDemoRunner {
         ctx.set_stroke_style(&JsValue::from_str("#64ffda"));
         ctx.set_line_width(2.5);
         ctx.begin_path();
-        ctx.move_to(to_screen_x(-1.5), to_screen_y(self.demo.w * -1.5 + self.demo.b));
-        ctx.line_to(to_screen_x(1.5), to_screen_y(self.demo.w * 1.5 + self.demo.b));
+        ctx.move_to(
+            to_screen_x(-1.5),
+            to_screen_y(self.demo.w * -1.5 + self.demo.b),
+        );
+        ctx.line_to(
+            to_screen_x(1.5),
+            to_screen_y(self.demo.w * 1.5 + self.demo.b),
+        );
         ctx.stroke();
 
         // Draw data points
         for p in self.demo.points() {
-            self.canvas.fill_circle(to_screen_x(p.x), to_screen_y(p.y), 4.0, "#ff6b6b");
+            self.canvas
+                .fill_circle(to_screen_x(p.x), to_screen_y(p.y), 4.0, "#ff6b6b");
         }
 
         // Draw loss trace at bottom
@@ -292,7 +308,13 @@ impl LinearRegressionDemoRunner {
             ctx.stroke();
 
             // Loss label
-            self.canvas.text("Loss", margin, loss_y - 5.0, "#888", "12px 'Inter', sans-serif");
+            self.canvas.text(
+                "Loss",
+                margin,
+                loss_y - 5.0,
+                "#888",
+                "12px 'Inter', sans-serif",
+            );
         }
 
         // Draw stats
@@ -303,7 +325,10 @@ impl LinearRegressionDemoRunner {
         ctx.set_fill_style(&JsValue::from_str("#fff"));
         let _ = ctx.fill_text(&format!("Step: {}", step_count), margin, h - 10.0);
         let _ = ctx.fill_text(
-            &format!("w: {:.3}  b: {:.3}  Loss: {:.4}", self.demo.w, self.demo.b, loss),
+            &format!(
+                "w: {:.3}  b: {:.3}  Loss: {:.4}",
+                self.demo.w, self.demo.b, loss
+            ),
             margin + 100.0,
             h - 10.0,
         );

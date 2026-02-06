@@ -77,7 +77,7 @@ impl Default for TransientConfig {
             inductance: 22e-6,
             capacitance: 100e-6,
             load_resistance: 2.5,
-            duration: 500e-6, // 500us default
+            duration: 500e-6,  // 500us default
             output_step: 1e-6, // 1us output resolution
             steps_per_cycle: 100,
             initial_il: 0.0,
@@ -125,7 +125,10 @@ impl TransientResult {
         }
         let n = self.v_out.len().min(100);
         let last_samples: Vec<f64> = self.v_out.iter().rev().take(n).copied().collect();
-        let max = last_samples.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        let max = last_samples
+            .iter()
+            .copied()
+            .fold(f64::NEG_INFINITY, f64::max);
         let min = last_samples.iter().copied().fold(f64::INFINITY, f64::min);
         max - min
     }
@@ -137,7 +140,10 @@ impl TransientResult {
         }
         let n = self.i_l.len().min(100);
         let last_samples: Vec<f64> = self.i_l.iter().rev().take(n).copied().collect();
-        let max = last_samples.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        let max = last_samples
+            .iter()
+            .copied()
+            .fold(f64::NEG_INFINITY, f64::max);
         let min = last_samples.iter().copied().fold(f64::INFINITY, f64::min);
         max - min
     }
@@ -171,13 +177,7 @@ pub struct SimulationStats {
 ///
 /// Rearranging: (I - h·A)·x[n+1] = x[n] + h·B·u
 /// Therefore:   x[n+1] = (I - h·A)^(-1)·(x[n] + h·B·u)
-fn backward_euler_step(
-    x: [f64; 2],
-    u: f64,
-    a: &Matrix2x2,
-    b: &[f64; 2],
-    h: f64,
-) -> [f64; 2] {
+fn backward_euler_step(x: [f64; 2], u: f64, a: &Matrix2x2, b: &[f64; 2], h: f64) -> [f64; 2] {
     // (I - h·A)
     let i_minus_ha = Matrix2x2::new(
         1.0 - h * a.m[0][0],
@@ -201,13 +201,7 @@ fn backward_euler_step(
 
 /// Forward Euler step (simpler, less stable but faster)
 #[allow(dead_code)]
-fn forward_euler_step(
-    x: [f64; 2],
-    u: f64,
-    a: &Matrix2x2,
-    b: &[f64; 2],
-    h: f64,
-) -> [f64; 2] {
+fn forward_euler_step(x: [f64; 2], u: f64, a: &Matrix2x2, b: &[f64; 2], h: f64) -> [f64; 2] {
     // dx/dt = A·x + B·u
     let ax = a.mul_vec(x);
     let dxdt = [ax[0] + b[0] * u, ax[1] + b[1] * u];

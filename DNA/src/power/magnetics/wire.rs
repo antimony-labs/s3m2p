@@ -165,8 +165,7 @@ impl LitzWireSpec {
 
     /// Calculate AC resistance at frequency and temperature
     pub fn ac_resistance(&self, frequency: f64, temp_c: f64) -> f64 {
-        let dc_at_temp =
-            self.dc_resistance_per_m * (1.0 + COPPER_TEMP_COEFF * (temp_c - 20.0));
+        let dc_at_temp = self.dc_resistance_per_m * (1.0 + COPPER_TEMP_COEFF * (temp_c - 20.0));
         dc_at_temp * self.ac_resistance_factor(frequency)
     }
 
@@ -218,8 +217,7 @@ pub fn ac_resistance_factor_dowell(radius: f64, skin_depth: f64) -> f64 {
         let x4 = x2 * x2;
 
         // Polynomial approximation valid for 0.5 < x < 10
-        1.0 + x4 / 48.0 + x2.powi(2) / 3840.0 + x4 * x2 / 322560.0
-            - (x4 * x4) / 129024000.0
+        1.0 + x4 / 48.0 + x2.powi(2) / 3840.0 + x4 * x2 / 322560.0 - (x4 * x4) / 129024000.0
     } else {
         // High frequency - resistance approaches x/√2
         x / (2.0_f64).sqrt()
@@ -434,21 +432,21 @@ impl FoilSpec {
 pub fn common_litz_wires() -> Vec<LitzWireSpec> {
     vec![
         // Low power / high frequency
-        LitzWireSpec::new(30, 38),   // 30 strands of AWG 38
-        LitzWireSpec::new(50, 40),   // 50 strands of AWG 40
-        LitzWireSpec::new(100, 40),  // 100 strands of AWG 40
+        LitzWireSpec::new(30, 38),  // 30 strands of AWG 38
+        LitzWireSpec::new(50, 40),  // 50 strands of AWG 40
+        LitzWireSpec::new(100, 40), // 100 strands of AWG 40
         // Medium power
-        LitzWireSpec::new(60, 36),   // 60 strands of AWG 36
-        LitzWireSpec::new(100, 36),  // 100 strands of AWG 36
-        LitzWireSpec::new(175, 38),  // 175 strands of AWG 38
+        LitzWireSpec::new(60, 36),  // 60 strands of AWG 36
+        LitzWireSpec::new(100, 36), // 100 strands of AWG 36
+        LitzWireSpec::new(175, 38), // 175 strands of AWG 38
         // Higher power
-        LitzWireSpec::new(100, 32),  // 100 strands of AWG 32
-        LitzWireSpec::new(200, 36),  // 200 strands of AWG 36
-        LitzWireSpec::new(400, 38),  // 400 strands of AWG 38
+        LitzWireSpec::new(100, 32), // 100 strands of AWG 32
+        LitzWireSpec::new(200, 36), // 200 strands of AWG 36
+        LitzWireSpec::new(400, 38), // 400 strands of AWG 38
         // High power
-        LitzWireSpec::new(300, 32),  // 300 strands of AWG 32
-        LitzWireSpec::new(500, 36),  // 500 strands of AWG 36
-        LitzWireSpec::new(800, 38),  // 800 strands of AWG 38
+        LitzWireSpec::new(300, 32), // 300 strands of AWG 32
+        LitzWireSpec::new(500, 36), // 500 strands of AWG 36
+        LitzWireSpec::new(800, 38), // 800 strands of AWG 38
     ]
 }
 
@@ -557,7 +555,11 @@ mod tests {
     fn test_recommended_litz_strand() {
         // At 100kHz, skin depth ≈ 0.21mm, so ideal strand ≈ 0.42mm ≈ AWG 26
         let awg_100k = recommended_litz_strand_awg(100e3);
-        assert!(awg_100k >= 24 && awg_100k <= 30, "Expected AWG 24-30 at 100kHz, got {}", awg_100k);
+        assert!(
+            awg_100k >= 24 && awg_100k <= 30,
+            "Expected AWG 24-30 at 100kHz, got {}",
+            awg_100k
+        );
 
         // At 1MHz, skin depth ≈ 0.066mm, so ideal strand ≈ 0.13mm ≈ AWG 32
         let awg_1m = recommended_litz_strand_awg(1e6);

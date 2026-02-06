@@ -6,9 +6,9 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 use dna::cad::{
-    Point2, Point3, Vector3, Sketch, SketchPlane, SketchEntity, SketchEntityId,
-    SketchPointId, Constraint, GeometricConstraint, DimensionalConstraint,
-    Solid, make_box, make_cylinder, make_sphere, TOLERANCE,
+    make_box, make_cylinder, make_sphere, Constraint, DimensionalConstraint, GeometricConstraint,
+    Point2, Point3, Sketch, SketchEntity, SketchEntityId, SketchPlane, SketchPointId, Solid,
+    Vector3, TOLERANCE,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -224,33 +224,30 @@ impl SketchFixture {
 
     /// Add horizontal constraint to first line entity
     pub fn with_horizontal(mut self) -> Self {
-        self.constraints.push(Constraint::Geometric(
-            GeometricConstraint::Horizontal {
+        self.constraints
+            .push(Constraint::Geometric(GeometricConstraint::Horizontal {
                 line: SketchEntityId(0),
-            },
-        ));
+            }));
         self
     }
 
     /// Add vertical constraint to first line entity
     pub fn with_vertical(mut self) -> Self {
-        self.constraints.push(Constraint::Geometric(
-            GeometricConstraint::Vertical {
+        self.constraints
+            .push(Constraint::Geometric(GeometricConstraint::Vertical {
                 line: SketchEntityId(0),
-            },
-        ));
+            }));
         self
     }
 
     /// Add distance constraint between first two points
     pub fn with_distance(mut self, value: f32) -> Self {
-        self.constraints.push(Constraint::Dimensional(
-            DimensionalConstraint::Distance {
+        self.constraints
+            .push(Constraint::Dimensional(DimensionalConstraint::Distance {
                 p1: SketchPointId(0),
                 p2: SketchPointId(1),
                 value,
-            },
-        ));
+            }));
         self
     }
 
@@ -324,8 +321,12 @@ pub fn assert_point3_eq(actual: Point3, expected: Point3) {
     assert!(
         actual.approx_eq(expected, TOLERANCE),
         "Point3 mismatch:\n  actual:   ({:.6}, {:.6}, {:.6})\n  expected: ({:.6}, {:.6}, {:.6})",
-        actual.x, actual.y, actual.z,
-        expected.x, expected.y, expected.z
+        actual.x,
+        actual.y,
+        actual.z,
+        expected.x,
+        expected.y,
+        expected.z
     );
 }
 
@@ -370,7 +371,9 @@ pub fn assert_float_eq(actual: f32, expected: f32) {
     assert!(
         (actual - expected).abs() < TOLERANCE,
         "Float mismatch:\n  actual:   {:.6}\n  expected: {:.6}\n  diff:     {:.6}",
-        actual, expected, (actual - expected).abs()
+        actual,
+        expected,
+        (actual - expected).abs()
     );
 }
 
@@ -379,17 +382,16 @@ pub fn assert_float_near(actual: f32, expected: f32, tolerance: f32) {
     assert!(
         (actual - expected).abs() < tolerance,
         "Float mismatch (tol={}):\n  actual:   {:.6}\n  expected: {:.6}\n  diff:     {:.6}",
-        tolerance, actual, expected, (actual - expected).abs()
+        tolerance,
+        actual,
+        expected,
+        (actual - expected).abs()
     );
 }
 
 /// Assert a float is finite (not NaN or Infinity)
 pub fn assert_finite(value: f32, name: &str) {
-    assert!(
-        value.is_finite(),
-        "{} is not finite: {}",
-        name, value
-    );
+    assert!(value.is_finite(), "{} is not finite: {}", name, value);
 }
 
 /// Assert vector is approximately unit length
@@ -398,7 +400,10 @@ pub fn assert_unit_vector(v: Vector3) {
     assert!(
         (len - 1.0).abs() < TOLERANCE,
         "Vector not unit length:\n  vector: ({:.6}, {:.6}, {:.6})\n  length: {:.6}",
-        v.x, v.y, v.z, len
+        v.x,
+        v.y,
+        v.z,
+        len
     );
 }
 
@@ -420,18 +425,25 @@ pub fn assert_constraint_satisfied(sketch: &Sketch, constraint: &Constraint, tol
     assert!(
         error < tolerance,
         "Constraint not satisfied:\n  error: {:.6}\n  tolerance: {:.6}",
-        error, tolerance
+        error,
+        tolerance
     );
 }
 
 /// Assert all constraints are satisfied
-pub fn assert_all_constraints_satisfied(sketch: &Sketch, constraints: &[Constraint], tolerance: f32) {
+pub fn assert_all_constraints_satisfied(
+    sketch: &Sketch,
+    constraints: &[Constraint],
+    tolerance: f32,
+) {
     for (i, constraint) in constraints.iter().enumerate() {
         let error = constraint.evaluate(sketch);
         assert!(
             error < tolerance,
             "Constraint {} not satisfied:\n  error: {:.6}\n  tolerance: {:.6}",
-            i, error, tolerance
+            i,
+            error,
+            tolerance
         );
     }
 }
@@ -442,12 +454,14 @@ pub fn assert_sketch_finite(sketch: &Sketch) {
         assert!(
             point.position.x.is_finite(),
             "Point {} x is not finite: {}",
-            i, point.position.x
+            i,
+            point.position.x
         );
         assert!(
             point.position.y.is_finite(),
             "Point {} y is not finite: {}",
-            i, point.position.y
+            i,
+            point.position.y
         );
     }
 }
@@ -480,12 +494,10 @@ mod tests {
 
     #[test]
     fn test_sketch_fixture_chaining() {
-        let (sketch, constraints) = SketchFixture::two_points(
-            Point2::new(0.0, 0.0),
-            Point2::new(10.0, 5.0),
-        )
-        .with_distance(15.0)
-        .build();
+        let (sketch, constraints) =
+            SketchFixture::two_points(Point2::new(0.0, 0.0), Point2::new(10.0, 5.0))
+                .with_distance(15.0)
+                .build();
 
         assert_eq!(sketch.points.len(), 2);
         assert_eq!(constraints.len(), 1);

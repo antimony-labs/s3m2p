@@ -80,12 +80,12 @@ impl Default for GraphSlamDemo {
             nodes: Vec::new(),
             edges: Vec::new(),
             true_path: Vec::new(),
-            odometry_noise: 0.005,    // BEST: minimum noise
-            loop_threshold: 0.12,     // Distance to detect loop closure
+            odometry_noise: 0.005, // BEST: minimum noise
+            loop_threshold: 0.12,  // Distance to detect loop closure
             time: 0.0,
             rng: Rng::new(42),
             frame_count: 0,
-            keyframe_interval: 15,    // Add node every N frames
+            keyframe_interval: 15, // Add node every N frames
             is_optimizing: false,
             optimization_iterations: 0,
             last_loop_closure: None,
@@ -125,7 +125,7 @@ impl GraphSlamDemo {
         }
 
         // Add keyframe nodes periodically
-        if self.frame_count % self.keyframe_interval == 0 {
+        if self.frame_count.is_multiple_of(self.keyframe_interval) {
             self.add_node(dt);
         }
     }
@@ -141,14 +141,14 @@ impl GraphSlamDemo {
         // Calculate noisy pose based on accumulated odometry
         let noisy_pos = if node_idx == 0 {
             // First node: start at true position (with small noise)
-            Vec2::new(
-                self.true_pos.x + noise_x,
-                self.true_pos.y + noise_y,
-            )
+            Vec2::new(self.true_pos.x + noise_x, self.true_pos.y + noise_y)
         } else {
             // Subsequent nodes: add from previous with drift
             let prev_pos = self.nodes[node_idx - 1].pos;
-            let true_path_idx = self.true_path.len().saturating_sub(self.keyframe_interval as usize + 1);
+            let true_path_idx = self
+                .true_path
+                .len()
+                .saturating_sub(self.keyframe_interval as usize + 1);
             let old_true_pos = self.true_path[true_path_idx];
             let true_dx = self.true_pos.x - old_true_pos.x;
             let true_dy = self.true_pos.y - old_true_pos.y;
@@ -161,10 +161,7 @@ impl GraphSlamDemo {
 
         // Add the node
         let new_node = PoseNode {
-            pos: Vec2::new(
-                noisy_pos.x.clamp(0.05, 0.95),
-                noisy_pos.y.clamp(0.05, 0.95),
-            ),
+            pos: Vec2::new(noisy_pos.x.clamp(0.05, 0.95), noisy_pos.y.clamp(0.05, 0.95)),
             theta: self.true_theta + theta_noise,
             is_keyframe: true,
         };
@@ -322,9 +319,11 @@ impl GraphSlamDemo {
         }
 
         if let Some(i) = best_idx {
-            if best_dist < 0.3 { // More lenient for manual
+            if best_dist < 0.3 {
+                // More lenient for manual
                 let true_current_idx = self.true_path.len() - 1;
-                let true_other_idx = (i as f32 / self.nodes.len() as f32 * self.true_path.len() as f32) as usize;
+                let true_other_idx =
+                    (i as f32 / self.nodes.len() as f32 * self.true_path.len() as f32) as usize;
 
                 if true_other_idx < self.true_path.len() {
                     let true_current = self.true_path[true_current_idx];
@@ -431,7 +430,7 @@ impl Demo for GraphSlamDemo {
                 min: 0.005,
                 max: 0.1,
                 step: 0.005,
-                default: 0.005,   // BEST: minimum noise
+                default: 0.005, // BEST: minimum noise
             },
             ParamMeta {
                 name: "loop_threshold",
@@ -439,7 +438,7 @@ impl Demo for GraphSlamDemo {
                 min: 0.05,
                 max: 0.3,
                 step: 0.01,
-                default: 0.12,    // Reasonable detection distance
+                default: 0.12, // Reasonable detection distance
             },
         ]
     }

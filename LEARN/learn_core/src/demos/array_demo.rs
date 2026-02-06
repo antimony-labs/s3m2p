@@ -5,17 +5,31 @@
 //! LAYER: LEARN -> learn_core -> demos
 //! ===============================================================================
 
+use super::pseudocode::{array as pc_array, Pseudocode};
 use crate::{Demo, ParamMeta, Rng};
-use super::pseudocode::{Pseudocode, array as pc_array};
 
 /// Animation state for array operations
 #[derive(Clone, Debug, PartialEq)]
 pub enum ArrayAnimation {
     Idle,
-    Accessing { index: usize, progress: f32 },
-    Inserting { index: usize, value: i32, progress: f32 },
-    Deleting { index: usize, progress: f32 },
-    Shifting { start: usize, direction: i32, progress: f32 },
+    Accessing {
+        index: usize,
+        progress: f32,
+    },
+    Inserting {
+        index: usize,
+        value: i32,
+        progress: f32,
+    },
+    Deleting {
+        index: usize,
+        progress: f32,
+    },
+    Shifting {
+        start: usize,
+        direction: i32,
+        progress: f32,
+    },
 }
 
 /// Array visualization demo
@@ -77,7 +91,10 @@ impl ArrayDemo {
     /// Start an access animation
     pub fn access(&mut self, index: usize) {
         if index < self.size {
-            self.animation = ArrayAnimation::Accessing { index, progress: 0.0 };
+            self.animation = ArrayAnimation::Accessing {
+                index,
+                progress: 0.0,
+            };
             self.message = format!("Accessing index {} - O(1)", index);
             self.pseudocode = Pseudocode::new("Access", pc_array::ACCESS);
             self.pseudocode.set_line(0);
@@ -101,7 +118,11 @@ impl ArrayDemo {
             self.pseudocode.set_line(2);
             return;
         }
-        self.animation = ArrayAnimation::Inserting { index, value, progress: 0.0 };
+        self.animation = ArrayAnimation::Inserting {
+            index,
+            value,
+            progress: 0.0,
+        };
         self.message = format!("Inserting {} at index {} - O(n-i) shifting", value, index);
         self.pseudocode.set_line(0);
     }
@@ -114,7 +135,10 @@ impl ArrayDemo {
             self.pseudocode.set_line(1);
             return;
         }
-        self.animation = ArrayAnimation::Deleting { index, progress: 0.0 };
+        self.animation = ArrayAnimation::Deleting {
+            index,
+            progress: 0.0,
+        };
         self.message = format!("Deleting index {} - O(n-i) shifting", index);
         self.pseudocode.set_line(0);
     }
@@ -131,7 +155,11 @@ impl ArrayDemo {
     /// Get the shift offset for an element during animation (for rendering)
     pub fn get_shift_offset(&self, index: usize) -> f32 {
         match &self.animation {
-            ArrayAnimation::Inserting { index: ins_idx, progress, .. } => {
+            ArrayAnimation::Inserting {
+                index: ins_idx,
+                progress,
+                ..
+            } => {
                 if index >= *ins_idx && index < self.size {
                     // Elements at and after insertion point shift right
                     *progress
@@ -139,7 +167,11 @@ impl ArrayDemo {
                     0.0
                 }
             }
-            ArrayAnimation::Deleting { index: del_idx, progress, .. } => {
+            ArrayAnimation::Deleting {
+                index: del_idx,
+                progress,
+                ..
+            } => {
                 if index > *del_idx && index < self.size {
                     // Elements after deletion point shift left
                     -*progress
@@ -154,7 +186,11 @@ impl ArrayDemo {
     /// Check if an element should be fading out (during delete)
     pub fn is_fading(&self, index: usize) -> Option<f32> {
         match &self.animation {
-            ArrayAnimation::Deleting { index: del_idx, progress, .. } => {
+            ArrayAnimation::Deleting {
+                index: del_idx,
+                progress,
+                ..
+            } => {
                 if index == *del_idx {
                     Some(1.0 - *progress)
                 } else {
@@ -168,7 +204,11 @@ impl ArrayDemo {
     /// Check if an element should be fading in (during insert)
     pub fn is_appearing(&self, index: usize) -> Option<(i32, f32)> {
         match &self.animation {
-            ArrayAnimation::Inserting { index: ins_idx, value, progress } => {
+            ArrayAnimation::Inserting {
+                index: ins_idx,
+                value,
+                progress,
+            } => {
                 if index == *ins_idx && *progress > 0.5 {
                     Some((*value, (*progress - 0.5) * 2.0))
                 } else {
@@ -209,7 +249,11 @@ impl Demo for ArrayDemo {
                     self.animation = ArrayAnimation::Idle;
                 }
             }
-            ArrayAnimation::Inserting { index, value, progress } => {
+            ArrayAnimation::Inserting {
+                index,
+                value,
+                progress,
+            } => {
                 *progress += speed;
                 // Update pseudocode line based on progress
                 if *progress < 0.2 {
@@ -298,16 +342,14 @@ impl Demo for ArrayDemo {
     }
 
     fn params() -> &'static [ParamMeta] {
-        &[
-            ParamMeta {
-                name: "speed",
-                label: "Animation Speed",
-                min: 0.25,
-                max: 4.0,
-                step: 0.25,
-                default: 1.0,
-            },
-        ]
+        &[ParamMeta {
+            name: "speed",
+            label: "Animation Speed",
+            min: 0.25,
+            max: 4.0,
+            step: 0.25,
+            default: 1.0,
+        }]
     }
 }
 
@@ -328,7 +370,10 @@ mod tests {
         let mut demo = ArrayDemo::default();
         demo.reset(42);
         demo.access(2);
-        assert!(matches!(demo.animation, ArrayAnimation::Accessing { index: 2, .. }));
+        assert!(matches!(
+            demo.animation,
+            ArrayAnimation::Accessing { index: 2, .. }
+        ));
     }
 
     #[test]

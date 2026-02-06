@@ -13,12 +13,12 @@ use std::f32::consts::PI;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SnapType {
     None,
-    Point,        // Existing endpoint
-    Midpoint,     // Midpoint of line/arc
-    Center,       // Center of circle/arc
-    Intersection, // Intersection of two entities
+    Point,         // Existing endpoint
+    Midpoint,      // Midpoint of line/arc
+    Center,        // Center of circle/arc
+    Intersection,  // Intersection of two entities
     Perpendicular, // Perpendicular to line
-    Grid,         // Grid snap
+    Grid,          // Grid snap
 }
 
 /// Result of snap position calculation
@@ -58,7 +58,11 @@ pub fn snap_to_grid(pos: Point2, grid_size: f32) -> Point2 {
 }
 
 /// Find the closest point to a position within tolerance
-pub fn find_point_at_position(sketch: &Sketch, pos: Point2, tolerance: f32) -> Option<SketchPointId> {
+pub fn find_point_at_position(
+    sketch: &Sketch,
+    pos: Point2,
+    tolerance: f32,
+) -> Option<SketchPointId> {
     let mut best_id: Option<SketchPointId> = None;
     let mut best_dist = tolerance;
 
@@ -74,7 +78,12 @@ pub fn find_point_at_position(sketch: &Sketch, pos: Point2, tolerance: f32) -> O
 }
 
 /// Snap to existing point if close enough, otherwise snap to grid
-pub fn snap_position(sketch: &Sketch, pos: Point2, point_tolerance: f32, grid_size: f32) -> (Point2, Option<SketchPointId>) {
+pub fn snap_position(
+    sketch: &Sketch,
+    pos: Point2,
+    point_tolerance: f32,
+    grid_size: f32,
+) -> (Point2, Option<SketchPointId>) {
     // Priority 1: Snap to existing points
     if let Some(point_id) = find_point_at_position(sketch, pos, point_tolerance) {
         if let Some(point) = sketch.point(point_id) {
@@ -88,7 +97,12 @@ pub fn snap_position(sketch: &Sketch, pos: Point2, point_tolerance: f32, grid_si
 
 /// Enhanced snap with multiple snap types
 /// Priority: Point > Midpoint > Center > Intersection > Perpendicular > Grid
-pub fn snap_position_enhanced(sketch: &Sketch, pos: Point2, tolerance: f32, grid_size: f32) -> SnapResult {
+pub fn snap_position_enhanced(
+    sketch: &Sketch,
+    pos: Point2,
+    tolerance: f32,
+    grid_size: f32,
+) -> SnapResult {
     let tol_sq = tolerance * tolerance;
 
     // Priority 1: Snap to existing points (endpoints)
@@ -167,7 +181,15 @@ pub fn entity_midpoint(sketch: &Sketch, entity: &SketchEntity) -> Option<(Point2
             let b = sketch.point(*end)?.position;
             Some((a.midpoint(&b), *id))
         }
-        SketchEntity::Arc { id, center, start, end, radius, ccw, .. } => {
+        SketchEntity::Arc {
+            id,
+            center,
+            start,
+            end,
+            radius,
+            ccw,
+            ..
+        } => {
             // Arc midpoint is the point on the arc at the middle angle
             let c = sketch.point(*center)?.position;
             let s = sketch.point(*start)?.position;
@@ -216,7 +238,7 @@ pub fn perpendicular_foot(p: Point2, a: Point2, b: Point2) -> Option<Point2> {
     let t = (ap.x * ab.x + ap.y * ab.y) / ab_len_sq;
 
     // Only return if foot is within segment (with small margin)
-    if t >= 0.05 && t <= 0.95 {
+    if (0.05..=0.95).contains(&t) {
         Some(Point2::new(a.x + t * ab.x, a.y + t * ab.y))
     } else {
         None
@@ -241,7 +263,7 @@ pub fn line_line_intersection(a1: Point2, a2: Point2, b1: Point2, b2: Point2) ->
     let u = (dx * d1.y - dy * d1.x) / cross;
 
     // Check if intersection is within both segments
-    if t >= 0.0 && t <= 1.0 && u >= 0.0 && u <= 1.0 {
+    if (0.0..=1.0).contains(&t) && (0.0..=1.0).contains(&u) {
         Some(Point2::new(a1.x + t * d1.x, a1.y + t * d1.y))
     } else {
         None
@@ -249,7 +271,11 @@ pub fn line_line_intersection(a1: Point2, a2: Point2, b1: Point2, b2: Point2) ->
 }
 
 /// Find the nearest intersection point to the given position
-pub fn find_nearest_intersection(sketch: &Sketch, pos: Point2, tolerance: f32) -> Option<SnapResult> {
+pub fn find_nearest_intersection(
+    sketch: &Sketch,
+    pos: Point2,
+    tolerance: f32,
+) -> Option<SnapResult> {
     let mut best: Option<(Point2, f32)> = None;
     let tol_sq = tolerance * tolerance;
 
@@ -271,12 +297,12 @@ pub fn find_nearest_intersection(sketch: &Sketch, pos: Point2, tolerance: f32) -
     // Test all pairs of lines
     for i in 0..lines.len() {
         for j in (i + 1)..lines.len() {
-            if let Some(intersection) = line_line_intersection(lines[i].0, lines[i].1, lines[j].0, lines[j].1) {
+            if let Some(intersection) =
+                line_line_intersection(lines[i].0, lines[i].1, lines[j].0, lines[j].1)
+            {
                 let dist_sq = intersection.distance_squared(&pos);
-                if dist_sq < tol_sq {
-                    if best.map_or(true, |(_, d)| dist_sq < d) {
-                        best = Some((intersection, dist_sq));
-                    }
+                if dist_sq < tol_sq && best.is_none_or(|(_, d)| dist_sq < d) {
+                    best = Some((intersection, dist_sq));
                 }
             }
         }

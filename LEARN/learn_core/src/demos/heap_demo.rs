@@ -5,8 +5,8 @@
 //! LAYER: LEARN -> learn_core -> demos
 //! ===============================================================================
 
+use super::pseudocode::{heap as pc_heap, Pseudocode};
 use crate::{Demo, ParamMeta, Rng, Vec2};
-use super::pseudocode::{Pseudocode, heap as pc_heap};
 
 /// Heap type
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -19,11 +19,27 @@ pub enum HeapType {
 #[derive(Clone, Debug, PartialEq)]
 pub enum HeapAnimation {
     Idle,
-    Inserting { value: i32, index: usize, progress: f32 },
-    BubblingUp { index: usize, progress: f32 },
-    Extracting { progress: f32 },
-    SinkingDown { index: usize, progress: f32 },
-    Swapping { i: usize, j: usize, progress: f32 },
+    Inserting {
+        value: i32,
+        index: usize,
+        progress: f32,
+    },
+    BubblingUp {
+        index: usize,
+        progress: f32,
+    },
+    Extracting {
+        progress: f32,
+    },
+    SinkingDown {
+        index: usize,
+        progress: f32,
+    },
+    Swapping {
+        i: usize,
+        j: usize,
+        progress: f32,
+    },
 }
 
 /// Heap visualization demo
@@ -186,7 +202,11 @@ impl HeapDemo {
         self.elements.push(value);
         self.update_positions();
 
-        self.animation = HeapAnimation::Inserting { value, index, progress: 0.0 };
+        self.animation = HeapAnimation::Inserting {
+            value,
+            index,
+            progress: 0.0,
+        };
         self.message = format!("Inserting {} - O(log n) bubble up", value);
     }
 
@@ -205,7 +225,10 @@ impl HeapDemo {
             HeapType::MaxHeap => "max",
             HeapType::MinHeap => "min",
         };
-        self.message = format!("Extracting {} ({}) - O(log n) sink down", self.elements[0], type_name);
+        self.message = format!(
+            "Extracting {} ({}) - O(log n) sink down",
+            self.elements[0], type_name
+        );
         self.animation = HeapAnimation::Extracting { progress: 0.0 };
     }
 
@@ -216,7 +239,11 @@ impl HeapDemo {
 
     /// Get parent index
     pub fn parent(index: usize) -> Option<usize> {
-        if index == 0 { None } else { Some((index - 1) / 2) }
+        if index == 0 {
+            None
+        } else {
+            Some((index - 1) / 2)
+        }
     }
 
     /// Get left child index
@@ -286,13 +313,24 @@ impl Demo for HeapDemo {
 
         self.animation = match anim {
             HeapAnimation::Idle => HeapAnimation::Idle,
-            HeapAnimation::Inserting { index, value, progress } => {
+            HeapAnimation::Inserting {
+                index,
+                value,
+                progress,
+            } => {
                 let new_progress = progress + speed;
                 if new_progress >= 1.0 {
                     self.highlight = vec![index];
-                    HeapAnimation::BubblingUp { index, progress: 0.0 }
+                    HeapAnimation::BubblingUp {
+                        index,
+                        progress: 0.0,
+                    }
                 } else {
-                    HeapAnimation::Inserting { index, value, progress: new_progress }
+                    HeapAnimation::Inserting {
+                        index,
+                        value,
+                        progress: new_progress,
+                    }
                 }
             }
             HeapAnimation::BubblingUp { index, progress } => {
@@ -303,7 +341,10 @@ impl Demo for HeapDemo {
                         if self.should_swap(index, parent) {
                             self.elements.swap(index, parent);
                             self.highlight = vec![parent];
-                            HeapAnimation::BubblingUp { index: parent, progress: 0.0 }
+                            HeapAnimation::BubblingUp {
+                                index: parent,
+                                progress: 0.0,
+                            }
                         } else {
                             self.message = format!("Inserted at position {}", index);
                             HeapAnimation::Idle
@@ -313,7 +354,10 @@ impl Demo for HeapDemo {
                         HeapAnimation::Idle
                     }
                 } else {
-                    HeapAnimation::BubblingUp { index, progress: new_progress }
+                    HeapAnimation::BubblingUp {
+                        index,
+                        progress: new_progress,
+                    }
                 }
             }
             HeapAnimation::Extracting { progress } => {
@@ -325,14 +369,19 @@ impl Demo for HeapDemo {
                         self.elements[0] = last;
                         self.highlight = vec![0];
                         self.update_positions();
-                        HeapAnimation::SinkingDown { index: 0, progress: 0.0 }
+                        HeapAnimation::SinkingDown {
+                            index: 0,
+                            progress: 0.0,
+                        }
                     } else {
                         self.message = format!("Extracted: {}", self.last_extracted.unwrap());
                         self.update_positions();
                         HeapAnimation::Idle
                     }
                 } else {
-                    HeapAnimation::Extracting { progress: new_progress }
+                    HeapAnimation::Extracting {
+                        progress: new_progress,
+                    }
                 }
             }
             HeapAnimation::SinkingDown { index, progress } => {
@@ -342,7 +391,10 @@ impl Demo for HeapDemo {
                         if self.should_sink(index, child) {
                             self.elements.swap(index, child);
                             self.highlight = vec![child];
-                            HeapAnimation::SinkingDown { index: child, progress: 0.0 }
+                            HeapAnimation::SinkingDown {
+                                index: child,
+                                progress: 0.0,
+                            }
                         } else {
                             if let Some(v) = self.last_extracted {
                                 self.message = format!("Extracted: {}", v);
@@ -356,7 +408,10 @@ impl Demo for HeapDemo {
                         HeapAnimation::Idle
                     }
                 } else {
-                    HeapAnimation::SinkingDown { index, progress: new_progress }
+                    HeapAnimation::SinkingDown {
+                        index,
+                        progress: new_progress,
+                    }
                 }
             }
             HeapAnimation::Swapping { i, j, progress } => {
@@ -364,7 +419,11 @@ impl Demo for HeapDemo {
                 if new_progress >= 1.0 {
                     HeapAnimation::Idle
                 } else {
-                    HeapAnimation::Swapping { i, j, progress: new_progress }
+                    HeapAnimation::Swapping {
+                        i,
+                        j,
+                        progress: new_progress,
+                    }
                 }
             }
         };
@@ -372,22 +431,23 @@ impl Demo for HeapDemo {
 
     fn set_param(&mut self, name: &str, value: f32) -> bool {
         match name {
-            "speed" => { self.speed = value; true }
+            "speed" => {
+                self.speed = value;
+                true
+            }
             _ => false,
         }
     }
 
     fn params() -> &'static [ParamMeta] {
-        &[
-            ParamMeta {
-                name: "speed",
-                label: "Animation Speed",
-                min: 0.25,
-                max: 4.0,
-                step: 0.25,
-                default: 1.0,
-            },
-        ]
+        &[ParamMeta {
+            name: "speed",
+            label: "Animation Speed",
+            min: 0.25,
+            max: 4.0,
+            step: 0.25,
+            default: 1.0,
+        }]
     }
 }
 

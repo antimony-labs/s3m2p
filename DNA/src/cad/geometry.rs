@@ -33,7 +33,7 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 use glam::{Mat4, Vec3};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Tolerance for geometric comparisons (1 micrometer)
 pub const TOLERANCE: f32 = 1e-6;

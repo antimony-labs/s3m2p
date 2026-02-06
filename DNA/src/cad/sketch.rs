@@ -7,7 +7,7 @@
 
 use super::geometry::{Point3, Vector3};
 use super::topology::{Face, Solid};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Coordinate frame for arbitrary sketch planes
 ///
@@ -76,10 +76,14 @@ impl SketchCoordinateFrame {
     /// Uses the face's planar surface normal and centroid as origin.
     pub fn from_face(face: &Face, solid: &Solid) -> Option<Self> {
         // Get first 3 vertices to compute face normal
-        let verts: Vec<Point3> = face.outer_loop.edges.iter()
+        let verts: Vec<Point3> = face
+            .outer_loop
+            .edges
+            .iter()
             .take(3)
             .filter_map(|&edge_id| {
-                solid.edge(edge_id)
+                solid
+                    .edge(edge_id)
                     .and_then(|e| solid.vertex(e.start))
                     .map(|v| v.point)
             })
@@ -105,9 +109,13 @@ impl SketchCoordinateFrame {
         let normal = Vector3::from_vec3(cross.normalize());
 
         // Compute centroid as origin
-        let all_verts: Vec<Point3> = face.outer_loop.edges.iter()
+        let all_verts: Vec<Point3> = face
+            .outer_loop
+            .edges
+            .iter()
             .filter_map(|&edge_id| {
-                solid.edge(edge_id)
+                solid
+                    .edge(edge_id)
                     .and_then(|e| solid.vertex(e.start))
                     .map(|v| v.point)
             })
@@ -188,9 +196,9 @@ impl PartialEq for SketchCoordinateFrame {
 /// Sketch plane orientation
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum SketchPlane {
-    XY,  // Normal: +Z
-    YZ,  // Normal: +X
-    XZ,  // Normal: +Y
+    XY, // Normal: +Z
+    YZ, // Normal: +X
+    XZ, // Normal: +Y
     /// Arbitrary plane defined by a coordinate frame
     Arbitrary(SketchCoordinateFrame),
 }
@@ -248,7 +256,7 @@ pub struct ConstraintId(pub u32);
 pub struct SketchPoint {
     pub id: SketchPointId,
     pub position: Point2,
-    pub is_construction: bool,  // Construction geometry (guides, not extruded)
+    pub is_construction: bool, // Construction geometry (guides, not extruded)
 }
 
 /// Sketch entity types
@@ -386,9 +394,9 @@ impl Sketch {
             .iter()
             .filter(|e| match e {
                 SketchEntity::Line { start, end, .. } => *start == point_id || *end == point_id,
-                SketchEntity::Arc { center, start, end, .. } => {
-                    *center == point_id || *start == point_id || *end == point_id
-                }
+                SketchEntity::Arc {
+                    center, start, end, ..
+                } => *center == point_id || *start == point_id || *end == point_id,
                 SketchEntity::Circle { center, .. } => *center == point_id,
                 SketchEntity::Point { point, .. } => *point == point_id,
             })
@@ -508,7 +516,8 @@ mod tests {
         let frame = SketchCoordinateFrame::from_origin_normal(
             Point3::new(0.0, 0.0, 0.0),
             Vector3::new(0.0, 0.0, 1.0),
-        ).unwrap();
+        )
+        .unwrap();
 
         // U and V should be perpendicular to normal and each other
         let u_dot_n = frame.u_axis.x * frame.normal.x
@@ -532,7 +541,8 @@ mod tests {
         let frame = SketchCoordinateFrame::from_origin_normal(
             Point3::new(10.0, 20.0, 30.0),
             Vector3::new(1.0, 1.0, 1.0), // Tilted normal
-        ).unwrap();
+        )
+        .unwrap();
 
         // Transform a 2D point to 3D and back
         let p2 = Point2::new(5.0, 7.0);
@@ -548,7 +558,8 @@ mod tests {
         let frame = SketchCoordinateFrame::from_origin_normal(
             Point3::new(0.0, 0.0, 0.0),
             Vector3::new(0.0, 0.0, 1.0),
-        ).unwrap();
+        )
+        .unwrap();
 
         let offset = frame.with_offset(10.0);
 
@@ -563,7 +574,8 @@ mod tests {
         let frame = SketchCoordinateFrame::from_origin_normal(
             Point3::new(5.0, 5.0, 5.0),
             Vector3::new(0.0, 1.0, 0.0), // Y normal (like XZ plane but shifted)
-        ).unwrap();
+        )
+        .unwrap();
 
         let sketch = Sketch::new(SketchPlane::Arbitrary(frame));
 

@@ -58,7 +58,7 @@ pub fn go_to_lesson(idx: usize) {
             // Scroll to top after rendering
             let closure = wasm_bindgen::closure::Closure::once_into_js(move || {
                 if let Some(window) = web_sys::window() {
-                    let _ = window.scroll_with_x_and_y(0.0, 0.0);
+                    window.scroll_with_x_and_y(0.0, 0.0);
                 }
             });
             let _ = web_sys::window()
@@ -75,7 +75,7 @@ pub fn go_to_lesson(idx: usize) {
 #[wasm_bindgen]
 pub fn go_home() {
     if let Some(window) = web_sys::window() {
-        let _ = window.scroll_to_with_x_and_y(0.0, 0.0);
+        window.scroll_to_with_x_and_y(0.0, 0.0);
     }
 
     if let Ok(renderer) = LessonRenderer::new("app") {

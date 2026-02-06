@@ -69,7 +69,7 @@ pub struct PerceptronDemo {
     // For MLP mode (hidden layer with 2-4 neurons)
     pub use_hidden_layer: bool,
     pub hidden_w: Vec<[f32; 3]>, // weights for hidden neurons [w1, w2, bias]
-    pub output_w: Vec<f32>,       // weights from hidden to output (including bias)
+    pub output_w: Vec<f32>,      // weights from hidden to output (including bias)
 
     // Training state
     learning_rate: f32,
@@ -194,20 +194,14 @@ impl PerceptronDemo {
 
             // Spiral 0
             self.points.push(DataPoint {
-                pos: Vec2::new(
-                    r * angle.cos() + noise,
-                    r * angle.sin() + noise,
-                ),
+                pos: Vec2::new(r * angle.cos() + noise, r * angle.sin() + noise),
                 label: false,
             });
 
             // Spiral 1 (offset by PI)
             let angle2 = angle + std::f32::consts::PI;
             self.points.push(DataPoint {
-                pos: Vec2::new(
-                    r * angle2.cos() + noise,
-                    r * angle2.sin() + noise,
-                ),
+                pos: Vec2::new(r * angle2.cos() + noise, r * angle2.sin() + noise),
                 label: true,
             });
         }
@@ -537,11 +531,7 @@ mod tests {
 
         // Single perceptron should NOT solve XOR well
         let acc = demo.compute_accuracy();
-        assert!(
-            acc < 0.75,
-            "Perceptron should fail XOR (acc={})",
-            acc
-        );
+        assert!(acc < 0.75, "Perceptron should fail XOR (acc={})", acc);
     }
 
     #[test]
@@ -558,10 +548,6 @@ mod tests {
 
         // MLP should solve XOR
         let acc = demo.compute_accuracy();
-        assert!(
-            acc > 0.85,
-            "MLP should solve XOR (acc={})",
-            acc
-        );
+        assert!(acc > 0.85, "MLP should solve XOR (acc={})", acc);
     }
 }

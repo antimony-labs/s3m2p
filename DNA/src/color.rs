@@ -357,11 +357,11 @@ impl ThemePalette {
     /// Dark mode palette (default)
     pub fn dark() -> Self {
         Self {
-            bg: Rgb::new(5, 5, 8),             // #050508
-            surface: Rgb::new(10, 10, 18),     // #0a0a12
-            text: Rgb::new(224, 224, 224),     // #e0e0e0
+            bg: Rgb::new(5, 5, 8),               // #050508
+            surface: Rgb::new(10, 10, 18),       // #0a0a12
+            text: Rgb::new(224, 224, 224),       // #e0e0e0
             text_muted: Rgb::new(136, 136, 136), // #888888
-            accent: Rgb::new(0, 255, 255),     // #00FFFF (cyan)
+            accent: Rgb::new(0, 255, 255),       // #00FFFF (cyan)
             border_alpha: 0.15,
         }
     }
@@ -369,11 +369,11 @@ impl ThemePalette {
     /// Light mode palette
     pub fn light() -> Self {
         Self {
-            bg: Rgb::new(245, 245, 247),       // #F5F5F7
-            surface: Rgb::new(255, 255, 255),  // #FFFFFF
-            text: Rgb::new(26, 26, 46),        // #1A1A2E
+            bg: Rgb::new(245, 245, 247),         // #F5F5F7
+            surface: Rgb::new(255, 255, 255),    // #FFFFFF
+            text: Rgb::new(26, 26, 46),          // #1A1A2E
             text_muted: Rgb::new(102, 102, 119), // #666677
-            accent: Rgb::new(0, 139, 139),     // #008B8B (dark cyan)
+            accent: Rgb::new(0, 139, 139),       // #008B8B (dark cyan)
             border_alpha: 0.2,
         }
     }

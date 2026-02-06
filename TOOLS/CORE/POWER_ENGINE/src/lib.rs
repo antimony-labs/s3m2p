@@ -73,7 +73,10 @@ impl From<&BuckDesign> for DesignReport {
 
         let summary = format!(
             "Buck converter: {:.1}V → {:.1}V @ {:.2}A, fsw = {:.0}kHz",
-            req.vin.nom_v, req.vout, req.iout_max, req.switching_freq_hz / 1000.0
+            req.vin.nom_v,
+            req.vout,
+            req.iout_max,
+            req.switching_freq_hz / 1000.0
         );
 
         let components = vec![
@@ -140,7 +143,10 @@ impl From<&BoostDesign> for DesignReport {
 
         let summary = format!(
             "Boost converter: {:.1}V → {:.1}V @ {:.2}A, fsw = {:.0}kHz",
-            req.vin.nom_v, req.vout, req.iout_max, req.switching_freq_hz / 1000.0
+            req.vin.nom_v,
+            req.vout,
+            req.iout_max,
+            req.switching_freq_hz / 1000.0
         );
 
         let components = vec![

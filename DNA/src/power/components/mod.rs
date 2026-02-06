@@ -5,11 +5,11 @@
 //! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
-pub mod mosfet;
 pub mod diode;
+pub mod mosfet;
 
-pub use mosfet::*;
 pub use diode::*;
+pub use mosfet::*;
 
 // ============================================================================
 // E-SERIES STANDARD VALUES
@@ -321,7 +321,10 @@ mod tests {
         // Exact value
         assert_eq!(nearest_e24(1000.0), 1000.0);
         // Close to 1.1k
-        assert!((nearest_e24(1050.0) - 1000.0).abs() < 1.0 || (nearest_e24(1050.0) - 1100.0).abs() < 1.0);
+        assert!(
+            (nearest_e24(1050.0) - 1000.0).abs() < 1.0
+                || (nearest_e24(1050.0) - 1100.0).abs() < 1.0
+        );
         // Verify decade scaling
         assert_eq!(nearest_e24(10000.0), 10000.0);
         assert_eq!(nearest_e24(100.0), 100.0);

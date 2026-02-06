@@ -21,14 +21,14 @@ pub fn run() {
 
     // Generate inputs (x) evenly spaced between -1 and 1
     let x: Array1<f64> = Array1::linspace(-1.0, 1.0, num_samples);
-    
+
     // Generate targets (y) with some noise
     let mut rng = rand::rng();
     let noise: Array1<f64> = Array1::from_shape_fn(num_samples, |_| {
         let n: f64 = rng.random_range(-0.5..0.5); // Increased noise for better visualization
         n
     });
-    
+
     let y = &x * true_w + true_b + &noise;
 
     // 2. Initialization
@@ -55,7 +55,7 @@ pub fn run() {
         // Backward pass (Gradients)
         // d_mse/d_w = 2 * mean(error * x)
         // d_mse/d_b = 2 * mean(error)
-        
+
         let dw = 2.0 * (&error * &x).mean().unwrap();
         let db = 2.0 * error.mean().unwrap();
 
@@ -71,7 +71,7 @@ pub fn run() {
     println!("--- Final Result ---");
     println!("True:      w = {:.4}, b = {:.4}", true_w, true_b);
     println!("Learned:   w = {:.4}, b = {:.4}", w, b);
-    
+
     // Visualization
     println!("Generating interactive visualization...");
     let filename = "lesson_01.json";
@@ -86,6 +86,6 @@ pub fn run() {
     } else {
         println!("Visualization saved to: {}", filename);
     }
-    
+
     println!("-----------------------");
 }

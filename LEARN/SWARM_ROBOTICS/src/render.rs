@@ -42,7 +42,8 @@ impl LessonRenderer {
 
         // Render lessons grouped by phase
         for phase in PHASES.iter() {
-            let phase_lessons: Vec<&Lesson> = lessons.iter().filter(|l| l.phase == *phase).collect();
+            let phase_lessons: Vec<&Lesson> =
+                lessons.iter().filter(|l| l.phase == *phase).collect();
 
             if phase_lessons.is_empty() {
                 continue;
@@ -157,7 +158,7 @@ impl LessonRenderer {
                         </div>
                     </div>
                     <div class="demo-hint">
-                        <strong>Try this:</strong> Turn off separation (set to 0) to see collisions! 
+                        <strong>Try this:</strong> Turn off separation (set to 0) to see collisions!
                         Turn off alignment to see chaos. All three together create beautiful flocking.
                     </div>
                 </div>
@@ -308,4 +309,3 @@ impl LessonRenderer {
         Ok(())
     }
 }
-

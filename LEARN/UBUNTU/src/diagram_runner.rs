@@ -5,10 +5,10 @@
 //! LAYER: LEARN → UBUNTU
 //! ═══════════════════════════════════════════════════════════════════════════════
 
-use wasm_bindgen::prelude::*;
-use learn_web::{Canvas, render_diagram};
-use learn_core::{FilesystemTree, PermissionMatrix};
 use learn_core::demos::FsPermissionsDemo;
+use learn_core::{FilesystemTree, PermissionMatrix};
+use learn_web::{render_diagram, Canvas};
+use wasm_bindgen::prelude::*;
 
 /// Start diagram visualization for a lesson
 pub fn start_diagram(lesson_id: usize, demo: &FsPermissionsDemo) -> Result<(), JsValue> {

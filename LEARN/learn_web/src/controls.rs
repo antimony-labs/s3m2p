@@ -98,7 +98,11 @@ where
                 let closure = Closure::wrap(Box::new(move |_: web_sys::Event| {
                     let window = web_sys::window().unwrap();
                     let document = window.document().unwrap();
-                    if let Some(el) = document.query_selector(&format!("[data-param='{}']", param_name_clone)).ok().flatten() {
+                    if let Some(el) = document
+                        .query_selector(&format!("[data-param='{}']", param_name_clone))
+                        .ok()
+                        .flatten()
+                    {
                         if let Ok(input) = el.dyn_into::<HtmlInputElement>() {
                             if let Ok(value) = input.value().parse::<f32>() {
                                 on_change_clone(&param_name_clone, value);
@@ -107,7 +111,8 @@ where
                     }
                 }) as Box<dyn FnMut(_)>);
 
-                element.add_event_listener_with_callback("input", closure.as_ref().unchecked_ref())?;
+                element
+                    .add_event_listener_with_callback("input", closure.as_ref().unchecked_ref())?;
                 closure.forget();
             }
         }

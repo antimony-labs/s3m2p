@@ -42,7 +42,8 @@ impl LessonRenderer {
 
         // Render lessons grouped by phase
         for phase in PHASES.iter() {
-            let phase_lessons: Vec<&Lesson> = LESSONS.iter().filter(|l| l.phase == *phase).collect();
+            let phase_lessons: Vec<&Lesson> =
+                LESSONS.iter().filter(|l| l.phase == *phase).collect();
 
             if phase_lessons.is_empty() {
                 continue;
@@ -71,8 +72,12 @@ impl LessonRenderer {
 
             for lesson in phase_lessons {
                 let demo_badge = match lesson.demo_type {
-                    DemoType::Terminal => r##"<span class="badge badge-terminal">Interactive</span>"##,
-                    DemoType::TerminalDiagram => r##"<span class="badge badge-terminal">Visual</span>"##,
+                    DemoType::Terminal => {
+                        r##"<span class="badge badge-terminal">Interactive</span>"##
+                    }
+                    DemoType::TerminalDiagram => {
+                        r##"<span class="badge badge-terminal">Visual</span>"##
+                    }
                     DemoType::Calculator => r##"<span class="badge badge-calc">Calculator</span>"##,
                     DemoType::Static => r##"<span class="badge badge-static">Theory</span>"##,
                 };
@@ -151,15 +156,16 @@ impl LessonRenderer {
                 "progress-bubble future"
             };
 
-            let lesson_title = LESSONS.get(i)
-                .map(|l| l.title)
-                .unwrap_or("Unknown");
+            let lesson_title = LESSONS.get(i).map(|l| l.title).unwrap_or("Unknown");
 
             html.push_str(&format!(
                 r##"<button class="{}" onclick="go_to_lesson({})" title="{}">
                     <span class="bubble-num">{}</span>
                 </button>"##,
-                class, i, lesson_title, i + 1
+                class,
+                i,
+                lesson_title,
+                i + 1
             ));
 
             if i < end - 1 {
@@ -179,14 +185,16 @@ impl LessonRenderer {
         // Render concepts with tooltips if definitions exist
         let concepts_html: String = if lesson.concept_definitions.is_empty() {
             // Fallback: render without tooltips
-            lesson.key_concepts
+            lesson
+                .key_concepts
                 .iter()
                 .map(|c| format!(r##"<span class="concept">{}</span>"##, c))
                 .collect::<Vec<_>>()
                 .join("")
         } else {
             // Render with tooltips from definitions
-            lesson.concept_definitions
+            lesson
+                .concept_definitions
                 .iter()
                 .map(|(term, def)| {
                     format!(
@@ -203,8 +211,8 @@ impl LessonRenderer {
 
         // Determine demo section based on lesson type
         let demo_section = match lesson.demo_type {
-            DemoType::Terminal => {
-                String::from(r##"
+            DemoType::Terminal => String::from(
+                r##"
                 <section class="terminal-section">
                     <h3>Interactive Terminal</h3>
                     <div class="terminal" id="terminal">
@@ -218,10 +226,10 @@ impl LessonRenderer {
                         <p>Try: <code>ls -l</code>, <code>cat readme.txt</code>, <code>chmod 777 readme.txt</code>, <code>su root</code>, <code>help</code></p>
                     </div>
                 </section>
-                "##)
-            }
-            DemoType::TerminalDiagram => {
-                String::from(r##"
+                "##,
+            ),
+            DemoType::TerminalDiagram => String::from(
+                r##"
                 <section class="split-demo">
                     <div class="terminal-half">
                         <h3>Interactive Terminal</h3>
@@ -238,10 +246,10 @@ impl LessonRenderer {
                         <canvas id="diagram-canvas" width="600" height="400"></canvas>
                     </div>
                 </section>
-                "##)
-            }
-            DemoType::Calculator => {
-                String::from(r##"
+                "##,
+            ),
+            DemoType::Calculator => String::from(
+                r##"
                 <section class="calculator-section">
                     <h3>Partition Calculator</h3>
                     <div class="calculator">
@@ -255,8 +263,8 @@ impl LessonRenderer {
                         </div>
                     </div>
                 </section>
-                "##)
-            }
+                "##,
+            ),
             DemoType::Static => String::new(),
         };
 
@@ -416,7 +424,10 @@ fn convert_markdown_to_html(md: &str) -> String {
 
         // Blockquotes
         if trimmed.starts_with("> ") {
-            html.push_str(&format!("<blockquote>{}</blockquote>\n", format_inline(&trimmed[2..])));
+            html.push_str(&format!(
+                "<blockquote>{}</blockquote>\n",
+                format_inline(&trimmed[2..])
+            ));
             continue;
         }
 
@@ -459,8 +470,13 @@ fn convert_markdown_to_html(md: &str) -> String {
             html.push_str(&format!("<li>{}</li>\n", format_inline(content)));
             continue;
         }
-        if trimmed.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false)
-            && trimmed.contains(". ") {
+        if trimmed
+            .chars()
+            .next()
+            .map(|c| c.is_ascii_digit())
+            .unwrap_or(false)
+            && trimmed.contains(". ")
+        {
             if let Some(pos) = trimmed.find(". ") {
                 if !in_list {
                     html.push_str("<ol>\n");

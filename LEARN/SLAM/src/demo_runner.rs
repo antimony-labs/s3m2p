@@ -20,12 +20,12 @@ use learn_web::{AnimationLoop, Canvas};
 
 // Thread-local state for the currently running demos
 thread_local! {
-    static COMPLEMENTARY_FILTER_DEMO: RefCell<Option<ComplementaryFilterDemoRunner>> = RefCell::new(None);
-    static DARK_HALLWAY_DEMO: RefCell<Option<DarkHallwayDemoRunner>> = RefCell::new(None);
-    static PARTICLE_FILTER_DEMO: RefCell<Option<ParticleFilterDemoRunner>> = RefCell::new(None);
-    static KALMAN_FILTER_DEMO: RefCell<Option<KalmanFilterDemoRunner>> = RefCell::new(None);
-    static EKF_SLAM_DEMO: RefCell<Option<EkfSlamDemoRunner>> = RefCell::new(None);
-    static GRAPH_SLAM_DEMO: RefCell<Option<GraphSlamDemoRunner>> = RefCell::new(None);
+    static COMPLEMENTARY_FILTER_DEMO: RefCell<Option<ComplementaryFilterDemoRunner>> = const { RefCell::new(None) };
+    static DARK_HALLWAY_DEMO: RefCell<Option<DarkHallwayDemoRunner>> = const { RefCell::new(None) };
+    static PARTICLE_FILTER_DEMO: RefCell<Option<ParticleFilterDemoRunner>> = const { RefCell::new(None) };
+    static KALMAN_FILTER_DEMO: RefCell<Option<KalmanFilterDemoRunner>> = const { RefCell::new(None) };
+    static EKF_SLAM_DEMO: RefCell<Option<EkfSlamDemoRunner>> = const { RefCell::new(None) };
+    static GRAPH_SLAM_DEMO: RefCell<Option<GraphSlamDemoRunner>> = const { RefCell::new(None) };
 }
 
 /// Dispatch to the appropriate demo based on lesson index
@@ -2463,12 +2463,12 @@ impl DarkHallwayDemoRunner {
         for &lm in &self.landmarks {
             let x = lm * self.scale_x;
             ctx.set_fill_style(&"rgba(100, 255, 218, 0.1)".into());
-            ctx.fill_rect((x - 5.0) as f64, (mid_y - 50.0) as f64, 10.0, 100.0);
+            ctx.fill_rect((x - 5.0) as f64, (mid_y - 50.0), 10.0, 100.0);
 
             // Text label
             ctx.set_fill_style(&"rgba(100, 255, 218, 0.3)".into());
             ctx.set_font("12px Inter");
-            let _ = ctx.fill_text("Door", (x - 10.0) as f64, (mid_y - 60.0) as f64);
+            let _ = ctx.fill_text("Door", (x - 10.0) as f64, (mid_y - 60.0));
         }
 
         // Draw True Robot (Ghost/Faint)
@@ -2476,7 +2476,7 @@ impl DarkHallwayDemoRunner {
         ctx.begin_path();
         ctx.arc(
             true_screen_x as f64,
-            mid_y as f64,
+            mid_y,
             8.0,
             0.0,
             std::f64::consts::PI * 2.0,
@@ -2490,7 +2490,7 @@ impl DarkHallwayDemoRunner {
         ctx.begin_path();
         ctx.arc(
             est_screen_x as f64,
-            mid_y as f64,
+            mid_y,
             10.0,
             0.0,
             std::f64::consts::PI * 2.0,
@@ -2504,7 +2504,7 @@ impl DarkHallwayDemoRunner {
         ctx.begin_path();
         let _ = ctx.ellipse(
             est_screen_x as f64,
-            mid_y as f64,
+            mid_y,
             uncertainty_px as f64,
             15.0,
             0.0,
@@ -2524,7 +2524,7 @@ impl DarkHallwayDemoRunner {
 
         // Draw distance
         let dist_text = format!("Est Dist: {:.1}m", self.est_x);
-        let _ = ctx.fill_text(&dist_text, (w - 150.0) as f64, 30.0);
+        let _ = ctx.fill_text(&dist_text, (w - 150.0), 30.0);
     }
 
     fn wire_controls() -> Result<(), JsValue> {

@@ -5,8 +5,8 @@
 //! LAYER: LEARN -> learn_core -> demos
 //! ===============================================================================
 
+use super::pseudocode::{stack as pc_stack, Pseudocode};
 use crate::{Demo, ParamMeta, Rng};
-use super::pseudocode::{Pseudocode, stack as pc_stack};
 
 /// Animation state for stack operations
 #[derive(Clone, Debug, PartialEq)]
@@ -71,7 +71,10 @@ impl StackDemo {
             self.pseudocode.set_line(1);
             return;
         }
-        self.animation = StackAnimation::Pushing { value, progress: 0.0 };
+        self.animation = StackAnimation::Pushing {
+            value,
+            progress: 0.0,
+        };
         self.message = format!("Pushing {} - O(1)", value);
         self.pseudocode.set_line(0);
     }
@@ -201,22 +204,23 @@ impl Demo for StackDemo {
 
     fn set_param(&mut self, name: &str, value: f32) -> bool {
         match name {
-            "speed" => { self.speed = value; true }
+            "speed" => {
+                self.speed = value;
+                true
+            }
             _ => false,
         }
     }
 
     fn params() -> &'static [ParamMeta] {
-        &[
-            ParamMeta {
-                name: "speed",
-                label: "Animation Speed",
-                min: 0.25,
-                max: 4.0,
-                step: 0.25,
-                default: 1.0,
-            },
-        ]
+        &[ParamMeta {
+            name: "speed",
+            label: "Animation Speed",
+            min: 0.25,
+            max: 4.0,
+            step: 0.25,
+            default: 1.0,
+        }]
     }
 }
 
@@ -231,12 +235,16 @@ mod tests {
         let initial_len = demo.len();
 
         demo.push(99);
-        for _ in 0..100 { demo.step(0.016); }
+        for _ in 0..100 {
+            demo.step(0.016);
+        }
         assert_eq!(demo.len(), initial_len + 1);
         assert_eq!(demo.top(), Some(99));
 
         demo.pop();
-        for _ in 0..100 { demo.step(0.016); }
+        for _ in 0..100 {
+            demo.step(0.016);
+        }
         assert_eq!(demo.len(), initial_len);
         assert_eq!(demo.last_popped, Some(99));
     }

@@ -5,10 +5,10 @@
 //! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
-use super::sketch::{Sketch, SketchPointId, Point2};
 use super::constraints::Constraint;
 use super::geometry::TOLERANCE;
-use serde::{Serialize, Deserialize};
+use super::sketch::{Point2, Sketch, SketchPointId};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Solver configuration
@@ -16,7 +16,7 @@ use std::collections::HashMap;
 pub struct SolverConfig {
     pub max_iterations: usize,
     pub tolerance: f32,
-    pub damping_factor: f32,  // Under-relaxation for stability
+    pub damping_factor: f32, // Under-relaxation for stability
 }
 
 impl Default for SolverConfig {
@@ -77,9 +77,13 @@ impl ConstraintAnalysis {
         let dof_status = if remaining_dof == 0 {
             DofStatus::FullyConstrained
         } else if remaining_dof > 0 {
-            DofStatus::UnderConstrained { dof: remaining_dof as usize }
+            DofStatus::UnderConstrained {
+                dof: remaining_dof as usize,
+            }
         } else {
-            DofStatus::OverConstrained { redundant: (-remaining_dof) as usize }
+            DofStatus::OverConstrained {
+                redundant: (-remaining_dof) as usize,
+            }
         };
 
         // Check which constraints are satisfied
@@ -102,7 +106,9 @@ impl ConstraintAnalysis {
         match &self.dof_status {
             DofStatus::FullyConstrained => "Fully constrained".to_string(),
             DofStatus::UnderConstrained { dof } => format!("Under-constrained by {} DOF", dof),
-            DofStatus::OverConstrained { redundant } => format!("Over-constrained ({} redundant)", redundant),
+            DofStatus::OverConstrained { redundant } => {
+                format!("Over-constrained ({} redundant)", redundant)
+            }
         }
     }
 
@@ -193,7 +199,7 @@ impl ConstraintSolver {
         for (i, constraint) in constraints.iter().enumerate() {
             let error = residuals[i];
             if error.abs() < 1e-12 {
-                continue;  // Already satisfied
+                continue; // Already satisfied
             }
 
             let grads = constraint.gradient(sketch);
@@ -219,8 +225,8 @@ impl Default for ConstraintSolver {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cad::sketch::*;
     use crate::cad::constraints::*;
+    use crate::cad::sketch::*;
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // BASIC CONSTRAINT SOLVER TESTS
@@ -238,11 +244,9 @@ mod tests {
         };
         sketch.add_entity(line);
 
-        let constraints = vec![
-            Constraint::Geometric(GeometricConstraint::Horizontal {
-                line: SketchEntityId(0),
-            }),
-        ];
+        let constraints = vec![Constraint::Geometric(GeometricConstraint::Horizontal {
+            line: SketchEntityId(0),
+        })];
 
         let solver = ConstraintSolver::default();
         let result = solver.solve(&mut sketch, &constraints);
@@ -251,8 +255,12 @@ mod tests {
 
         let pt1 = sketch.point(p1).unwrap();
         let pt2 = sketch.point(p2).unwrap();
-        assert!((pt1.position.y - pt2.position.y).abs() < 0.1,
-            "Y coordinates should be equal: {} vs {}", pt1.position.y, pt2.position.y);
+        assert!(
+            (pt1.position.y - pt2.position.y).abs() < 0.1,
+            "Y coordinates should be equal: {} vs {}",
+            pt1.position.y,
+            pt2.position.y
+        );
     }
 
     #[test]
@@ -267,11 +275,9 @@ mod tests {
         };
         sketch.add_entity(line);
 
-        let constraints = vec![
-            Constraint::Geometric(GeometricConstraint::Vertical {
-                line: SketchEntityId(0),
-            }),
-        ];
+        let constraints = vec![Constraint::Geometric(GeometricConstraint::Vertical {
+            line: SketchEntityId(0),
+        })];
 
         let solver = ConstraintSolver::default();
         let result = solver.solve(&mut sketch, &constraints);
@@ -280,8 +286,12 @@ mod tests {
 
         let pt1 = sketch.point(p1).unwrap();
         let pt2 = sketch.point(p2).unwrap();
-        assert!((pt1.position.x - pt2.position.x).abs() < 0.1,
-            "X coordinates should be equal: {} vs {}", pt1.position.x, pt2.position.x);
+        assert!(
+            (pt1.position.x - pt2.position.x).abs() < 0.1,
+            "X coordinates should be equal: {} vs {}",
+            pt1.position.x,
+            pt2.position.x
+        );
     }
 
     #[test]
@@ -290,9 +300,10 @@ mod tests {
         let p1 = sketch.add_point(Point2::new(0.0, 0.0));
         let p2 = sketch.add_point(Point2::new(5.0, 5.0));
 
-        let constraints = vec![
-            Constraint::Geometric(GeometricConstraint::Coincident { p1, p2 }),
-        ];
+        let constraints = vec![Constraint::Geometric(GeometricConstraint::Coincident {
+            p1,
+            p2,
+        })];
 
         let solver = ConstraintSolver::default();
         let result = solver.solve(&mut sketch, &constraints);
@@ -311,13 +322,11 @@ mod tests {
         let p1 = sketch.add_point(Point2::new(0.0, 0.0));
         let p2 = sketch.add_point(Point2::new(3.0, 4.0));
 
-        let constraints = vec![
-            Constraint::Dimensional(DimensionalConstraint::Distance {
-                p1,
-                p2,
-                value: 10.0,
-            }),
-        ];
+        let constraints = vec![Constraint::Dimensional(DimensionalConstraint::Distance {
+            p1,
+            p2,
+            value: 10.0,
+        })];
 
         let solver = ConstraintSolver::default();
         let result = solver.solve(&mut sketch, &constraints);
@@ -326,7 +335,11 @@ mod tests {
             let pt1 = sketch.point(p1).unwrap();
             let pt2 = sketch.point(p2).unwrap();
             let dist = pt1.position.distance(&pt2.position);
-            assert!((dist - 10.0).abs() < 0.5, "Distance should be ~10: {}", dist);
+            assert!(
+                (dist - 10.0).abs() < 0.5,
+                "Distance should be ~10: {}",
+                dist
+            );
         }
     }
 
@@ -336,13 +349,13 @@ mod tests {
         let p1 = sketch.add_point(Point2::new(0.0, 0.0));
         let p2 = sketch.add_point(Point2::new(5.0, 10.0));
 
-        let constraints = vec![
-            Constraint::Dimensional(DimensionalConstraint::HorizontalDistance {
+        let constraints = vec![Constraint::Dimensional(
+            DimensionalConstraint::HorizontalDistance {
                 p1,
                 p2,
                 value: 20.0,
-            }),
-        ];
+            },
+        )];
 
         let solver = ConstraintSolver::default();
         let result = solver.solve(&mut sketch, &constraints);
@@ -352,7 +365,11 @@ mod tests {
         let pt1 = sketch.point(p1).unwrap();
         let pt2 = sketch.point(p2).unwrap();
         let dx = (pt2.position.x - pt1.position.x).abs();
-        assert!((dx - 20.0).abs() < 0.5, "Horizontal distance should be ~20: {}", dx);
+        assert!(
+            (dx - 20.0).abs() < 0.5,
+            "Horizontal distance should be ~20: {}",
+            dx
+        );
     }
 
     #[test]
@@ -361,13 +378,13 @@ mod tests {
         let p1 = sketch.add_point(Point2::new(0.0, 0.0));
         let p2 = sketch.add_point(Point2::new(10.0, 5.0));
 
-        let constraints = vec![
-            Constraint::Dimensional(DimensionalConstraint::VerticalDistance {
+        let constraints = vec![Constraint::Dimensional(
+            DimensionalConstraint::VerticalDistance {
                 p1,
                 p2,
                 value: 30.0,
-            }),
-        ];
+            },
+        )];
 
         let solver = ConstraintSolver::default();
         let result = solver.solve(&mut sketch, &constraints);
@@ -377,7 +394,11 @@ mod tests {
         let pt1 = sketch.point(p1).unwrap();
         let pt2 = sketch.point(p2).unwrap();
         let dy = (pt2.position.y - pt1.position.y).abs();
-        assert!((dy - 30.0).abs() < 0.5, "Vertical distance should be ~30: {}", dy);
+        assert!(
+            (dy - 30.0).abs() < 0.5,
+            "Vertical distance should be ~30: {}",
+            dy
+        );
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -415,11 +436,18 @@ mod tests {
             let pt2 = sketch.point(p2).unwrap();
 
             // Check horizontal
-            assert!((pt1.position.y - pt2.position.y).abs() < 0.1, "Line should be horizontal");
+            assert!(
+                (pt1.position.y - pt2.position.y).abs() < 0.1,
+                "Line should be horizontal"
+            );
 
             // Check distance
             let dist = pt1.position.distance(&pt2.position);
-            assert!((dist - 10.0).abs() < 0.5, "Distance should be ~10: {}", dist);
+            assert!(
+                (dist - 10.0).abs() < 0.5,
+                "Distance should be ~10: {}",
+                dist
+            );
         }
     }
 
@@ -427,20 +455,44 @@ mod tests {
     fn test_rectangle_h_v_constraints() {
         let mut sketch = Sketch::new(SketchPlane::XY);
         let p0 = sketch.add_point(Point2::new(0.0, 0.0));
-        let p1 = sketch.add_point(Point2::new(12.0, 3.0));  // Slightly off
+        let p1 = sketch.add_point(Point2::new(12.0, 3.0)); // Slightly off
         let p2 = sketch.add_point(Point2::new(15.0, 10.0));
         let p3 = sketch.add_point(Point2::new(2.0, 8.0));
 
-        sketch.add_entity(SketchEntity::Line { id: SketchEntityId(0), start: p0, end: p1 });
-        sketch.add_entity(SketchEntity::Line { id: SketchEntityId(1), start: p1, end: p2 });
-        sketch.add_entity(SketchEntity::Line { id: SketchEntityId(2), start: p2, end: p3 });
-        sketch.add_entity(SketchEntity::Line { id: SketchEntityId(3), start: p3, end: p0 });
+        sketch.add_entity(SketchEntity::Line {
+            id: SketchEntityId(0),
+            start: p0,
+            end: p1,
+        });
+        sketch.add_entity(SketchEntity::Line {
+            id: SketchEntityId(1),
+            start: p1,
+            end: p2,
+        });
+        sketch.add_entity(SketchEntity::Line {
+            id: SketchEntityId(2),
+            start: p2,
+            end: p3,
+        });
+        sketch.add_entity(SketchEntity::Line {
+            id: SketchEntityId(3),
+            start: p3,
+            end: p0,
+        });
 
         let constraints = vec![
-            Constraint::Geometric(GeometricConstraint::Horizontal { line: SketchEntityId(0) }),
-            Constraint::Geometric(GeometricConstraint::Horizontal { line: SketchEntityId(2) }),
-            Constraint::Geometric(GeometricConstraint::Vertical { line: SketchEntityId(1) }),
-            Constraint::Geometric(GeometricConstraint::Vertical { line: SketchEntityId(3) }),
+            Constraint::Geometric(GeometricConstraint::Horizontal {
+                line: SketchEntityId(0),
+            }),
+            Constraint::Geometric(GeometricConstraint::Horizontal {
+                line: SketchEntityId(2),
+            }),
+            Constraint::Geometric(GeometricConstraint::Vertical {
+                line: SketchEntityId(1),
+            }),
+            Constraint::Geometric(GeometricConstraint::Vertical {
+                line: SketchEntityId(3),
+            }),
         ];
 
         let solver = ConstraintSolver::default();
@@ -473,13 +525,11 @@ mod tests {
         let p2 = sketch.add_point(Point2::new(10.0, 0.0));
 
         // 2 points = 4 DOF, 1 constraint = 3 DOF remaining
-        let constraints = vec![
-            Constraint::Dimensional(DimensionalConstraint::Distance {
-                p1,
-                p2,
-                value: 10.0,
-            }),
-        ];
+        let constraints = vec![Constraint::Dimensional(DimensionalConstraint::Distance {
+            p1,
+            p2,
+            value: 10.0,
+        })];
 
         let analysis = ConstraintAnalysis::analyze(&sketch, &constraints);
 
@@ -502,19 +552,15 @@ mod tests {
                 p2,
                 value: 10.0,
             }),
-            Constraint::Dimensional(DimensionalConstraint::VerticalDistance {
-                p1,
-                p2,
-                value: 0.0,
-            }),
+            Constraint::Dimensional(DimensionalConstraint::VerticalDistance { p1, p2, value: 0.0 }),
             Constraint::Dimensional(DimensionalConstraint::HorizontalDistance {
                 p1,
-                p2: p1,  // Fix p1 x
+                p2: p1, // Fix p1 x
                 value: 0.0,
             }),
             Constraint::Dimensional(DimensionalConstraint::VerticalDistance {
                 p1,
-                p2: p1,  // Fix p1 y
+                p2: p1, // Fix p1 y
                 value: 0.0,
             }),
         ];
@@ -535,11 +581,23 @@ mod tests {
 
         // 2 points = 4 DOF, 5 constraints = 1 redundant
         let constraints = vec![
-            Constraint::Dimensional(DimensionalConstraint::Distance { p1, p2, value: 10.0 }),
-            Constraint::Dimensional(DimensionalConstraint::HorizontalDistance { p1, p2, value: 10.0 }),
+            Constraint::Dimensional(DimensionalConstraint::Distance {
+                p1,
+                p2,
+                value: 10.0,
+            }),
+            Constraint::Dimensional(DimensionalConstraint::HorizontalDistance {
+                p1,
+                p2,
+                value: 10.0,
+            }),
             Constraint::Dimensional(DimensionalConstraint::VerticalDistance { p1, p2, value: 0.0 }),
             Constraint::Geometric(GeometricConstraint::Coincident { p1, p2: p1 }),
-            Constraint::Dimensional(DimensionalConstraint::Distance { p1, p2: p1, value: 0.0 }),
+            Constraint::Dimensional(DimensionalConstraint::Distance {
+                p1,
+                p2: p1,
+                value: 0.0,
+            }),
         ];
 
         let analysis = ConstraintAnalysis::analyze(&sketch, &constraints);
@@ -547,7 +605,10 @@ mod tests {
         assert_eq!(analysis.total_dof, 4);
         assert_eq!(analysis.constraint_count, 5);
         assert_eq!(analysis.remaining_dof, -1);
-        assert_eq!(analysis.dof_status, DofStatus::OverConstrained { redundant: 1 });
+        assert_eq!(
+            analysis.dof_status,
+            DofStatus::OverConstrained { redundant: 1 }
+        );
     }
 
     #[test]
@@ -566,11 +627,15 @@ mod tests {
     fn test_dof_analysis_constraint_satisfaction() {
         let mut sketch = Sketch::new(SketchPlane::XY);
         let p1 = sketch.add_point(Point2::new(0.0, 0.0));
-        let p2 = sketch.add_point(Point2::new(3.0, 4.0));  // Distance = 5.0
+        let p2 = sketch.add_point(Point2::new(3.0, 4.0)); // Distance = 5.0
 
         let constraints = vec![
-            Constraint::Dimensional(DimensionalConstraint::Distance { p1, p2, value: 5.0 }),  // Satisfied
-            Constraint::Dimensional(DimensionalConstraint::Distance { p1, p2, value: 10.0 }), // NOT satisfied
+            Constraint::Dimensional(DimensionalConstraint::Distance { p1, p2, value: 5.0 }), // Satisfied
+            Constraint::Dimensional(DimensionalConstraint::Distance {
+                p1,
+                p2,
+                value: 10.0,
+            }), // NOT satisfied
         ];
 
         let analysis = ConstraintAnalysis::analyze(&sketch, &constraints);
@@ -599,7 +664,10 @@ mod tests {
             remaining_dof: 3,
             constraint_satisfied: vec![],
         };
-        assert_eq!(analysis_under.status_message(), "Under-constrained by 3 DOF");
+        assert_eq!(
+            analysis_under.status_message(),
+            "Under-constrained by 3 DOF"
+        );
 
         let analysis_over = ConstraintAnalysis {
             dof_status: DofStatus::OverConstrained { redundant: 2 },
@@ -608,7 +676,10 @@ mod tests {
             remaining_dof: -2,
             constraint_satisfied: vec![],
         };
-        assert_eq!(analysis_over.status_message(), "Over-constrained (2 redundant)");
+        assert_eq!(
+            analysis_over.status_message(),
+            "Over-constrained (2 redundant)"
+        );
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -635,7 +706,7 @@ mod tests {
     fn test_solver_already_satisfied() {
         let mut sketch = Sketch::new(SketchPlane::XY);
         let p1 = sketch.add_point(Point2::new(0.0, 0.0));
-        let p2 = sketch.add_point(Point2::new(10.0, 0.0));  // Already horizontal
+        let p2 = sketch.add_point(Point2::new(10.0, 0.0)); // Already horizontal
         let line = SketchEntity::Line {
             id: SketchEntityId(0),
             start: p1,
@@ -643,28 +714,30 @@ mod tests {
         };
         sketch.add_entity(line);
 
-        let constraints = vec![
-            Constraint::Geometric(GeometricConstraint::Horizontal {
-                line: SketchEntityId(0),
-            }),
-        ];
+        let constraints = vec![Constraint::Geometric(GeometricConstraint::Horizontal {
+            line: SketchEntityId(0),
+        })];
 
         let solver = ConstraintSolver::default();
         let result = solver.solve(&mut sketch, &constraints);
 
         assert!(result.converged);
-        assert_eq!(result.iterations, 0, "Already satisfied should converge in 0 iterations");
+        assert_eq!(
+            result.iterations, 0,
+            "Already satisfied should converge in 0 iterations"
+        );
     }
 
     #[test]
     fn test_solver_coincident_points_at_start() {
         let mut sketch = Sketch::new(SketchPlane::XY);
         let p1 = sketch.add_point(Point2::new(10.0, 20.0));
-        let p2 = sketch.add_point(Point2::new(10.0, 20.0));  // Already coincident
+        let p2 = sketch.add_point(Point2::new(10.0, 20.0)); // Already coincident
 
-        let constraints = vec![
-            Constraint::Geometric(GeometricConstraint::Coincident { p1, p2 }),
-        ];
+        let constraints = vec![Constraint::Geometric(GeometricConstraint::Coincident {
+            p1,
+            p2,
+        })];
 
         let solver = ConstraintSolver::default();
         let result = solver.solve(&mut sketch, &constraints);
@@ -677,7 +750,7 @@ mod tests {
     fn test_solver_zero_length_line() {
         let mut sketch = Sketch::new(SketchPlane::XY);
         let p1 = sketch.add_point(Point2::new(5.0, 5.0));
-        let p2 = sketch.add_point(Point2::new(5.0, 5.0));  // Same position
+        let p2 = sketch.add_point(Point2::new(5.0, 5.0)); // Same position
         let line = SketchEntity::Line {
             id: SketchEntityId(0),
             start: p1,
@@ -685,11 +758,9 @@ mod tests {
         };
         sketch.add_entity(line);
 
-        let constraints = vec![
-            Constraint::Geometric(GeometricConstraint::Horizontal {
-                line: SketchEntityId(0),
-            }),
-        ];
+        let constraints = vec![Constraint::Geometric(GeometricConstraint::Horizontal {
+            line: SketchEntityId(0),
+        })];
 
         let solver = ConstraintSolver::default();
         let result = solver.solve(&mut sketch, &constraints);
@@ -706,8 +777,16 @@ mod tests {
 
         // Conflicting constraints
         let constraints = vec![
-            Constraint::Dimensional(DimensionalConstraint::Distance { p1, p2, value: 10.0 }),
-            Constraint::Dimensional(DimensionalConstraint::Distance { p1, p2, value: 20.0 }),
+            Constraint::Dimensional(DimensionalConstraint::Distance {
+                p1,
+                p2,
+                value: 10.0,
+            }),
+            Constraint::Dimensional(DimensionalConstraint::Distance {
+                p1,
+                p2,
+                value: 20.0,
+            }),
         ];
 
         let solver = ConstraintSolver::default();
@@ -715,7 +794,10 @@ mod tests {
 
         // Should not fully converge (or have residual error)
         if result.converged {
-            assert!(result.final_error > 0.01, "Conflicting constraints should have residual error");
+            assert!(
+                result.final_error > 0.01,
+                "Conflicting constraints should have residual error"
+            );
         }
     }
 
@@ -723,7 +805,7 @@ mod tests {
     fn test_solver_max_iterations_limit() {
         let config = SolverConfig {
             max_iterations: 10,
-            tolerance: 1e-12,  // Very tight tolerance
+            tolerance: 1e-12, // Very tight tolerance
             damping_factor: 0.25,
         };
 
@@ -731,18 +813,20 @@ mod tests {
         let p1 = sketch.add_point(Point2::new(0.0, 0.0));
         let p2 = sketch.add_point(Point2::new(50.0, 50.0));
 
-        let constraints = vec![
-            Constraint::Dimensional(DimensionalConstraint::Distance {
-                p1,
-                p2,
-                value: 5.0,  // Very far from current
-            }),
-        ];
+        let constraints = vec![Constraint::Dimensional(DimensionalConstraint::Distance {
+            p1,
+            p2,
+            value: 5.0, // Very far from current
+        })];
 
         let solver = ConstraintSolver::new(config);
         let result = solver.solve(&mut sketch, &constraints);
 
-        assert!(result.iterations <= 10, "Should respect max_iterations: {}", result.iterations);
+        assert!(
+            result.iterations <= 10,
+            "Should respect max_iterations: {}",
+            result.iterations
+        );
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -755,18 +839,19 @@ mod tests {
         let p1 = sketch.add_point(Point2::new(0.0, 0.0));
         let p2 = sketch.add_point(Point2::new(10.0, 10.0));
 
-        let constraints = vec![
-            Constraint::Dimensional(DimensionalConstraint::Distance {
-                p1,
-                p2,
-                value: 5.0,
-            }),
-        ];
+        let constraints = vec![Constraint::Dimensional(DimensionalConstraint::Distance {
+            p1,
+            p2,
+            value: 5.0,
+        })];
 
         let solver = ConstraintSolver::default();
         let result = solver.solve(&mut sketch, &constraints);
 
-        assert!(!result.final_error.is_nan(), "Final error should not be NaN");
+        assert!(
+            !result.final_error.is_nan(),
+            "Final error should not be NaN"
+        );
 
         for point in &sketch.points {
             assert!(!point.position.x.is_nan(), "Point x should not be NaN");
@@ -782,13 +867,11 @@ mod tests {
         let p1 = sketch.add_point(Point2::new(1e6, 1e6));
         let p2 = sketch.add_point(Point2::new(1e6 + 10.0, 1e6 + 10.0));
 
-        let constraints = vec![
-            Constraint::Dimensional(DimensionalConstraint::Distance {
-                p1,
-                p2,
-                value: 20.0,
-            }),
-        ];
+        let constraints = vec![Constraint::Dimensional(DimensionalConstraint::Distance {
+            p1,
+            p2,
+            value: 20.0,
+        })];
 
         let solver = ConstraintSolver::default();
         let result = solver.solve(&mut sketch, &constraints);
@@ -801,7 +884,7 @@ mod tests {
     fn test_solver_very_small_displacement() {
         let mut sketch = Sketch::new(SketchPlane::XY);
         let p1 = sketch.add_point(Point2::new(0.0, 0.0));
-        let p2 = sketch.add_point(Point2::new(0.0, 0.00001));  // Almost horizontal
+        let p2 = sketch.add_point(Point2::new(0.0, 0.00001)); // Almost horizontal
         let line = SketchEntity::Line {
             id: SketchEntityId(0),
             start: p1,
@@ -809,17 +892,19 @@ mod tests {
         };
         sketch.add_entity(line);
 
-        let constraints = vec![
-            Constraint::Geometric(GeometricConstraint::Horizontal {
-                line: SketchEntityId(0),
-            }),
-        ];
+        let constraints = vec![Constraint::Geometric(GeometricConstraint::Horizontal {
+            line: SketchEntityId(0),
+        })];
 
         let solver = ConstraintSolver::default();
         let result = solver.solve(&mut sketch, &constraints);
 
         assert!(result.converged);
-        assert!(result.iterations <= 5, "Near-solution should converge quickly: {}", result.iterations);
+        assert!(
+            result.iterations <= 5,
+            "Near-solution should converge quickly: {}",
+            result.iterations
+        );
     }
 
     #[test]
@@ -834,18 +919,20 @@ mod tests {
         };
         sketch.add_entity(line);
 
-        let constraints = vec![
-            Constraint::Geometric(GeometricConstraint::Horizontal {
-                line: SketchEntityId(0),
-            }),
-        ];
+        let constraints = vec![Constraint::Geometric(GeometricConstraint::Horizontal {
+            line: SketchEntityId(0),
+        })];
 
         let solver = ConstraintSolver::default();
         let result = solver.solve(&mut sketch, &constraints);
 
         assert!(result.converged);
         assert!(result.iterations > 0, "Should take at least one iteration");
-        assert!(result.iterations < 50, "Simple constraint should converge quickly: {}", result.iterations);
+        assert!(
+            result.iterations < 50,
+            "Simple constraint should converge quickly: {}",
+            result.iterations
+        );
     }
 }
 
@@ -856,8 +943,8 @@ mod tests {
 #[cfg(test)]
 mod proptest_tests {
     use super::*;
-    use crate::cad::sketch::*;
     use crate::cad::constraints::*;
+    use crate::cad::sketch::*;
     use proptest::prelude::*;
 
     proptest! {

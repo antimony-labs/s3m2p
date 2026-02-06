@@ -7,8 +7,8 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use wasm_bindgen::prelude::*;
 use wasm_bindgen::closure::Closure;
+use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::HtmlInputElement;
 
@@ -206,7 +206,11 @@ impl GpioDebounceDemoRunner {
                             .and_then(|w| w.document())
                             .and_then(|d| d.get_element_by_id("pause-btn"))
                         {
-                            btn.set_text_content(Some(if runner.paused { "▶ Play" } else { "⏸ Pause" }));
+                            btn.set_text_content(Some(if runner.paused {
+                                "▶ Play"
+                            } else {
+                                "⏸ Pause"
+                            }));
                         }
                     }
                 });
@@ -239,15 +243,33 @@ impl GpioDebounceDemoRunner {
         ctx.set_font("12px 'Inter', sans-serif");
         ctx.set_fill_style(&JsValue::from_str("#888"));
         let _ = ctx.fill_text("Raw Signal", timeline_x, margin + 10.0);
-        let _ = ctx.fill_text("Debounced", timeline_x, margin + timeline_height + gap + 10.0);
+        let _ = ctx.fill_text(
+            "Debounced",
+            timeline_x,
+            margin + timeline_height + gap + 10.0,
+        );
 
         // Draw raw signal timeline
         let raw_y = margin + 25.0;
-        self.draw_timeline(timeline_x, raw_y, timeline_width, timeline_height - 15.0, &self.demo.raw_history, "#ff6644");
+        self.draw_timeline(
+            timeline_x,
+            raw_y,
+            timeline_width,
+            timeline_height - 15.0,
+            &self.demo.raw_history,
+            "#ff6644",
+        );
 
         // Draw debounced signal timeline
         let debounce_y = margin + timeline_height + gap + 25.0;
-        self.draw_timeline(timeline_x, debounce_y, timeline_width, timeline_height - 15.0, &self.demo.debounced_history, "#44ff88");
+        self.draw_timeline(
+            timeline_x,
+            debounce_y,
+            timeline_width,
+            timeline_height - 15.0,
+            &self.demo.debounced_history,
+            "#44ff88",
+        );
 
         // Draw LED indicator
         let led_x = w - margin - led_size / 2.0;
@@ -262,11 +284,20 @@ impl GpioDebounceDemoRunner {
         }
 
         // LED body
-        let led_color = if self.demo.debounced_state { "#44ff88" } else { "#442222" };
-        self.canvas.fill_circle(led_x, led_y, led_size / 2.0, led_color);
+        let led_color = if self.demo.debounced_state {
+            "#44ff88"
+        } else {
+            "#442222"
+        };
+        self.canvas
+            .fill_circle(led_x, led_y, led_size / 2.0, led_color);
 
         // LED border
-        ctx.set_stroke_style(&JsValue::from_str(if self.demo.debounced_state { "#88ffaa" } else { "#664444" }));
+        ctx.set_stroke_style(&JsValue::from_str(if self.demo.debounced_state {
+            "#88ffaa"
+        } else {
+            "#664444"
+        }));
         ctx.set_line_width(2.0);
         ctx.begin_path();
         let _ = ctx.arc(led_x, led_y, led_size / 2.0, 0.0, std::f64::consts::TAU);
@@ -305,10 +336,22 @@ impl GpioDebounceDemoRunner {
 
         // Draw time
         ctx.set_fill_style(&JsValue::from_str("#555"));
-        let _ = ctx.fill_text(&format!("Time: {:.2}s", self.demo.time), w - margin - 80.0, bounce_y);
+        let _ = ctx.fill_text(
+            &format!("Time: {:.2}s", self.demo.time),
+            w - margin - 80.0,
+            bounce_y,
+        );
     }
 
-    fn draw_timeline(&self, x: f64, y: f64, width: f64, height: f64, history: &[bool], color: &str) {
+    fn draw_timeline(
+        &self,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+        history: &[bool],
+        color: &str,
+    ) {
         let ctx = self.canvas.ctx();
 
         // Background
@@ -435,7 +478,10 @@ impl PwmControlDemoRunner {
                         PWM_DEMO.with(|d| {
                             if let Some(runner) = d.borrow_mut().as_mut() {
                                 runner.demo.set_param("duty", duty);
-                                update_text("quantized-duty-value", &format!("{:.1}", runner.demo.quantized_duty * 100.0));
+                                update_text(
+                                    "quantized-duty-value",
+                                    &format!("{:.1}", runner.demo.quantized_duty * 100.0),
+                                );
                             }
                         });
                         update_text("duty-value", &format!("{:.0}", value));
@@ -472,7 +518,10 @@ impl PwmControlDemoRunner {
                         PWM_DEMO.with(|d| {
                             if let Some(runner) = d.borrow_mut().as_mut() {
                                 runner.demo.set_param("resolution_bits", value);
-                                update_text("quantized-duty-value", &format!("{:.1}", runner.demo.quantized_duty * 100.0));
+                                update_text(
+                                    "quantized-duty-value",
+                                    &format!("{:.1}", runner.demo.quantized_duty * 100.0),
+                                );
                             }
                         });
                         update_text("res-value", &format!("{:.0}", value));
@@ -511,7 +560,10 @@ impl PwmControlDemoRunner {
                     if let Some(runner) = d.borrow_mut().as_mut() {
                         let seed = (js_sys::Math::random() * 1_000_000.0) as u64;
                         runner.demo.reset(seed);
-                        update_text("quantized-duty-value", &format!("{:.1}", runner.demo.quantized_duty * 100.0));
+                        update_text(
+                            "quantized-duty-value",
+                            &format!("{:.1}", runner.demo.quantized_duty * 100.0),
+                        );
                     }
                 });
             }) as Box<dyn FnMut(_)>);
@@ -532,7 +584,11 @@ impl PwmControlDemoRunner {
                             .and_then(|w| w.document())
                             .and_then(|d| d.get_element_by_id("pause-btn"))
                         {
-                            btn.set_text_content(Some(if runner.paused { "▶ Play" } else { "⏸ Pause" }));
+                            btn.set_text_content(Some(if runner.paused {
+                                "▶ Play"
+                            } else {
+                                "⏸ Pause"
+                            }));
                         }
                     }
                 });
@@ -563,7 +619,11 @@ impl PwmControlDemoRunner {
         ctx.set_font("12px 'Inter', sans-serif");
         ctx.set_fill_style(&JsValue::from_str("#888"));
         let _ = ctx.fill_text("PWM Output (Digital)", timeline_x, margin + 10.0);
-        let _ = ctx.fill_text("Averaged Output (Analog-ish)", timeline_x, margin + timeline_height + gap + 10.0);
+        let _ = ctx.fill_text(
+            "Averaged Output (Analog-ish)",
+            timeline_x,
+            margin + timeline_height + gap + 10.0,
+        );
 
         // Draw raw PWM waveform
         let raw_y = margin + 25.0;
@@ -904,7 +964,11 @@ impl AdcReadingDemoRunner {
                             .and_then(|w| w.document())
                             .and_then(|d| d.get_element_by_id("pause-btn"))
                         {
-                            btn.set_text_content(Some(if runner.paused { "▶ Play" } else { "⏸ Pause" }));
+                            btn.set_text_content(Some(if runner.paused {
+                                "▶ Play"
+                            } else {
+                                "⏸ Pause"
+                            }));
                         }
                     }
                 });
@@ -1006,13 +1070,18 @@ impl AdcReadingDemoRunner {
         for (i, &v) in self.demo.sampled_history.iter().enumerate().step_by(2) {
             let px = plot_x + (i as f64) * step;
             let py = to_y(v);
-            self.canvas.fill_circle(px, py, 2.0, "rgba(255, 170, 68, 0.45)");
+            self.canvas
+                .fill_circle(px, py, 2.0, "rgba(255, 170, 68, 0.45)");
         }
 
         // Labels
         ctx.set_font("12px 'Inter', sans-serif");
         ctx.set_fill_style(&JsValue::from_str("#888"));
-        let _ = ctx.fill_text("ADC: analog (gray), quantized (orange), filtered (green)", plot_x, margin + 10.0);
+        let _ = ctx.fill_text(
+            "ADC: analog (gray), quantized (orange), filtered (green)",
+            plot_x,
+            margin + 10.0,
+        );
 
         // Axis labels
         ctx.set_font("10px 'Inter', sans-serif");
@@ -1212,7 +1281,11 @@ impl I2cBusDemoRunner {
                             .and_then(|w| w.document())
                             .and_then(|d| d.get_element_by_id("pause-btn"))
                         {
-                            btn.set_text_content(Some(if runner.paused { "▶ Play" } else { "⏸ Pause" }));
+                            btn.set_text_content(Some(if runner.paused {
+                                "▶ Play"
+                            } else {
+                                "⏸ Pause"
+                            }));
                         }
                     }
                 });
@@ -1246,11 +1319,25 @@ impl I2cBusDemoRunner {
 
         // Draw SCL
         let scl_y = margin + 25.0;
-        self.draw_bool_timeline(x, scl_y, timeline_width, timeline_height - 15.0, &self.demo.scl_history, "#44ff88");
+        self.draw_bool_timeline(
+            x,
+            scl_y,
+            timeline_width,
+            timeline_height - 15.0,
+            &self.demo.scl_history,
+            "#44ff88",
+        );
 
         // Draw SDA
         let sda_y = margin + timeline_height + gap + 25.0;
-        self.draw_bool_timeline(x, sda_y, timeline_width, timeline_height - 15.0, &self.demo.sda_history, "#ffaa44");
+        self.draw_bool_timeline(
+            x,
+            sda_y,
+            timeline_width,
+            timeline_height - 15.0,
+            &self.demo.sda_history,
+            "#ffaa44",
+        );
 
         // Status
         let phase = match self.demo.phase {
@@ -1285,7 +1372,15 @@ impl I2cBusDemoRunner {
         );
     }
 
-    fn draw_bool_timeline(&self, x: f64, y: f64, width: f64, height: f64, history: &[bool], color: &str) {
+    fn draw_bool_timeline(
+        &self,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+        history: &[bool],
+        color: &str,
+    ) {
         let ctx = self.canvas.ctx();
 
         ctx.set_fill_style(&JsValue::from_str("rgba(255, 255, 255, 0.03)"));
@@ -1452,8 +1547,20 @@ impl OhmsLawPowerDemoRunner {
 
         // Draw current and power traces
         if !self.demo.current_history.is_empty() {
-            let max_current = self.demo.current_history.iter().cloned().fold(0.1_f32, f32::max).max(100.0);
-            let max_power = self.demo.power_history.iter().cloned().fold(0.1_f32, f32::max).max(500.0);
+            let max_current = self
+                .demo
+                .current_history
+                .iter()
+                .cloned()
+                .fold(0.1_f32, f32::max)
+                .max(100.0);
+            let max_power = self
+                .demo
+                .power_history
+                .iter()
+                .cloned()
+                .fold(0.1_f32, f32::max)
+                .max(500.0);
 
             // Current trace (top half)
             ctx.set_stroke_style(&JsValue::from_str("#44ff88"));
@@ -1498,26 +1605,45 @@ impl OhmsLawPowerDemoRunner {
 
         ctx.set_font("12px 'JetBrains Mono', monospace");
         ctx.set_fill_style(&JsValue::from_str("#777"));
-        let current_color = if self.demo.current_exceeds_limit() { "#ff6644" } else { "#44ff88" };
-        let power_color = if self.demo.power_exceeds_limit() { "#ff6644" } else { "#ffaa44" };
-        
+        let current_color = if self.demo.current_exceeds_limit() {
+            "#ff6644"
+        } else {
+            "#44ff88"
+        };
+        let power_color = if self.demo.power_exceeds_limit() {
+            "#ff6644"
+        } else {
+            "#ffaa44"
+        };
+
         ctx.set_fill_style(&JsValue::from_str(current_color));
         let _ = ctx.fill_text(
-            &format!("I = {:.3}A ({:.1}mA)", self.demo.current, self.demo.current * 1000.0),
+            &format!(
+                "I = {:.3}A ({:.1}mA)",
+                self.demo.current,
+                self.demo.current * 1000.0
+            ),
             margin,
             h - 50.0,
         );
-        
+
         ctx.set_fill_style(&JsValue::from_str(power_color));
         let _ = ctx.fill_text(
-            &format!("P = {:.3}W ({:.1}mW)", self.demo.power, self.demo.power * 1000.0),
+            &format!(
+                "P = {:.3}W ({:.1}mW)",
+                self.demo.power,
+                self.demo.power * 1000.0
+            ),
             margin,
             h - 30.0,
         );
 
         ctx.set_fill_style(&JsValue::from_str("#888"));
         let _ = ctx.fill_text(
-            &format!("V = {:.1}V, R = {:.0}Ω", self.demo.voltage, self.demo.resistance),
+            &format!(
+                "V = {:.1}V, R = {:.0}Ω",
+                self.demo.voltage, self.demo.resistance
+            ),
             margin,
             h - 10.0,
         );
@@ -1643,14 +1769,26 @@ impl RcTimeConstantDemoRunner {
 
         // Draw charging curve
         if !self.demo.voltage_history.is_empty() {
-            let max_time = self.demo.time_history.iter().cloned().fold(0.1_f32, f32::max).max(self.demo.tau * 5.0);
+            let max_time = self
+                .demo
+                .time_history
+                .iter()
+                .cloned()
+                .fold(0.1_f32, f32::max)
+                .max(self.demo.tau * 5.0);
             let max_voltage = self.demo.v_final;
 
             ctx.set_stroke_style(&JsValue::from_str("#44ff88"));
             ctx.set_line_width(2.0);
             ctx.begin_path();
             let step = plot_w / self.demo.voltage_history.len().max(1) as f64;
-            for (i, (&voltage, &_time)) in self.demo.voltage_history.iter().zip(self.demo.time_history.iter()).enumerate() {
+            for (i, (&voltage, &_time)) in self
+                .demo
+                .voltage_history
+                .iter()
+                .zip(self.demo.time_history.iter())
+                .enumerate()
+            {
                 let x = plot_x + (i as f64) * step;
                 let y = plot_y + plot_h - (voltage / max_voltage) as f64 * plot_h;
                 if i == 0 {
@@ -1665,7 +1803,11 @@ impl RcTimeConstantDemoRunner {
             let tau_x = plot_x + (self.demo.tau / max_time) as f64 * plot_w;
             ctx.set_stroke_style(&JsValue::from_str("rgba(255, 170, 68, 0.5)"));
             ctx.set_line_width(1.0);
-            ctx.set_line_dash(&js_sys::Array::of2(&JsValue::from(5.0), &JsValue::from(5.0))).ok();
+            ctx.set_line_dash(&js_sys::Array::of2(
+                &JsValue::from(5.0),
+                &JsValue::from(5.0),
+            ))
+            .ok();
             ctx.begin_path();
             ctx.move_to(tau_x, plot_y);
             ctx.line_to(tau_x, plot_y + plot_h);
@@ -1682,13 +1824,21 @@ impl RcTimeConstantDemoRunner {
         ctx.set_font("12px 'JetBrains Mono', monospace");
         ctx.set_fill_style(&JsValue::from_str("#777"));
         let _ = ctx.fill_text(
-            &format!("τ = {:.2}s (R={:.0}Ω, C={:.0}µF)", self.demo.tau, self.demo.resistance, self.demo.capacitance),
+            &format!(
+                "τ = {:.2}s (R={:.0}Ω, C={:.0}µF)",
+                self.demo.tau, self.demo.resistance, self.demo.capacitance
+            ),
             margin,
             h - 30.0,
         );
         ctx.set_fill_style(&JsValue::from_str("#44ff88"));
         let _ = ctx.fill_text(
-            &format!("V = {:.2}V / {:.1}V ({:.0}%)", self.demo.voltage, self.demo.v_final, (self.demo.voltage / self.demo.v_final * 100.0)),
+            &format!(
+                "V = {:.2}V / {:.1}V ({:.0}%)",
+                self.demo.voltage,
+                self.demo.v_final,
+                (self.demo.voltage / self.demo.v_final * 100.0)
+            ),
             margin,
             h - 10.0,
         );
@@ -1854,7 +2004,12 @@ impl PowerBudgetDemoRunner {
         let bar_y = plot_y + plot_h * 0.2;
 
         ctx.set_fill_style(&JsValue::from_str("#ffaa44"));
-        ctx.fill_rect(bar_x, bar_y + plot_h * 0.6 - bar_height, bar_width, bar_height);
+        ctx.fill_rect(
+            bar_x,
+            bar_y + plot_h * 0.6 - bar_height,
+            bar_width,
+            bar_height,
+        );
 
         // Labels and stats
         ctx.set_font("14px 'Rajdhani', sans-serif");
@@ -1864,13 +2019,23 @@ impl PowerBudgetDemoRunner {
         ctx.set_font("12px 'JetBrains Mono', monospace");
         ctx.set_fill_style(&JsValue::from_str("#777"));
         let _ = ctx.fill_text(
-            &format!("Active: {:.0}mA × {:.1}s = {:.0}mAs", self.demo.active_current, self.demo.active_time, self.demo.active_current * self.demo.active_time),
+            &format!(
+                "Active: {:.0}mA × {:.1}s = {:.0}mAs",
+                self.demo.active_current,
+                self.demo.active_time,
+                self.demo.active_current * self.demo.active_time
+            ),
             margin,
             h - 70.0,
         );
         ctx.set_fill_style(&JsValue::from_str("#44ff88"));
         let _ = ctx.fill_text(
-            &format!("Sleep: {:.0}µA × {:.0}s = {:.1}mAs", self.demo.sleep_current, self.demo.sleep_time, (self.demo.sleep_current / 1000.0) * self.demo.sleep_time),
+            &format!(
+                "Sleep: {:.0}µA × {:.0}s = {:.1}mAs",
+                self.demo.sleep_current,
+                self.demo.sleep_time,
+                (self.demo.sleep_current / 1000.0) * self.demo.sleep_time
+            ),
             margin,
             h - 50.0,
         );
@@ -1882,7 +2047,10 @@ impl PowerBudgetDemoRunner {
         );
         ctx.set_fill_style(&JsValue::from_str("#64ffda"));
         let _ = ctx.fill_text(
-            &format!("Battery: {:.0}mAh → {:.0} cycles → {:.0} days", self.demo.battery_capacity, self.demo.cycles, self.demo.lifetime_days),
+            &format!(
+                "Battery: {:.0}mAh → {:.0} cycles → {:.0} days",
+                self.demo.battery_capacity, self.demo.cycles, self.demo.lifetime_days
+            ),
             margin,
             h - 10.0,
         );
@@ -1936,36 +2104,30 @@ fn wire_reset_pause_buttons(prefix: &str) -> Result<(), JsValue> {
         let prefix_clone = prefix.to_string();
         let closure = Closure::wrap(Box::new(move |_: web_sys::Event| {
             let paused = match prefix_clone.as_str() {
-                "ohms-law" => {
-                    OHMS_LAW_DEMO.with(|d| {
-                        if let Some(runner) = d.borrow_mut().as_mut() {
-                            runner.paused = !runner.paused;
-                            runner.paused
-                        } else {
-                            false
-                        }
-                    })
-                }
-                "rc" => {
-                    RC_DEMO.with(|d| {
-                        if let Some(runner) = d.borrow_mut().as_mut() {
-                            runner.paused = !runner.paused;
-                            runner.paused
-                        } else {
-                            false
-                        }
-                    })
-                }
-                "power-budget" => {
-                    POWER_BUDGET_DEMO.with(|d| {
-                        if let Some(runner) = d.borrow_mut().as_mut() {
-                            runner.paused = !runner.paused;
-                            runner.paused
-                        } else {
-                            false
-                        }
-                    })
-                }
+                "ohms-law" => OHMS_LAW_DEMO.with(|d| {
+                    if let Some(runner) = d.borrow_mut().as_mut() {
+                        runner.paused = !runner.paused;
+                        runner.paused
+                    } else {
+                        false
+                    }
+                }),
+                "rc" => RC_DEMO.with(|d| {
+                    if let Some(runner) = d.borrow_mut().as_mut() {
+                        runner.paused = !runner.paused;
+                        runner.paused
+                    } else {
+                        false
+                    }
+                }),
+                "power-budget" => POWER_BUDGET_DEMO.with(|d| {
+                    if let Some(runner) = d.borrow_mut().as_mut() {
+                        runner.paused = !runner.paused;
+                        runner.paused
+                    } else {
+                        false
+                    }
+                }),
                 _ => false,
             };
             if let Some(btn) = web_sys::window()

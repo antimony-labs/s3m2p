@@ -11,17 +11,21 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::HtmlInputElement;
 
-use learn_core::{Demo, demos::BoidsDemo};
+use learn_core::{demos::BoidsDemo, Demo};
 use learn_web::{AnimationLoop, Canvas};
 
 // Thread-local state for the currently running demos
 thread_local! {
-    static BOIDS_DEMO: RefCell<Option<BoidsDemoRunner>> = RefCell::new(None);
-    static CURRENT_DEMO: RefCell<Option<SwarmDemoRunner>> = RefCell::new(None);
+    static BOIDS_DEMO: RefCell<Option<BoidsDemoRunner>> = const { RefCell::new(None) };
+    static CURRENT_DEMO: RefCell<Option<SwarmDemoRunner>> = const { RefCell::new(None) };
 }
 
 /// Dispatch to the appropriate demo based on lesson index
-pub fn start_demo_for_lesson(_lesson_idx: usize, canvas_id: &str, seed: u64) -> Result<(), JsValue> {
+pub fn start_demo_for_lesson(
+    _lesson_idx: usize,
+    canvas_id: &str,
+    seed: u64,
+) -> Result<(), JsValue> {
     // For now, use BoidsDemo for lessons 0, 1, 3
     // Other lessons will be wired as demos are implemented
     BoidsDemoRunner::start(canvas_id, seed)
@@ -107,7 +111,7 @@ impl BoidsDemoRunner {
             let param_name = param.name.to_string();
             let slider_id = format!("{}-slider", param_name);
             let value_id = format!("{}-value", param_name);
-            
+
             if let Some(slider) = web_sys::window()
                 .and_then(|w| w.document())
                 .and_then(|d| d.get_element_by_id(&slider_id))
@@ -129,7 +133,7 @@ impl BoidsDemoRunner {
                                     false
                                 }
                             });
-                            
+
                             if param_updated {
                                 // Update value display
                                 if let Some(value_el) = web_sys::window()
@@ -139,12 +143,16 @@ impl BoidsDemoRunner {
                                     value_el.set_text_content(Some(&format!("{:.2}", value)));
                                 }
                             } else {
-                                web_sys::console::warn_1(&format!("Failed to update parameter: {}", param_name_clone).into());
+                                web_sys::console::warn_1(
+                                    &format!("Failed to update parameter: {}", param_name_clone)
+                                        .into(),
+                                );
                             }
                         }
                     }
                 }) as Box<dyn FnMut(_)>);
-                slider.add_event_listener_with_callback("input", closure.as_ref().unchecked_ref())?;
+                slider
+                    .add_event_listener_with_callback("input", closure.as_ref().unchecked_ref())?;
                 closure.forget();
             } else {
                 web_sys::console::warn_1(&format!("Slider not found: {}", slider_id).into());
@@ -263,10 +271,16 @@ impl BoidsDemoRunner {
         ctx.set_font("12px 'Inter', sans-serif");
         let collisions = self.demo.world.compute_collisions(0.02);
         let min_sep = self.demo.world.compute_min_separation();
-        let components = self.demo.world.compute_components(self.demo.neighbor_radius);
+        let components = self
+            .demo
+            .world
+            .compute_components(self.demo.neighbor_radius);
         let hud_text = format!(
             "Collisions: {} | Min Separation: {:.3} | Components: {} | Agents: {}",
-            collisions, min_sep, components, self.demo.world.agents.len()
+            collisions,
+            min_sep,
+            components,
+            self.demo.world.agents.len()
         );
         let _ = ctx.fill_text(&hud_text, margin, h - 20.0);
     }
@@ -411,4 +425,3 @@ impl SwarmDemoRunner {
         let _ = ctx.fill_text(&seed_text, 20.0, h - 20.0);
     }
 }
-

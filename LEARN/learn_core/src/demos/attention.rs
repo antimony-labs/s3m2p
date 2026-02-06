@@ -28,7 +28,9 @@ impl Sentence {
     pub fn tokens(&self) -> &'static [&'static str] {
         match self {
             Sentence::TheCatSat => &["The", "cat", "sat", "on", "the", "mat"],
-            Sentence::TheAnimalDidnt => &["The", "animal", "didn't", "cross", "the", "road", "because", "it", "was", "tired"],
+            Sentence::TheAnimalDidnt => &[
+                "The", "animal", "didn't", "cross", "the", "road", "because", "it", "was", "tired",
+            ],
             Sentence::BankRiver => &["I", "went", "to", "the", "bank", "by", "the", "river"],
             Sentence::TranslationExample => &["Je", "suis", "un", "étudiant"],
         }
@@ -246,7 +248,12 @@ impl Demo for AttentionDemo {
         self.rng = Rng::new(seed);
 
         // Load tokens from sentence
-        self.tokens = self.sentence.tokens().iter().map(|&s| s.to_string()).collect();
+        self.tokens = self
+            .sentence
+            .tokens()
+            .iter()
+            .map(|&s| s.to_string())
+            .collect();
         self.selected_query = 0;
         self.show_step = 0;
 
@@ -262,7 +269,12 @@ impl Demo for AttentionDemo {
         match name {
             "sentence" => {
                 self.sentence = Sentence::from_index(value as usize);
-                self.tokens = self.sentence.tokens().iter().map(|&s| s.to_string()).collect();
+                self.tokens = self
+                    .sentence
+                    .tokens()
+                    .iter()
+                    .map(|&s| s.to_string())
+                    .collect();
                 self.selected_query = 0;
                 self.rng = Rng::new(self.seed);
                 self.init_weights();
@@ -339,7 +351,8 @@ mod tests {
             assert!(
                 (sum - 1.0).abs() < 1e-5,
                 "Attention weights for token {} should sum to 1: {}",
-                q, sum
+                q,
+                sum
             );
         }
     }
@@ -355,8 +368,14 @@ mod tests {
         demo2.reset(42);
 
         // Find max attention weight
-        let max1 = demo1.attention_weights[0].iter().cloned().fold(0.0f32, f32::max);
-        let max2 = demo2.attention_weights[0].iter().cloned().fold(0.0f32, f32::max);
+        let max1 = demo1.attention_weights[0]
+            .iter()
+            .cloned()
+            .fold(0.0f32, f32::max);
+        let max2 = demo2.attention_weights[0]
+            .iter()
+            .cloned()
+            .fold(0.0f32, f32::max);
 
         // Lower temperature should produce more peaked distribution
         assert!(max1 > max2, "Lower temp should give sharper attention");
@@ -377,7 +396,11 @@ mod tests {
     fn test_different_sentences() {
         let mut demo = AttentionDemo::default();
 
-        for sentence in [Sentence::TheCatSat, Sentence::TheAnimalDidnt, Sentence::BankRiver] {
+        for sentence in [
+            Sentence::TheCatSat,
+            Sentence::TheAnimalDidnt,
+            Sentence::BankRiver,
+        ] {
             demo.sentence = sentence;
             demo.reset(42);
 

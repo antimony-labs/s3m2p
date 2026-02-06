@@ -5,8 +5,8 @@
 //! LAYER: LEARN -> learn_core -> demos -> problems
 //! ===============================================================================
 
+use crate::demos::pseudocode::{CodeLine, Pseudocode};
 use crate::Demo;
-use crate::demos::pseudocode::{Pseudocode, CodeLine};
 use std::collections::VecDeque;
 
 // Static pseudocode for each variant
@@ -87,9 +87,9 @@ pub struct GraphProblemsDemo {
     /// BFS/DFS queue/stack
     pub queue: VecDeque<(usize, usize)>,
     /// For course schedule
-    pub courses: Vec<i32>,      // Course numbers
-    pub in_degrees: Vec<i32>,   // In-degree for each course
-    pub completed: Vec<usize>,  // Completed courses
+    pub courses: Vec<i32>, // Course numbers
+    pub in_degrees: Vec<i32>,  // In-degree for each course
+    pub completed: Vec<usize>, // Completed courses
     pub processing: Option<usize>,
     /// For word ladder
     pub words: Vec<String>,
@@ -132,10 +132,34 @@ impl GraphProblemsDemo {
     fn setup_islands(&mut self) {
         // 4x5 grid with 3 islands
         self.grid = vec![
-            vec![Cell::Land, Cell::Land, Cell::Water, Cell::Water, Cell::Water],
-            vec![Cell::Land, Cell::Land, Cell::Water, Cell::Water, Cell::Water],
-            vec![Cell::Water, Cell::Water, Cell::Land, Cell::Water, Cell::Water],
-            vec![Cell::Water, Cell::Water, Cell::Water, Cell::Land, Cell::Land],
+            vec![
+                Cell::Land,
+                Cell::Land,
+                Cell::Water,
+                Cell::Water,
+                Cell::Water,
+            ],
+            vec![
+                Cell::Land,
+                Cell::Land,
+                Cell::Water,
+                Cell::Water,
+                Cell::Water,
+            ],
+            vec![
+                Cell::Water,
+                Cell::Water,
+                Cell::Land,
+                Cell::Water,
+                Cell::Water,
+            ],
+            vec![
+                Cell::Water,
+                Cell::Water,
+                Cell::Water,
+                Cell::Land,
+                Cell::Land,
+            ],
         ];
         self.rows = 4;
         self.cols = 5;
@@ -175,13 +199,22 @@ impl GraphProblemsDemo {
     fn setup_word_ladder(&mut self) {
         self.current_word = "hit".to_string();
         self.target_word = "cog".to_string();
-        self.words = vec!["hot".to_string(), "dot".to_string(), "dog".to_string(),
-                          "lot".to_string(), "log".to_string(), "cog".to_string()];
+        self.words = vec![
+            "hot".to_string(),
+            "dot".to_string(),
+            "dog".to_string(),
+            "lot".to_string(),
+            "log".to_string(),
+            "cog".to_string(),
+        ];
         self.word_path = vec![self.current_word.clone()];
         self.queue.clear();
         self.pseudocode = Pseudocode::new("Word Ladder", WORD_LADDER_CODE);
         self.pseudocode.current_line = Some(0);
-        self.message = format!("Transform '{}' to '{}'", self.current_word, self.target_word);
+        self.message = format!(
+            "Transform '{}' to '{}'",
+            self.current_word, self.target_word
+        );
     }
 
     pub fn step_algorithm(&mut self) {
@@ -311,7 +344,8 @@ impl GraphProblemsDemo {
         let prev_word = self.word_path.last().unwrap().clone();
 
         // Find the changed character
-        let changed_pos = prev_word.chars()
+        let changed_pos = prev_word
+            .chars()
             .zip(next_word.chars())
             .position(|(a, b)| a != b)
             .unwrap_or(0);

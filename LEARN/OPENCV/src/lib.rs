@@ -109,7 +109,7 @@ pub fn go_to_lesson(idx: usize) {
 pub fn go_home() {
     // Scroll to top of page
     if let Some(window) = web_sys::window() {
-        let _ = window.scroll_to_with_x_and_y(0.0, 0.0);
+        window.scroll_to_with_x_and_y(0.0, 0.0);
     }
 
     // Stop any running demo

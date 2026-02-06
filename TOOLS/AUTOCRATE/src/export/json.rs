@@ -84,13 +84,19 @@ pub fn export_assembly_json(
     let overall_dims = calculate_overall_dimensions(assembly);
 
     // Convert assembly nodes to component exports
-    let mut component_counter: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
-    let components: Vec<ComponentExport> = assembly.nodes.iter()
+    let mut component_counter: std::collections::HashMap<String, usize> =
+        std::collections::HashMap::new();
+    let components: Vec<ComponentExport> = assembly
+        .nodes
+        .iter()
         .filter(|n| n.id != assembly.root_id)
         .map(|node| {
             let type_name = get_component_type_name(&node.component_type);
             let counter = component_counter.entry(type_name.clone()).or_insert(0);
-            let part_number = crate::manufacturing::part_numbers::generate_part_number(&node.component_type, *counter);
+            let part_number = crate::manufacturing::part_numbers::generate_part_number(
+                &node.component_type,
+                *counter,
+            );
             *counter += 1;
 
             ComponentExport {
@@ -180,7 +186,7 @@ fn get_component_type_name(component_type: &ComponentType) -> String {
             } else {
                 "HorizontalCleat".to_string()
             }
-        },
+        }
         ComponentType::Panel { .. } => "Panel".to_string(),
         ComponentType::Nail { .. } => "Nail".to_string(),
     }
@@ -197,11 +203,21 @@ mod tests {
 
         let skid_id = assembly.create_node(
             "Skid 1".to_string(),
-            ComponentType::Skid { dimensions: [3.5, 3.5, 120.0] },
+            ComponentType::Skid {
+                dimensions: [3.5, 3.5, 120.0],
+            },
             LocalTransform::identity(),
             BoundingBox {
-                min: Point3 { x: -2.0, y: -60.0, z: 0.0 },
-                max: Point3 { x: 2.0, y: 60.0, z: 3.5 },
+                min: Point3 {
+                    x: -2.0,
+                    y: -60.0,
+                    z: 0.0,
+                },
+                max: Point3 {
+                    x: 2.0,
+                    y: 60.0,
+                    z: 3.5,
+                },
             },
         );
         assembly.add_child(assembly.root_id, skid_id);
@@ -212,8 +228,7 @@ mod tests {
         let json = export_assembly_json(&assembly, &spec, &manufacturing);
 
         // Should be valid JSON
-        let parsed: serde_json::Value = serde_json::from_str(&json)
-            .expect("JSON should be valid");
+        let parsed: serde_json::Value = serde_json::from_str(&json).expect("JSON should be valid");
 
         assert!(parsed["crate_specification"].is_object());
         assert!(parsed["components"].is_array());
@@ -221,7 +236,11 @@ mod tests {
         assert!(parsed["manufacturing_data"].is_object());
 
         // Check datum planes
-        assert_eq!(parsed["manufacturing_data"]["datum_planes"]["a"].as_str().unwrap(),
-                   "Base plane (Z=0, bottom of skids)");
+        assert_eq!(
+            parsed["manufacturing_data"]["datum_planes"]["a"]
+                .as_str()
+                .unwrap(),
+            "Base plane (Z=0, bottom of skids)"
+        );
     }
 }

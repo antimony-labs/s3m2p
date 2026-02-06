@@ -6,21 +6,21 @@ use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
+pub mod assembly;
 pub mod calculator;
 pub mod constants;
-pub mod geometry;
-pub mod render;
-pub mod assembly;
-pub mod generator;
-pub mod step_converter;
-pub mod manufacturing;
 pub mod export;
+pub mod generator;
+pub mod geometry;
+pub mod manufacturing;
+pub mod render;
+pub mod step_converter;
 
+pub use assembly::{ComponentType, CrateAssembly};
 pub use constants::LumberSize;
-pub use geometry::*;
-pub use render::{WebGLRenderer, Canvas2DRenderer, ViewMode, Camera, ProjectionType};
-pub use assembly::{CrateAssembly, ComponentType};
 pub use generator::generate_crate;
+pub use geometry::*;
+pub use render::{Camera, Canvas2DRenderer, ProjectionType, ViewMode, WebGLRenderer};
 
 /// Product dimensions input (in inches)
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -116,10 +116,13 @@ pub struct CrateGeometry {
     pub cleats: Vec<CleatGeometry>,
 }
 
-use web_sys::{window, HtmlCanvasElement, MouseEvent, WheelEvent, Blob, Url, HtmlAnchorElement, HtmlInputElement, HtmlSelectElement};
-use wasm_bindgen::closure::Closure;
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
+use wasm_bindgen::closure::Closure;
+use web_sys::{
+    window, Blob, HtmlAnchorElement, HtmlCanvasElement, HtmlInputElement, HtmlSelectElement,
+    MouseEvent, Url, WheelEvent,
+};
 
 fn download_file(filename: &str, content: &str) -> Result<(), JsValue> {
     let window = window().ok_or("no window")?;
@@ -132,11 +135,13 @@ fn download_file(filename: &str, content: &str) -> Result<(), JsValue> {
     let blob = Blob::new_with_str_sequence_and_options(&parts, &properties)?;
 
     let url = Url::create_object_url_with_blob(&blob)?;
-    let a = document.create_element("a")?.dyn_into::<HtmlAnchorElement>()?;
+    let a = document
+        .create_element("a")?
+        .dyn_into::<HtmlAnchorElement>()?;
     a.set_href(&url);
     a.set_download(filename);
     a.style().set_property("display", "none")?;
-    
+
     body.append_child(&a)?;
     a.click();
     body.remove_child(&a)?;
@@ -169,11 +174,10 @@ pub fn start() -> Result<(), JsValue> {
     canvas.set_height(height);
 
     // Initialize WebGL renderer
-    let mut renderer = render::WebGLRenderer::new(canvas.clone())
-        .map_err(|e| JsValue::from_str(&e))?;
+    let mut renderer =
+        render::WebGLRenderer::new(canvas.clone()).map_err(|e| JsValue::from_str(&e))?;
 
-    renderer.init_shaders()
-        .map_err(|e| JsValue::from_str(&e))?;
+    renderer.init_shaders().map_err(|e| JsValue::from_str(&e))?;
 
     web_sys::console::log_1(&"WebGL renderer initialized!".into());
 
@@ -181,17 +185,32 @@ pub fn start() -> Result<(), JsValue> {
     {
         let camera = renderer.camera_mut();
         camera.distance = 150.0;
-        camera.azimuth = std::f32::consts::PI / 4.0;  // 45 degrees
+        camera.azimuth = std::f32::consts::PI / 4.0; // 45 degrees
         camera.elevation = std::f32::consts::PI / 6.0; // 30 degrees
         camera.target = glam::Vec3::new(0.0, 0.0, 20.0);
     }
 
     // UI Elements
-    let input_length = document.get_element_by_id("length").unwrap().dyn_into::<HtmlInputElement>()?;
-    let input_width = document.get_element_by_id("width").unwrap().dyn_into::<HtmlInputElement>()?;
-    let input_height = document.get_element_by_id("height").unwrap().dyn_into::<HtmlInputElement>()?;
-    let input_weight = document.get_element_by_id("weight").unwrap().dyn_into::<HtmlInputElement>()?;
-    let input_style = document.get_element_by_id("style").unwrap().dyn_into::<HtmlSelectElement>()?;
+    let input_length = document
+        .get_element_by_id("length")
+        .unwrap()
+        .dyn_into::<HtmlInputElement>()?;
+    let input_width = document
+        .get_element_by_id("width")
+        .unwrap()
+        .dyn_into::<HtmlInputElement>()?;
+    let input_height = document
+        .get_element_by_id("height")
+        .unwrap()
+        .dyn_into::<HtmlInputElement>()?;
+    let input_weight = document
+        .get_element_by_id("weight")
+        .unwrap()
+        .dyn_into::<HtmlInputElement>()?;
+    let input_style = document
+        .get_element_by_id("style")
+        .unwrap()
+        .dyn_into::<HtmlSelectElement>()?;
     let btn_generate = document.get_element_by_id("generate").unwrap();
     let btn_export = document.get_element_by_id("export-step").unwrap();
     let btn_export_cut_list = document.get_element_by_id("export-cut-list").unwrap();
@@ -228,7 +247,7 @@ pub fn start() -> Result<(), JsValue> {
 
         Closure::wrap(Box::new(move || {
             web_sys::console::log_1(&"Generating crate...".into());
-            
+
             // Parse inputs
             let length = input_length.value_as_number() as f32;
             let width = input_width.value_as_number() as f32;
@@ -263,11 +282,11 @@ pub fn start() -> Result<(), JsValue> {
             // Update WebGL buffers
             let gl = renderer.borrow().gl.clone();
             let result = process_assembly_for_rendering(&gl, &assembly.borrow());
-            
+
             if let Ok((new_bufs, new_colors)) = result {
                 *mesh_buffers_rc.borrow_mut() = new_bufs;
                 *colors_rc.borrow_mut() = new_colors;
-                
+
                 // Render immediately
                 let r = renderer.borrow();
                 r.begin_frame();
@@ -275,7 +294,7 @@ pub fn start() -> Result<(), JsValue> {
                     r.draw_mesh(buf, colors_rc.borrow()[i]);
                 }
                 r.end_frame();
-                
+
                 web_sys::console::log_1(&"Crate generated and rendered.".into());
             } else {
                 web_sys::console::error_1(&"Failed to process assembly for rendering".into());
@@ -284,10 +303,15 @@ pub fn start() -> Result<(), JsValue> {
     };
 
     // Initial generation
-    update_scene.as_ref().unchecked_ref::<js_sys::Function>().call0(&JsValue::NULL).unwrap();
+    update_scene
+        .as_ref()
+        .unchecked_ref::<js_sys::Function>()
+        .call0(&JsValue::NULL)
+        .unwrap();
 
     // Bind Generate Button
-    btn_generate.add_event_listener_with_callback("click", update_scene.as_ref().unchecked_ref())?;
+    btn_generate
+        .add_event_listener_with_callback("click", update_scene.as_ref().unchecked_ref())?;
     update_scene.forget(); // Keep alive
 
     // Bind Export STEP Button
@@ -315,7 +339,8 @@ pub fn start() -> Result<(), JsValue> {
                 web_sys::console::warn_1(&"No manufacturing data - generate crate first".into());
             }
         }) as Box<dyn FnMut()>);
-        btn_export_cut_list.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+        btn_export_cut_list
+            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
         closure.forget();
     }
 
@@ -331,7 +356,8 @@ pub fn start() -> Result<(), JsValue> {
                 web_sys::console::warn_1(&"No manufacturing data - generate crate first".into());
             }
         }) as Box<dyn FnMut()>);
-        btn_export_bom.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+        btn_export_bom
+            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
         closure.forget();
     }
 
@@ -347,7 +373,8 @@ pub fn start() -> Result<(), JsValue> {
                 web_sys::console::warn_1(&"No manufacturing data - generate crate first".into());
             }
         }) as Box<dyn FnMut()>);
-        btn_export_nailing.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+        btn_export_nailing
+            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
         closure.forget();
     }
 
@@ -358,18 +385,16 @@ pub fn start() -> Result<(), JsValue> {
         let manufacturing_data = manufacturing_data.clone();
         let closure = Closure::wrap(Box::new(move || {
             if let Some(mfg) = manufacturing_data.borrow().as_ref() {
-                let json = export::json::export_assembly_json(
-                    &assembly.borrow(),
-                    &spec_rc.borrow(),
-                    mfg
-                );
+                let json =
+                    export::json::export_assembly_json(&assembly.borrow(), &spec_rc.borrow(), mfg);
                 let _ = download_file("autocrate_assembly.json", &json);
                 web_sys::console::log_1(&"Assembly JSON exported".into());
             } else {
                 web_sys::console::warn_1(&"No manufacturing data - generate crate first".into());
             }
         }) as Box<dyn FnMut()>);
-        btn_export_json.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+        btn_export_json
+            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
         closure.forget();
     }
 
@@ -378,14 +403,18 @@ pub fn start() -> Result<(), JsValue> {
         let manufacturing_data = manufacturing_data.clone();
         let closure = Closure::wrap(Box::new(move || {
             if let Some(mfg) = manufacturing_data.borrow().as_ref() {
-                let gcode = export::gcode::export_cnc_gcode(&mfg.cnc_program, export::gcode::GcodeUnits::Imperial);
+                let gcode = export::gcode::export_cnc_gcode(
+                    &mfg.cnc_program,
+                    export::gcode::GcodeUnits::Imperial,
+                );
                 let _ = download_file("autocrate_cnc.gcode", &gcode);
                 web_sys::console::log_1(&"CNC G-code exported".into());
             } else {
                 web_sys::console::warn_1(&"No manufacturing data - generate crate first".into());
             }
         }) as Box<dyn FnMut()>);
-        btn_export_gcode.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+        btn_export_gcode
+            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
         closure.forget();
     }
 
@@ -403,7 +432,7 @@ pub fn start() -> Result<(), JsValue> {
             // Reset to perspective defaults
             r.camera_mut().azimuth = std::f32::consts::PI / 4.0;
             r.camera_mut().elevation = std::f32::consts::PI / 6.0;
-            
+
             // Update UI classes
             let _ = btn_view3d_clone.class_list().add_1("active");
             let _ = btn_view2d_clone.class_list().remove_1("active");
@@ -527,12 +556,13 @@ pub fn start() -> Result<(), JsValue> {
 
             // Zoom camera
             let delta = event.delta_y() as f32 * 0.1;
-            
+
             if r.camera().projection_type == ProjectionType::Perspective {
                 r.camera_mut().zoom(delta);
             } else {
                 // Adjust orthographic size
-                r.camera_mut().orthographic_size = (r.camera().orthographic_size + delta).max(10.0).min(1000.0);
+                r.camera_mut().orthographic_size =
+                    (r.camera().orthographic_size + delta).max(10.0).min(1000.0);
             }
 
             // Re-render
@@ -553,7 +583,10 @@ pub fn start() -> Result<(), JsValue> {
     Ok(())
 }
 
-fn process_assembly_for_rendering(gl: &web_sys::WebGl2RenderingContext, assembly: &CrateAssembly) -> Result<(Vec<render::MeshBuffer>, Vec<glam::Vec3>), JsValue> {
+fn process_assembly_for_rendering(
+    gl: &web_sys::WebGl2RenderingContext,
+    assembly: &CrateAssembly,
+) -> Result<(Vec<render::MeshBuffer>, Vec<glam::Vec3>), JsValue> {
     let mut mesh_buffers = Vec::new();
     let mut colors = Vec::new();
 
@@ -563,10 +596,7 @@ fn process_assembly_for_rendering(gl: &web_sys::WebGl2RenderingContext, assembly
         }
 
         // Create mesh in local space
-        let mesh = render::Mesh::create_box(
-            node.bounds.min.to_vec3(),
-            node.bounds.max.to_vec3(),
-        );
+        let mesh = render::Mesh::create_box(node.bounds.min.to_vec3(), node.bounds.max.to_vec3());
 
         // Create transform matrix
         let transform = glam::Mat4::from_rotation_translation(
@@ -578,12 +608,12 @@ fn process_assembly_for_rendering(gl: &web_sys::WebGl2RenderingContext, assembly
         let transformed_mesh = mesh.transformed(&transform);
 
         let color = match &node.component_type {
-            ComponentType::Skid { .. } => glam::Vec3::new(0.65, 0.45, 0.30),    // Darker brown
+            ComponentType::Skid { .. } => glam::Vec3::new(0.65, 0.45, 0.30), // Darker brown
             ComponentType::Floorboard { .. } => glam::Vec3::new(0.85, 0.75, 0.60), // Lighter tan
-            ComponentType::Cleat { .. } => glam::Vec3::new(0.75, 0.60, 0.45),   // Medium brown
-            ComponentType::Panel { .. } => glam::Vec3::new(0.80, 0.70, 0.55),   // Light wood tone
-            ComponentType::Nail { .. } => glam::Vec3::new(0.60, 0.65, 0.70),    // Galvanized steel
-            _ => glam::Vec3::new(0.5, 0.5, 0.5), // Default for unknown
+            ComponentType::Cleat { .. } => glam::Vec3::new(0.75, 0.60, 0.45), // Medium brown
+            ComponentType::Panel { .. } => glam::Vec3::new(0.80, 0.70, 0.55), // Light wood tone
+            ComponentType::Nail { .. } => glam::Vec3::new(0.60, 0.65, 0.70), // Galvanized steel
+            _ => glam::Vec3::new(0.5, 0.5, 0.5),                             // Default for unknown
         };
 
         mesh_buffers.push(render::MeshBuffer::from_mesh(gl, &transformed_mesh)?);

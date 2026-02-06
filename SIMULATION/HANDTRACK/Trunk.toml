@@ -1,0 +1,18 @@
+[[hooks]]
+stage = "pre_build"
+command = "sh"
+command_arguments = ["-c", "echo 'Building hand tracking simulation...'"]
+
+[[hooks]]
+stage = "post_build"
+command = "sh"
+command_arguments = ["-c", "cd dist && JS_FILE=$(ls handtrack-*.js 2>/dev/null | head -1) && WASM_FILE=$(ls handtrack-*_bg.wasm 2>/dev/null | head -1) && [ -n \"$JS_FILE\" ] && ln -sf \"$JS_FILE\" handtrack.js; [ -n \"$WASM_FILE\" ] && ln -sf \"$WASM_FILE\" handtrack_bg.wasm; true"]
+
+[build]
+target = "index.html"
+dist = "dist"
+
+[serve]
+addresses = ["0.0.0.0"]
+port = 8082
+open = true

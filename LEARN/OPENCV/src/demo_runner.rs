@@ -330,21 +330,23 @@ fn process_frame() {
 
     // Process based on lesson (new curriculum: 17 lessons across 6 phases)
     let processed = match lesson_id {
-        5 => image_processing::canny_edge(&image_data, low_thresh, high_thresh),      // Edge Detection
-        6 => image_processing::gaussian_blur(&image_data, blur_radius),               // Noise Reduction
-        7 => image_processing::harris_corners(&image_data, low_thresh),               // Corner Detection
-        8 => image_processing::simple_blob_detection(&image_data),                    // Blob Detection
-        9 => image_processing::threshold(&image_data, low_thresh as u8),              // Thresholding
-        12 => image_processing::find_contours(&image_data, low_thresh as u8),         // Contour Detection
-        15 => image_processing::color_tracking(&image_data, low_thresh as u8, 20),    // Color Tracking
-        16 => image_processing::simple_face_detection(&image_data),                   // Face Detection
+        5 => image_processing::canny_edge(&image_data, low_thresh, high_thresh), // Edge Detection
+        6 => image_processing::gaussian_blur(&image_data, blur_radius),          // Noise Reduction
+        7 => image_processing::harris_corners(&image_data, low_thresh),          // Corner Detection
+        8 => image_processing::simple_blob_detection(&image_data),               // Blob Detection
+        9 => image_processing::threshold(&image_data, low_thresh as u8),         // Thresholding
+        12 => image_processing::find_contours(&image_data, low_thresh as u8), // Contour Detection
+        15 => image_processing::color_tracking(&image_data, low_thresh as u8, 20), // Color Tracking
+        16 => image_processing::simple_face_detection(&image_data),           // Face Detection
         _ => image_processing::grayscale(&image_data),
     };
 
     // Put processed image back
-    if let Ok(new_image_data) =
-        ImageData::new_with_u8_clamped_array_and_sh(wasm_bindgen::Clamped(&processed), width, height)
-    {
+    if let Ok(new_image_data) = ImageData::new_with_u8_clamped_array_and_sh(
+        wasm_bindgen::Clamped(&processed),
+        width,
+        height,
+    ) {
         let _ = ctx.put_image_data(&new_image_data, 0.0, 0.0);
     }
 }
@@ -352,14 +354,14 @@ fn process_frame() {
 /// Render a static canvas demo
 fn render_canvas_demo(lesson_id: usize) {
     match lesson_id {
-        1 => render_color_space_demo(),      // Pixels & Color Spaces
-        2 => render_pinhole_demo(),          // Pinhole Camera Model
-        3 => render_camera_matrix_demo(),    // Camera Matrix & Projection
-        4 => render_convolution_demo(),      // Convolution
-        10 => render_transform_demo(),       // Image Transformations
-        11 => render_homography_demo(),      // Homography
-        13 => render_stereo_demo(),          // Stereo Vision & Depth
-        14 => render_epipolar_demo(),        // Epipolar Geometry
+        1 => render_color_space_demo(),   // Pixels & Color Spaces
+        2 => render_pinhole_demo(),       // Pinhole Camera Model
+        3 => render_camera_matrix_demo(), // Camera Matrix & Projection
+        4 => render_convolution_demo(),   // Convolution
+        10 => render_transform_demo(),    // Image Transformations
+        11 => render_homography_demo(),   // Homography
+        13 => render_stereo_demo(),       // Stereo Vision & Depth
+        14 => render_epipolar_demo(),     // Epipolar Geometry
         _ => render_placeholder_demo(lesson_id),
     }
 }
@@ -659,20 +661,27 @@ fn render_convolution_demo() {
                     let px = 20.0 + x as f64 * cell_size;
                     let py = 30.0 + y as f64 * cell_size;
 
-                    ctx.set_fill_style(&JsValue::from_str(&format!("rgb({},{},{})", val, val, val)));
+                    ctx.set_fill_style(&JsValue::from_str(&format!(
+                        "rgb({},{},{})",
+                        val, val, val
+                    )));
                     ctx.fill_rect(px, py, cell_size - 2.0, cell_size - 2.0);
 
                     ctx.set_fill_style(&JsValue::from_str(if val > 128 { "#000" } else { "#fff" }));
                     ctx.set_font("10px JetBrains Mono, monospace");
-                    let _ = ctx.fill_text(&val.to_string(), px + cell_size / 2.0 - 1.0, py + cell_size / 2.0 + 4.0);
+                    let _ = ctx.fill_text(
+                        &val.to_string(),
+                        px + cell_size / 2.0 - 1.0,
+                        py + cell_size / 2.0 + 4.0,
+                    );
                 }
             }
 
             // Draw kernel (3x3 blur)
             let kernel: [[f32; 3]; 3] = [
-                [1.0/9.0, 1.0/9.0, 1.0/9.0],
-                [1.0/9.0, 1.0/9.0, 1.0/9.0],
-                [1.0/9.0, 1.0/9.0, 1.0/9.0],
+                [1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0],
+                [1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0],
+                [1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0],
             ];
 
             ctx.set_fill_style(&JsValue::from_str("#fff"));
@@ -689,7 +698,11 @@ fn render_convolution_demo() {
 
                     ctx.set_fill_style(&JsValue::from_str("#0099ff"));
                     ctx.set_font("10px JetBrains Mono, monospace");
-                    let _ = ctx.fill_text(&format!("{:.2}", val), px + cell_size / 2.0 - 1.0, py + cell_size / 2.0 + 4.0);
+                    let _ = ctx.fill_text(
+                        &format!("{:.2}", val),
+                        px + cell_size / 2.0 - 1.0,
+                        py + cell_size / 2.0 + 4.0,
+                    );
                 }
             }
 
@@ -758,7 +771,11 @@ fn render_transform_demo() {
 
             ctx.set_fill_style(&JsValue::from_str("#888"));
             ctx.set_font("11px Inter, sans-serif");
-            let _ = ctx.fill_text("Geometric transforms change position, rotation, and scale", 250.0, 280.0);
+            let _ = ctx.fill_text(
+                "Geometric transforms change position, rotation, and scale",
+                250.0,
+                280.0,
+            );
         }
     }
 }
@@ -851,7 +868,11 @@ fn render_homography_demo() {
             // Formula at bottom
             ctx.set_fill_style(&JsValue::from_str("#888"));
             ctx.set_font("11px JetBrains Mono, monospace");
-            let _ = ctx.fill_text("p' = H · p    (4 point pairs → solve for 3×3 matrix H)", 250.0, 280.0);
+            let _ = ctx.fill_text(
+                "p' = H · p    (4 point pairs → solve for 3×3 matrix H)",
+                250.0,
+                280.0,
+            );
         }
     }
 }
@@ -1060,7 +1081,11 @@ fn render_epipolar_demo() {
             // Explanation
             ctx.set_fill_style(&JsValue::from_str("#888"));
             ctx.set_font("11px Inter, sans-serif");
-            let _ = ctx.fill_text("Point p maps to epipolar line l' in other image", 250.0, 220.0);
+            let _ = ctx.fill_text(
+                "Point p maps to epipolar line l' in other image",
+                250.0,
+                220.0,
+            );
             let _ = ctx.fill_text("Corresponding point p' must lie on l'", 250.0, 240.0);
 
             // Formula
@@ -1118,7 +1143,7 @@ fn render_sidebyside_demo(_lesson_id: usize) {
                 ctx.set_fill_style(&JsValue::from_str("#0066CC"));
                 ctx.set_font("14px sans-serif");
                 ctx.set_text_align("center");
-                let _ = ctx.fill_text(*canvas_id, 150.0, 100.0);
+                let _ = ctx.fill_text(canvas_id, 150.0, 100.0);
             }
         }
     }

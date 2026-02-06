@@ -1,9 +1,9 @@
 //! Lumber cut list generation with ASTM D6039 tolerances
 
+use super::part_numbers::generate_part_number;
+use super::{determine_lumber_grade, LumberGrade, Tolerance};
 use crate::assembly::*;
 use crate::constants::LumberSize;
-use super::{Tolerance, LumberGrade, determine_lumber_grade};
-use super::part_numbers::generate_part_number;
 use serde::{Deserialize, Serialize};
 
 /// Cut list entry for a lumber component
@@ -15,7 +15,7 @@ pub struct CutListEntry {
     pub length: Tolerance,
     pub quantity: u32,
     pub lumber_grade: LumberGrade,
-    pub straightness_tolerance: f32,  // inches per foot
+    pub straightness_tolerance: f32,     // inches per foot
     pub perpendicularity_tolerance: f32, // degrees
     pub notes: Vec<String>,
 }
@@ -42,10 +42,10 @@ pub fn generate_cut_list(assembly: &CrateAssembly, product_weight: f32) -> Vec<C
                     description: "Skid".to_string(),
                     lumber_size: LumberSize::L4x4,
                     length: Tolerance::lumber(
-                        dimensions[2],  // length dimension
-                        0.125,          // ±1/8" tolerance
-                        0.0625,         // 1/16" per foot straightness
-                        1.0,            // 1.0° perpendicularity
+                        dimensions[2], // length dimension
+                        0.125,         // ±1/8" tolerance
+                        0.0625,        // 1/16" per foot straightness
+                        1.0,           // 1.0° perpendicularity
                     ),
                     quantity: 1,
                     lumber_grade,
@@ -53,7 +53,7 @@ pub fn generate_cut_list(assembly: &CrateAssembly, product_weight: f32) -> Vec<C
                     perpendicularity_tolerance: 1.0,
                     notes: vec!["Run along length".to_string()],
                 })
-            },
+            }
 
             ComponentType::Floorboard { dimensions } => {
                 counter_floorboard += 1;
@@ -62,10 +62,10 @@ pub fn generate_cut_list(assembly: &CrateAssembly, product_weight: f32) -> Vec<C
                     description: "Floor Board".to_string(),
                     lumber_size: LumberSize::L2x6,
                     length: Tolerance::lumber(
-                        dimensions[2],  // length dimension
-                        0.0625,         // ±1/16" tolerance (tighter for floorboards)
-                        0.0625,         // 1/16" per foot straightness
-                        1.0,            // 1.0° perpendicularity
+                        dimensions[2], // length dimension
+                        0.0625,        // ±1/16" tolerance (tighter for floorboards)
+                        0.0625,        // 1/16" per foot straightness
+                        1.0,           // 1.0° perpendicularity
                     ),
                     quantity: 1,
                     lumber_grade,
@@ -73,9 +73,12 @@ pub fn generate_cut_list(assembly: &CrateAssembly, product_weight: f32) -> Vec<C
                     perpendicularity_tolerance: 1.0,
                     notes: vec!["Spans across skids".to_string()],
                 })
-            },
+            }
 
-            ComponentType::Cleat { dimensions, is_vertical } => {
+            ComponentType::Cleat {
+                dimensions,
+                is_vertical,
+            } => {
                 let (counter, desc, note) = if *is_vertical {
                     counter_cleat_v += 1;
                     (counter_cleat_v, "Vertical Cleat", "Corner posts")
@@ -89,10 +92,10 @@ pub fn generate_cut_list(assembly: &CrateAssembly, product_weight: f32) -> Vec<C
                     description: desc.to_string(),
                     lumber_size: LumberSize::L2x4,
                     length: Tolerance::lumber(
-                        dimensions[2],  // length dimension
-                        0.0625,         // ±1/16" tolerance
-                        0.0625,         // 1/16" per foot straightness
-                        0.5,            // 0.5° perpendicularity (tighter for cleats)
+                        dimensions[2], // length dimension
+                        0.0625,        // ±1/16" tolerance
+                        0.0625,        // 1/16" per foot straightness
+                        0.5,           // 0.5° perpendicularity (tighter for cleats)
                     ),
                     quantity: 1,
                     lumber_grade,
@@ -100,7 +103,7 @@ pub fn generate_cut_list(assembly: &CrateAssembly, product_weight: f32) -> Vec<C
                     perpendicularity_tolerance: 0.5,
                     notes: vec![note.to_string()],
                 })
-            },
+            }
 
             // Panels and nails don't go in cut list (different manufacturing process)
             _ => None,
@@ -122,7 +125,8 @@ fn aggregate_cut_list(entries: Vec<CutListEntry>) -> Vec<CutListEntry> {
     let mut aggregated: HashMap<String, CutListEntry> = HashMap::new();
 
     for entry in entries {
-        aggregated.entry(entry.part_number.clone())
+        aggregated
+            .entry(entry.part_number.clone())
             .and_modify(|e| e.quantity += 1)
             .or_insert(entry);
     }
@@ -148,7 +152,9 @@ mod tests {
         for i in 0..3 {
             let id = assembly.create_node(
                 format!("Skid {}", i + 1),
-                ComponentType::Skid { dimensions: [3.5, 3.5, 120.0] },
+                ComponentType::Skid {
+                    dimensions: [3.5, 3.5, 120.0],
+                },
                 LocalTransform::identity(),
                 BoundingBox::default(),
             );

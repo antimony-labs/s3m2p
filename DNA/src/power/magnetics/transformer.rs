@@ -295,7 +295,9 @@ pub fn design_transformer(
         _ => 2.0,
     };
 
-    let n_calculated = ((volt_seconds * volt_second_factor) / (core.ae * 1e-6 * b_max * flux_swing_factor)).ceil() as u32;
+    let n_calculated = ((volt_seconds * volt_second_factor)
+        / (core.ae * 1e-6 * b_max * flux_swing_factor))
+        .ceil() as u32;
 
     // Minimum turns for practical transformer (coupling, leakage control)
     // Also helps reduce flux density and losses for oversized cores
@@ -303,7 +305,8 @@ pub fn design_transformer(
     let n_primary = n_calculated.max(min_turns);
 
     // Calculate actual B peak (will be lower than b_max if we used more turns)
-    let b_peak = volt_seconds * volt_second_factor / (n_primary as f64 * core.ae * 1e-6 * flux_swing_factor);
+    let b_peak =
+        volt_seconds * volt_second_factor / (n_primary as f64 * core.ae * 1e-6 * flux_swing_factor);
 
     if b_peak > b_max * 1.1 {
         return TransformerDesignResult::FluxDensityTooHigh { b_peak, b_max };
@@ -321,7 +324,8 @@ pub fn design_transformer(
         // For forward: Ns/Np = Vout / (Vin × D)
         let n_ratio = match req.topology {
             TransformerTopology::Flyback => {
-                (*vout + 0.5) * (1.0 - req.duty_cycle_max) / (req.primary_voltage * req.duty_cycle_max)
+                (*vout + 0.5) * (1.0 - req.duty_cycle_max)
+                    / (req.primary_voltage * req.duty_cycle_max)
             }
             _ => (*vout + 0.5) / (req.primary_voltage * req.duty_cycle_max),
         };
@@ -383,9 +387,8 @@ pub fn design_transformer(
     // Isolation area ≈ clearance_height × winding_width
     // Estimate winding width as sqrt(bobbin_window)
     let winding_width = core.bobbin_window.sqrt();
-    let isolation_area = req.isolation.min_clearance_mm()
-        * winding_width
-        * req.isolation.insulation_layers() as f64;
+    let isolation_area =
+        req.isolation.min_clearance_mm() * winding_width * req.isolation.insulation_layers() as f64;
     total_window_area += isolation_area;
 
     let fill_factor = total_window_area / core.bobbin_window;
@@ -474,11 +477,7 @@ fn estimate_required_area_product(power_throughput: f64, frequency: f64) -> f64 
 }
 
 /// Select wire gauge for given current and frequency
-fn select_wire_for_current(
-    current_rms: f64,
-    frequency: f64,
-    density: CurrentDensity,
-) -> WireSpec {
+fn select_wire_for_current(current_rms: f64, frequency: f64, density: CurrentDensity) -> WireSpec {
     let required_area = current_rms / density.value();
     let skin_depth = copper_skin_depth(frequency);
 
@@ -567,7 +566,10 @@ pub fn auto_design_transformer(
     let all_cores = super::core_materials::core_geometry_database();
 
     let filtered_cores: Vec<CoreGeometry> = if let Some(ct) = core_type {
-        all_cores.into_iter().filter(|c| c.core_type == ct).collect()
+        all_cores
+            .into_iter()
+            .filter(|c| c.core_type == ct)
+            .collect()
     } else {
         all_cores
     };
@@ -654,7 +656,11 @@ mod tests {
     fn test_area_product_estimate() {
         // 50W at 100kHz: AP = 50 × 50^1.14 ≈ 4200 mm⁴
         let ap = estimate_required_area_product(50.0, 100e3);
-        assert!(ap > 2000.0 && ap < 10000.0, "Expected AP 2000-10000 mm⁴, got {}", ap);
+        assert!(
+            ap > 2000.0 && ap < 10000.0,
+            "Expected AP 2000-10000 mm⁴, got {}",
+            ap
+        );
     }
 
     #[test]
@@ -672,7 +678,11 @@ mod tests {
 
         let lm = flyback_magnetizing_inductance(&spec);
         // For 10W output with CCM, Lm is typically in mH range
-        assert!(lm > 100e-6 && lm < 10e-3, "Expected Lm 100µH-10mH, got {} H", lm);
+        assert!(
+            lm > 100e-6 && lm < 10e-3,
+            "Expected Lm 100µH-10mH, got {} H",
+            lm
+        );
     }
 
     #[test]
@@ -730,25 +740,32 @@ mod tests {
             .find(|c| c.part_number == "ETD49")
             .unwrap();
 
-        println!("Core: {} - Ae={} mm², Ve={} mm³, Surface={} cm²",
-            core.part_number, core.ae, core.ve, core.surface_area);
-        println!("Material: {} - k={}, α={}, β={}",
-            material.name, material.steinmetz_k, material.steinmetz_alpha, material.steinmetz_beta);
+        println!(
+            "Core: {} - Ae={} mm², Ve={} mm³, Surface={} cm²",
+            core.part_number, core.ae, core.ve, core.surface_area
+        );
+        println!(
+            "Material: {} - k={}, α={}, β={}",
+            material.name, material.steinmetz_k, material.steinmetz_alpha, material.steinmetz_beta
+        );
 
         // Test simple sinusoidal core loss first
         let pv_100k_0p1t = material.core_loss_density(100e3, 0.1);
-        println!("Core loss density at 100kHz, 0.1T: {:.4} W/cm³", pv_100k_0p1t);
+        println!(
+            "Core loss density at 100kHz, 0.1T: {:.4} W/cm³",
+            pv_100k_0p1t
+        );
 
         // Use 48V DC input (POE/telecom application) which has lower volt-seconds
         let req = TransformerRequirements {
             primary_voltage: 48.0, // 48V DC (POE/telecom)
             secondary_voltages: vec![5.0],
             secondary_currents: vec![1.0], // 5W output (reduced for test)
-            frequency: 200e3,      // Higher frequency for smaller core
+            frequency: 200e3,              // Higher frequency for smaller core
             duty_cycle_max: 0.45,
             isolation: IsolationClass::None, // No isolation overhead for basic test
             ambient_temp: 25.0,
-            max_temp_rise: 60.0,   // Realistic thermal limit
+            max_temp_rise: 60.0, // Realistic thermal limit
             topology: TransformerTopology::Flyback,
         };
 
@@ -764,8 +781,16 @@ mod tests {
                     design.total_loss,
                     design.temp_rise
                 );
-                assert!(design.primary.turns > 1, "Expected >1 turns, got {}", design.primary.turns);
-                assert!(design.b_peak < 0.35, "Expected B_peak < 0.35T, got {}", design.b_peak);
+                assert!(
+                    design.primary.turns > 1,
+                    "Expected >1 turns, got {}",
+                    design.primary.turns
+                );
+                assert!(
+                    design.b_peak < 0.35,
+                    "Expected B_peak < 0.35T, got {}",
+                    design.b_peak
+                );
                 assert!(design.total_loss > 0.0);
             }
             other => panic!("Expected success, got {:?}", other),
@@ -781,19 +806,22 @@ mod tests {
 
         // Use 48V DC input for auto-select test
         let req = TransformerRequirements {
-            primary_voltage: 48.0,  // 48V DC input
+            primary_voltage: 48.0, // 48V DC input
             secondary_voltages: vec![12.0],
             secondary_currents: vec![1.0], // 12W
             frequency: 150e3,
             duty_cycle_max: 0.45,
             isolation: IsolationClass::Basic,
             ambient_temp: 25.0,
-            max_temp_rise: 60.0,    // Realistic thermal limit
+            max_temp_rise: 60.0, // Realistic thermal limit
             topology: TransformerTopology::Flyback,
         };
 
         let design = auto_design_transformer(&req, &material, Some(CoreType::ETD));
-        assert!(design.is_some(), "Expected auto_design to find a valid core");
+        assert!(
+            design.is_some(),
+            "Expected auto_design to find a valid core"
+        );
 
         let d = design.unwrap();
         println!(

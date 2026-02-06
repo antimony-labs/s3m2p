@@ -1,7 +1,7 @@
 //! Crate generation algorithms for Style A and Style B
 
 use crate::{
-    assembly::*, constants::*, geometry::*, CrateSpec, CrateStyle, ProductDimensions, Clearances,
+    assembly::*, constants::*, geometry::*, Clearances, CrateSpec, CrateStyle, ProductDimensions,
 };
 
 /// Generate complete crate assembly
@@ -25,17 +25,38 @@ pub fn generate_crate(spec: &CrateSpec, style: CrateStyle) -> CrateAssembly {
     let overall_height = interior_height + base_height + panel_thickness;
 
     // Generate base assembly
-    generate_base(&mut assembly, spec, overall_width, overall_length, base_height);
+    generate_base(
+        &mut assembly,
+        spec,
+        overall_width,
+        overall_length,
+        base_height,
+    );
 
     // Generate walls based on style
     match style {
         CrateStyle::A => {
             // Style A: Open frame only
-            generate_open_walls(&mut assembly, spec, overall_width, overall_length, interior_height, base_height);
+            generate_open_walls(
+                &mut assembly,
+                spec,
+                overall_width,
+                overall_length,
+                interior_height,
+                base_height,
+            );
         }
         CrateStyle::B => {
             // Style B: Frame + sheathing
-            generate_sheathed_walls(&mut assembly, spec, overall_width, overall_length, interior_height, base_height, panel_thickness);
+            generate_sheathed_walls(
+                &mut assembly,
+                spec,
+                overall_width,
+                overall_length,
+                interior_height,
+                base_height,
+                panel_thickness,
+            );
         }
     }
 
@@ -125,16 +146,36 @@ fn generate_sheathed_walls(
 
     // 4 corner posts
     let corners = [
-        ("CornerFL", -half_width + cleat_dims.1 / 2.0, -half_length + cleat_dims.1 / 2.0),
-        ("CornerFR", half_width - cleat_dims.1 / 2.0, -half_length + cleat_dims.1 / 2.0),
-        ("CornerBL", -half_width + cleat_dims.1 / 2.0, half_length - cleat_dims.1 / 2.0),
-        ("CornerBR", half_width - cleat_dims.1 / 2.0, half_length - cleat_dims.1 / 2.0),
+        (
+            "CornerFL",
+            -half_width + cleat_dims.1 / 2.0,
+            -half_length + cleat_dims.1 / 2.0,
+        ),
+        (
+            "CornerFR",
+            half_width - cleat_dims.1 / 2.0,
+            -half_length + cleat_dims.1 / 2.0,
+        ),
+        (
+            "CornerBL",
+            -half_width + cleat_dims.1 / 2.0,
+            half_length - cleat_dims.1 / 2.0,
+        ),
+        (
+            "CornerBR",
+            half_width - cleat_dims.1 / 2.0,
+            half_length - cleat_dims.1 / 2.0,
+        ),
     ];
 
     for (name, x, y) in corners.iter() {
         let bounds = BoundingBox {
             min: Point3::new(x - cleat_dims.0 / 2.0, y - cleat_dims.1 / 2.0, base_height),
-            max: Point3::new(x + cleat_dims.0 / 2.0, y + cleat_dims.1 / 2.0, base_height + wall_height),
+            max: Point3::new(
+                x + cleat_dims.0 / 2.0,
+                y + cleat_dims.1 / 2.0,
+                base_height + wall_height,
+            ),
         };
 
         let cleat_thickness = cleat_dims.0;
@@ -155,10 +196,34 @@ fn generate_sheathed_walls(
 
     // Panels
     let panels = [
-        (PanelType::Front, 0.0, -half_length - panel_thickness / 2.0, overall_width, wall_height),
-        (PanelType::Back, 0.0, half_length + panel_thickness / 2.0, overall_width, wall_height),
-        (PanelType::Left, -half_width - panel_thickness / 2.0, 0.0, overall_length, wall_height),
-        (PanelType::Right, half_width + panel_thickness / 2.0, 0.0, overall_length, wall_height),
+        (
+            PanelType::Front,
+            0.0,
+            -half_length - panel_thickness / 2.0,
+            overall_width,
+            wall_height,
+        ),
+        (
+            PanelType::Back,
+            0.0,
+            half_length + panel_thickness / 2.0,
+            overall_width,
+            wall_height,
+        ),
+        (
+            PanelType::Left,
+            -half_width - panel_thickness / 2.0,
+            0.0,
+            overall_length,
+            wall_height,
+        ),
+        (
+            PanelType::Right,
+            half_width + panel_thickness / 2.0,
+            0.0,
+            overall_length,
+            wall_height,
+        ),
         (PanelType::Top, 0.0, 0.0, overall_width, overall_length),
     ];
 
@@ -175,18 +240,22 @@ fn generate_sheathed_walls(
                     Point3::new(width / 2.0, *y + panel_thickness / 2.0, z + height),
                 )
             }
-            PanelType::Left | PanelType::Right => {
-                (
-                    Point3::new(*x - panel_thickness / 2.0, -width / 2.0, base_height),
-                    Point3::new(*x + panel_thickness / 2.0, width / 2.0, base_height + height),
-                )
-            }
-            PanelType::Top => {
-                (
-                    Point3::new(-width / 2.0, -height / 2.0, base_height + wall_height),
-                    Point3::new(width / 2.0, height / 2.0, base_height + wall_height + panel_thickness),
-                )
-            }
+            PanelType::Left | PanelType::Right => (
+                Point3::new(*x - panel_thickness / 2.0, -width / 2.0, base_height),
+                Point3::new(
+                    *x + panel_thickness / 2.0,
+                    width / 2.0,
+                    base_height + height,
+                ),
+            ),
+            PanelType::Top => (
+                Point3::new(-width / 2.0, -height / 2.0, base_height + wall_height),
+                Point3::new(
+                    width / 2.0,
+                    height / 2.0,
+                    base_height + wall_height + panel_thickness,
+                ),
+            ),
         };
 
         let bounds = BoundingBox { min, max };
@@ -230,7 +299,11 @@ fn generate_open_walls(
     for (name, x, y) in corners.iter() {
         let bounds = BoundingBox {
             min: Point3::new(*x, *y, base_height),
-            max: Point3::new(x + cleat_dims.0, y + cleat_dims.1, base_height + interior_height),
+            max: Point3::new(
+                x + cleat_dims.0,
+                y + cleat_dims.1,
+                base_height + interior_height,
+            ),
         };
 
         let cleat_thickness = cleat_dims.0;

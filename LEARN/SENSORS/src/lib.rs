@@ -487,7 +487,7 @@ async fn request_camera_with_facing(facing_mode: Option<&str>) {
             for i in 0..tracks.length() {
                 let track_val = tracks.get(i);
                 if let Ok(track) = track_val.dyn_into::<web_sys::MediaStreamTrack>() {
-                    let _ = track.stop();
+                    track.stop();
                 }
             }
         }
@@ -540,7 +540,11 @@ async fn request_camera_with_facing(facing_mode: Option<&str>) {
                             let _ = btn.set_attribute("style", "display: block; margin-top: 8px;");
                         }
 
-                        let camera_name = if facing_str == "user" { "Front" } else { "Back" };
+                        let camera_name = if facing_str == "user" {
+                            "Front"
+                        } else {
+                            "Back"
+                        };
                         update_camera_status("available", &format!("Streaming ({})", camera_name));
                     }
                     Err(_) => {

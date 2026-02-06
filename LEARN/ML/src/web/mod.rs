@@ -68,8 +68,8 @@ async fn add_comment_handler(
     Json(payload): Json<NewCommentRequest>,
 ) -> Json<comments::Comment> {
     let comment = state.comment_store.add_comment(
-        payload.lesson_id, 
-        payload.author, 
+        payload.lesson_id,
+        payload.author,
         payload.content
     );
     Json(comment)

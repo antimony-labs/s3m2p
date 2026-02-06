@@ -5,8 +5,8 @@
 //! LAYER: LEARN -> learn_core -> demos -> problems
 //! ===============================================================================
 
+use crate::demos::pseudocode::{CodeLine, Pseudocode};
 use crate::Demo;
-use crate::demos::pseudocode::{Pseudocode, CodeLine};
 
 // Static pseudocode for each variant
 static VALID_PARENS_CODE: &[CodeLine] = &[
@@ -249,7 +249,9 @@ impl StackProblemsDemo {
             self.pseudocode.current_line = Some(5);
             self.message = format!(
                 "{} > {}, days until warmer = {}",
-                temp, prev.value, self.pos - prev.index
+                temp,
+                prev.value,
+                self.pos - prev.index
             );
         }
 
@@ -339,10 +341,7 @@ impl StackProblemsDemo {
                 self.result[0] = area;
             }
             self.pseudocode.current_line = Some(7);
-            self.message = format!(
-                "Pop height {}, width = {}, area = {}",
-                height, width, area
-            );
+            self.message = format!("Pop height {}, width = {}, area = {}", height, width, area);
         }
 
         if self.pos <= n {

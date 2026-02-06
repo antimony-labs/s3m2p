@@ -44,31 +44,37 @@ pub mod extrude;
 pub mod geometry;
 pub mod intersect;
 pub mod mesh;
+pub mod pattern;
 pub mod primitives;
 pub mod revolve;
-pub mod pattern;
 pub mod sketch;
 pub mod solver;
 pub mod topology;
 
 // Re-export commonly used types
+pub use boolean::{difference, intersection, union, BooleanError, BooleanOp};
+pub use constraints::{Constraint, DimensionalConstraint, GeometricConstraint};
+pub use extrude::{extrude_sketch, ExtrudeError, ExtrudeParams};
 pub use geometry::{
     BoundingBox3, Line, Plane, Point3, Ray, Segment, Transform3, Vector3, TOLERANCE,
 };
+pub use intersect::{
+    pick_face, plane_plane_intersect, point_in_solid, ray_cylinder_intersect, ray_sphere_intersect,
+    ray_triangle_intersect, Classification, FaceHit,
+};
+pub use mesh::{solid_to_mesh, solid_to_pickable_mesh, PickableMesh, TriangleMesh};
+pub use pattern::{circular_pattern, linear_pattern};
 pub use primitives::{
     make_box, make_box_at, make_cone, make_cone_at, make_cylinder, make_cylinder_at, make_sphere,
     make_sphere_at,
 };
+pub use revolve::{revolve_sketch, RevolveAxis, RevolveError, RevolveParams};
+pub use sketch::{
+    ConstraintId, Point2, Sketch, SketchCoordinateFrame, SketchEntity, SketchEntityId, SketchPlane,
+    SketchPoint, SketchPointId,
+};
+pub use solver::{ConstraintAnalysis, ConstraintSolver, DofStatus, SolverConfig, SolverResult};
 pub use topology::{
     CurveType, Edge, EdgeId, Face, FaceId, FaceOrientation, Loop, Shell, ShellId, Solid,
     SurfaceType, Vertex, VertexId,
 };
-pub use mesh::{TriangleMesh, solid_to_mesh, PickableMesh, solid_to_pickable_mesh};
-pub use intersect::{Classification, plane_plane_intersect, ray_sphere_intersect, ray_cylinder_intersect, point_in_solid, ray_triangle_intersect, pick_face, FaceHit};
-pub use boolean::{BooleanOp, BooleanError, union, difference, intersection};
-pub use sketch::{Sketch, SketchPlane, SketchCoordinateFrame, Point2, SketchPoint, SketchPointId, SketchEntity, SketchEntityId, ConstraintId};
-pub use constraints::{Constraint, GeometricConstraint, DimensionalConstraint};
-pub use solver::{ConstraintSolver, SolverConfig, SolverResult, DofStatus, ConstraintAnalysis};
-pub use extrude::{extrude_sketch, ExtrudeParams, ExtrudeError};
-pub use revolve::{revolve_sketch, RevolveParams, RevolveAxis, RevolveError};
-pub use pattern::{linear_pattern, circular_pattern};

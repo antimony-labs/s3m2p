@@ -4,7 +4,7 @@
 //! MODIFIED: 2026-01-07
 //! ═══════════════════════════════════════════════════════════════════════════════
 
-use cad_engine::{Solid, FaceId, solid_to_mesh};
+use cad_engine::{solid_to_mesh, FaceId, Solid};
 use wasm_bindgen::JsValue;
 use web_sys::{WebGl2RenderingContext as GL, WebGlBuffer, WebGlVertexArrayObject};
 
@@ -84,8 +84,12 @@ impl MeshBuffers {
         let edge_index_buffer = create_index_buffer(gl, &edge_indices_data)?;
 
         // Create VAOs
-        let shaded_vao = gl.create_vertex_array().ok_or("Failed to create shaded VAO")?;
-        let wireframe_vao = gl.create_vertex_array().ok_or("Failed to create wireframe VAO")?;
+        let shaded_vao = gl
+            .create_vertex_array()
+            .ok_or("Failed to create shaded VAO")?;
+        let wireframe_vao = gl
+            .create_vertex_array()
+            .ok_or("Failed to create wireframe VAO")?;
 
         Ok(Self {
             position_buffer,
@@ -191,7 +195,11 @@ fn map_triangles_to_faces(solid: &Solid, mesh: &cad_engine::TriangleMesh) -> Vec
     for face in &solid.faces {
         // Count vertices in face's outer loop
         let vertex_count = face.outer_loop.edges.len();
-        let triangles_for_face = if vertex_count >= 3 { vertex_count - 2 } else { 0 };
+        let triangles_for_face = if vertex_count >= 3 {
+            vertex_count - 2
+        } else {
+            0
+        };
 
         for _ in 0..triangles_for_face {
             if tri_idx < mesh.triangles.len() {

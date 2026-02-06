@@ -49,10 +49,10 @@ impl DiodeType {
     pub fn has_reverse_recovery(&self) -> bool {
         match self {
             DiodeType::Standard => true,
-            DiodeType::Schottky => false,  // Majority carrier device
+            DiodeType::Schottky => false, // Majority carrier device
             DiodeType::FastRecovery => true,
             DiodeType::Ultrafast => true,
-            DiodeType::SiCSchottky => false,  // Majority carrier device
+            DiodeType::SiCSchottky => false, // Majority carrier device
         }
     }
 }
@@ -265,7 +265,8 @@ impl DiodeSpec {
         };
         losses.leakage = ir * op.vr_off;
 
-        losses.total = losses.conduction + losses.reverse_recovery + losses.capacitive + losses.leakage;
+        losses.total =
+            losses.conduction + losses.reverse_recovery + losses.capacitive + losses.leakage;
         losses
     }
 
@@ -286,9 +287,7 @@ impl DiodeSpec {
     /// Check if diode is suitable for given voltage and current
     pub fn is_suitable(&self, vr_max: f64, if_avg: f64, if_rms: f64) -> bool {
         // Use 80% derating for voltage, 70% for current
-        vr_max <= self.vrrm * 0.8
-            && if_avg <= self.if_avg * 0.7
-            && if_rms <= self.if_rms * 0.7
+        vr_max <= self.vrrm * 0.8 && if_avg <= self.if_avg * 0.7 && if_rms <= self.if_rms * 0.7
     }
 
     /// Get efficiency advantage over a reference diode (Vf based)
@@ -307,8 +306,8 @@ pub struct SelectedDiode {
     pub operating_point: DiodeOperatingPoint,
     pub losses: DiodeLosses,
     pub junction_temp: f64,
-    pub derating_voltage: f64,  // Actual Vr / Vrrm
-    pub derating_current: f64,  // Actual If_avg / If_avg_rated
+    pub derating_voltage: f64, // Actual Vr / Vrrm
+    pub derating_current: f64, // Actual If_avg / If_avg_rated
 }
 
 // ============================================================================
@@ -438,7 +437,7 @@ pub fn diode_database() -> Vec<DiodeSpec> {
             diode_type: DiodeType::Schottky,
             vrrm: 150.0,
             vr: 150.0,
-            if_avg: 20.0,  // Per leg, dual diode
+            if_avg: 20.0, // Per leg, dual diode
             if_rms: 30.0,
             ifsm: 400.0,
             vf_typical: 0.82,
@@ -606,7 +605,7 @@ pub fn diode_database() -> Vec<DiodeSpec> {
             ifsm: 78.0,
             vf_typical: 1.5,
             vf_max: 1.8,
-            vf_temp_coeff: 0.4,  // SiC has positive temp coeff!
+            vf_temp_coeff: 0.4, // SiC has positive temp coeff!
             trr: 0.0,
             qrr: 0.0,
             cj: 35e-12,
@@ -770,11 +769,7 @@ pub enum DiodePreference {
 }
 
 /// Recommend diode type for application
-pub fn recommend_diode_type(
-    vr_max: f64,
-    fsw: f64,
-    efficiency_priority: bool,
-) -> DiodeType {
+pub fn recommend_diode_type(vr_max: f64, fsw: f64, efficiency_priority: bool) -> DiodeType {
     if vr_max <= 40.0 {
         // Low voltage - Schottky is ideal
         DiodeType::Schottky
@@ -814,7 +809,7 @@ mod tests {
     fn test_vf_temperature() {
         let diode = DiodeSpec {
             vf_typical: 0.50,
-            vf_temp_coeff: -2.0,  // mV/°C
+            vf_temp_coeff: -2.0, // mV/°C
             ..Default::default()
         };
 
@@ -892,16 +887,28 @@ mod tests {
     #[test]
     fn test_recommend_diode_type() {
         // Low voltage → Schottky
-        assert_eq!(recommend_diode_type(30.0, 100e3, false), DiodeType::Schottky);
+        assert_eq!(
+            recommend_diode_type(30.0, 100e3, false),
+            DiodeType::Schottky
+        );
 
         // High voltage, high frequency → SiC
-        assert_eq!(recommend_diode_type(400.0, 200e3, false), DiodeType::SiCSchottky);
+        assert_eq!(
+            recommend_diode_type(400.0, 200e3, false),
+            DiodeType::SiCSchottky
+        );
 
         // High voltage, efficiency priority → SiC
-        assert_eq!(recommend_diode_type(400.0, 50e3, true), DiodeType::SiCSchottky);
+        assert_eq!(
+            recommend_diode_type(400.0, 50e3, true),
+            DiodeType::SiCSchottky
+        );
 
         // High voltage, low frequency, cost priority → Ultrafast
-        assert_eq!(recommend_diode_type(400.0, 50e3, false), DiodeType::Ultrafast);
+        assert_eq!(
+            recommend_diode_type(400.0, 50e3, false),
+            DiodeType::Ultrafast
+        );
     }
 
     #[test]

@@ -13,8 +13,8 @@
 //! - Transconductance amplifier (OTA)
 //! - Digital (difference equations)
 
-use std::f64::consts::PI;
 use super::small_signal::{Complex, TransferFunction};
+use std::f64::consts::PI;
 
 // ============================================================================
 // COMPENSATOR TYPES
@@ -160,12 +160,12 @@ pub struct CompensatorRequirements {
 impl Default for CompensatorRequirements {
     fn default() -> Self {
         Self {
-            crossover_freq: 10e3,      // 10 kHz
-            phase_margin_deg: 55.0,    // 55° (good balance)
-            min_gain_margin_db: 10.0,  // 10 dB
-            vref: 0.8,                 // 0.8V reference (common)
-            divider_ratio: 0.2,        // 5:1 divider for 5V output
-            modulator_gain: 1.0,       // Unity modulator gain
+            crossover_freq: 10e3,     // 10 kHz
+            phase_margin_deg: 55.0,   // 55° (good balance)
+            min_gain_margin_db: 10.0, // 10 dB
+            vref: 0.8,                // 0.8V reference (common)
+            divider_ratio: 0.2,       // 5:1 divider for 5V output
+            modulator_gain: 1.0,      // Unity modulator gain
         }
     }
 }
@@ -208,9 +208,13 @@ pub fn design_compensator(
         CompensatorType::TypeII => {
             design_type_ii(fc, required_comp_gain, required_phase_boost, requirements)
         }
-        CompensatorType::TypeIII => {
-            design_type_iii(fc, required_comp_gain, required_phase_boost, plant, requirements)
-        }
+        CompensatorType::TypeIII => design_type_iii(
+            fc,
+            required_comp_gain,
+            required_phase_boost,
+            plant,
+            requirements,
+        ),
     }
 }
 
@@ -369,7 +373,7 @@ fn design_type_ii(
         components,
         crossover_freq: fc,
         phase_margin_deg: 90.0 + actual_phase, // Rough estimate
-        gain_margin_db: 20.0,                   // Typical
+        gain_margin_db: 20.0,                  // Typical
         notes: vec![
             format!("Zero at {:.1} Hz", fz),
             format!("Pole at {:.1} Hz", fp),
@@ -438,7 +442,7 @@ fn design_type_iii(
         dc_gain: wi / (wz1 * wz2) * wp1 * wp2, // Normalized
         zeros: vec![Complex::new(-wz1, 0.0), Complex::new(-wz2, 0.0)],
         poles: vec![
-            Complex::new(0.0, 0.0),    // Integrator
+            Complex::new(0.0, 0.0), // Integrator
             Complex::new(-wp1, 0.0),
             Complex::new(-wp2, 0.0),
         ],
@@ -622,8 +626,8 @@ pub fn design_type_ii_k_factor(
 /// Select nearest standard E24 resistor value
 pub fn nearest_e24_resistor(target: f64) -> f64 {
     const E24: [f64; 24] = [
-        1.0, 1.1, 1.2, 1.3, 1.5, 1.6, 1.8, 2.0, 2.2, 2.4, 2.7, 3.0,
-        3.3, 3.6, 3.9, 4.3, 4.7, 5.1, 5.6, 6.2, 6.8, 7.5, 8.2, 9.1,
+        1.0, 1.1, 1.2, 1.3, 1.5, 1.6, 1.8, 2.0, 2.2, 2.4, 2.7, 3.0, 3.3, 3.6, 3.9, 4.3, 4.7, 5.1,
+        5.6, 6.2, 6.8, 7.5, 8.2, 9.1,
     ];
 
     let decade = target.log10().floor();

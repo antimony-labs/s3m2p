@@ -81,7 +81,7 @@ impl Demo for RcTimeConstantDemo {
         if self.charging {
             self.time += dt;
             self.voltage = self.voltage_at_time(self.time);
-            
+
             self.voltage_history.push(self.voltage);
             self.time_history.push(self.time);
 
@@ -144,4 +144,3 @@ impl Demo for RcTimeConstantDemo {
         ]
     }
 }
-

@@ -25,11 +25,11 @@ pub struct CncTool {
 pub struct CncOperation {
     pub operation_number: u32,
     pub operation_type: CncOperationType,
-    pub tool: String,           // Tool reference (e.g., "T1")
-    pub feed_rate: f32,         // inches per minute
-    pub spindle_speed: u32,     // RPM
-    pub cut_depth: f32,         // inches
-    pub path: Vec<Point3>,      // Tool path points
+    pub tool: String,       // Tool reference (e.g., "T1")
+    pub feed_rate: f32,     // inches per minute
+    pub spindle_speed: u32, // RPM
+    pub cut_depth: f32,     // inches
+    pub path: Vec<Point3>,  // Tool path points
     pub description: String,
 }
 
@@ -46,28 +46,56 @@ pub fn generate_cnc_program(assembly: &CrateAssembly) -> CncCutProgram {
     let mut operations = Vec::new();
 
     // Extract panel components
-    let panels: Vec<_> = assembly.nodes.iter()
+    let panels: Vec<_> = assembly
+        .nodes
+        .iter()
         .filter(|n| matches!(n.component_type, ComponentType::Panel { .. }))
         .collect();
 
     // Generate cutting operations for each panel
     for (idx, panel_node) in panels.iter().enumerate() {
-        if let ComponentType::Panel { thickness, width, height, panel_type } = &panel_node.component_type {
+        if let ComponentType::Panel {
+            thickness,
+            width,
+            height,
+            panel_type,
+        } = &panel_node.component_type
+        {
             // Create rectangular profile cut
             let path = vec![
-                Point3 { x: 0.0, y: 0.0, z: 0.0 },
-                Point3 { x: *width, y: 0.0, z: 0.0 },
-                Point3 { x: *width, y: *height, z: 0.0 },
-                Point3 { x: 0.0, y: *height, z: 0.0 },
-                Point3 { x: 0.0, y: 0.0, z: 0.0 }, // Close the loop
+                Point3 {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                Point3 {
+                    x: *width,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                Point3 {
+                    x: *width,
+                    y: *height,
+                    z: 0.0,
+                },
+                Point3 {
+                    x: 0.0,
+                    y: *height,
+                    z: 0.0,
+                },
+                Point3 {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                }, // Close the loop
             ];
 
             operations.push(CncOperation {
                 operation_number: (idx + 1) as u32,
                 operation_type: CncOperationType::OutlineProfile,
                 tool: "T1".to_string(),
-                feed_rate: 60.0,        // 60 in/min for plywood
-                spindle_speed: 12000,   // 12000 RPM
+                feed_rate: 60.0,      // 60 in/min for plywood
+                spindle_speed: 12000, // 12000 RPM
                 cut_depth: *thickness,
                 path,
                 description: format!("{:?} Panel - {:.1}\" x {:.1}\"", panel_type, width, height),
@@ -77,13 +105,11 @@ pub fn generate_cnc_program(assembly: &CrateAssembly) -> CncCutProgram {
 
     CncCutProgram {
         operations,
-        tool_list: vec![
-            CncTool {
-                tool_number: 1,
-                tool_type: "1/4\" End Mill".to_string(),
-                diameter: 0.25,
-            }
-        ],
+        tool_list: vec![CncTool {
+            tool_number: 1,
+            tool_type: "1/4\" End Mill".to_string(),
+            diameter: 0.25,
+        }],
         material_setup: "3/4\" Plywood, secured to spoilboard with vacuum or clamps".to_string(),
     }
 }

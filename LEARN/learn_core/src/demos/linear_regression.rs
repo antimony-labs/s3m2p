@@ -158,7 +158,7 @@ impl Demo for LinearRegressionDemo {
         self.step_count += 1;
 
         // Record loss every 5 steps
-        if self.step_count % 5 == 0 {
+        if self.step_count.is_multiple_of(5) {
             let loss = self.compute_loss();
             self.loss_history.push(loss);
 

@@ -23,12 +23,12 @@ fn convolve2d(input: &[Vec<f64>], kernel: &[Vec<f64>]) -> Vec<Vec<f64>> {
     let input_w = input[0].len();
     let kernel_h = kernel.len();
     let kernel_w = kernel[0].len();
-    
+
     let out_h = input_h - kernel_h + 1;
     let out_w = input_w - kernel_w + 1;
-    
+
     let mut output = vec![vec![0.0; out_w]; out_h];
-    
+
     for i in 0..out_h {
         for j in 0..out_w {
             let mut sum = 0.0;
@@ -40,7 +40,7 @@ fn convolve2d(input: &[Vec<f64>], kernel: &[Vec<f64>]) -> Vec<Vec<f64>> {
             output[i][j] = sum;
         }
     }
-    
+
     output
 }
 
@@ -48,9 +48,9 @@ fn convolve2d(input: &[Vec<f64>], kernel: &[Vec<f64>]) -> Vec<Vec<f64>> {
 fn max_pool2d(input: &[Vec<f64>], pool_size: usize) -> Vec<Vec<f64>> {
     let h = input.len() / pool_size;
     let w = input[0].len() / pool_size;
-    
+
     let mut output = vec![vec![0.0; w]; h];
-    
+
     for i in 0..h {
         for j in 0..w {
             let mut max_val = f64::NEG_INFINITY;
@@ -65,7 +65,7 @@ fn max_pool2d(input: &[Vec<f64>], pool_size: usize) -> Vec<Vec<f64>> {
             output[i][j] = max_val;
         }
     }
-    
+
     output
 }
 
@@ -80,7 +80,7 @@ fn relu_2d(input: &[Vec<f64>]) -> Vec<Vec<f64>> {
 fn generate_synthetic_image(shape: &str, size: usize) -> Vec<Vec<f64>> {
     let mut img = vec![vec![0.0; size]; size];
     let center = size / 2;
-    
+
     match shape {
         "vertical_line" => {
             for i in 2..(size - 2) {
@@ -113,7 +113,7 @@ fn generate_synthetic_image(shape: &str, size: usize) -> Vec<Vec<f64>> {
         }
         _ => {}
     }
-    
+
     img
 }
 
@@ -145,22 +145,22 @@ fn get_kernels() -> Vec<(&'static str, Vec<Vec<f64>>)> {
 
 pub fn run() {
     println!("--- Lesson 04: Convolutional Neural Networks (CNNs) ---");
-    
+
     // 1. Create synthetic images
     let img_size = 16;
     let shapes = ["vertical_line", "horizontal_line", "cross", "square"];
-    
+
     println!("Generating synthetic images...");
-    
+
     // 2. Get edge detection kernels
     let kernels = get_kernels();
-    
+
     // 3. Apply convolutions and collect results for visualization
     let mut all_results = Vec::new();
-    
+
     for shape in &shapes {
         let img = generate_synthetic_image(shape, img_size);
-        
+
         // Store original image
         for (i, row) in img.iter().enumerate() {
             for (j, &val) in row.iter().enumerate() {
@@ -173,12 +173,12 @@ pub fn run() {
                 }));
             }
         }
-        
+
         // Apply each kernel
         for (kernel_name, kernel) in &kernels {
             let conv_result = convolve2d(&img, kernel);
             let activated = relu_2d(&conv_result);
-            
+
             for (i, row) in activated.iter().enumerate() {
                 for (j, &val) in row.iter().enumerate() {
                     all_results.push(json!({
@@ -192,17 +192,17 @@ pub fn run() {
             }
         }
     }
-    
+
     // 4. Demonstrate a simple CNN for binary classification
     println!("\nTraining simple CNN classifier (Cross vs Others)...");
-    
+
     let mut rng = rand::rng();
-    
+
     // Simple learnable 3x3 kernel
     let mut kernel: Vec<Vec<f64>> = (0..3)
         .map(|_| (0..3).map(|_| rng.random_range(-0.5..0.5)).collect())
         .collect();
-    
+
     // Training data
     let cross_imgs: Vec<_> = (0..20).map(|_| {
         let mut img = generate_synthetic_image("cross", img_size);
@@ -214,7 +214,7 @@ pub fn run() {
         }
         (img, 1.0f64) // Label: 1 = cross
     }).collect();
-    
+
     let other_imgs: Vec<_> = (0..20).map(|i| {
         let shape = if i % 2 == 0 { "vertical_line" } else { "horizontal_line" };
         let mut img = generate_synthetic_image(shape, img_size);
@@ -225,44 +225,44 @@ pub fn run() {
         }
         (img, 0.0f64) // Label: 0 = not cross
     }).collect();
-    
+
     let mut training_data: Vec<_> = cross_imgs.into_iter().chain(other_imgs.into_iter()).collect();
-    
+
     // Training loop
     let learning_rate = 0.01;
     let epochs = 100;
-    
+
     for epoch in 0..epochs {
         let mut total_loss = 0.0;
         let mut correct = 0;
-        
+
         // Shuffle
         training_data.shuffle(&mut rng);
-        
+
         for (img, target) in &training_data {
             // Forward pass
             let conv = convolve2d(img, &kernel);
             let activated = relu_2d(&conv);
-            
+
             // Global average pooling
             let sum: f64 = activated.iter().flat_map(|r| r.iter()).sum();
             let count = (activated.len() * activated[0].len()) as f64;
             let pooled = sum / count;
-            
+
             // Sigmoid for probability
             let pred = 1.0 / (1.0 + (-pooled * 10.0).exp());
-            
+
             // Binary cross-entropy loss
             let loss = -(target * pred.ln() + (1.0 - target) * (1.0 - pred).ln());
             total_loss += loss;
-            
+
             if (pred > 0.5) == (*target > 0.5) {
                 correct += 1;
             }
-            
+
             // Backprop (simplified gradient)
             let d_loss = pred - target; // Gradient of loss w.r.t. pred
-            
+
             // Update kernel (very simplified)
             for ki in 0..3 {
                 for kj in 0..3 {
@@ -278,14 +278,14 @@ pub fn run() {
                 }
             }
         }
-        
+
         if epoch % 20 == 0 {
             let acc = 100.0 * correct as f64 / training_data.len() as f64;
-            println!("Epoch {}: Loss = {:.4}, Accuracy = {:.1}%", 
+            println!("Epoch {}: Loss = {:.4}, Accuracy = {:.1}%",
                      epoch, total_loss / training_data.len() as f64, acc);
         }
     }
-    
+
     let final_acc = {
         let mut correct = 0;
         for (img, target) in &training_data {
@@ -300,13 +300,13 @@ pub fn run() {
         }
         100.0 * correct as f64 / training_data.len() as f64
     };
-    
+
     println!("Final Accuracy: {:.1}%", final_acc);
     println!("Learned kernel:");
     for row in &kernel {
         println!("  {:?}", row.iter().map(|v| format!("{:.2}", v)).collect::<Vec<_>>());
     }
-    
+
     // Add learned kernel visualization
     for (i, row) in kernel.iter().enumerate() {
         for (j, &val) in row.iter().enumerate() {
@@ -319,7 +319,7 @@ pub fn run() {
             }));
         }
     }
-    
+
     // 5. Generate Vega-Lite visualization
     let spec = json!({
         "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
@@ -350,7 +350,7 @@ pub fn run() {
             }
         }
     });
-    
+
     let filename = "lesson_04.json";
     std::fs::write(filename, spec.to_string()).unwrap();
     println!("Visualization saved to: {}", filename);
@@ -373,7 +373,7 @@ mod tests {
             vec![0.0, 1.0, 0.0],
             vec![0.0, 0.0, 0.0],
         ];
-        
+
         let result = convolve2d(&input, &kernel);
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].len(), 1);
@@ -392,7 +392,7 @@ mod tests {
             vec![1.0, 1.0],
             vec![1.0, 1.0],
         ];
-        
+
         let result = convolve2d(&input, &kernel);
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].len(), 2);
@@ -407,7 +407,7 @@ mod tests {
             vec![9.0, 10.0, 11.0, 12.0],
             vec![13.0, 14.0, 15.0, 16.0],
         ];
-        
+
         let result = max_pool2d(&input, 2);
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].len(), 2);
@@ -423,7 +423,7 @@ mod tests {
             vec![-1.0, 2.0],
             vec![3.0, -4.0],
         ];
-        
+
         let result = relu_2d(&input);
         assert!((result[0][0] - 0.0).abs() < 1e-6);
         assert!((result[0][1] - 2.0).abs() < 1e-6);

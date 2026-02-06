@@ -5,8 +5,8 @@
 //! LAYER: LEARN -> learn_core -> demos -> problems
 //! ===============================================================================
 
+use crate::demos::pseudocode::{CodeLine, Pseudocode};
 use crate::Demo;
-use crate::demos::pseudocode::{Pseudocode, CodeLine};
 
 // Static pseudocode for each variant
 static BASIC_SEARCH_CODE: &[CodeLine] = &[
@@ -216,10 +216,7 @@ impl BinarySearchDemo {
             self.left = self.mid + 1;
         } else {
             self.pseudocode.current_line = Some(8);
-            self.message = format!(
-                "{} > {}, search left half",
-                self.arr[self.mid], self.target
-            );
+            self.message = format!("{} > {}, search left half", self.arr[self.mid], self.target);
             self.right = self.mid.saturating_sub(1);
         }
     }
@@ -310,7 +307,10 @@ impl BinarySearchDemo {
         if self.arr[self.mid] == self.target {
             self.found = Some(self.mid);
             // Continue to find boundaries
-            self.message = format!("Found {} at {}, continuing to find range...", self.target, self.mid);
+            self.message = format!(
+                "Found {} at {}, continuing to find range...",
+                self.target, self.mid
+            );
             self.right = self.mid.saturating_sub(1); // Keep searching left for first occurrence
         } else if self.arr[self.mid] < self.target {
             self.left = self.mid + 1;
@@ -334,10 +334,7 @@ impl BinarySearchDemo {
 
         let current = self.matrix[self.left][self.right];
         self.pseudocode.current_line = Some(2);
-        self.message = format!(
-            "At ({}, {}), value = {}",
-            self.left, self.right, current
-        );
+        self.message = format!("At ({}, {}), value = {}", self.left, self.right, current);
 
         if current == self.target {
             self.found = Some(self.left * cols + self.right);

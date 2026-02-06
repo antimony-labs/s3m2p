@@ -1,13 +1,16 @@
 //! Converts CrateAssembly to STEP entities
 
-use crate::assembly::{CrateAssembly, ComponentType};
+use crate::assembly::{ComponentType, CrateAssembly};
 use dna::export::step::{
-    StepWriter,
     entities::EntityId,
-    primitives::{CartesianPoint, Direction, Axis2Placement3D, Vector, Line, Plane},
-    topology::{VertexPoint, EdgeCurve, OrientedEdge, FaceBound, AdvancedFace, ClosedShell, ManifoldSolidBrep},
+    primitives::{Axis2Placement3D, CartesianPoint, Direction, Line, Plane, Vector},
+    topology::{
+        AdvancedFace, ClosedShell, EdgeCurve, FaceBound, ManifoldSolidBrep, OrientedEdge,
+        VertexPoint,
+    },
+    StepWriter,
 };
-use glam::f32::{Vec3, Mat4};
+use glam::f32::{Mat4, Vec3};
 
 /// Creates a solid box (manifold_solid_brep) from min and max corner points and a transform.
 /// Returns the EntityId of the MANIFOLD_SOLID_BREP.
@@ -25,10 +28,14 @@ pub fn create_box_brep(writer: &mut StepWriter, transform: Mat4, min: Vec3, max:
     ];
 
     // Transform corners to global space
-    let p_vecs: Vec<Vec3> = local_corners.iter().map(|p| transform.transform_point3(*p)).collect();
+    let p_vecs: Vec<Vec3> = local_corners
+        .iter()
+        .map(|p| transform.transform_point3(*p))
+        .collect();
 
     // 1. Create 8 Cartesian Points
-    let p_ids: Vec<EntityId> = p_vecs.iter()
+    let p_ids: Vec<EntityId> = p_vecs
+        .iter()
         .map(|p| writer.add_point(None, p.x as f64, p.y as f64, p.z as f64))
         .collect();
 
@@ -40,9 +47,11 @@ pub fn create_box_brep(writer: &mut StepWriter, transform: Mat4, min: Vec3, max:
     let dir_x = writer.add_direction(None, axis_x.x as f64, axis_x.y as f64, axis_x.z as f64);
     let dir_y = writer.add_direction(None, axis_y.x as f64, axis_y.y as f64, axis_y.z as f64);
     let dir_z = writer.add_direction(None, axis_z.x as f64, axis_z.y as f64, axis_z.z as f64);
-    
-    let dir_neg_x = writer.add_direction(None, -axis_x.x as f64, -axis_x.y as f64, -axis_x.z as f64);
-    let dir_neg_y = writer.add_direction(None, -axis_y.x as f64, -axis_y.y as f64, -axis_y.z as f64);
+
+    let dir_neg_x =
+        writer.add_direction(None, -axis_x.x as f64, -axis_x.y as f64, -axis_x.z as f64);
+    let dir_neg_y =
+        writer.add_direction(None, -axis_y.x as f64, -axis_y.y as f64, -axis_y.z as f64);
     // dir_neg_z not strictly needed if we rely on axis logic, but let's be consistent if needed
 
     // 3. Create vectors for edge lengths
@@ -59,22 +68,23 @@ pub fn create_box_brep(writer: &mut StepWriter, transform: Mat4, min: Vec3, max:
     let l01 = writer.add_line(None, p_ids[0], vec_x); // p0 -> p1
     let l12 = writer.add_line(None, p_ids[1], vec_y); // p1 -> p2
     let l23 = writer.add_line(None, p_ids[2], vec_x); // p2 -> p3 (reverse x)
-    let l30 = writer.add_line(None, p_ids[3], vec_y); 
+    let l30 = writer.add_line(None, p_ids[3], vec_y);
 
     // Top face
-    let l45 = writer.add_line(None, p_ids[4], vec_x); 
-    let l56 = writer.add_line(None, p_ids[5], vec_y); 
-    let l67 = writer.add_line(None, p_ids[6], vec_x); 
-    let l74 = writer.add_line(None, p_ids[7], vec_y); 
+    let l45 = writer.add_line(None, p_ids[4], vec_x);
+    let l56 = writer.add_line(None, p_ids[5], vec_y);
+    let l67 = writer.add_line(None, p_ids[6], vec_x);
+    let l74 = writer.add_line(None, p_ids[7], vec_y);
 
     // Vertical edges
-    let l04 = writer.add_line(None, p_ids[0], vec_z); 
-    let l15 = writer.add_line(None, p_ids[1], vec_z); 
-    let l26 = writer.add_line(None, p_ids[2], vec_z); 
-    let l37 = writer.add_line(None, p_ids[3], vec_z); 
+    let l04 = writer.add_line(None, p_ids[0], vec_z);
+    let l15 = writer.add_line(None, p_ids[1], vec_z);
+    let l26 = writer.add_line(None, p_ids[2], vec_z);
+    let l37 = writer.add_line(None, p_ids[3], vec_z);
 
     // 5. Create vertex points
-    let vps: Vec<EntityId> = p_ids.iter()
+    let vps: Vec<EntityId> = p_ids
+        .iter()
         .map(|&pid| writer.add_vertex_point(None, pid))
         .collect();
 
@@ -189,7 +199,10 @@ pub fn create_box_brep(writer: &mut StepWriter, transform: Mat4, min: Vec3, max:
     let af_right = writer.add_advanced_face(None, right_plane, vec![fb_right]);
 
     // 10. Create ClosedShell
-    let closed_shell = writer.add_closed_shell(None, vec![af_bottom, af_top, af_front, af_back, af_left, af_right]);
+    let closed_shell = writer.add_closed_shell(
+        None,
+        vec![af_bottom, af_top, af_front, af_back, af_left, af_right],
+    );
 
     // 11. Create ManifoldSolidBrep
     writer.add_manifold_solid_brep(None, closed_shell)
@@ -205,29 +218,19 @@ pub fn convert_assembly_to_step(assembly: &CrateAssembly) -> StepWriter {
         "AUTOCRATE-001",
         "AutoCrate Assembly",
         "ASTM D6039 Shipping Crate",
-        vec![product_context]
+        vec![product_context],
     );
-    let product_formation = writer.add_product_definition_formation(
-        "1.0",
-        Some("Initial design".to_string()),
-        product
-    );
-    let def_context = writer.add_product_definition_context(
-        "design",
-        app_context,
-        "design"
-    );
+    let product_formation =
+        writer.add_product_definition_formation("1.0", Some("Initial design".to_string()), product);
+    let def_context = writer.add_product_definition_context("design", app_context, "design");
     let product_def = writer.add_product_definition(
         "design",
         Some("Design definition".to_string()),
         product_formation,
-        def_context
+        def_context,
     );
-    let product_def_shape = writer.add_product_definition_shape(
-        Some("Assembly Shape".to_string()),
-        None,
-        product_def
-    );
+    let product_def_shape =
+        writer.add_product_definition_shape(Some("Assembly Shape".to_string()), None, product_def);
 
     // === 2. Create Datum Reference Frame (A|B|C) ===
     // Datum A: Base plane (Z=0, bottom of skids) - PRIMARY
@@ -235,13 +238,13 @@ pub fn convert_assembly_to_step(assembly: &CrateAssembly) -> StepWriter {
         "Datum A Feature",
         Some("Base plane at Z=0".to_string()),
         product_def_shape,
-        true
+        true,
     );
     let datum_a = writer.add_datum(
         "Datum A",
         Some("Base plane (Z=0, bottom of skids)".to_string()),
         datum_a_aspect,
-        "A"
+        "A",
     );
     let datum_ref_a = writer.add_datum_reference(1, datum_a); // Precedence 1 = primary
 
@@ -250,13 +253,13 @@ pub fn convert_assembly_to_step(assembly: &CrateAssembly) -> StepWriter {
         "Datum B Feature",
         Some("Width centerplane".to_string()),
         product_def_shape,
-        true
+        true,
     );
     let datum_b = writer.add_datum(
         "Datum B",
         Some("Width centerplane (YZ at X=0)".to_string()),
         datum_b_aspect,
-        "B"
+        "B",
     );
     let datum_ref_b = writer.add_datum_reference(2, datum_b); // Precedence 2 = secondary
 
@@ -265,13 +268,13 @@ pub fn convert_assembly_to_step(assembly: &CrateAssembly) -> StepWriter {
         "Datum C Feature",
         Some("Length centerplane".to_string()),
         product_def_shape,
-        true
+        true,
     );
     let datum_c = writer.add_datum(
         "Datum C",
         Some("Length centerplane (XZ at Y=0)".to_string()),
         datum_c_aspect,
-        "C"
+        "C",
     );
     let datum_ref_c = writer.add_datum_reference(3, datum_c); // Precedence 3 = tertiary
 
@@ -280,7 +283,7 @@ pub fn convert_assembly_to_step(assembly: &CrateAssembly) -> StepWriter {
         "Primary DRF",
         Some("A|B|C".to_string()),
         product_def_shape,
-        vec![datum_ref_a, datum_ref_b, datum_ref_c]
+        vec![datum_ref_a, datum_ref_b, datum_ref_c],
     );
 
     // === 3. Iterate through components and add geometry + tolerances ===
@@ -294,11 +297,16 @@ pub fn convert_assembly_to_step(assembly: &CrateAssembly) -> StepWriter {
 
         let global_transform = Mat4::from_rotation_translation(
             node.transform.rotation,
-            node.transform.translation.to_vec3()
+            node.transform.translation.to_vec3(),
         );
 
         // Create B-rep geometry
-        let brep_id = create_box_brep(&mut writer, global_transform, node.bounds.min.to_vec3(), node.bounds.max.to_vec3());
+        let brep_id = create_box_brep(
+            &mut writer,
+            global_transform,
+            node.bounds.min.to_vec3(),
+            node.bounds.max.to_vec3(),
+        );
         brep_ids.push(brep_id);
 
         // Add PMI/GD&T based on component type
@@ -309,14 +317,17 @@ pub fn convert_assembly_to_step(assembly: &CrateAssembly) -> StepWriter {
                     &format!("{} Top Surface", node.name),
                     Some("Skid mounting surface".to_string()),
                     product_def_shape,
-                    true
+                    true,
                 );
                 let magnitude = writer.add_length_measure_with_unit(0.125, unit_inch);
                 writer.add_flatness_tolerance("Flatness 0.125\"", magnitude, aspect);
 
                 // Material designation
-                writer.add_material_designation(&node.name, "ASTM D245 No.2 Southern Pine, Pressure Treated");
-            },
+                writer.add_material_designation(
+                    &node.name,
+                    "ASTM D245 No.2 Southern Pine, Pressure Treated",
+                );
+            }
 
             ComponentType::Floorboard { .. } => {
                 // Floorboard top surface - flatness tolerance ±0.0625"
@@ -324,13 +335,13 @@ pub fn convert_assembly_to_step(assembly: &CrateAssembly) -> StepWriter {
                     &format!("{} Top Surface", node.name),
                     Some("Floor mounting surface".to_string()),
                     product_def_shape,
-                    true
+                    true,
                 );
                 let magnitude = writer.add_length_measure_with_unit(0.0625, unit_inch);
                 writer.add_flatness_tolerance("Flatness 0.0625\"", magnitude, aspect);
 
                 writer.add_material_designation(&node.name, "ASTM D245 No.2 Southern Pine");
-            },
+            }
 
             ComponentType::Cleat { is_vertical, .. } => {
                 if *is_vertical {
@@ -339,23 +350,23 @@ pub fn convert_assembly_to_step(assembly: &CrateAssembly) -> StepWriter {
                         &format!("{} Vertical Face", node.name),
                         Some("Corner post face".to_string()),
                         product_def_shape,
-                        true
+                        true,
                     );
                     let magnitude = writer.add_length_measure_with_unit(0.0625, unit_inch); // ~0.5° in linear
                     writer.add_perpendicularity_tolerance(
                         "Perp 0.0625\" | A",
                         magnitude,
                         aspect,
-                        datum_system
+                        datum_system,
                     );
                 }
 
                 writer.add_material_designation(&node.name, "ASTM D245 No.2 Southern Pine");
-            },
+            }
 
             ComponentType::Panel { .. } => {
                 writer.add_material_designation(&node.name, "ASTM D3043 Grade C-C Plywood, 3/4\"");
-            },
+            }
 
             ComponentType::Nail { x, y, z, .. } => {
                 // Nail position - position tolerance ±0.25" relative to A|B|C
@@ -363,7 +374,7 @@ pub fn convert_assembly_to_step(assembly: &CrateAssembly) -> StepWriter {
                     &format!("Nail at ({:.1}, {:.1}, {:.1})", x, y, z),
                     Some(format!("Nailing coordinate {:.1},{:.1},{:.1}", x, y, z)),
                     product_def_shape,
-                    true
+                    true,
                 );
                 let magnitude = writer.add_length_measure_with_unit(0.25, unit_inch);
                 writer.add_position_tolerance(
@@ -371,11 +382,12 @@ pub fn convert_assembly_to_step(assembly: &CrateAssembly) -> StepWriter {
                     Some("Datum-referenced fastener location".to_string()),
                     magnitude,
                     aspect,
-                    datum_system
+                    datum_system,
                 );
 
-                writer.add_material_designation(&node.name, "ASTM F1667 16d Common Nail, Galvanized");
-            },
+                writer
+                    .add_material_designation(&node.name, "ASTM F1667 16d Common Nail, Galvanized");
+            }
 
             _ => {
                 // Other components - generic material
@@ -386,11 +398,8 @@ pub fn convert_assembly_to_step(assembly: &CrateAssembly) -> StepWriter {
 
     // === 4. Create shape representation and link to product ===
     let geom_context = writer.add_geometric_representation_context("3D", "assembly");
-    let shape_rep = writer.add_shape_representation(
-        "AutoCrate Assembly Geometry",
-        brep_ids,
-        geom_context
-    );
+    let shape_rep =
+        writer.add_shape_representation("AutoCrate Assembly Geometry", brep_ids, geom_context);
     writer.add_shape_definition_representation(product_def_shape, shape_rep);
 
     writer

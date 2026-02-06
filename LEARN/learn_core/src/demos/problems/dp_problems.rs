@@ -5,8 +5,8 @@
 //! LAYER: LEARN -> learn_core -> demos -> problems
 //! ===============================================================================
 
+use crate::demos::pseudocode::{CodeLine, Pseudocode};
 use crate::Demo;
-use crate::demos::pseudocode::{Pseudocode, CodeLine};
 
 // Static pseudocode for each variant
 static CLIMBING_STAIRS_CODE: &[CodeLine] = &[
@@ -181,15 +181,26 @@ impl DPProblemsDemo {
                 self.pseudocode.current_line = Some(4);
                 self.message = format!(
                     "nums[{}]={} < nums[{}]={}, dp[{}] = max({}, {}+1) = {}",
-                    self.j, self.nums[self.j], self.i, self.nums[self.i],
-                    self.i, self.dp[self.i] - 1, self.dp[self.j], self.dp[self.i]
+                    self.j,
+                    self.nums[self.j],
+                    self.i,
+                    self.nums[self.i],
+                    self.i,
+                    self.dp[self.i] - 1,
+                    self.dp[self.j],
+                    self.dp[self.i]
                 );
             } else {
                 self.pseudocode.current_line = Some(3);
                 self.message = format!(
                     "nums[{}]={} < nums[{}]={}, but dp[{}]={} already >= {}",
-                    self.j, self.nums[self.j], self.i, self.nums[self.i],
-                    self.i, self.dp[self.i], self.dp[self.j] + 1
+                    self.j,
+                    self.nums[self.j],
+                    self.i,
+                    self.nums[self.i],
+                    self.i,
+                    self.dp[self.i],
+                    self.dp[self.j] + 1
                 );
             }
         } else {
@@ -231,8 +242,13 @@ impl DPProblemsDemo {
                 self.pseudocode.current_line = Some(4);
                 self.message = format!(
                     "Coin {}: dp[{}] = min({}, dp[{}]+1) = {}",
-                    coin, self.j,
-                    if self.dp[self.j] == i32::MAX { "inf".to_string() } else { self.dp[self.j].to_string() },
+                    coin,
+                    self.j,
+                    if self.dp[self.j] == i32::MAX {
+                        "inf".to_string()
+                    } else {
+                        self.dp[self.j].to_string()
+                    },
                     self.j - coin as usize,
                     self.dp[self.j]
                 );
@@ -240,8 +256,13 @@ impl DPProblemsDemo {
                 self.pseudocode.current_line = Some(4);
                 self.message = format!(
                     "Coin {}: dp[{}] = {} (no improvement)",
-                    coin, self.j,
-                    if self.dp[self.j] == i32::MAX { "inf".to_string() } else { self.dp[self.j].to_string() }
+                    coin,
+                    self.j,
+                    if self.dp[self.j] == i32::MAX {
+                        "inf".to_string()
+                    } else {
+                        self.dp[self.j].to_string()
+                    }
                 );
             }
             self.highlights = vec![self.j];

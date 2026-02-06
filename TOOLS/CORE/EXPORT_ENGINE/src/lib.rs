@@ -94,7 +94,10 @@ impl Default for ExportConfig {
 
 /// Check if a format is supported for export
 pub fn is_format_supported(format: ExportFormat) -> bool {
-    matches!(format, ExportFormat::GerberX2 | ExportFormat::Pdf | ExportFormat::Step)
+    matches!(
+        format,
+        ExportFormat::GerberX2 | ExportFormat::Pdf | ExportFormat::Step
+    )
 }
 
 #[cfg(test)]

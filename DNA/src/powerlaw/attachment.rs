@@ -25,7 +25,12 @@ impl BarabasiAlbert {
     pub fn new(m0: usize, m: usize, width: f32, height: f32) -> Self {
         assert!(m <= m0, "m must be <= m0");
         assert!(m > 0, "m must be > 0");
-        Self { m0, m, width, height }
+        Self {
+            m0,
+            m,
+            width,
+            height,
+        }
     }
 
     /// Generate network into arena using preferential attachment
@@ -217,13 +222,18 @@ mod tests {
         let avg_degree = degrees.iter().sum::<u32>() as f32 / degrees.len() as f32;
 
         // Max degree should be significantly higher than average (characteristic of scale-free)
-        assert!(max_degree as f32 > avg_degree * 2.0,
+        assert!(
+            max_degree as f32 > avg_degree * 2.0,
             "Expected scale-free hub formation, max={}, avg={}",
-            max_degree, avg_degree);
+            max_degree,
+            avg_degree
+        );
 
         // Most nodes should have low degree (power law)
         let low_degree_count = degrees.iter().filter(|&&d| d <= 4).count();
-        assert!(low_degree_count as f32 > degrees.len() as f32 * 0.5,
-            "Expected many low-degree nodes in power law distribution");
+        assert!(
+            low_degree_count as f32 > degrees.len() as f32 * 0.5,
+            "Expected many low-degree nodes in power law distribution"
+        );
     }
 }

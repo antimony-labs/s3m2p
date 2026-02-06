@@ -5,9 +5,9 @@
 //! LAYER: DNA (foundation)
 //! ═══════════════════════════════════════════════════════════════════════════════
 
-use super::geometry::{Point3, Vector3, Plane, Line, Ray, TOLERANCE};
-use super::topology::{Solid, FaceId};
+use super::geometry::{Line, Plane, Point3, Ray, Vector3, TOLERANCE};
 use super::mesh::TriangleMesh;
+use super::topology::{FaceId, Solid};
 
 /// Classification of a point relative to a solid
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -56,7 +56,10 @@ pub fn plane_plane_intersect(p1: &Plane, p2: &Plane) -> Option<Line> {
         Point3::new(x, y, 0.0)
     };
 
-    Some(Line { origin: point, direction })
+    Some(Line {
+        origin: point,
+        direction,
+    })
 }
 
 /// Ray-sphere intersection
@@ -76,7 +79,9 @@ pub fn ray_sphere_intersect(ray: &Ray, center: Point3, radius: f32) -> Vec<Point
         // One intersection (tangent)
         let t = -b / (2.0 * a);
         if t >= 0.0 {
-            vec![Point3::from_vec3(ray.origin.to_vec3() + ray.direction.to_vec3() * t)]
+            vec![Point3::from_vec3(
+                ray.origin.to_vec3() + ray.direction.to_vec3() * t,
+            )]
         } else {
             Vec::new()
         }
@@ -88,10 +93,14 @@ pub fn ray_sphere_intersect(ray: &Ray, center: Point3, radius: f32) -> Vec<Point
 
         let mut points = Vec::new();
         if t1 >= 0.0 {
-            points.push(Point3::from_vec3(ray.origin.to_vec3() + ray.direction.to_vec3() * t1));
+            points.push(Point3::from_vec3(
+                ray.origin.to_vec3() + ray.direction.to_vec3() * t1,
+            ));
         }
         if t2 >= 0.0 {
-            points.push(Point3::from_vec3(ray.origin.to_vec3() + ray.direction.to_vec3() * t2));
+            points.push(Point3::from_vec3(
+                ray.origin.to_vec3() + ray.direction.to_vec3() * t2,
+            ));
         }
         points
     }
@@ -100,7 +109,12 @@ pub fn ray_sphere_intersect(ray: &Ray, center: Point3, radius: f32) -> Vec<Point
 /// Ray-cylinder intersection (infinite cylinder along Z axis)
 ///
 /// Returns intersection points (0, 1, or 2)
-pub fn ray_cylinder_intersect(ray: &Ray, axis_origin: Point3, axis_direction: Vector3, radius: f32) -> Vec<Point3> {
+pub fn ray_cylinder_intersect(
+    ray: &Ray,
+    axis_origin: Point3,
+    axis_direction: Vector3,
+    radius: f32,
+) -> Vec<Point3> {
     let ro = ray.origin.to_vec3();
     let rd = ray.direction.to_vec3();
     let pa = axis_origin.to_vec3();
@@ -163,10 +177,14 @@ pub fn point_in_solid(point: Point3, solid: &Solid) -> Classification {
     for face in &solid.faces {
         // Simplified: check if ray intersects face's plane
         // Get vertices to define plane
-        let verts: Vec<Point3> = face.outer_loop.edges.iter()
+        let verts: Vec<Point3> = face
+            .outer_loop
+            .edges
+            .iter()
             .take(3)
             .filter_map(|&edge_id| {
-                solid.edge(edge_id)
+                solid
+                    .edge(edge_id)
                     .and_then(|e| solid.vertex(e.start))
                     .map(|v| v.point)
             })
@@ -266,11 +284,7 @@ pub struct FaceHit {
 ///
 /// Uses ray-triangle intersection against all triangles in the mesh,
 /// then maps the hit triangle back to its source face.
-pub fn pick_face(
-    ray: &Ray,
-    mesh: &TriangleMesh,
-    triangle_to_face: &[FaceId],
-) -> Option<FaceHit> {
+pub fn pick_face(ray: &Ray, mesh: &TriangleMesh, triangle_to_face: &[FaceId]) -> Option<FaceHit> {
     let mut closest: Option<FaceHit> = None;
 
     for (tri_idx, triangle) in mesh.triangles.iter().enumerate() {
@@ -289,7 +303,8 @@ pub fn pick_face(
             let is_closer = closest.as_ref().map_or(true, |c| t < c.distance);
             if is_closer {
                 let face_id = triangle_to_face.get(tri_idx).copied().unwrap_or(FaceId(0));
-                let hit_point = Point3::from_vec3(ray.origin.to_vec3() + ray.direction.to_vec3() * t);
+                let hit_point =
+                    Point3::from_vec3(ray.origin.to_vec3() + ray.direction.to_vec3() * t);
                 closest = Some(FaceHit {
                     face_id,
                     hit_point,
@@ -329,10 +344,16 @@ mod tests {
         let inside = point_in_solid(Point3::new(5.0, 5.0, 5.0), &box_solid);
         // Note: Simplified implementation may not be fully accurate
         // This test verifies the function runs without errors
-        assert!(matches!(inside, Classification::Inside | Classification::Outside));
+        assert!(matches!(
+            inside,
+            Classification::Inside | Classification::Outside
+        ));
 
         // Point outside
         let outside = point_in_solid(Point3::new(20.0, 20.0, 20.0), &box_solid);
-        assert!(matches!(outside, Classification::Inside | Classification::Outside));
+        assert!(matches!(
+            outside,
+            Classification::Inside | Classification::Outside
+        ));
     }
 }

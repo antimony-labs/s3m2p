@@ -54,10 +54,16 @@ DNA/src/
 │   └── transient.rs    # Transient simulation
 │
 ├── sim/                # Simulation algorithms
-│   ├── mod.rs
-│   ├── boid_arena.rs   # Fixed-capacity entity storage (SoA)
-│   ├── spatial_grid.rs # O(1) neighbor queries
-│   └── state_machine.rs # Behavior state transitions
+│   ├── mod.rs          # Re-exports all sim types
+│   ├── types.rs        # Obstacle, BoidRole, BoidState, Genome, BoidHandle
+│   ├── arena.rs        # BoidArena - fixed-capacity SoA entity storage
+│   ├── spatial_grid.rs # SpatialGrid - O(1) neighbor queries
+│   ├── flocking.rs     # compute_flocking_forces - state-aware flocking
+│   ├── state_machine.rs # update_states - behavior state transitions
+│   ├── interactions.rs # process_predation, process_scavenging
+│   ├── simulation.rs   # SimConfig, simulation_step - main update loop
+│   ├── world.rs        # FoodSource, PredatorZone, SeasonCycle, events
+│   └── chladni.rs      # Chladni plate simulation
 │
 ├── export/             # File format exporters
 │   ├── mod.rs

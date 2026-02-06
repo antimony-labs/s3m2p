@@ -27,15 +27,33 @@ fn test_step_export_with_pmi_gdt() {
 
     // Verify STEP file structure
     assert!(content.contains("ISO-10303-21"), "Missing STEP header");
-    assert!(content.contains("AP242_MANAGED_MODEL_BASED_3D_ENGINEERING_MIM_LF"), "Missing AP242 schema");
+    assert!(
+        content.contains("AP242_MANAGED_MODEL_BASED_3D_ENGINEERING_MIM_LF"),
+        "Missing AP242 schema"
+    );
 
     // Verify Product Structure
-    assert!(content.contains("APPLICATION_CONTEXT"), "Missing APPLICATION_CONTEXT");
-    assert!(content.contains("PRODUCT_CONTEXT"), "Missing PRODUCT_CONTEXT");
+    assert!(
+        content.contains("APPLICATION_CONTEXT"),
+        "Missing APPLICATION_CONTEXT"
+    );
+    assert!(
+        content.contains("PRODUCT_CONTEXT"),
+        "Missing PRODUCT_CONTEXT"
+    );
     assert!(content.contains("PRODUCT"), "Missing PRODUCT");
-    assert!(content.contains("PRODUCT_DEFINITION"), "Missing PRODUCT_DEFINITION");
-    assert!(content.contains("PRODUCT_DEFINITION_SHAPE"), "Missing PRODUCT_DEFINITION_SHAPE");
-    assert!(content.contains("SHAPE_REPRESENTATION"), "Missing SHAPE_REPRESENTATION");
+    assert!(
+        content.contains("PRODUCT_DEFINITION"),
+        "Missing PRODUCT_DEFINITION"
+    );
+    assert!(
+        content.contains("PRODUCT_DEFINITION_SHAPE"),
+        "Missing PRODUCT_DEFINITION_SHAPE"
+    );
+    assert!(
+        content.contains("SHAPE_REPRESENTATION"),
+        "Missing SHAPE_REPRESENTATION"
+    );
 
     // Verify Datum Reference Frame (A|B|C)
     assert!(content.contains("DATUM"), "Missing DATUM entity");
@@ -47,17 +65,32 @@ fn test_step_export_with_pmi_gdt() {
     assert!(content.contains("A|B|C"), "Missing A|B|C reference");
 
     // Verify Geometric Tolerances
-    assert!(content.contains("FLATNESS_TOLERANCE"), "Missing FLATNESS_TOLERANCE");
+    assert!(
+        content.contains("FLATNESS_TOLERANCE"),
+        "Missing FLATNESS_TOLERANCE"
+    );
     assert!(content.contains("SHAPE_ASPECT"), "Missing SHAPE_ASPECT");
-    assert!(content.contains("LENGTH_MEASURE_WITH_UNIT"), "Missing LENGTH_MEASURE_WITH_UNIT");
+    assert!(
+        content.contains("LENGTH_MEASURE_WITH_UNIT"),
+        "Missing LENGTH_MEASURE_WITH_UNIT"
+    );
 
     // Verify PMI
-    assert!(content.contains("MATERIAL_DESIGNATION"), "Missing MATERIAL_DESIGNATION");
+    assert!(
+        content.contains("MATERIAL_DESIGNATION"),
+        "Missing MATERIAL_DESIGNATION"
+    );
     assert!(content.contains("ASTM"), "Missing ASTM material spec");
 
     // Verify B-rep geometry
-    assert!(content.contains("MANIFOLD_SOLID_BREP"), "Missing MANIFOLD_SOLID_BREP");
-    assert!(content.contains("CARTESIAN_POINT"), "Missing CARTESIAN_POINT");
+    assert!(
+        content.contains("MANIFOLD_SOLID_BREP"),
+        "Missing MANIFOLD_SOLID_BREP"
+    );
+    assert!(
+        content.contains("CARTESIAN_POINT"),
+        "Missing CARTESIAN_POINT"
+    );
     assert!(content.contains("ADVANCED_FACE"), "Missing ADVANCED_FACE");
     assert!(content.contains("CLOSED_SHELL"), "Missing CLOSED_SHELL");
 
@@ -75,11 +108,17 @@ fn test_step_export_datum_system() {
     let content = step_writer.to_string();
 
     // Verify all three datums are defined with proper precedence
-    assert!(content.contains("DATUM_REFERENCE"), "Missing DATUM_REFERENCE");
+    assert!(
+        content.contains("DATUM_REFERENCE"),
+        "Missing DATUM_REFERENCE"
+    );
 
     // Count datum references (should be at least 3 for A, B, C)
     let datum_ref_count = content.matches("DATUM_REFERENCE").count();
-    assert!(datum_ref_count >= 3, "Should have at least 3 datum references (A, B, C)");
+    assert!(
+        datum_ref_count >= 3,
+        "Should have at least 3 datum references (A, B, C)"
+    );
 
     // Verify datum system links them
     assert!(content.contains("DATUM_SYSTEM"), "Missing DATUM_SYSTEM");
@@ -92,7 +131,9 @@ fn test_step_export_skid_tolerances() {
     let assembly = generate_crate(&spec, CrateStyle::B);
 
     // Verify assembly has skids
-    let skid_count = assembly.nodes.iter()
+    let skid_count = assembly
+        .nodes
+        .iter()
         .filter(|n| matches!(n.component_type, ComponentType::Skid { .. }))
         .count();
 
@@ -102,9 +143,18 @@ fn test_step_export_skid_tolerances() {
     let content = step_writer.to_string();
 
     // Verify flatness tolerances for skid tops
-    assert!(content.contains("Flatness 0.125\""), "Missing skid flatness tolerance");
-    assert!(content.contains("Top Surface"), "Missing surface designation");
-    assert!(content.contains("ASTM D245"), "Missing lumber material spec");
+    assert!(
+        content.contains("Flatness 0.125\""),
+        "Missing skid flatness tolerance"
+    );
+    assert!(
+        content.contains("Top Surface"),
+        "Missing surface designation"
+    );
+    assert!(
+        content.contains("ASTM D245"),
+        "Missing lumber material spec"
+    );
     assert!(content.contains("Southern Pine"), "Missing wood species");
 }
 
@@ -114,7 +164,9 @@ fn test_step_export_cleat_perpendicularity() {
     let assembly = generate_crate(&spec, CrateStyle::B);
 
     // Verify assembly has cleats
-    let cleat_count = assembly.nodes.iter()
+    let cleat_count = assembly
+        .nodes
+        .iter()
         .filter(|n| matches!(n.component_type, ComponentType::Cleat { .. }))
         .count();
 
@@ -124,7 +176,10 @@ fn test_step_export_cleat_perpendicularity() {
     let content = step_writer.to_string();
 
     // Verify perpendicularity tolerances for vertical cleats
-    assert!(content.contains("PERPENDICULARITY_TOLERANCE"), "Missing PERPENDICULARITY_TOLERANCE");
+    assert!(
+        content.contains("PERPENDICULARITY_TOLERANCE"),
+        "Missing PERPENDICULARITY_TOLERANCE"
+    );
     assert!(content.contains("Perp"), "Missing perpendicularity callout");
 }
 
@@ -134,7 +189,9 @@ fn test_step_export_panel_materials() {
     let assembly = generate_crate(&spec, CrateStyle::B);
 
     // Verify assembly has panels
-    let panel_count = assembly.nodes.iter()
+    let panel_count = assembly
+        .nodes
+        .iter()
         .filter(|n| matches!(n.component_type, ComponentType::Panel { .. }))
         .count();
 

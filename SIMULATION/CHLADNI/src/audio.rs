@@ -7,7 +7,7 @@
 
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{AudioContext, AnalyserNode, MediaStreamConstraints};
+use web_sys::{AnalyserNode, AudioContext, MediaStreamConstraints};
 
 /// Audio analyzer for microphone input
 pub struct AudioAnalyzer {
@@ -25,21 +25,21 @@ impl AudioAnalyzer {
     /// Create a new audio analyzer
     pub fn new() -> Result<Self, JsValue> {
         let audio_context = AudioContext::new()?;
-        
+
         // Create analyser node using create_analyser
         let analyser = audio_context.create_analyser()?;
-        
+
         // Configure analyser for frequency analysis
         analyser.set_fft_size(2048);
         analyser.set_smoothing_time_constant(0.8);
-        
+
         let sample_rate = audio_context.sample_rate();
-        
+
         Ok(Self {
             audio_context,
             analyser,
             source: None,
-            fft_buffer: vec![0.0; 1024], // Half of FFT size
+            fft_buffer: vec![0.0; 1024],  // Half of FFT size
             time_buffer: vec![0.0; 2048], // Full FFT size for time domain
             sample_rate,
             is_active: false,
@@ -50,25 +50,29 @@ impl AudioAnalyzer {
     pub async fn start_microphone(&mut self) -> Result<(), JsValue> {
         let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window"))?;
         let navigator = window.navigator();
-        let media_devices = navigator.media_devices()
+        let media_devices = navigator
+            .media_devices()
             .map_err(|_| JsValue::from_str("No media devices"))?;
 
         // Request microphone access
         let constraints = MediaStreamConstraints::new();
         constraints.set_audio(&JsValue::TRUE);
-        
+
         let promise = media_devices.get_user_media_with_constraints(&constraints)?;
         let stream = wasm_bindgen_futures::JsFuture::from(promise).await?;
         let stream = stream.dyn_into::<web_sys::MediaStream>()?;
 
         // Create audio source from stream using JsCast
         // Note: create_media_stream_source returns a MediaStreamAudioSourceNode
-        let source_obj = self.audio_context
+        let source_obj = self
+            .audio_context
             .create_media_stream_source(&stream)
             .map_err(|e| JsValue::from_str(&format!("Failed to create audio source: {:?}", e)))?;
-        let source: web_sys::MediaStreamAudioSourceNode = source_obj.dyn_into()
+        let source: web_sys::MediaStreamAudioSourceNode = source_obj
+            .dyn_into()
             .map_err(|_| JsValue::from_str("Failed to cast to MediaStreamAudioSourceNode"))?;
-        source.connect_with_audio_node(&self.analyser)
+        source
+            .connect_with_audio_node(&self.analyser)
             .map_err(|e| JsValue::from_str(&format!("Failed to connect audio: {:?}", e)))?;
 
         self.source = Some(source);
@@ -101,7 +105,7 @@ impl AudioAnalyzer {
             self.fft_buffer.resize(1024, 0.0);
         }
         self.analyser.get_float_frequency_data(&mut self.fft_buffer);
-        
+
         // Find peak frequency
         let mut max_magnitude = f32::NEG_INFINITY;
         let mut peak_bin = 0;
@@ -152,7 +156,8 @@ impl AudioAnalyzer {
         }
 
         // Get time-domain data
-        self.analyser.get_float_time_domain_data(&mut self.time_buffer);
+        self.analyser
+            .get_float_time_domain_data(&mut self.time_buffer);
 
         // Calculate RMS
         let sum_squares: f32 = self.time_buffer.iter().map(|&x| x * x).sum();
@@ -185,9 +190,8 @@ impl AudioAnalyzer {
         let bin_hz = self.sample_rate / 2048.0;
 
         // Convert frequency to bin index
-        let freq_to_bin = |freq: f32| -> usize {
-            ((freq / bin_hz) as usize).min(self.fft_buffer.len() - 1)
-        };
+        let freq_to_bin =
+            |freq: f32| -> usize { ((freq / bin_hz) as usize).min(self.fft_buffer.len() - 1) };
 
         // Band boundaries in bins
         let sub_bass_start = freq_to_bin(20.0);
@@ -218,15 +222,13 @@ impl AudioAnalyzer {
         let high = band_energy(mid_end, high_end);
 
         // Normalize (typical speech/music values, can tune)
-        let normalize = |v: f32, scale: f32| -> f32 {
-            (v * scale).min(1.0)
-        };
+        let normalize = |v: f32, scale: f32| -> f32 { (v * scale).min(1.0) };
 
         [
-            normalize(sub_bass, 50.0),  // Sub-bass often weaker
-            normalize(bass, 30.0),       // Bass
-            normalize(mid, 20.0),        // Mid is usually stronger
-            normalize(high, 40.0),       // High often weaker
+            normalize(sub_bass, 50.0), // Sub-bass often weaker
+            normalize(bass, 30.0),     // Bass
+            normalize(mid, 20.0),      // Mid is usually stronger
+            normalize(high, 40.0),     // High often weaker
         ]
     }
 
@@ -244,31 +246,31 @@ impl AudioAnalyzer {
 }
 
 /// Map audio frequency to Chladni plate mode
-/// 
+///
 /// For a square plate: f_mn = C * (m² + n²)
 /// We need to find the closest (m, n) mode for a given frequency
-/// 
+///
 /// Plate constant C depends on:
 /// - Plate material properties (Young's modulus, density)
 /// - Plate dimensions
 /// - Boundary conditions
-/// 
+///
 /// Typical values: C ≈ 100-1000 Hz for a 30cm square plate
 pub fn frequency_to_mode(frequency: f32, plate_constant: f32) -> (u32, u32) {
     // Target value: m² + n² = frequency / plate_constant
     let target = frequency / plate_constant;
-    
+
     // Find closest (m, n) such that m² + n² ≈ target
     let mut best_m = 1;
     let mut best_n = 1;
     let mut best_diff = f32::INFINITY;
-    
+
     // Search reasonable range (m, n from 1 to 20)
     for m in 1..=20 {
         for n in 1..=20 {
             let mode_value = (m * m + n * n) as f32;
             let diff = (mode_value - target).abs();
-            
+
             if diff < best_diff {
                 best_diff = diff;
                 best_m = m;
@@ -276,15 +278,15 @@ pub fn frequency_to_mode(frequency: f32, plate_constant: f32) -> (u32, u32) {
             }
         }
     }
-    
+
     (best_m as u32, best_n as u32)
 }
 
 /// Calculate plate constant from physical properties
-/// 
+///
 /// For a square plate with fixed edges:
 /// C = (π² / L²) * sqrt(D / ρh)
-/// 
+///
 /// Where:
 /// - L = plate side length (m)
 /// - D = flexural rigidity = Eh³ / (12(1-ν²))
@@ -292,7 +294,7 @@ pub fn frequency_to_mode(frequency: f32, plate_constant: f32) -> (u32, u32) {
 /// - h = plate thickness (m)
 /// - ν = Poisson's ratio
 /// - ρ = density (kg/m³)
-/// 
+///
 /// Simplified: C ≈ 1000 Hz for typical 30cm aluminum plate
 pub fn calculate_plate_constant(
     plate_size: f32,
@@ -306,10 +308,10 @@ pub fn calculate_plate_constant(
     let e = youngs_modulus;
     let rho = density;
     let nu = poisson_ratio;
-    
+
     // Flexural rigidity
     let d = (e * h * h * h) / (12.0 * (1.0 - nu * nu));
-    
+
     // Plate constant
     let pi = std::f32::consts::PI;
     (pi * pi / (l * l)) * (d / (rho * h)).sqrt()

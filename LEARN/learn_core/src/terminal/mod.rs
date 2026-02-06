@@ -48,9 +48,8 @@ impl TerminalConfig for DefaultConfig {
 
     fn allowed_commands(&self) -> &[&str] {
         &[
-            "ls", "cd", "pwd", "cat", "chmod", "chown", "mkdir", "touch",
-            "rm", "cp", "mv", "echo", "head", "tail", "grep", "clear",
-            "whoami", "id", "su", "help",
+            "ls", "cd", "pwd", "cat", "chmod", "chown", "mkdir", "touch", "rm", "cp", "mv", "echo",
+            "head", "tail", "grep", "clear", "whoami", "id", "su", "help",
         ]
     }
 

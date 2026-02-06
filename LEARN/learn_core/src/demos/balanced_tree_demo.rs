@@ -5,8 +5,8 @@
 //! LAYER: LEARN -> learn_core -> demos
 //! ===============================================================================
 
+use super::pseudocode::{avl as pc_avl, Pseudocode};
 use crate::{Demo, ParamMeta, Rng, Vec2};
-use super::pseudocode::{Pseudocode, avl as pc_avl};
 
 /// A node in the AVL tree
 #[derive(Clone, Debug)]
@@ -42,10 +42,26 @@ pub enum RotationType {
 #[derive(Clone, Debug, PartialEq)]
 pub enum AvlAnimation {
     Idle,
-    Inserting { value: i32, path: Vec<usize>, step: usize, progress: f32 },
-    CheckingBalance { node: usize, progress: f32 },
-    Rotating { node: usize, rotation: RotationType, progress: f32 },
-    Rebalancing { path: Vec<usize>, step: usize, progress: f32 },
+    Inserting {
+        value: i32,
+        path: Vec<usize>,
+        step: usize,
+        progress: f32,
+    },
+    CheckingBalance {
+        node: usize,
+        progress: f32,
+    },
+    Rotating {
+        node: usize,
+        rotation: RotationType,
+        progress: f32,
+    },
+    Rebalancing {
+        path: Vec<usize>,
+        step: usize,
+        progress: f32,
+    },
 }
 
 /// AVL tree (balanced BST) visualization demo
@@ -96,7 +112,9 @@ impl BalancedTreeDemo {
     }
 
     fn position_subtree(&mut self, idx: usize, x: f32, y: f32, spread: f32, depth: usize) {
-        if depth > 6 { return; }
+        if depth > 6 {
+            return;
+        }
 
         self.nodes[idx].position = Vec2::new(x, y);
 
@@ -210,13 +228,11 @@ impl BalancedTreeDemo {
             } else {
                 self.nodes[node].left = Some(new_idx);
             }
+        } else if let Some(right) = self.nodes[node].right {
+            let new_right = self.insert_recursive(right, new_idx);
+            self.nodes[node].right = Some(new_right);
         } else {
-            if let Some(right) = self.nodes[node].right {
-                let new_right = self.insert_recursive(right, new_idx);
-                self.nodes[node].right = Some(new_right);
-            } else {
-                self.nodes[node].right = Some(new_idx);
-            }
+            self.nodes[node].right = Some(new_idx);
         }
 
         // Update height
@@ -289,7 +305,12 @@ impl BalancedTreeDemo {
         }
 
         self.message = format!("Inserting {} - O(log n)", value);
-        self.animation = AvlAnimation::Inserting { value, path, step: 0, progress: 0.0 };
+        self.animation = AvlAnimation::Inserting {
+            value,
+            path,
+            step: 0,
+            progress: 0.0,
+        };
     }
 
     /// Get tree height
@@ -341,7 +362,12 @@ impl Demo for BalancedTreeDemo {
 
         match &mut self.animation {
             AvlAnimation::Idle => {}
-            AvlAnimation::Inserting { value, path, step, progress } => {
+            AvlAnimation::Inserting {
+                value,
+                path,
+                step,
+                progress,
+            } => {
                 *progress += speed * 0.5;
                 if *progress >= 1.0 {
                     if *step < path.len() {
@@ -363,7 +389,8 @@ impl Demo for BalancedTreeDemo {
 
                         let rotations = self.rotation_count - old_rotations;
                         if rotations > 0 {
-                            self.message = format!("Inserted {} with {} rotation(s)", val, rotations);
+                            self.message =
+                                format!("Inserted {} with {} rotation(s)", val, rotations);
                         } else {
                             self.message = format!("Inserted {} (no rebalancing needed)", val);
                         }
@@ -395,22 +422,23 @@ impl Demo for BalancedTreeDemo {
 
     fn set_param(&mut self, name: &str, value: f32) -> bool {
         match name {
-            "speed" => { self.speed = value; true }
+            "speed" => {
+                self.speed = value;
+                true
+            }
             _ => false,
         }
     }
 
     fn params() -> &'static [ParamMeta] {
-        &[
-            ParamMeta {
-                name: "speed",
-                label: "Animation Speed",
-                min: 0.25,
-                max: 4.0,
-                step: 0.25,
-                default: 1.0,
-            },
-        ]
+        &[ParamMeta {
+            name: "speed",
+            label: "Animation Speed",
+            min: 0.25,
+            max: 4.0,
+            step: 0.25,
+            default: 1.0,
+        }]
     }
 }
 

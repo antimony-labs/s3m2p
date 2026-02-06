@@ -7,9 +7,9 @@ use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 /// 2D orthographic view direction
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ViewDirection {
-    Front,  // Looking along -Y
-    Top,    // Looking along -Z
-    Side,   // Looking along +X
+    Front, // Looking along -Y
+    Top,   // Looking along -Z
+    Side,  // Looking along +X
 }
 
 /// 2D technical drawing renderer
@@ -103,19 +103,46 @@ impl Canvas2DRenderer {
         // Draw visible edges based on view
         let edges: Vec<(usize, usize)> = match self.view {
             ViewDirection::Front => vec![
-                (0, 1), (1, 2), (2, 3), (3, 0), // Back face
-                (4, 5), (5, 6), (6, 7), (7, 4), // Front face
-                (0, 4), (1, 5), (2, 6), (3, 7), // Connecting edges
+                (0, 1),
+                (1, 2),
+                (2, 3),
+                (3, 0), // Back face
+                (4, 5),
+                (5, 6),
+                (6, 7),
+                (7, 4), // Front face
+                (0, 4),
+                (1, 5),
+                (2, 6),
+                (3, 7), // Connecting edges
             ],
             ViewDirection::Top => vec![
-                (0, 1), (1, 5), (5, 4), (4, 0), // Bottom
-                (3, 2), (2, 6), (6, 7), (7, 3), // Top
-                (0, 3), (1, 2), (4, 7), (5, 6), // Sides
+                (0, 1),
+                (1, 5),
+                (5, 4),
+                (4, 0), // Bottom
+                (3, 2),
+                (2, 6),
+                (6, 7),
+                (7, 3), // Top
+                (0, 3),
+                (1, 2),
+                (4, 7),
+                (5, 6), // Sides
             ],
             ViewDirection::Side => vec![
-                (0, 3), (3, 7), (7, 4), (4, 0), // Left
-                (1, 2), (2, 6), (6, 5), (5, 1), // Right
-                (0, 1), (3, 2), (4, 5), (7, 6), // Connecting
+                (0, 3),
+                (3, 7),
+                (7, 4),
+                (4, 0), // Left
+                (1, 2),
+                (2, 6),
+                (6, 5),
+                (5, 1), // Right
+                (0, 1),
+                (3, 2),
+                (4, 5),
+                (7, 6), // Connecting
             ],
         };
 
@@ -125,13 +152,7 @@ impl Canvas2DRenderer {
     }
 
     /// Draw dimension line with arrows and text
-    pub fn draw_dimension(
-        &self,
-        p1: Vec3,
-        p2: Vec3,
-        offset: f32,
-        label: &str,
-    ) {
+    pub fn draw_dimension(&self, p1: Vec3, p2: Vec3, offset: f32, label: &str) {
         let (x1, y1) = self.project(p1);
         let (x2, y2) = self.project(p2);
 

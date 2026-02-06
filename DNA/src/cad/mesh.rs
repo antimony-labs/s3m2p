@@ -6,7 +6,7 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 use super::geometry::{Point3, Vector3};
-use super::topology::{Solid, Face, FaceId, EdgeId};
+use super::topology::{EdgeId, Face, FaceId, Solid};
 
 /// Triangle mesh representation
 #[derive(Clone, Debug)]
@@ -57,9 +57,13 @@ pub fn solid_to_mesh(solid: &Solid) -> TriangleMesh {
 /// Triangulate a single face and add to mesh
 fn triangulate_face(face: &Face, solid: &Solid, mesh: &mut TriangleMesh) {
     // Get all vertices in the face's outer loop
-    let face_vertices: Vec<Point3> = face.outer_loop.edges.iter()
+    let face_vertices: Vec<Point3> = face
+        .outer_loop
+        .edges
+        .iter()
         .filter_map(|&edge_id| {
-            solid.edge(edge_id)
+            solid
+                .edge(edge_id)
                 .and_then(|e| solid.vertex(e.start))
                 .map(|v| v.point)
         })
@@ -90,11 +94,8 @@ fn triangulate_face(face: &Face, solid: &Solid, mesh: &mut TriangleMesh) {
 
     // Fan triangulation from first vertex
     for i in 1..face_vertices.len() - 1 {
-        mesh.triangles.push([
-            base_idx,
-            base_idx + i,
-            base_idx + i + 1,
-        ]);
+        mesh.triangles
+            .push([base_idx, base_idx + i, base_idx + i + 1]);
         mesh.normals.push(normal);
     }
 }
@@ -144,11 +145,10 @@ pub fn solid_to_pickable_mesh(solid: &Solid) -> PickableMesh {
 
     // Extract edge segments for edge picking
     for edge in &solid.edges {
-        if let (Some(start_v), Some(end_v)) = (
-            solid.vertex(edge.start),
-            solid.vertex(edge.end),
-        ) {
-            pickable.edge_segments.push((start_v.point, end_v.point, edge.id));
+        if let (Some(start_v), Some(end_v)) = (solid.vertex(edge.start), solid.vertex(edge.end)) {
+            pickable
+                .edge_segments
+                .push((start_v.point, end_v.point, edge.id));
         }
     }
 

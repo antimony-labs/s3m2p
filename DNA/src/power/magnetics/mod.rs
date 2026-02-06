@@ -31,9 +31,9 @@
 //! ```
 
 pub mod core_materials;
-pub mod wire;
 pub mod transformer;
+pub mod wire;
 
 pub use core_materials::*;
-pub use wire::*;
 pub use transformer::*;
+pub use wire::*;

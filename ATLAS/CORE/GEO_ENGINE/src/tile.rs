@@ -172,7 +172,9 @@ impl TileKey {
 
 /// Convert tile Y coordinate to latitude
 fn tile_y_to_lat(y: u32, n: f32) -> f32 {
-    let lat_rad = (std::f32::consts::PI * (1.0 - 2.0 * (y as f32) / n)).sinh().atan();
+    let lat_rad = (std::f32::consts::PI * (1.0 - 2.0 * (y as f32) / n))
+        .sinh()
+        .atan();
     lat_rad.to_degrees()
 }
 

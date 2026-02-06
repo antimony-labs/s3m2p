@@ -5,17 +5,17 @@
 //! LAYER: LEARN -> learn_core -> demos
 //! ===============================================================================
 
+use super::pseudocode::{binary_tree as pc_tree, Pseudocode};
 use crate::{Demo, ParamMeta, Rng, Vec2};
-use super::pseudocode::{Pseudocode, binary_tree as pc_tree};
 
 /// A node in the binary tree
 #[derive(Clone, Debug)]
 pub struct TreeNode {
     pub value: i32,
-    pub left: Option<usize>,   // Index into nodes vector
-    pub right: Option<usize>,  // Index into nodes vector
-    pub position: Vec2,        // For rendering
-    pub highlight: bool,       // Currently highlighted during traversal
+    pub left: Option<usize>,  // Index into nodes vector
+    pub right: Option<usize>, // Index into nodes vector
+    pub position: Vec2,       // For rendering
+    pub highlight: bool,      // Currently highlighted during traversal
 }
 
 /// Traversal order types
@@ -31,8 +31,15 @@ pub enum TraversalOrder {
 #[derive(Clone, Debug, PartialEq)]
 pub enum TreeAnimation {
     Idle,
-    Inserting { value: i32, progress: f32 },
-    Traversing { order: TraversalOrder, step: usize, progress: f32 },
+    Inserting {
+        value: i32,
+        progress: f32,
+    },
+    Traversing {
+        order: TraversalOrder,
+        step: usize,
+        progress: f32,
+    },
 }
 
 /// Binary tree visualization demo
@@ -80,7 +87,9 @@ impl BinaryTreeDemo {
     }
 
     fn position_subtree(&mut self, idx: usize, x: f32, y: f32, spread: f32, depth: usize) {
-        if depth > 5 { return; } // Prevent infinite recursion
+        if depth > 5 {
+            return;
+        } // Prevent infinite recursion
 
         self.nodes[idx].position = Vec2::new(x, y);
 
@@ -151,7 +160,10 @@ impl BinaryTreeDemo {
             self.message = "Tree is full (max 15 nodes)".to_string();
             return;
         }
-        self.animation = TreeAnimation::Inserting { value, progress: 0.0 };
+        self.animation = TreeAnimation::Inserting {
+            value,
+            progress: 0.0,
+        };
         self.message = format!("Inserting {} into tree", value);
         self.pseudocode.set_line(0);
     }
@@ -192,7 +204,11 @@ impl BinaryTreeDemo {
             TraversalOrder::PostOrder => "Post-order (Left→Right→Root)",
             TraversalOrder::LevelOrder => "Level-order (BFS)",
         };
-        self.animation = TreeAnimation::Traversing { order, step: 0, progress: 0.0 };
+        self.animation = TreeAnimation::Traversing {
+            order,
+            step: 0,
+            progress: 0.0,
+        };
         self.message = format!("{} traversal - O(n)", order_name);
     }
 
@@ -233,7 +249,9 @@ impl BinaryTreeDemo {
     }
 
     fn levelorder(&self, result: &mut Vec<usize>) {
-        if self.root.is_none() { return; }
+        if self.root.is_none() {
+            return;
+        }
 
         let mut queue = vec![self.root.unwrap()];
         while !queue.is_empty() {
@@ -250,7 +268,8 @@ impl BinaryTreeDemo {
 
     /// Get traversal values as string
     pub fn get_traversal_values(&self) -> Vec<i32> {
-        self.traversal_path.iter()
+        self.traversal_path
+            .iter()
             .filter_map(|&idx| self.nodes.get(idx).map(|n| n.value))
             .collect()
     }
@@ -298,7 +317,11 @@ impl Demo for BinaryTreeDemo {
                     self.animation = TreeAnimation::Idle;
                 }
             }
-            TreeAnimation::Traversing { order, step, progress } => {
+            TreeAnimation::Traversing {
+                order,
+                step,
+                progress,
+            } => {
                 *progress += speed * 0.5;
                 // Update pseudocode line based on traversal step
                 match order {
@@ -329,7 +352,8 @@ impl Demo for BinaryTreeDemo {
                     }
 
                     if *step >= self.traversal_path.len() {
-                        let values: Vec<String> = self.get_traversal_values()
+                        let values: Vec<String> = self
+                            .get_traversal_values()
                             .iter()
                             .map(|v| v.to_string())
                             .collect();
@@ -343,22 +367,23 @@ impl Demo for BinaryTreeDemo {
 
     fn set_param(&mut self, name: &str, value: f32) -> bool {
         match name {
-            "speed" => { self.speed = value; true }
+            "speed" => {
+                self.speed = value;
+                true
+            }
             _ => false,
         }
     }
 
     fn params() -> &'static [ParamMeta] {
-        &[
-            ParamMeta {
-                name: "speed",
-                label: "Animation Speed",
-                min: 0.25,
-                max: 4.0,
-                step: 0.25,
-                default: 1.0,
-            },
-        ]
+        &[ParamMeta {
+            name: "speed",
+            label: "Animation Speed",
+            min: 0.25,
+            max: 4.0,
+            step: 0.25,
+            default: 1.0,
+        }]
     }
 }
 
@@ -380,8 +405,12 @@ mod tests {
         demo.reset(42);
 
         // Test that all traversals visit all nodes
-        for order in [TraversalOrder::PreOrder, TraversalOrder::InOrder,
-                      TraversalOrder::PostOrder, TraversalOrder::LevelOrder] {
+        for order in [
+            TraversalOrder::PreOrder,
+            TraversalOrder::InOrder,
+            TraversalOrder::PostOrder,
+            TraversalOrder::LevelOrder,
+        ] {
             let path = demo.compute_traversal(order);
             assert_eq!(path.len(), 7);
         }

@@ -10,16 +10,16 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlInputElement};
 
-use learn_core::demos::FsPermissionsDemo;
-use learn_core::{Demo, TerminalConfig, DefaultConfig};
 use crate::terminal_configs::{
-    Lesson5Config, Lesson7Config, Lesson8Config, Lesson9Config, Lesson10Config,
-    Lesson11Config, DefaultLessonConfig
+    DefaultLessonConfig, Lesson10Config, Lesson11Config, Lesson5Config, Lesson7Config,
+    Lesson8Config, Lesson9Config,
 };
+use learn_core::demos::FsPermissionsDemo;
+use learn_core::{Demo, TerminalConfig};
 
 // Thread-local state for the currently running demo
 thread_local! {
-    static CURRENT_DEMO: RefCell<Option<FsPermissionsDemoRunner>> = RefCell::new(None);
+    static CURRENT_DEMO: RefCell<Option<FsPermissionsDemoRunner>> = const { RefCell::new(None) };
 }
 
 /// Filesystem Permissions demo runner
@@ -122,7 +122,11 @@ impl FsPermissionsDemoRunner {
                 .expect("document");
 
             if let Ok(line) = document.create_element("div") {
-                line.set_class_name(if is_error { "terminal-line error" } else { "terminal-line" });
+                line.set_class_name(if is_error {
+                    "terminal-line error"
+                } else {
+                    "terminal-line"
+                });
                 line.set_text_content(Some(text));
                 let _ = output_el.append_child(&line);
             }

@@ -33,7 +33,15 @@ impl StepEntity for ShapeAspect {
             write!(w, "$")?;
         }
         write!(w, ",{}", self.of_shape)?;
-        write!(w, ",{}", if self.product_definitional { ".T." } else { ".F." })
+        write!(
+            w,
+            ",{}",
+            if self.product_definitional {
+                ".T."
+            } else {
+                ".F."
+            }
+        )
     }
 }
 
@@ -62,7 +70,15 @@ impl StepEntity for Datum {
             write!(w, "$")?;
         }
         write!(w, ",{}", self.of_shape)?;
-        write!(w, ",{}", if self.product_definitional { ".T." } else { ".F." })?;
+        write!(
+            w,
+            ",{}",
+            if self.product_definitional {
+                ".T."
+            } else {
+                ".F."
+            }
+        )?;
         write!(w, ",'{}'", self.identification)
     }
 }
@@ -86,7 +102,7 @@ impl StepEntity for DatumReferenceCompartment {
 /// DATUM_REFERENCE - reference to a specific datum
 pub struct DatumReference {
     pub id: EntityId,
-    pub precedence: u32, // 1 = primary, 2 = secondary, 3 = tertiary
+    pub precedence: u32,            // 1 = primary, 2 = secondary, 3 = tertiary
     pub referenced_datum: EntityId, // Datum
 }
 
@@ -124,7 +140,15 @@ impl StepEntity for DatumSystem {
             write!(w, "$")?;
         }
         write!(w, ",{}", self.of_shape)?;
-        write!(w, ",{}", if self.product_definitional { ".T." } else { ".F." })?;
+        write!(
+            w,
+            ",{}",
+            if self.product_definitional {
+                ".T."
+            } else {
+                ".F."
+            }
+        )?;
         write!(w, ",")?;
         write_entity_list(&self.constituents, w)
     }
@@ -170,7 +194,7 @@ impl StepEntity for MeasureQualifier {
 pub struct GeometricToleranceBase {
     pub name: String,
     pub description: Option<String>,
-    pub magnitude: EntityId, // LengthMeasureWithUnit
+    pub magnitude: EntityId,               // LengthMeasureWithUnit
     pub toleranced_shape_aspect: EntityId, // ShapeAspect
 }
 
@@ -193,7 +217,11 @@ impl StepEntity for FlatnessTolerance {
         } else {
             write!(w, "$")?;
         }
-        write!(w, ",{},{}", self.base.magnitude, self.base.toleranced_shape_aspect)
+        write!(
+            w,
+            ",{},{}",
+            self.base.magnitude, self.base.toleranced_shape_aspect
+        )
     }
 }
 
@@ -216,7 +244,11 @@ impl StepEntity for StraightnessTolerance {
         } else {
             write!(w, "$")?;
         }
-        write!(w, ",{},{}", self.base.magnitude, self.base.toleranced_shape_aspect)
+        write!(
+            w,
+            ",{},{}",
+            self.base.magnitude, self.base.toleranced_shape_aspect
+        )
     }
 }
 
@@ -240,7 +272,11 @@ impl StepEntity for PerpendicularityTolerance {
         } else {
             write!(w, "$")?;
         }
-        write!(w, ",{},{}", self.base.magnitude, self.base.toleranced_shape_aspect)?;
+        write!(
+            w,
+            ",{},{}",
+            self.base.magnitude, self.base.toleranced_shape_aspect
+        )?;
         write!(w, ",({})", self.datum_system)
     }
 }
@@ -265,7 +301,11 @@ impl StepEntity for PositionTolerance {
         } else {
             write!(w, "$")?;
         }
-        write!(w, ",{},{}", self.base.magnitude, self.base.toleranced_shape_aspect)?;
+        write!(
+            w,
+            ",{},{}",
+            self.base.magnitude, self.base.toleranced_shape_aspect
+        )?;
         write!(w, ",({})", self.datum_system)
     }
 }
@@ -290,7 +330,11 @@ impl StepEntity for AngularityTolerance {
         } else {
             write!(w, "$")?;
         }
-        write!(w, ",{},{}", self.base.magnitude, self.base.toleranced_shape_aspect)?;
+        write!(
+            w,
+            ",{},{}",
+            self.base.magnitude, self.base.toleranced_shape_aspect
+        )?;
         write!(w, ",({})", self.datum_system)
     }
 }
@@ -315,7 +359,11 @@ impl StepEntity for ParallelismTolerance {
         } else {
             write!(w, "$")?;
         }
-        write!(w, ",{},{}", self.base.magnitude, self.base.toleranced_shape_aspect)?;
+        write!(
+            w,
+            ",{},{}",
+            self.base.magnitude, self.base.toleranced_shape_aspect
+        )?;
         write!(w, ",({})", self.datum_system)
     }
 }

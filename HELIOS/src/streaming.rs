@@ -44,7 +44,8 @@ impl StarEntry {
     /// Get RGB color from B-V index
     pub fn color_rgb(&self) -> [u8; 3] {
         // Same as DNA star color mapping
-        let temp = 4600.0 * (1.0 / (0.92 * self.color_bv + 1.7) + 1.0 / (0.92 * self.color_bv + 0.62));
+        let temp =
+            4600.0 * (1.0 / (0.92 * self.color_bv + 1.7) + 1.0 / (0.92 * self.color_bv + 0.62));
 
         let r = if temp <= 6600.0 {
             255.0
@@ -94,7 +95,13 @@ pub struct TileCache {
 impl TileCache {
     /// Create new tile cache with capacity
     pub fn new(capacity: usize, server_url: String) -> Self {
-        console::log_1(&format!("TileCache initialized: capacity={}, server={}", capacity, server_url).into());
+        console::log_1(
+            &format!(
+                "TileCache initialized: capacity={}, server={}",
+                capacity, server_url
+            )
+            .into(),
+        );
 
         Self {
             cache: LruCache::new(NonZeroUsize::new(capacity).unwrap()),
@@ -135,24 +142,34 @@ impl TileCache {
             key.coords().1
         );
 
-        console::log_1(&format!("Fetching tile: face={} level={} coords={:?}",
-            key.face(), key.level(), key.coords()).into());
+        console::log_1(
+            &format!(
+                "Fetching tile: face={} level={} coords={:?}",
+                key.face(),
+                key.level(),
+                key.coords()
+            )
+            .into(),
+        );
 
         spawn_local(async move {
             match fetch_tile_data(&url).await {
                 Ok(tile_data) => {
-                    console::log_1(&format!(
-                        "Loaded tile: {} stars from face={} level={} coords={:?}",
-                        tile_data.stars.len(),
-                        tile_data.face,
-                        tile_data.level,
-                        (tile_data.x, tile_data.y)
-                    ).into());
+                    console::log_1(
+                        &format!(
+                            "Loaded tile: {} stars from face={} level={} coords={:?}",
+                            tile_data.stars.len(),
+                            tile_data.face,
+                            tile_data.level,
+                            (tile_data.x, tile_data.y)
+                        )
+                        .into(),
+                    );
 
                     // Store in cache (requires message passing for thread safety in WASM)
                     // For now, this is a placeholder - proper implementation needs
                     // a Rc<RefCell<TileCache>> or message channel
-                },
+                }
                 Err(e) => {
                     console::error_1(&format!("Failed to fetch tile: {}", e).into());
                 }

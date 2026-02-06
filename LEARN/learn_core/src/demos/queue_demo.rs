@@ -5,8 +5,8 @@
 //! LAYER: LEARN -> learn_core -> demos
 //! ===============================================================================
 
+use super::pseudocode::{queue as pc_queue, Pseudocode};
 use crate::{Demo, ParamMeta, Rng};
-use super::pseudocode::{Pseudocode, queue as pc_queue};
 
 /// Animation state for queue operations
 #[derive(Clone, Debug, PartialEq)]
@@ -71,7 +71,10 @@ impl QueueDemo {
             self.pseudocode.set_line(1);
             return;
         }
-        self.animation = QueueAnimation::Enqueuing { value, progress: 0.0 };
+        self.animation = QueueAnimation::Enqueuing {
+            value,
+            progress: 0.0,
+        };
         self.message = format!("Enqueuing {} at back - O(1)", value);
         self.pseudocode.set_line(0);
     }
@@ -208,22 +211,23 @@ impl Demo for QueueDemo {
 
     fn set_param(&mut self, name: &str, value: f32) -> bool {
         match name {
-            "speed" => { self.speed = value; true }
+            "speed" => {
+                self.speed = value;
+                true
+            }
             _ => false,
         }
     }
 
     fn params() -> &'static [ParamMeta] {
-        &[
-            ParamMeta {
-                name: "speed",
-                label: "Animation Speed",
-                min: 0.25,
-                max: 4.0,
-                step: 0.25,
-                default: 1.0,
-            },
-        ]
+        &[ParamMeta {
+            name: "speed",
+            label: "Animation Speed",
+            min: 0.25,
+            max: 4.0,
+            step: 0.25,
+            default: 1.0,
+        }]
     }
 }
 
@@ -238,12 +242,16 @@ mod tests {
         let first = demo.front();
 
         demo.enqueue(99);
-        for _ in 0..100 { demo.step(0.016); }
+        for _ in 0..100 {
+            demo.step(0.016);
+        }
         assert_eq!(demo.back(), Some(99));
         assert_eq!(demo.front(), first); // Front unchanged
 
         demo.dequeue();
-        for _ in 0..100 { demo.step(0.016); }
+        for _ in 0..100 {
+            demo.step(0.016);
+        }
         assert_eq!(demo.last_dequeued, first);
     }
 }

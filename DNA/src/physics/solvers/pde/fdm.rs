@@ -108,7 +108,14 @@ impl DrivenWaveSolver2D {
         let src_y = (source_y * self.height as f32).clamp(2.0, self.height as f32 - 3.0) as usize;
 
         for _ in 0..num_substeps {
-            self.substep(c2_dt2_dx2, damping_coeff, src_x, src_y, source_amplitude, sub_dt);
+            self.substep(
+                c2_dt2_dx2,
+                damping_coeff,
+                src_x,
+                src_y,
+                source_amplitude,
+                sub_dt,
+            );
         }
 
         // Compute velocity field for motion metric

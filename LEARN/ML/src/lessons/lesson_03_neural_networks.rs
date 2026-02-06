@@ -16,7 +16,7 @@ pub fn run() {
     // (0,1) -> 1
     // (1,0) -> 1
     // (1,1) -> 0
-    
+
     let inputs = vec![
         vec![0.0, 0.0],
         vec![0.0, 1.0],
@@ -28,9 +28,9 @@ pub fn run() {
     // 2. The Model: MLP (Multi-Layer Perceptron)
     // 2 Inputs -> 4 Hidden Neurons (Tanh) -> 1 Output Neuron (Linear -> Sigmoid logic via Loss)
     // For simplicity in this engine, we'll implement manually without a Layer struct first.
-    
+
     let mut rng = rand::rng();
-    
+
     // Hidden Layer Weights (2 inputs x 4 neurons)
     let mut w1 = Vec::new();
     for _ in 0..8 { w1.push(Value::new(rng.random_range(-1.0..1.0))); }
@@ -50,7 +50,7 @@ pub fn run() {
 
     for epoch in 0..epochs {
         let mut total_loss = Value::new(0.0);
-        
+
         for (i, x) in inputs.iter().enumerate() {
             // Forward Pass
             let x1 = Value::new(x[0]);
@@ -69,13 +69,13 @@ pub fn run() {
             for n in 0..4 {
                 final_z = final_z + hidden_outs[n].clone() * w2[n].clone();
             }
-            
+
             // Loss (Squared Error for simplicity: (pred - target)^2)
             // Note: Usually we use BCE for classification, but MSE works for XOR demo
             let target = Value::new(targets[i]);
             let diff = final_z - target;
             let loss = diff.pow(2.0);
-            
+
             total_loss = total_loss + loss;
         }
 
@@ -90,14 +90,14 @@ pub fn run() {
 
         // Update Steps (Gradient Descent)
         // w = w - lr * grad
-        // Note: We need to mutate data inside Value. In a real generic engine, 
+        // Note: We need to mutate data inside Value. In a real generic engine,
         // we would have a parameter update method. Here we cheat slightly by accessing internal Rc if we could,
         // but our Value struct encapsulates it. We need a helper or access to update.
         // Actually, Value is immutable from outside perspective mostly.
         // We implemented Add/Mul creating NEW Values.
         // To update weights, we need interior mutability access or recreate them?
         // Wait, Value holds Rc<RefCell<ValueInternal>>. We can modify data!
-        
+
         // Let's add a helper to Value to update data given gradient
         update_param(&w1, learning_rate);
         update_param(&b1, learning_rate);
@@ -131,7 +131,7 @@ pub fn run() {
             grid_data.push((x, y, pred));
         }
     }
-    
+
     let json = generate_xor_json(&inputs, &targets, &grid_data);
     std::fs::write(filename, json).unwrap();
     println!("Visualization saved to: {}", filename);
@@ -152,7 +152,7 @@ fn forward(x: &Vec<f64>, w1: &Vec<Value>, b1: &Vec<Value>, w2: &Vec<Value>, b2: 
     for n in 0..4 {
         final_z = final_z + hidden_outs[n].clone() * w2[n].clone();
     }
-    
+
     (final_z.data(), final_z)
 }
 
@@ -172,9 +172,9 @@ fn update_param_single(p: &Value, lr: f64) {
 
 fn generate_xor_json(inputs: &Vec<Vec<f64>>, targets: &Vec<f64>, grid: &Vec<(f64, f64, f64)>) -> String {
     use serde_json::json;
-    
+
     let mut values = Vec::new();
-    
+
     // Heatmap Grid
     for (x, y, val) in grid {
         values.push(json!({
@@ -208,9 +208,9 @@ fn generate_xor_json(inputs: &Vec<Vec<f64>>, targets: &Vec<f64>, grid: &Vec<(f64
                 "encoding": {
                     "x": { "field": "x", "type": "quantitative", "bin": {"maxbins": 20}, "title": "Input 1" },
                     "y": { "field": "y", "type": "quantitative", "bin": {"maxbins": 20}, "title": "Input 2" },
-                    "color": { 
-                        "field": "val", 
-                        "type": "quantitative", 
+                    "color": {
+                        "field": "val",
+                        "type": "quantitative",
                         "scale": {"scheme": "purpleorange"},
                         "legend": {"title": "Prediction"}
                     },
@@ -230,7 +230,7 @@ fn generate_xor_json(inputs: &Vec<Vec<f64>>, targets: &Vec<f64>, grid: &Vec<(f64
             }
         ]
     });
-    
+
     spec.to_string()
 }
 

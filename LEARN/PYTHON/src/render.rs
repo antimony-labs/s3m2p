@@ -4,7 +4,7 @@
 //! MODIFIED: 2026-01-31
 //! ═══════════════════════════════════════════════════════════════════════════════
 
-use crate::lessons::{Lesson, LESSONS, PHASES, GLOSSARY};
+use crate::lessons::{Lesson, GLOSSARY, LESSONS, PHASES};
 use wasm_bindgen::prelude::*;
 use web_sys::{Document, Element};
 
@@ -113,7 +113,8 @@ impl LessonRenderer {
         html.push_str(&Self::playground_html());
 
         for phase in PHASES.iter() {
-            let phase_lessons: Vec<&Lesson> = LESSONS.iter().filter(|l| l.phase == *phase).collect();
+            let phase_lessons: Vec<&Lesson> =
+                LESSONS.iter().filter(|l| l.phase == *phase).collect();
 
             if phase_lessons.is_empty() {
                 continue;
@@ -241,7 +242,10 @@ impl LessonRenderer {
             .iter()
             .map(|c| {
                 if let Some(def) = Self::glossary_tooltip_for(c) {
-                    format!(r#"<span class="concept" data-tooltip="{}">{}</span>"#, def, c)
+                    format!(
+                        r#"<span class="concept" data-tooltip="{}">{}</span>"#,
+                        def, c
+                    )
                 } else {
                     format!(r#"<span class="concept">{}</span>"#, c)
                 }
@@ -486,7 +490,10 @@ fn convert_markdown_to_html(md: &str) -> String {
 
         if trimmed.starts_with("> ") {
             close_list(&mut html, &mut list_type);
-            html.push_str(&format!("<blockquote>{}</blockquote>\n", format_inline(&trimmed[2..])));
+            html.push_str(&format!(
+                "<blockquote>{}</blockquote>\n",
+                format_inline(&trimmed[2..])
+            ));
             continue;
         }
 
@@ -531,7 +538,11 @@ fn convert_markdown_to_html(md: &str) -> String {
             continue;
         }
 
-        if trimmed.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false)
+        if trimmed
+            .chars()
+            .next()
+            .map(|c| c.is_ascii_digit())
+            .unwrap_or(false)
             && trimmed.contains(". ")
         {
             if list_type == ListType::Unordered {
@@ -541,7 +552,7 @@ fn convert_markdown_to_html(md: &str) -> String {
                 html.push_str("<ol>\n");
                 list_type = ListType::Ordered;
             }
-            let content = trimmed.splitn(2, ". ").nth(1).unwrap_or("");
+            let content = trimmed.split_once(". ").map(|x| x.1).unwrap_or("");
             html.push_str(&format!("<li>{}</li>\n", format_inline(content)));
             continue;
         }
@@ -580,7 +591,7 @@ fn format_inline(text: &str) -> String {
 
         if ch == '`' {
             let mut code = String::new();
-            while let Some(c) = chars.next() {
+            for c in chars.by_ref() {
                 if c == '`' {
                     break;
                 }

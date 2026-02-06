@@ -5,8 +5,8 @@
 //! LAYER: LEARN -> learn_core -> demos
 //! ===============================================================================
 
+use super::pseudocode::{hash_table as pc_hash, Pseudocode};
 use crate::{Demo, ParamMeta, Rng};
-use super::pseudocode::{Pseudocode, hash_table as pc_hash};
 
 /// A bucket entry in the hash table
 #[derive(Clone, Debug)]
@@ -18,18 +18,34 @@ pub struct HashEntry {
 /// Collision resolution strategy
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CollisionStrategy {
-    Chaining,       // Linked list per bucket
-    LinearProbing,  // Check next slot
+    Chaining,      // Linked list per bucket
+    LinearProbing, // Check next slot
 }
 
 /// Animation state for hash table operations
 #[derive(Clone, Debug, PartialEq)]
 pub enum HashAnimation {
     Idle,
-    Hashing { key: String, progress: f32, hash_value: usize },
-    Inserting { bucket: usize, progress: f32 },
-    Searching { key: String, bucket: usize, probe: usize, progress: f32 },
-    Collision { bucket: usize, probe: usize, progress: f32 },
+    Hashing {
+        key: String,
+        progress: f32,
+        hash_value: usize,
+    },
+    Inserting {
+        bucket: usize,
+        progress: f32,
+    },
+    Searching {
+        key: String,
+        bucket: usize,
+        probe: usize,
+        progress: f32,
+    },
+    Collision {
+        bucket: usize,
+        probe: usize,
+        progress: f32,
+    },
 }
 
 /// Hash table visualization demo
@@ -134,7 +150,10 @@ impl HashTableDemo {
         self.highlight_chain = None;
         self.pseudocode = Pseudocode::new("Hash Insert", pc_hash::INSERT);
 
-        self.message = format!("hash(\"{}\") = {} (mod {})", key, hash_value, self.num_buckets);
+        self.message = format!(
+            "hash(\"{}\") = {} (mod {})",
+            key, hash_value, self.num_buckets
+        );
         self.animation = HashAnimation::Hashing {
             key,
             progress: 0.0,
@@ -211,7 +230,11 @@ impl Demo for HashTableDemo {
 
         self.animation = match anim {
             HashAnimation::Idle => HashAnimation::Idle,
-            HashAnimation::Hashing { key, progress, hash_value } => {
+            HashAnimation::Hashing {
+                key,
+                progress,
+                hash_value,
+            } => {
                 let new_progress = progress + speed;
                 if new_progress >= 1.0 {
                     let bucket = hash_value;
@@ -224,23 +247,46 @@ impl Demo for HashTableDemo {
                     // Check for collision
                     if self.buckets[bucket].len() > 1 {
                         self.collisions = self.buckets[bucket].len() - 1;
-                        self.message = format!("Collision at bucket {} ({} existing entries)", bucket, self.collisions);
-                        HashAnimation::Collision { bucket, probe: 0, progress: 0.0 }
+                        self.message = format!(
+                            "Collision at bucket {} ({} existing entries)",
+                            bucket, self.collisions
+                        );
+                        HashAnimation::Collision {
+                            bucket,
+                            probe: 0,
+                            progress: 0.0,
+                        }
                     } else {
-                        HashAnimation::Inserting { bucket, progress: 0.0 }
+                        HashAnimation::Inserting {
+                            bucket,
+                            progress: 0.0,
+                        }
                     }
                 } else {
-                    HashAnimation::Hashing { key, progress: new_progress, hash_value }
+                    HashAnimation::Hashing {
+                        key,
+                        progress: new_progress,
+                        hash_value,
+                    }
                 }
             }
-            HashAnimation::Collision { bucket, probe, progress } => {
+            HashAnimation::Collision {
+                bucket,
+                probe,
+                progress,
+            } => {
                 let new_progress = progress + speed * 0.5;
                 if new_progress >= 1.0 {
                     self.highlight_chain = Some(self.buckets[bucket].len().saturating_sub(1));
-                    self.message = format!("Added to chain (length: {})", self.buckets[bucket].len());
+                    self.message =
+                        format!("Added to chain (length: {})", self.buckets[bucket].len());
                     HashAnimation::Idle
                 } else {
-                    HashAnimation::Collision { bucket, probe, progress: new_progress }
+                    HashAnimation::Collision {
+                        bucket,
+                        probe,
+                        progress: new_progress,
+                    }
                 }
             }
             HashAnimation::Inserting { bucket, progress } => {
@@ -250,10 +296,18 @@ impl Demo for HashTableDemo {
                     self.message = format!("Inserted in bucket {} - O(1)", bucket);
                     HashAnimation::Idle
                 } else {
-                    HashAnimation::Inserting { bucket, progress: new_progress }
+                    HashAnimation::Inserting {
+                        bucket,
+                        progress: new_progress,
+                    }
                 }
             }
-            HashAnimation::Searching { key, bucket, probe, progress } => {
+            HashAnimation::Searching {
+                key,
+                bucket,
+                probe,
+                progress,
+            } => {
                 let new_progress = progress + speed * 0.7;
                 if new_progress >= 1.0 {
                     self.highlight_chain = Some(probe);
@@ -261,18 +315,29 @@ impl Demo for HashTableDemo {
                     if probe < self.buckets[bucket].len() {
                         if self.buckets[bucket][probe].key == key {
                             let value = self.buckets[bucket][probe].value;
-                            self.message = format!("Found \"{}\" = {} (probes: {})", key, value, probe + 1);
+                            self.message =
+                                format!("Found \"{}\" = {} (probes: {})", key, value, probe + 1);
                             HashAnimation::Idle
                         } else {
                             self.collisions += 1;
-                            HashAnimation::Searching { key, bucket, probe: probe + 1, progress: 0.0 }
+                            HashAnimation::Searching {
+                                key,
+                                bucket,
+                                probe: probe + 1,
+                                progress: 0.0,
+                            }
                         }
                     } else {
                         self.message = format!("\"{}\" not found (probes: {})", key, probe);
                         HashAnimation::Idle
                     }
                 } else {
-                    HashAnimation::Searching { key, bucket, probe, progress: new_progress }
+                    HashAnimation::Searching {
+                        key,
+                        bucket,
+                        probe,
+                        progress: new_progress,
+                    }
                 }
             }
         };
@@ -280,22 +345,23 @@ impl Demo for HashTableDemo {
 
     fn set_param(&mut self, name: &str, value: f32) -> bool {
         match name {
-            "speed" => { self.speed = value; true }
+            "speed" => {
+                self.speed = value;
+                true
+            }
             _ => false,
         }
     }
 
     fn params() -> &'static [ParamMeta] {
-        &[
-            ParamMeta {
-                name: "speed",
-                label: "Animation Speed",
-                min: 0.25,
-                max: 4.0,
-                step: 0.25,
-                default: 1.0,
-            },
-        ]
+        &[ParamMeta {
+            name: "speed",
+            label: "Animation Speed",
+            min: 0.25,
+            max: 4.0,
+            step: 0.25,
+            default: 1.0,
+        }]
     }
 }
 
@@ -326,7 +392,9 @@ mod tests {
 
         demo.insert_immediate("grape".to_string(), 42);
         let bucket = demo.hash("grape");
-        assert!(demo.buckets[bucket].iter().any(|e| e.key == "grape" && e.value == 42));
+        assert!(demo.buckets[bucket]
+            .iter()
+            .any(|e| e.key == "grape" && e.value == 42));
     }
 
     #[test]

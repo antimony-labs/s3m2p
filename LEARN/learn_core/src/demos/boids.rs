@@ -5,8 +5,8 @@
 //! LAYER: LEARN → learn_core → demos
 //! ═══════════════════════════════════════════════════════════════════════════════
 
-use crate::{Demo, ParamMeta, Vec2};
 use super::swarm_world::{Agent, Obstacle, SwarmWorld};
+use crate::{Demo, ParamMeta, Vec2};
 
 /// Boids flocking demo
 pub struct BoidsDemo {
@@ -73,13 +73,13 @@ impl Demo for BoidsDemo {
 
     fn step(&mut self, dt: f32) {
         self.world.dt = dt;
-        
+
         // Compute boids forces for each agent
         for i in 0..self.world.agents.len() {
             let neighbors = self.world.find_neighbors(i, self.neighbor_radius);
-            
+
             let mut accel = Vec2::ZERO;
-            
+
             // Separation
             let mut sep = Vec2::ZERO;
             for &j in &neighbors {
@@ -87,13 +87,13 @@ impl Demo for BoidsDemo {
                 let dist_sq = diff.length_squared() + 0.01; // epsilon
                 sep += diff / dist_sq;
             }
-            if neighbors.len() > 0 {
+            if !neighbors.is_empty() {
                 sep = sep.normalize() * self.k_sep;
             }
             accel += sep;
-            
+
             // Alignment
-            if neighbors.len() > 0 {
+            if !neighbors.is_empty() {
                 let mut avg_vel = Vec2::ZERO;
                 for &j in &neighbors {
                     avg_vel += self.world.agents[j].vel;
@@ -102,9 +102,9 @@ impl Demo for BoidsDemo {
                 let ali = (avg_vel - self.world.agents[i].vel) * self.k_ali;
                 accel += ali;
             }
-            
+
             // Cohesion
-            if neighbors.len() > 0 {
+            if !neighbors.is_empty() {
                 let mut avg_pos = Vec2::ZERO;
                 for &j in &neighbors {
                     avg_pos += self.world.agents[j].pos;
@@ -113,7 +113,7 @@ impl Demo for BoidsDemo {
                 let coh = (avg_pos - self.world.agents[i].pos) * self.k_coh;
                 accel += coh;
             }
-            
+
             // Obstacle avoidance
             for obs in &self.world.obstacles {
                 let diff = self.world.agents[i].pos - obs.center;
@@ -124,21 +124,21 @@ impl Demo for BoidsDemo {
                     accel += avoid_force;
                 }
             }
-            
+
             // Clamp acceleration
             if accel.length() > self.max_accel {
                 accel = accel.normalize() * self.max_accel;
             }
-            
+
             // Update velocity
             self.world.agents[i].vel += accel * dt;
-            
+
             // Clamp speed
             if self.world.agents[i].vel.length() > self.v_max {
                 self.world.agents[i].vel = self.world.agents[i].vel.normalize() * self.v_max;
             }
         }
-        
+
         // Update positions
         self.world.step();
     }
@@ -238,4 +238,3 @@ impl Demo for BoidsDemo {
         ]
     }
 }
-

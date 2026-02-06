@@ -174,9 +174,21 @@ pub fn design_boost(requirements: &BoostRequirements) -> Result<BoostDesign, Str
 
     // Calculate duty cycles at different input voltages
     let efficiency_estimate = 0.88; // Boost typically slightly less efficient than buck
-    let duty_max = calculate_duty_cycle(requirements.vin.min_v, requirements.vout, efficiency_estimate);
-    let duty_nom = calculate_duty_cycle(requirements.vin.nom_v, requirements.vout, efficiency_estimate);
-    let duty_min = calculate_duty_cycle(requirements.vin.max_v, requirements.vout, efficiency_estimate);
+    let duty_max = calculate_duty_cycle(
+        requirements.vin.min_v,
+        requirements.vout,
+        efficiency_estimate,
+    );
+    let duty_nom = calculate_duty_cycle(
+        requirements.vin.nom_v,
+        requirements.vout,
+        efficiency_estimate,
+    );
+    let duty_min = calculate_duty_cycle(
+        requirements.vin.max_v,
+        requirements.vout,
+        efficiency_estimate,
+    );
 
     // Check duty cycle limits
     if duty_max > 0.85 {
@@ -464,11 +476,17 @@ mod tests {
 
         println!("Boost Design Summary:");
         println!("  Duty cycle: {:.1}%", design.duty_cycle_nom * 100.0);
-        println!("  Inductor: {}", format_inductance(design.inductor.selected_value));
+        println!(
+            "  Inductor: {}",
+            format_inductance(design.inductor.selected_value)
+        );
         println!("  Input current: {:.2}A", design.input_current_a);
         println!("  IL peak: {:.2}A", design.inductor_peak_current_a);
         println!("  Switch V: {:.1}V", design.switch_voltage_stress_v);
-        println!("  Efficiency: {:.1}%", design.efficiency.total_efficiency * 100.0);
+        println!(
+            "  Efficiency: {:.1}%",
+            design.efficiency.total_efficiency * 100.0
+        );
     }
 
     #[test]

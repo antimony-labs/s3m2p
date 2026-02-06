@@ -157,13 +157,13 @@ impl Default for ParticleFilterDemo {
             cmd_forward: 0.15,
             cmd_turn: 0.5,
             particles: Vec::new(),
-            num_particles: 500,       // BEST: maximum particles
+            num_particles: 500, // BEST: maximum particles
             est_pos: Vec2::new(0.5, 0.5),
             est_theta: 0.0,
             landmarks: Vec::new(),
             measurements: Vec::new(),
-            motion_noise: 0.0,        // BEST: no motion noise
-            sensor_noise: 0.01,       // BEST: minimum sensor noise
+            motion_noise: 0.0,  // BEST: no motion noise
+            sensor_noise: 0.01, // BEST: minimum sensor noise
             phase: PFPhase::Predict,
             step_mode: false,
             phase_timer: 0.0,
@@ -183,10 +183,7 @@ impl ParticleFilterDemo {
         let uniform_weight = 1.0 / self.num_particles as f32;
 
         for _ in 0..self.num_particles {
-            let pos = Vec2::new(
-                self.rng.range(0.1, 0.9),
-                self.rng.range(0.1, 0.9),
-            );
+            let pos = Vec2::new(self.rng.range(0.1, 0.9), self.rng.range(0.1, 0.9));
             self.particles.push(Particle {
                 pos,
                 theta: self.rng.range(0.0, std::f32::consts::TAU),
@@ -332,7 +329,9 @@ impl ParticleFilterDemo {
             self.particles.len() as f32
         };
 
-        self.best_particle_weight = self.particles.iter()
+        self.best_particle_weight = self
+            .particles
+            .iter()
             .map(|p| p.weight)
             .fold(0.0_f32, f32::max);
     }
@@ -460,10 +459,7 @@ impl Demo for ParticleFilterDemo {
         self.error_history.clear();
 
         // Reset true pose to a random position
-        self.true_pos = Vec2::new(
-            self.rng.range(0.2, 0.8),
-            self.rng.range(0.2, 0.8),
-        );
+        self.true_pos = Vec2::new(self.rng.range(0.2, 0.8), self.rng.range(0.2, 0.8));
         self.true_prev_pos = self.true_pos;
         self.true_theta = self.rng.range(0.0, std::f32::consts::TAU);
 
@@ -473,11 +469,11 @@ impl Demo for ParticleFilterDemo {
 
         // Initialize landmarks (known map - robot knows where these are)
         self.landmarks = vec![
-            Vec2::new(0.1, 0.1),   // corners
+            Vec2::new(0.1, 0.1), // corners
             Vec2::new(0.9, 0.1),
             Vec2::new(0.9, 0.9),
             Vec2::new(0.1, 0.9),
-            Vec2::new(0.5, 0.1),   // midpoints of edges
+            Vec2::new(0.5, 0.1), // midpoints of edges
             Vec2::new(0.5, 0.9),
             Vec2::new(0.1, 0.5),
             Vec2::new(0.9, 0.5),
@@ -542,7 +538,7 @@ impl Demo for ParticleFilterDemo {
                 min: 10.0,
                 max: 500.0,
                 step: 10.0,
-                default: 500.0,   // BEST: maximum particles
+                default: 500.0, // BEST: maximum particles
             },
             ParamMeta {
                 name: "motion_noise",
@@ -550,7 +546,7 @@ impl Demo for ParticleFilterDemo {
                 min: 0.0,
                 max: 0.1,
                 step: 0.005,
-                default: 0.0,     // BEST: no noise
+                default: 0.0, // BEST: no noise
             },
             ParamMeta {
                 name: "sensor_noise",
@@ -558,7 +554,7 @@ impl Demo for ParticleFilterDemo {
                 min: 0.01,
                 max: 0.15,
                 step: 0.005,
-                default: 0.01,    // BEST: minimum noise
+                default: 0.01, // BEST: minimum noise
             },
         ]
     }
@@ -572,7 +568,7 @@ mod tests {
     fn test_reset_initializes_particles() {
         let mut demo = ParticleFilterDemo::default();
         demo.reset(42);
-        assert_eq!(demo.particles.len(), 500);  // BEST: default max particles
+        assert_eq!(demo.particles.len(), 500); // BEST: default max particles
     }
 
     #[test]
@@ -586,11 +582,7 @@ mod tests {
         }
 
         let sum: f32 = demo.particles.iter().map(|p| p.weight).sum();
-        assert!(
-            (sum - 1.0).abs() < 0.01,
-            "Weights should sum to 1: {}",
-            sum
-        );
+        assert!((sum - 1.0).abs() < 0.01, "Weights should sum to 1: {}", sum);
     }
 
     #[test]
@@ -607,11 +599,7 @@ mod tests {
 
         // Error should be reasonably small
         let error = demo.error();
-        assert!(
-            error < 0.2,
-            "Localization error should be small: {}",
-            error
-        );
+        assert!(error < 0.2, "Localization error should be small: {}", error);
     }
 
     #[test]

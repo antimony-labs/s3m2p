@@ -30,30 +30,46 @@ use crate::{Demo, ParamMeta, Rng, Vec2};
 /// 2x2 matrix for covariance
 #[derive(Clone, Copy, Debug)]
 pub struct Mat2 {
-    pub m00: f32, pub m01: f32,
-    pub m10: f32, pub m11: f32,
+    pub m00: f32,
+    pub m01: f32,
+    pub m10: f32,
+    pub m11: f32,
 }
 
 impl Mat2 {
     pub fn identity() -> Self {
-        Self { m00: 1.0, m01: 0.0, m10: 0.0, m11: 1.0 }
+        Self {
+            m00: 1.0,
+            m01: 0.0,
+            m10: 0.0,
+            m11: 1.0,
+        }
     }
 
     pub fn diag(d0: f32, d1: f32) -> Self {
-        Self { m00: d0, m01: 0.0, m10: 0.0, m11: d1 }
+        Self {
+            m00: d0,
+            m01: 0.0,
+            m10: 0.0,
+            m11: d1,
+        }
     }
 
     pub fn scale(self, s: f32) -> Self {
         Self {
-            m00: self.m00 * s, m01: self.m01 * s,
-            m10: self.m10 * s, m11: self.m11 * s,
+            m00: self.m00 * s,
+            m01: self.m01 * s,
+            m10: self.m10 * s,
+            m11: self.m11 * s,
         }
     }
 
     pub fn add(self, other: Self) -> Self {
         Self {
-            m00: self.m00 + other.m00, m01: self.m01 + other.m01,
-            m10: self.m10 + other.m10, m11: self.m11 + other.m11,
+            m00: self.m00 + other.m00,
+            m01: self.m01 + other.m01,
+            m10: self.m10 + other.m10,
+            m11: self.m11 + other.m11,
         }
     }
 
@@ -75,8 +91,10 @@ impl Mat2 {
 
     pub fn transpose(self) -> Self {
         Self {
-            m00: self.m00, m01: self.m10,
-            m10: self.m01, m11: self.m11,
+            m00: self.m00,
+            m01: self.m10,
+            m10: self.m01,
+            m11: self.m11,
         }
     }
 
@@ -87,8 +105,10 @@ impl Mat2 {
             return None;
         }
         Some(Self {
-            m00: self.m11 / det,  m01: -self.m01 / det,
-            m10: -self.m10 / det, m11: self.m00 / det,
+            m00: self.m11 / det,
+            m01: -self.m01 / det,
+            m10: -self.m10 / det,
+            m11: self.m00 / det,
         })
     }
 
@@ -143,8 +163,8 @@ pub struct KalmanFilterDemo {
     pub true_path: Vec<Vec2>,
 
     // Kalman filter state
-    pub kf_pos: Vec2,      // estimated position (mean)
-    pub kf_cov: Mat2,      // position covariance
+    pub kf_pos: Vec2,       // estimated position (mean)
+    pub kf_cov: Mat2,       // position covariance
     pub kf_path: Vec<Vec2>, // estimated trajectory
 
     // Last GPS measurement (for visualization)
@@ -155,9 +175,9 @@ pub struct KalmanFilterDemo {
     pub kalman_gain: Mat2,
 
     // Noise parameters
-    pub process_noise: f32,    // Q: motion model uncertainty
+    pub process_noise: f32,     // Q: motion model uncertainty
     pub measurement_noise: f32, // R: GPS measurement uncertainty
-    pub gps_interval: usize,   // frames between GPS updates
+    pub gps_interval: usize,    // frames between GPS updates
 
     // Algorithm state
     pub phase: KFPhase,
@@ -182,9 +202,9 @@ impl Default for KalmanFilterDemo {
             last_gps: None,
             gps_history: Vec::new(),
             kalman_gain: Mat2::identity(),
-            process_noise: 0.01,      // BEST: minimum process noise
-            measurement_noise: 0.1,   // BEST: minimum GPS noise
-            gps_interval: 1,          // BEST: GPS every frame
+            process_noise: 0.01,    // BEST: minimum process noise
+            measurement_noise: 0.1, // BEST: minimum GPS noise
+            gps_interval: 1,        // BEST: GPS every frame
             phase: KFPhase::Predict,
             frame_count: 0,
             time: 0.0,
@@ -274,10 +294,7 @@ impl KalmanFilterDemo {
 
         // H = I (we directly measure position)
         // R = measurement noise covariance
-        let r = Mat2::diag(
-            self.measurement_noise * 0.1,
-            self.measurement_noise * 0.1,
-        );
+        let r = Mat2::diag(self.measurement_noise * 0.1, self.measurement_noise * 0.1);
 
         // Kalman gain: K = Σ' * H^T * (H * Σ' * H^T + R)^(-1)
         // With H = I: K = Σ' * (Σ' + R)^(-1)
@@ -338,10 +355,7 @@ impl Demo for KalmanFilterDemo {
         self.frame_count = 0;
 
         // Reset true state
-        self.true_pos = Vec2::new(
-            self.rng.range(0.3, 0.7),
-            self.rng.range(0.3, 0.7),
-        );
+        self.true_pos = Vec2::new(self.rng.range(0.3, 0.7), self.rng.range(0.3, 0.7));
         self.true_vel = Vec2::new(0.1, 0.05);
         self.true_path.clear();
 
@@ -369,7 +383,7 @@ impl Demo for KalmanFilterDemo {
         self.predict(dt);
 
         // Update only when GPS is available
-        if self.frame_count % self.gps_interval == 0 {
+        if self.frame_count.is_multiple_of(self.gps_interval) {
             self.update();
         }
 
@@ -406,7 +420,7 @@ impl Demo for KalmanFilterDemo {
                 min: 0.01,
                 max: 1.0,
                 step: 0.01,
-                default: 0.01,   // BEST: minimum noise
+                default: 0.01, // BEST: minimum noise
             },
             ParamMeta {
                 name: "measurement_noise",
@@ -414,7 +428,7 @@ impl Demo for KalmanFilterDemo {
                 min: 0.1,
                 max: 2.0,
                 step: 0.1,
-                default: 0.1,    // BEST: minimum noise
+                default: 0.1, // BEST: minimum noise
             },
             ParamMeta {
                 name: "gps_interval",
@@ -422,7 +436,7 @@ impl Demo for KalmanFilterDemo {
                 min: 1.0,
                 max: 50.0,
                 step: 1.0,
-                default: 1.0,    // BEST: GPS every frame
+                default: 1.0, // BEST: GPS every frame
             },
         ]
     }
@@ -446,7 +460,10 @@ mod tests {
         demo.reset(42);
         let cov_before = demo.kf_cov.m00;
         demo.predict(0.1);
-        assert!(demo.kf_cov.m00 > cov_before, "Covariance should grow during prediction");
+        assert!(
+            demo.kf_cov.m00 > cov_before,
+            "Covariance should grow during prediction"
+        );
     }
 
     #[test]
@@ -459,7 +476,10 @@ mod tests {
         }
         let cov_before = demo.kf_cov.m00;
         demo.update();
-        assert!(demo.kf_cov.m00 < cov_before, "Covariance should shrink after update");
+        assert!(
+            demo.kf_cov.m00 < cov_before,
+            "Covariance should shrink after update"
+        );
     }
 
     #[test]

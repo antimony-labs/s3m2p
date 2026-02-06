@@ -5,7 +5,7 @@
 //! LAYER: LEARN → UBUNTU
 //! ═══════════════════════════════════════════════════════════════════════════════
 
-use learn_core::{TerminalConfig, demos::fs_permissions::FsPermissionsDemo};
+use learn_core::{demos::fs_permissions::FsPermissionsDemo, TerminalConfig};
 
 /// Lesson 5: The Terminal - Absolute beginner
 pub struct Lesson5Config;
@@ -23,7 +23,8 @@ impl TerminalConfig for Lesson5Config {
         let readme_idx = demo.create_file(user_home, "readme.txt", "user", "user", 0o644);
         demo.inodes[readme_idx].content = "Welcome to Ubuntu Linux!\n\
             This is a beginner-friendly operating system.\n\
-            Try these commands: ls, pwd, cat readme.txt".to_string();
+            Try these commands: ls, pwd, cat readme.txt"
+            .to_string();
     }
 
     fn allowed_commands(&self) -> &[&str] {
@@ -120,7 +121,9 @@ impl TerminalConfig for Lesson8Config {
     }
 
     fn allowed_commands(&self) -> &[&str] {
-        &["ls", "cat", "chmod", "chown", "pwd", "su", "whoami", "clear", "help"]
+        &[
+            "ls", "cat", "chmod", "chown", "pwd", "su", "whoami", "clear", "help",
+        ]
     }
 
     fn hints(&self) -> &[&str] {
@@ -157,7 +160,9 @@ impl TerminalConfig for Lesson9Config {
     }
 
     fn allowed_commands(&self) -> &[&str] {
-        &["ls", "pwd", "cat", "mkdir", "touch", "rm", "cp", "mv", "echo", "clear", "help"]
+        &[
+            "ls", "pwd", "cat", "mkdir", "touch", "rm", "cp", "mv", "echo", "clear", "help",
+        ]
     }
 
     fn hints(&self) -> &[&str] {
@@ -192,16 +197,19 @@ impl TerminalConfig for Lesson10Config {
         let passwd = demo.create_file(etc, "passwd", "root", "root", 0o644);
         demo.inodes[passwd].content = "root:x:0:0:root:/root:/bin/bash\n\
             user:x:1000:1000:User:/home/user:/bin/bash\n\
-            daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin".to_string();
+            daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin"
+            .to_string();
 
         let shadow = demo.create_file(etc, "shadow", "root", "shadow", 0o640);
         demo.inodes[shadow].content = "root:$6$encrypted$...:18000:0:99999:7:::\n\
-            user:$6$encrypted$...:18000:0:99999:7:::".to_string();
+            user:$6$encrypted$...:18000:0:99999:7:::"
+            .to_string();
 
         let group = demo.create_file(etc, "group", "root", "root", 0o644);
         demo.inodes[group].content = "root:x:0:\n\
             user:x:1000:\n\
-            sudo:x:27:user".to_string();
+            sudo:x:27:user"
+            .to_string();
     }
 
     fn allowed_commands(&self) -> &[&str] {
@@ -233,7 +241,8 @@ impl TerminalConfig for Lesson11Config {
         let user_home = demo.cwd;
         let note = demo.create_file(user_home, "readme.txt", "user", "user", 0o644);
         demo.inodes[note].content = "Package management tutorial.\n\
-            Commands are simulated for learning purposes.".to_string();
+            Commands are simulated for learning purposes."
+            .to_string();
     }
 
     fn allowed_commands(&self) -> &[&str] {

@@ -30,7 +30,7 @@ pub fn generate_linear_regression_json(
 
     let x_min = x_data.iter().fold(f64::INFINITY, |a, &b| a.min(b));
     let x_max = x_data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-    
+
     let line_start = w_learned * x_min + b_learned;
     let line_end = w_learned * x_max + b_learned;
 
@@ -85,7 +85,7 @@ pub fn generate_classification_json(
     b: f64,
     filename: &str,
 ) -> Result<(), Box<dyn Error>> {
-    
+
     // 1. Prepare Data
     let mut data_values = Vec::new();
     for (i, &x1) in x1_data.iter().enumerate() {
@@ -101,7 +101,7 @@ pub fn generate_classification_json(
     // 2. Calculate Decision Boundary Line
     // Boundary is where w1*x1 + w2*x2 + b = 0
     // => x2 = -(w1/w2)*x1 - (b/w2)
-    
+
     let x1_min = x1_data.iter().fold(f64::INFINITY, |a, &b| a.min(b));
     let x1_max = x1_data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
 
@@ -109,7 +109,7 @@ pub fn generate_classification_json(
     if w2.abs() > 1e-5 {
         let x2_start = -(w1 * x1_min + b) / w2;
         let x2_end = -(w1 * x1_max + b) / w2;
-        
+
         data_values.push(json!({ "x1": x1_min, "x2": x2_start, "type": "Boundary" }));
         data_values.push(json!({ "x1": x1_max, "x2": x2_end, "type": "Boundary" }));
     }
@@ -127,11 +127,11 @@ pub fn generate_classification_json(
                 "encoding": {
                     "x": { "field": "x1", "type": "quantitative", "title": "Feature 1" },
                     "y": { "field": "x2", "type": "quantitative", "title": "Feature 2" },
-                    "color": { 
-                        "field": "team", 
-                        "type": "nominal", 
+                    "color": {
+                        "field": "team",
+                        "type": "nominal",
                         "scale": {"domain": ["Red Team", "Blue Team"], "range": ["#ff6b6b", "#4dabf7"]},
-                        "legend": {"title": "Class"} 
+                        "legend": {"title": "Class"}
                     },
                     "tooltip": [
                         {"field": "x1", "type": "quantitative"},

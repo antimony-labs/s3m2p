@@ -22,9 +22,9 @@ mod heliosphere;
 mod heliosphere_model;
 mod solar_wind;
 
+use cca_projection::ObjectId;
 #[cfg(target_arch = "wasm32")]
 use simulation::{DragMode, SimulationState};
-use cca_projection::ObjectId;
 
 #[cfg(target_arch = "wasm32")]
 use std::cell::RefCell;
@@ -36,8 +36,9 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
 use web_sys::{
-    window, CanvasRenderingContext2d, HtmlCanvasElement, HtmlElement, HtmlInputElement, HtmlSelectElement,
-    InputEvent, KeyboardEvent, MouseEvent, TouchEvent, WheelEvent, WebGl2RenderingContext,
+    window, CanvasRenderingContext2d, HtmlCanvasElement, HtmlElement, HtmlInputElement,
+    HtmlSelectElement, InputEvent, KeyboardEvent, MouseEvent, TouchEvent, WebGl2RenderingContext,
+    WheelEvent,
 };
 
 #[cfg(target_arch = "wasm32")]
@@ -150,7 +151,10 @@ fn run() {
     let _ = style.set_property("width", &format!("{}px", window_width));
     let _ = style.set_property("height", &format!("{}px", window_height));
 
-    log(&format!("Canvas: {}x{} @ {}x DPR", window_width, window_height, dpr));
+    log(&format!(
+        "Canvas: {}x{} @ {}x DPR",
+        window_width, window_height, dpr
+    ));
 
     // Use Canvas2D renderer - WebGL2 has projection issues
     // Star background will be rendered in Canvas2D
@@ -162,10 +166,26 @@ fn run() {
         let _ = js_sys::Reflect::set(&context_options, &"alpha".into(), &false.into());
         let _ = js_sys::Reflect::set(&context_options, &"depth".into(), &true.into());
         let _ = js_sys::Reflect::set(&context_options, &"stencil".into(), &false.into());
-        let _ = js_sys::Reflect::set(&context_options, &"premultipliedAlpha".into(), &false.into());
-        let _ = js_sys::Reflect::set(&context_options, &"preserveDrawingBuffer".into(), &false.into());
-        let _ = js_sys::Reflect::set(&context_options, &"powerPreference".into(), &"high-performance".into());
-        let _ = js_sys::Reflect::set(&context_options, &"failIfMajorPerformanceCaveat".into(), &false.into());
+        let _ = js_sys::Reflect::set(
+            &context_options,
+            &"premultipliedAlpha".into(),
+            &false.into(),
+        );
+        let _ = js_sys::Reflect::set(
+            &context_options,
+            &"preserveDrawingBuffer".into(),
+            &false.into(),
+        );
+        let _ = js_sys::Reflect::set(
+            &context_options,
+            &"powerPreference".into(),
+            &"high-performance".into(),
+        );
+        let _ = js_sys::Reflect::set(
+            &context_options,
+            &"failIfMajorPerformanceCaveat".into(),
+            &false.into(),
+        );
 
         match canvas.get_context_with_context_options("webgl2", &context_options.into()) {
             Ok(Some(ctx)) => match ctx.dyn_into::<WebGl2RenderingContext>() {
@@ -212,9 +232,7 @@ fn run() {
 
     // Initialize simulation state (use CSS/logical dimensions, not scaled buffer)
     let state = Rc::new(RefCell::new(SimulationState::new()));
-    state
-        .borrow_mut()
-        .set_viewport(window_width, window_height);
+    state.borrow_mut().set_viewport(window_width, window_height);
     state.borrow_mut().view_heliosphere(); // Start with heliosphere view - shows pulsating solar cycle
 
     // Time tracking
@@ -236,7 +254,9 @@ fn run() {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
             event.prevent_default();
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             s.view_heliosphere();
             s.view.tilt = 0.7; // Reset tilt to ~40 degrees
             s.view.rotation = 0.0; // Reset rotation
@@ -256,29 +276,31 @@ fn run() {
             if event.button() != 0 {
                 return;
             }
-            
-            let Ok(mut s) = state.try_borrow_mut() else { return };
-            
+
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
+
             // Check if it was a drag or a click
             let dx = event.client_x() as f64 - s.view.drag_start_x;
             let dy = event.client_y() as f64 - s.view.drag_start_y;
             let dist = (dx * dx + dy * dy).sqrt();
-            
+
             if dist > 5.0 {
                 return; // It was a drag, not a click
             }
-            
+
             // Hit test
             let x = event.client_x() as f64;
             let y = event.client_y() as f64;
-            
+
             if let Some(object_id) = s.hit_test(x, y) {
                 // Set as selected object (camera will track it)
                 s.selected_object = object_id;
-                
+
                 // Update camera target immediately
                 s.sync_camera();
-                
+
                 // Auto-zoom to appropriate level for the object
                 // This gives the "see very clearly" behavior
                 match object_id {
@@ -291,19 +313,19 @@ fn run() {
                         // We want planet to take up ~1/4 of screen height
                         let radius_km = s.planet_radii_km[idx];
                         let radius_au = radius_km / crate::simulation::AU_KM;
-                        
+
                         // Current height in AU = height_px * zoom (AU/px)
                         // Target: radius_au * 2 * 4 = height_au_visible
                         // So target_zoom = height_au_visible / height_px
                         // target_zoom = (radius_au * 8.0) / s.view.height;
-                        
+
                         // Zooming in too much can be disorienting, so clamp it
                         // let target_zoom = (radius_au * 10.0 / s.view.height).max(0.000001);
-                        
+
                         // Use a fixed "close up" zoom that's good for seeing moons too
                         // Planet scale is usually around 0.00001 - 0.0001
                         let target_zoom = 0.00002; // Very close zoom
-                        
+
                         s.set_zoom(target_zoom);
                         s.view.tilt = std::f64::consts::PI * 0.2; // Slight tilt to see orbit
                     }
@@ -325,29 +347,31 @@ fn run() {
             if event.button() != 0 {
                 return;
             }
-            
-            let Ok(mut s) = state.try_borrow_mut() else { return };
-            
+
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
+
             // Check if it was a drag or a click
             let dx = event.client_x() as f64 - s.view.drag_start_x;
             let dy = event.client_y() as f64 - s.view.drag_start_y;
             let dist = (dx * dx + dy * dy).sqrt();
-            
+
             if dist > 5.0 {
                 return; // It was a drag, not a click
             }
-            
+
             // Hit test
             let x = event.client_x() as f64;
             let y = event.client_y() as f64;
-            
+
             if let Some(object_id) = s.hit_test(x, y) {
                 // Set as selected object (camera will track it)
                 s.selected_object = object_id;
-                
+
                 // Update camera target immediately
                 s.sync_camera();
-                
+
                 // Auto-zoom to appropriate level for the object
                 // This gives the "see very clearly" behavior
                 match object_id {
@@ -360,27 +384,28 @@ fn run() {
                         // We want planet to take up ~1/3 of screen height for a clear view
                         let radius_km = s.planet_radii_km[idx];
                         let radius_au = radius_km / crate::simulation::AU_KM;
-                        
+
                         // Target zoom: (AU visible vertically)
                         // If planet radius is r_au, and we want it to be 1/3 of screen:
                         // visible_au = r_au * 2 * 3 = r_au * 6
                         // Scale (AU visible) = r_au * 6
                         let target_scale = radius_au * 6.0;
-                        
-                        // We need to set the camera scale (AU visible), which corresponds to 
+
+                        // We need to set the camera scale (AU visible), which corresponds to
                         // the 'zoom' parameter in the 2D view structure via inverse relation roughly
                         // But simulation state has set_zoom method.
-                        
+
                         // Apply reasonable clamp to avoid floating point issues
                         let target_scale = target_scale.max(0.000001);
-                        
+
                         // Update camera directly
                         s.camera.scale = target_scale;
-                        s.camera.scale_level = crate::cca_projection::ScaleLevel::from_scale(target_scale);
-                        
+                        s.camera.scale_level =
+                            crate::cca_projection::ScaleLevel::from_scale(target_scale);
+
                         // Set specific angle to see the planet well
                         s.camera.set_angles(0.0, std::f64::consts::PI * 0.2); // Side/top view
-                        
+
                         // Also update legacy 2D view zoom for compatibility if needed
                         // (Though we should be moving to camera.scale)
                         s.view.zoom = 1.0 / target_scale; // Rough approximation if needed
@@ -401,7 +426,9 @@ fn run() {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
             event.prevent_default();
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
 
             s.view.drag_start_x = event.client_x() as f64;
             s.view.drag_start_y = event.client_y() as f64;
@@ -410,9 +437,9 @@ fn run() {
             // Left Click = Orbit (Rotate around target)
             // Right/Middle Click = Pan (Move target)
             // This is standard for 3D object viewers
-            
+
             let is_pan = event.button() == 2 || event.button() == 1; // Right or Middle
-            
+
             if is_pan {
                 // Pan mode - move camera position
                 s.view.drag_mode = DragMode::Pan;
@@ -474,7 +501,9 @@ fn run() {
     {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             let dx = event.client_x() as f64 - s.view.drag_start_x;
             let dy = event.client_y() as f64 - s.view.drag_start_y;
 
@@ -516,7 +545,9 @@ fn run() {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |event: WheelEvent| {
             event.prevent_default();
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
 
             // Zoom towards mouse position
             let mouse_x = event.client_x() as f64;
@@ -543,7 +574,9 @@ fn run() {
         let closure = Closure::wrap(Box::new(move |event: TouchEvent| {
             event.prevent_default();
             let touches = event.touches();
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
 
             if touches.length() == 2 {
                 // Two fingers: pinch-to-zoom
@@ -582,7 +615,9 @@ fn run() {
     {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |_: TouchEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             s.view.drag_mode = DragMode::None;
             s.view.pinching = false;
         }) as Box<dyn FnMut(_)>);
@@ -598,7 +633,9 @@ fn run() {
         let closure = Closure::wrap(Box::new(move |event: TouchEvent| {
             event.prevent_default();
             let touches = event.touches();
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
 
             if s.view.pinching && touches.length() == 2 {
                 // Two-finger gesture
@@ -657,7 +694,9 @@ fn run() {
     {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             match event.key().as_str() {
                 " " => s.toggle_pause(),
                 "1" => s.focus_on_planet(0), // Mercury
@@ -733,7 +772,9 @@ fn run() {
     if let Some(slider) = time_slider.clone() {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |_: InputEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             let days_offset: f64 = slider.value().parse().unwrap_or(0.0);
             s.julian_date = simulation::J2000_EPOCH + 8766.0 + days_offset;
         }) as Box<dyn FnMut(_)>);
@@ -763,7 +804,9 @@ fn run() {
     {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |_: MouseEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             let ts = s.time_scale / 2.0;
             s.set_time_scale(ts);
         }) as Box<dyn FnMut(_)>);
@@ -778,7 +821,9 @@ fn run() {
     {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |_: MouseEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             let ts = s.time_scale * 2.0;
             s.set_time_scale(ts);
         }) as Box<dyn FnMut(_)>);
@@ -925,7 +970,9 @@ fn run() {
     {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |_: MouseEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             let new_tilt = s.view.tilt + 0.15;
             s.view.set_tilt(new_tilt);
             s.mark_orbits_dirty();
@@ -941,7 +988,9 @@ fn run() {
     {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |_: MouseEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             let new_tilt = s.view.tilt - 0.15;
             s.view.set_tilt(new_tilt);
             s.mark_orbits_dirty();
@@ -957,7 +1006,9 @@ fn run() {
     {
         let state = state.clone();
         let closure = Closure::wrap(Box::new(move |_: MouseEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             s.view.tilt = 0.5; // Default ~30 degrees
             s.view.rotation = 0.0;
             s.mark_orbits_dirty();
@@ -988,7 +1039,9 @@ fn run() {
         let band_id_str = band_id.to_string();
         let all_band_ids = vec!["optical", "uv", "xray", "gamma", "ir", "radio", "cmb"];
         let closure = Closure::wrap(Box::new(move |_: MouseEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             s.star_mgr.set_current_band(band);
 
             // Update active button styling
@@ -1056,7 +1109,9 @@ fn run() {
         let state = state.clone();
         let slider_clone = slider.clone();
         let closure = Closure::wrap(Box::new(move |_: InputEvent| {
-            let Ok(mut s) = state.try_borrow_mut() else { return };
+            let Ok(mut s) = state.try_borrow_mut() else {
+                return;
+            };
             let mag_limit: f64 = slider_clone.value().parse().unwrap_or(6.0);
             s.star_mgr.set_magnitude_limit(mag_limit);
 
@@ -1118,7 +1173,10 @@ fn run() {
         match render_gl::RendererGl::new(gl) {
             Ok(r) => Some(Rc::new(RefCell::new(r))),
             Err(e) => {
-                log(&format!("Failed to create WebGL renderer: {}, falling back to Canvas2D", e));
+                log(&format!(
+                    "Failed to create WebGL renderer: {}, falling back to Canvas2D",
+                    e
+                ));
                 None
             }
         }

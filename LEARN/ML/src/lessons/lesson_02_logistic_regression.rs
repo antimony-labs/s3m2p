@@ -15,7 +15,7 @@ pub fn run() {
     // We will generate two blobs of points.
     // Red Team (0): Centered at (-1, -1)
     // Blue Team (1): Centered at (1, 1)
-    
+
     let num_samples_per_class = 100;
     let total_samples = num_samples_per_class * 2;
     let mut rng = rand::rng();
@@ -27,7 +27,7 @@ pub fn run() {
     // Generate Red Team (Class 0)
     for _ in 0..num_samples_per_class {
         x1_data.push(rng.random_range(-2.0..0.5)); // Spread around -1
-        x2_data.push(rng.random_range(-2.0..0.5)); 
+        x2_data.push(rng.random_range(-2.0..0.5));
         y_data.push(0.0);
     }
 
@@ -46,7 +46,7 @@ pub fn run() {
     // 2. Initialization
     // Model: z = w1*x1 + w2*x2 + b
     //        pred = sigmoid(z)
-    
+
     let mut w1 = rng.random_range(-1.0..1.0);
     let mut w2 = rng.random_range(-1.0..1.0);
     let mut b = 0.0;
@@ -61,7 +61,7 @@ pub fn run() {
         // Forward Pass
         // z = w1*x1 + w2*x2 + b
         let z = &x1 * w1 + &x2 * w2 + b;
-        
+
         // Sigmoid Activation: 1 / (1 + e^-z)
         let pred = z.mapv(|v: f64| 1.0 / (1.0 + (-v).exp()));
 
@@ -72,7 +72,7 @@ pub fn run() {
         // Backward Pass (Gradients)
         // dL/dz = pred - y  (Beautifully simple!)
         let error = &pred - &y;
-        
+
         let d_w1 = (&error * &x1).mean().unwrap();
         let d_w2 = (&error * &x2).mean().unwrap();
         let d_b = error.mean().unwrap();
@@ -88,8 +88,8 @@ pub fn run() {
                 let class = if **p > 0.5 { 1.0 } else { 0.0 };
                 (class - **t).abs() < 0.1f64
             }).count() as f64 / total_samples as f64;
-            
-            println!("Epoch {}: Accuracy = {:.2}%, w1={:.2}, w2={:.2}, b={:.2}", 
+
+            println!("Epoch {}: Accuracy = {:.2}%, w1={:.2}, w2={:.2}, b={:.2}",
                 epoch, accuracy * 100.0, w1, w2, b);
         }
     }

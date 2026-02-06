@@ -65,7 +65,8 @@ impl LessonRenderer {
 
         // Render lessons grouped by phase
         for phase in PHASES.iter() {
-            let phase_lessons: Vec<&Lesson> = LESSONS.iter().filter(|l| l.phase == *phase).collect();
+            let phase_lessons: Vec<&Lesson> =
+                LESSONS.iter().filter(|l| l.phase == *phase).collect();
 
             if phase_lessons.is_empty() {
                 continue;
@@ -166,15 +167,16 @@ impl LessonRenderer {
                 "progress-bubble future"
             };
 
-            let lesson_title = LESSONS.get(i)
-                .map(|l| l.title)
-                .unwrap_or("Unknown");
+            let lesson_title = LESSONS.get(i).map(|l| l.title).unwrap_or("Unknown");
 
             html.push_str(&format!(
                 r##"<button class="{}" onclick="go_to_lesson({})" title="{}">
                     <span class="bubble-num">{}</span>
                 </button>"##,
-                class, i, lesson_title, i + 1
+                class,
+                i,
+                lesson_title,
+                i + 1
             ));
 
             if i < end - 1 {
@@ -201,13 +203,15 @@ impl LessonRenderer {
 
         // Render concepts with tooltips if definitions exist
         let concepts_html: String = if lesson.concept_definitions.is_empty() {
-            lesson.key_concepts
+            lesson
+                .key_concepts
                 .iter()
                 .map(|c| format!(r##"<span class="concept">{}</span>"##, c))
                 .collect::<Vec<_>>()
                 .join("")
         } else {
-            lesson.concept_definitions
+            lesson
+                .concept_definitions
                 .iter()
                 .map(|(term, def)| {
                     format!(
@@ -471,7 +475,10 @@ fn convert_markdown_to_html(md: &str) -> String {
         // Blockquotes
         if trimmed.starts_with("> ") {
             close_list(&mut html, &mut list_type);
-            html.push_str(&format!("<blockquote>{}</blockquote>\n", format_inline(&trimmed[2..])));
+            html.push_str(&format!(
+                "<blockquote>{}</blockquote>\n",
+                format_inline(&trimmed[2..])
+            ));
             continue;
         }
 
@@ -521,7 +528,11 @@ fn convert_markdown_to_html(md: &str) -> String {
         }
 
         // Ordered lists
-        if trimmed.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false)
+        if trimmed
+            .chars()
+            .next()
+            .map(|c| c.is_ascii_digit())
+            .unwrap_or(false)
             && trimmed.contains(". ")
         {
             if let Some(pos) = trimmed.find(". ") {

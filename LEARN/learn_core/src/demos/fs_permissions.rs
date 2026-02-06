@@ -147,8 +147,10 @@ impl FsPermissionsDemo {
         self.cwd = user_home;
 
         // Initialize users
-        self.users.insert("root".to_string(), vec!["root".to_string()]);
-        self.users.insert("user".to_string(), vec!["user".to_string()]);
+        self.users
+            .insert("root".to_string(), vec!["root".to_string()]);
+        self.users
+            .insert("user".to_string(), vec!["user".to_string()]);
 
         // Check if we have a custom config
         let has_config = self.config.is_some();
@@ -170,7 +172,9 @@ impl FsPermissionsDemo {
 
             // Create /etc/passwd
             let passwd = self.create_file(etc, "passwd", "root", "root", 0o644);
-            self.inodes[passwd].content = "root:x:0:0:root:/root:/bin/bash\nuser:x:1000:1000:User:/home/user:/bin/bash".to_string();
+            self.inodes[passwd].content =
+                "root:x:0:0:root:/root:/bin/bash\nuser:x:1000:1000:User:/home/user:/bin/bash"
+                    .to_string();
 
             // Create /etc/shadow
             let shadow = self.create_file(etc, "shadow", "root", "shadow", 0o640);
@@ -399,7 +403,8 @@ impl FsPermissionsDemo {
         // Add output to history
         if !result.output.is_empty() {
             for line in result.output.lines() {
-                self.output_history.push((line.to_string(), !result.success));
+                self.output_history
+                    .push((line.to_string(), !result.success));
             }
             while self.output_history.len() > self.max_history {
                 self.output_history.remove(0);
@@ -419,14 +424,22 @@ impl FsPermissionsDemo {
 
         let idx = match self.resolve_path(target) {
             Some(i) => i,
-            None => return CommandResult::err(format!("ls: cannot access '{}': No such file or directory", target)),
+            None => {
+                return CommandResult::err(format!(
+                    "ls: cannot access '{}': No such file or directory",
+                    target
+                ))
+            }
         };
 
         let node = &self.inodes[idx];
 
         // Check read permission
         if !self.check_permission(node, 4) {
-            return CommandResult::err(format!("ls: cannot open directory '{}': Permission denied", target));
+            return CommandResult::err(format!(
+                "ls: cannot open directory '{}': Permission denied",
+                target
+            ));
         }
 
         if !node.is_dir {
@@ -523,12 +536,20 @@ impl FsPermissionsDemo {
 
         let idx = match self.resolve_path(path) {
             Some(i) => i,
-            None => return CommandResult::err(format!("chmod: cannot access '{}': No such file or directory", path)),
+            None => {
+                return CommandResult::err(format!(
+                    "chmod: cannot access '{}': No such file or directory",
+                    path
+                ))
+            }
         };
 
         // Only owner or root can chmod
         if self.current_user != "root" && self.current_user != self.inodes[idx].owner {
-            return CommandResult::err(format!("chmod: changing permissions of '{}': Operation not permitted", path));
+            return CommandResult::err(format!(
+                "chmod: changing permissions of '{}': Operation not permitted",
+                path
+            ));
         }
 
         // Parse octal mode
@@ -556,7 +577,12 @@ impl FsPermissionsDemo {
 
         let idx = match self.resolve_path(path) {
             Some(i) => i,
-            None => return CommandResult::err(format!("chown: cannot access '{}': No such file or directory", path)),
+            None => {
+                return CommandResult::err(format!(
+                    "chown: cannot access '{}': No such file or directory",
+                    path
+                ))
+            }
         };
 
         let parts: Vec<&str> = owner_group.split(':').collect();
@@ -644,7 +670,10 @@ impl FsPermissionsDemo {
 
         // Check write permission on parent
         if !self.check_permission(&self.inodes[parent_idx], 2) {
-            return CommandResult::err(format!("touch: cannot touch '{}': Permission denied", path));
+            return CommandResult::err(format!(
+                "touch: cannot touch '{}': Permission denied",
+                path
+            ));
         }
 
         // Create file
@@ -689,7 +718,11 @@ impl FsPermissionsDemo {
         }
 
         let recursive = args.contains(&"-r") || args.contains(&"-rf");
-        let path = args.iter().find(|a| !a.starts_with('-')).copied().unwrap_or("");
+        let path = args
+            .iter()
+            .find(|a| !a.starts_with('-'))
+            .copied()
+            .unwrap_or("");
 
         if path.is_empty() {
             return CommandResult::err("rm: missing operand");
@@ -697,7 +730,12 @@ impl FsPermissionsDemo {
 
         let idx = match self.resolve_path(path) {
             Some(i) => i,
-            None => return CommandResult::err(format!("rm: cannot remove '{}': No such file or directory", path)),
+            None => {
+                return CommandResult::err(format!(
+                    "rm: cannot remove '{}': No such file or directory",
+                    path
+                ))
+            }
         };
 
         // Cannot remove root
@@ -714,7 +752,10 @@ impl FsPermissionsDemo {
 
         // Check if directory is not empty
         if node.is_dir && !node.children.is_empty() && !recursive {
-            return CommandResult::err(format!("rm: cannot remove '{}': Directory not empty", path));
+            return CommandResult::err(format!(
+                "rm: cannot remove '{}': Directory not empty",
+                path
+            ));
         }
 
         // Check write permission on parent
@@ -739,16 +780,27 @@ impl FsPermissionsDemo {
 
         let src_idx = match self.resolve_path(src) {
             Some(i) => i,
-            None => return CommandResult::err(format!("cp: cannot stat '{}': No such file or directory", src)),
+            None => {
+                return CommandResult::err(format!(
+                    "cp: cannot stat '{}': No such file or directory",
+                    src
+                ))
+            }
         };
 
         // Check read permission on source
         if !self.check_permission(&self.inodes[src_idx], 4) {
-            return CommandResult::err(format!("cp: cannot open '{}' for reading: Permission denied", src));
+            return CommandResult::err(format!(
+                "cp: cannot open '{}' for reading: Permission denied",
+                src
+            ));
         }
 
         if self.inodes[src_idx].is_dir {
-            return CommandResult::err(format!("cp: -r not specified; omitting directory '{}'", src));
+            return CommandResult::err(format!(
+                "cp: -r not specified; omitting directory '{}'",
+                src
+            ));
         }
 
         // Get source info we need before mutating
@@ -756,33 +808,39 @@ impl FsPermissionsDemo {
         let content = self.inodes[src_idx].content.clone();
 
         // Get destination parent and name
-        let (dst_parent_path, dst_name): (&str, String) = if let Some(existing_idx) = self.resolve_path(dst) {
-            let existing = &self.inodes[existing_idx];
-            if existing.is_dir {
-                // Copy into directory
-                (dst, src_name)
+        let (dst_parent_path, dst_name): (&str, String) =
+            if let Some(existing_idx) = self.resolve_path(dst) {
+                let existing = &self.inodes[existing_idx];
+                if existing.is_dir {
+                    // Copy into directory
+                    (dst, src_name)
+                } else {
+                    // Overwrite file
+                    if dst.contains('/') {
+                        let (p, n) = dst.rsplit_once('/').unwrap();
+                        (p, n.to_string())
+                    } else {
+                        (".", dst.to_string())
+                    }
+                }
             } else {
-                // Overwrite file
+                // New file
                 if dst.contains('/') {
                     let (p, n) = dst.rsplit_once('/').unwrap();
                     (p, n.to_string())
                 } else {
                     (".", dst.to_string())
                 }
-            }
-        } else {
-            // New file
-            if dst.contains('/') {
-                let (p, n) = dst.rsplit_once('/').unwrap();
-                (p, n.to_string())
-            } else {
-                (".", dst.to_string())
-            }
-        };
+            };
 
         let parent_idx = match self.resolve_path(dst_parent_path) {
             Some(i) => i,
-            None => return CommandResult::err(format!("cp: cannot create '{}': No such file or directory", dst)),
+            None => {
+                return CommandResult::err(format!(
+                    "cp: cannot create '{}': No such file or directory",
+                    dst
+                ))
+            }
         };
 
         // Check write permission on destination parent
@@ -793,13 +851,7 @@ impl FsPermissionsDemo {
         // Create the copy
         let current_user = self.current_user.clone();
         let current_group = self.current_group.clone();
-        let new_idx = self.create_file(
-            parent_idx,
-            &dst_name,
-            &current_user,
-            &current_group,
-            0o644,
-        );
+        let new_idx = self.create_file(parent_idx, &dst_name, &current_user, &current_group, 0o644);
         self.inodes[new_idx].content = content;
 
         CommandResult::ok("")
@@ -815,7 +867,12 @@ impl FsPermissionsDemo {
 
         let src_idx = match self.resolve_path(src) {
             Some(i) => i,
-            None => return CommandResult::err(format!("mv: cannot stat '{}': No such file or directory", src)),
+            None => {
+                return CommandResult::err(format!(
+                    "mv: cannot stat '{}': No such file or directory",
+                    src
+                ))
+            }
         };
 
         // Cannot move root
@@ -854,7 +911,12 @@ impl FsPermissionsDemo {
             };
             let parent_idx = match self.resolve_path(parent_path) {
                 Some(i) => i,
-                None => return CommandResult::err(format!("mv: cannot move '{}' to '{}': No such file or directory", src, dst)),
+                None => {
+                    return CommandResult::err(format!(
+                        "mv: cannot move '{}' to '{}': No such file or directory",
+                        src, dst
+                    ))
+                }
             };
             (parent_idx, name)
         };
@@ -865,7 +927,9 @@ impl FsPermissionsDemo {
         }
 
         // Remove from old parent
-        self.inodes[src_parent_idx].children.retain(|&c| c != src_idx);
+        self.inodes[src_parent_idx]
+            .children
+            .retain(|&c| c != src_idx);
 
         // Add to new parent
         self.inodes[dst_parent_idx].children.push(src_idx);
@@ -899,7 +963,12 @@ impl FsPermissionsDemo {
 
         let idx = match self.resolve_path(path) {
             Some(i) => i,
-            None => return CommandResult::err(format!("head: cannot open '{}': No such file or directory", path)),
+            None => {
+                return CommandResult::err(format!(
+                    "head: cannot open '{}': No such file or directory",
+                    path
+                ))
+            }
         };
 
         let node = &self.inodes[idx];
@@ -936,7 +1005,12 @@ impl FsPermissionsDemo {
 
         let idx = match self.resolve_path(path) {
             Some(i) => i,
-            None => return CommandResult::err(format!("tail: cannot open '{}': No such file or directory", path)),
+            None => {
+                return CommandResult::err(format!(
+                    "tail: cannot open '{}': No such file or directory",
+                    path
+                ))
+            }
         };
 
         let node = &self.inodes[idx];
@@ -950,7 +1024,11 @@ impl FsPermissionsDemo {
         }
 
         let all_lines: Vec<&str> = node.content.lines().collect();
-        let start = if all_lines.len() > n { all_lines.len() - n } else { 0 };
+        let start = if all_lines.len() > n {
+            all_lines.len() - n
+        } else {
+            0
+        };
         let lines: Vec<&str> = all_lines[start..].to_vec();
         CommandResult::ok(lines.join("\n"))
     }
@@ -965,7 +1043,9 @@ impl FsPermissionsDemo {
 
         let idx = match self.resolve_path(path) {
             Some(i) => i,
-            None => return CommandResult::err(format!("grep: {}: No such file or directory", path)),
+            None => {
+                return CommandResult::err(format!("grep: {}: No such file or directory", path))
+            }
         };
 
         let node = &self.inodes[idx];
@@ -978,7 +1058,8 @@ impl FsPermissionsDemo {
             return CommandResult::err(format!("grep: {}: Permission denied", path));
         }
 
-        let matches: Vec<&str> = node.content
+        let matches: Vec<&str> = node
+            .content
             .lines()
             .filter(|line| line.contains(pattern))
             .collect();

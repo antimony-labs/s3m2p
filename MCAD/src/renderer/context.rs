@@ -4,16 +4,13 @@
 //! MODIFIED: 2026-01-07
 //! ═══════════════════════════════════════════════════════════════════════════════
 
+use super::buffers::MeshBuffers;
 use super::camera::Camera;
 use super::shaders::{self, RenderMode};
-use super::buffers::MeshBuffers;
 use cad_engine::FaceId;
-use glam::{Mat4, Vec3, Mat3};
+use glam::{Mat3, Mat4, Vec3};
 use wasm_bindgen::prelude::*;
-use web_sys::{
-    HtmlCanvasElement, WebGl2RenderingContext as GL, WebGlProgram, WebGlShader,
-    WebGlUniformLocation,
-};
+use web_sys::{HtmlCanvasElement, WebGl2RenderingContext as GL, WebGlProgram, WebGlShader};
 
 /// WebGL2 rendering context for MCAD
 pub struct WebGLContext {
@@ -42,9 +39,12 @@ impl WebGLContext {
             .dyn_into::<GL>()?;
 
         // Compile shader programs
-        let shaded_program = compile_program(&gl, shaders::SHADED_VERTEX, shaders::SHADED_FRAGMENT)?;
-        let wireframe_program = compile_program(&gl, shaders::WIREFRAME_VERTEX, shaders::WIREFRAME_FRAGMENT)?;
-        let picking_program = compile_program(&gl, shaders::PICKING_VERTEX, shaders::PICKING_FRAGMENT)?;
+        let shaded_program =
+            compile_program(&gl, shaders::SHADED_VERTEX, shaders::SHADED_FRAGMENT)?;
+        let wireframe_program =
+            compile_program(&gl, shaders::WIREFRAME_VERTEX, shaders::WIREFRAME_FRAGMENT)?;
+        let picking_program =
+            compile_program(&gl, shaders::PICKING_VERTEX, shaders::PICKING_FRAGMENT)?;
 
         let width = canvas.width();
         let height = canvas.height();
@@ -122,9 +122,24 @@ impl WebGLContext {
         let light_dir = Vec3::new(0.5, 0.7, 1.0).normalize();
         set_uniform_vec3(gl, &self.shaded_program, "u_light_dir", light_dir);
         set_uniform_vec3(gl, &self.shaded_program, "u_camera_pos", camera.position());
-        set_uniform_vec3(gl, &self.shaded_program, "u_base_color", Vec3::new(1.0, 0.42, 0.21)); // #ff6b35
-        set_uniform_vec3(gl, &self.shaded_program, "u_select_color", Vec3::new(0.0, 0.8, 1.0)); // Cyan
-        set_uniform_vec3(gl, &self.shaded_program, "u_hover_color", Vec3::new(0.5, 0.9, 1.0)); // Light cyan
+        set_uniform_vec3(
+            gl,
+            &self.shaded_program,
+            "u_base_color",
+            Vec3::new(1.0, 0.42, 0.21),
+        ); // #ff6b35
+        set_uniform_vec3(
+            gl,
+            &self.shaded_program,
+            "u_select_color",
+            Vec3::new(0.0, 0.8, 1.0),
+        ); // Cyan
+        set_uniform_vec3(
+            gl,
+            &self.shaded_program,
+            "u_hover_color",
+            Vec3::new(0.5, 0.9, 1.0),
+        ); // Light cyan
         set_uniform_f32(gl, &self.shaded_program, "u_ambient", 0.2);
         set_uniform_f32(gl, &self.shaded_program, "u_diffuse", 0.7);
         set_uniform_f32(gl, &self.shaded_program, "u_specular", 0.3);
@@ -155,7 +170,12 @@ impl WebGLContext {
 
         let mvp = camera.view_projection_matrix();
         set_uniform_mat4(gl, &self.wireframe_program, "u_mvp", &mvp);
-        set_uniform_vec3(gl, &self.wireframe_program, "u_color", Vec3::new(1.0, 0.42, 0.21)); // #ff6b35
+        set_uniform_vec3(
+            gl,
+            &self.wireframe_program,
+            "u_color",
+            Vec3::new(1.0, 0.42, 0.21),
+        ); // #ff6b35
         set_uniform_f32(gl, &self.wireframe_program, "u_alpha", 1.0);
 
         // Draw edges

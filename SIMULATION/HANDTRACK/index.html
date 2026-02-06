@@ -1,0 +1,2683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.too.foo; font-src 'self' data:;">
+    <title>Hand Tracking - MediaPipe</title>
+    <!-- MediaPipe dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* CSS Variables matching too.foo design system */
+        :root {
+            --bg: #050508;
+            --bg-alt: #08080c;
+            --surface: rgba(10, 15, 20, 0.85);
+            --surface-hover: rgba(0, 20, 30, 0.9);
+            --text: #e0e0e0;
+            --text-muted: rgba(255, 255, 255, 0.8);
+            --text-dim: rgba(255, 255, 255, 0.6);
+            --text-faint: rgba(255, 255, 255, 0.4);
+            --accent: #00ffff;
+            --accent-bright: #00ff00;
+            --accent-dim: rgba(0, 255, 255, 0.2);
+            --accent-faint: rgba(0, 255, 255, 0.1);
+            --border: rgba(0, 255, 255, 0.2);
+            --border-dim: rgba(0, 255, 255, 0.15);
+            --border-hover: rgba(0, 255, 255, 0.6);
+            --shadow: rgba(0, 0, 0, 0.5);
+            --glow: rgba(0, 255, 255, 0.3);
+            --glow-strong: rgba(0, 255, 255, 0.6);
+            --danger: #ff4444;
+            --success: #00ff88;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        #canvas-wrapper {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+        }
+
+        canvas {
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+            background: #000;
+        }
+
+        #sidebar {
+            width: 320px;
+            background: var(--bg-alt);
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 1px solid var(--border-dim);
+        }
+
+        h1 {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--accent);
+        }
+
+        h2 {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 16px 0 8px;
+            color: var(--accent-bright);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .subtitle {
+            color: var(--text-dim);
+            font-size: 12px;
+            margin-bottom: 16px;
+        }
+
+        .mode-selector {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .mode-btn {
+            padding: 10px 8px;
+            background: var(--surface);
+            color: var(--text-dim);
+            border: 1px solid var(--border-dim);
+            border-radius: 4px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .mode-btn:hover {
+            background: var(--surface-hover);
+            border-color: var(--border);
+        }
+
+        .mode-btn.active {
+            background: var(--accent-faint);
+            border-color: var(--accent);
+            color: var(--accent);
+            box-shadow: 0 0 15px var(--glow);
+        }
+
+        .mode-btn .icon {
+            font-size: 20px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .metric {
+            margin: 6px 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: var(--surface);
+            border: 1px solid var(--border-dim);
+            font-size: 13px;
+        }
+
+        .metric-label {
+            color: var(--text-dim);
+        }
+
+        .metric-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+            color: var(--accent);
+        }
+
+        .metric-value.detected {
+            color: var(--success);
+        }
+
+        .metric-value.not-detected {
+            color: var(--danger);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            background: var(--accent-faint);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            background: var(--accent-dim);
+            box-shadow: 0 0 20px var(--glow);
+        }
+
+        button:disabled {
+            background: var(--surface);
+            color: var(--text-faint);
+            border-color: var(--border-dim);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .slider-control {
+            margin: 10px 0;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+
+        .slider-value {
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: var(--surface);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+            border: 1px solid var(--border-dim);
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--glow);
+        }
+
+        .info {
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-top: 16px;
+            line-height: 1.6;
+            padding: 12px;
+            background: var(--accent-faint);
+            border-left: 3px solid var(--accent);
+        }
+
+        .info strong {
+            color: var(--accent);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+
+        .status-indicator.active {
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        .status-indicator.inactive {
+            background: var(--danger);
+        }
+
+        .mode-info {
+            display: none;
+        }
+
+        .mode-info.active {
+            display: block;
+        }
+
+        /* RPS specific */
+        .rps-result {
+            text-align: center;
+            padding: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border-dim);
+            margin: 8px 0;
+        }
+
+        .rps-result .big {
+            font-size: 32px;
+            margin: 8px 0;
+        }
+
+        .rps-score {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 8px;
+        }
+
+        .score-item {
+            text-align: center;
+        }
+
+        .score-item .num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        /* Drawing specific */
+        .color-picker {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 8px 0;
+        }
+
+        .color-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid var(--border-dim);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .color-btn:hover {
+            border-color: var(--border);
+        }
+
+        .color-btn.active {
+            border-color: #fff;
+            transform: scale(1.1);
+            box-shadow: 0 0 10px var(--glow);
+        }
+
+        /* Input styling */
+        input[type="text"] {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: 'Rajdhani', sans-serif;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 10px var(--glow);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════════════
+           MOBILE RESPONSIVE STYLES
+           ═══════════════════════════════════════════════════════════════════════════ */
+
+        #mobile-toolbar {
+            display: none;
+        }
+
+        #mobile-menu-overlay {
+            display: none;
+        }
+
+        #mobile-menu {
+            display: none;
+        }
+
+        #floating-status {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                height: 100dvh;
+            }
+
+            #container {
+                flex-direction: column;
+            }
+
+            #sidebar {
+                display: none;
+            }
+
+            #canvas-wrapper {
+                flex: 1;
+                height: calc(100dvh - 60px);
+            }
+
+            canvas {
+                width: 100% !important;
+                height: 100% !important;
+                object-fit: cover;
+            }
+
+            #no-camera {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            }
+
+            #no-camera[style*="display: block"] {
+                display: flex !important;
+            }
+
+            #no-camera[style*="display: none"] {
+                display: none !important;
+            }
+
+            /* Mobile Bottom Toolbar */
+            #mobile-toolbar {
+                display: flex;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 60px;
+                background: var(--bg-alt);
+                border-top: 1px solid var(--border);
+                align-items: center;
+                justify-content: space-between;
+                padding: 0 16px;
+                z-index: 100;
+            }
+
+            .toolbar-mode {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .toolbar-mode-icon {
+                font-size: 24px;
+            }
+
+            .toolbar-mode-name {
+                font-family: 'Rajdhani', sans-serif;
+                font-weight: 600;
+                color: var(--accent);
+            }
+
+            .toolbar-btn {
+                width: 44px;
+                height: 44px;
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                font-size: 20px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                padding: 0;
+                margin: 0;
+            }
+
+            .toolbar-btn:active {
+                background: var(--accent-faint);
+                border-color: var(--accent);
+            }
+
+            .toolbar-actions {
+                display: flex;
+                gap: 8px;
+            }
+
+            /* Mobile Menu Overlay */
+            #mobile-menu-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.7);
+                z-index: 200;
+            }
+
+            #mobile-menu-overlay.visible {
+                display: block;
+            }
+
+            /* Mobile Slide-up Menu */
+            #mobile-menu {
+                display: block;
+                position: fixed;
+                bottom: -100%;
+                left: 0;
+                right: 0;
+                max-height: 75vh;
+                background: var(--bg-alt);
+                border-top: 2px solid var(--accent);
+                border-radius: 16px 16px 0 0;
+                z-index: 300;
+                transition: bottom 0.3s ease-out;
+                overflow-y: auto;
+            }
+
+            #mobile-menu.open {
+                bottom: 0;
+            }
+
+            .menu-handle {
+                width: 40px;
+                height: 4px;
+                background: var(--border);
+                border-radius: 2px;
+                margin: 12px auto;
+            }
+
+            .menu-content {
+                padding: 0 16px 24px;
+            }
+
+            .menu-section {
+                margin-bottom: 20px;
+            }
+
+            .menu-section-title {
+                font-family: 'Rajdhani', sans-serif;
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--accent);
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                margin-bottom: 12px;
+            }
+
+            /* Mobile Mode Grid - 3x2 */
+            .mobile-mode-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+
+            .mobile-mode-btn {
+                padding: 12px 8px;
+                background: var(--surface);
+                border: 1px solid var(--border-dim);
+                border-radius: 8px;
+                text-align: center;
+                cursor: pointer;
+            }
+
+            .mobile-mode-btn.active {
+                background: var(--accent-faint);
+                border-color: var(--accent);
+            }
+
+            .mobile-mode-btn .icon {
+                font-size: 24px;
+                display: block;
+                margin-bottom: 4px;
+            }
+
+            .mobile-mode-btn .label {
+                font-family: 'Rajdhani', sans-serif;
+                font-size: 12px;
+                font-weight: 600;
+                color: var(--text);
+            }
+
+            .mobile-mode-btn.active .label {
+                color: var(--accent);
+            }
+
+            /* Mobile Camera Button */
+            .menu-camera-btn {
+                width: 100%;
+                padding: 14px;
+                font-size: 16px;
+            }
+
+            /* Mobile Metrics */
+            .mobile-metrics {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+                margin-top: 12px;
+            }
+
+            .mobile-metric {
+                text-align: center;
+                padding: 8px;
+                background: var(--surface);
+                border-radius: 4px;
+            }
+
+            .mobile-metric-value {
+                font-family: 'JetBrains Mono', monospace;
+                font-size: 16px;
+                font-weight: bold;
+                color: var(--accent);
+            }
+
+            .mobile-metric-label {
+                font-size: 10px;
+                color: var(--text-dim);
+            }
+
+            /* Mode-specific controls in mobile menu */
+            .mobile-mode-controls {
+                background: var(--surface);
+                border: 1px solid var(--border-dim);
+                border-radius: 8px;
+                padding: 12px;
+            }
+
+            .mobile-mode-controls h4 {
+                font-family: 'Rajdhani', sans-serif;
+                font-size: 13px;
+                color: var(--accent);
+                margin-bottom: 8px;
+            }
+
+            .mobile-color-picker {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                margin-bottom: 8px;
+            }
+
+            .mobile-color-btn {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                border: 2px solid var(--border-dim);
+                cursor: pointer;
+            }
+
+            .mobile-color-btn.active {
+                border-color: #fff;
+                transform: scale(1.1);
+            }
+
+            .mobile-slider {
+                margin: 8px 0;
+            }
+
+            .mobile-slider label {
+                display: flex;
+                justify-content: space-between;
+                font-size: 11px;
+                color: var(--text-dim);
+                margin-bottom: 4px;
+            }
+
+            .mobile-slider input[type="range"] {
+                width: 100%;
+            }
+
+            .mobile-btn-group {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            .mobile-btn-group button {
+                flex: 1;
+                min-width: 80px;
+                padding: 10px 8px;
+                font-size: 12px;
+                margin: 0;
+            }
+
+            /* Floating Controls */
+            #floating-controls {
+                display: flex;
+                position: fixed;
+                bottom: 70px;
+                left: 8px;
+                right: 8px;
+                z-index: 50;
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: center;
+                align-items: center;
+            }
+
+            .float-btn {
+                padding: 12px 16px;
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 25px;
+                color: var(--text);
+                font-family: 'Rajdhani', sans-serif;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                transition: all 0.2s;
+            }
+
+            .float-btn:active {
+                transform: scale(0.95);
+            }
+
+            .float-btn.primary {
+                background: var(--accent-faint);
+                border-color: var(--accent);
+                color: var(--accent);
+            }
+
+            .float-btn.danger {
+                background: rgba(255,68,68,0.2);
+                border-color: var(--danger);
+                color: var(--danger);
+            }
+
+            .float-btn.success {
+                background: rgba(0,255,136,0.2);
+                border-color: var(--success);
+                color: var(--success);
+            }
+
+            .float-btn.active {
+                background: var(--danger);
+                border-color: var(--danger);
+                color: #fff;
+                box-shadow: 0 0 20px rgba(255,68,68,0.5);
+            }
+
+            .float-color-picker {
+                display: flex;
+                gap: 6px;
+                background: var(--surface);
+                padding: 8px 12px;
+                border-radius: 25px;
+                border: 1px solid var(--border);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            }
+
+            .float-color {
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                border: 2px solid transparent;
+                cursor: pointer;
+            }
+
+            .float-color.active {
+                border-color: #fff;
+                transform: scale(1.15);
+            }
+
+            /* Floating RPS Game Display */
+            .float-rps-game {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                background: var(--surface);
+                padding: 12px 16px;
+                border-radius: 16px;
+                border: 1px solid var(--border);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                min-width: 160px;
+            }
+
+            .float-rps-moves {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .float-rps-player {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .float-rps-label {
+                font-size: 10px;
+                color: var(--text-dim);
+                font-weight: 600;
+            }
+
+            .float-rps-move {
+                font-size: 32px;
+                line-height: 1;
+            }
+
+            .float-rps-vs {
+                font-size: 12px;
+                color: var(--text-dim);
+                margin: 0 4px;
+            }
+
+            .float-rps-result {
+                font-size: 11px;
+                font-weight: 600;
+                color: var(--accent);
+                margin-top: 6px;
+                text-align: center;
+            }
+
+            /* Floating Status Indicator */
+            #floating-status {
+                display: block;
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                z-index: 50;
+                padding: 8px 12px;
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 20px;
+                font-family: 'JetBrains Mono', monospace;
+                font-size: 12px;
+                color: var(--accent);
+                box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            }
+
+            #floating-status #float-hands {
+                font-weight: bold;
+                color: var(--success);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="canvas-wrapper">
+            <canvas id="canvas"></canvas>
+            <div id="no-camera" style="display: block; color: #666; text-align: center; padding: 20px;">
+                <p style="font-size: 48px; margin-bottom: 10px;">✋</p>
+                <p>Click "Start Camera" to begin</p>
+            </div>
+        </div>
+        <div id="sidebar">
+            <h1>✋ Hand Tracking</h1>
+            <p class="subtitle">Interactive demos powered by MediaPipe ML</p>
+
+            <h2>Mode</h2>
+            <div class="mode-selector">
+                <button class="mode-btn active" data-mode="tracking">
+                    <span class="icon">👆</span>
+                    Tracking
+                </button>
+                <button class="mode-btn" data-mode="particles">
+                    <span class="icon">✨</span>
+                    Particles
+                </button>
+                <button class="mode-btn" data-mode="theremin">
+                    <span class="icon">🎵</span>
+                    Theremin
+                </button>
+                <button class="mode-btn" data-mode="rps">
+                    <span class="icon">✊</span>
+                    RPS Game
+                </button>
+                <button class="mode-btn" data-mode="drawing">
+                    <span class="icon">🎨</span>
+                    Air Draw
+                </button>
+                <button class="mode-btn" data-mode="notes">
+                    <span class="icon">📝</span>
+                    Notes
+                </button>
+            </div>
+
+            <h2>Camera</h2>
+            <button id="camera-btn">Start Camera</button>
+            <div class="metric">
+                <span class="metric-label">
+                    <span class="status-indicator inactive" id="camera-status"></span>
+                    Status
+                </span>
+                <span class="metric-value" id="camera-status-text">Off</span>
+            </div>
+
+            <!-- Tracking Mode Info -->
+            <div class="mode-info active" id="info-tracking">
+                <h2>Detection</h2>
+                <div class="metric">
+                    <span class="metric-label">Hands</span>
+                    <span class="metric-value" id="hands-count">0</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Gesture</span>
+                    <span class="metric-value" id="gesture">--</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">FPS</span>
+                    <span class="metric-value" id="fps">--</span>
+                </div>
+                <div class="info">
+                    <strong>Hand Tracking</strong><br>
+                    Show your hands to see 21 landmarks tracked in real-time. Try different gestures!
+                </div>
+            </div>
+
+            <!-- Particles Mode Info -->
+            <div class="mode-info" id="info-particles">
+                <h2>Particle Settings</h2>
+                <div class="slider-control">
+                    <div class="slider-label">
+                        <span>Particle Count</span>
+                        <span class="slider-value" id="particle-count-value">50</span>
+                    </div>
+                    <input type="range" id="particle-count" min="10" max="200" value="50">
+                </div>
+                <div class="slider-control">
+                    <div class="slider-label">
+                        <span>Trail Length</span>
+                        <span class="slider-value" id="trail-length-value">20</span>
+                    </div>
+                    <input type="range" id="trail-length" min="5" max="50" value="20">
+                </div>
+                <div class="info">
+                    <strong>Particle Magic</strong><br>
+                    Particles follow your fingertips! Make a fist to create an explosion effect.
+                </div>
+            </div>
+
+            <!-- Theremin Mode Info -->
+            <div class="mode-info" id="info-theremin">
+                <h2>Theremin</h2>
+                <button id="audio-unlock-btn" style="background: var(--success); border-color: var(--success); color: #000; font-weight: bold; margin-bottom: 12px;">
+                    🔊 Tap to Enable Sound
+                </button>
+                <div class="metric">
+                    <span class="metric-label">Frequency</span>
+                    <span class="metric-value" id="theremin-freq">--</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Volume</span>
+                    <span class="metric-value" id="theremin-vol">--</span>
+                </div>
+                <div class="slider-control">
+                    <div class="slider-label">
+                        <span>Min Frequency</span>
+                        <span class="slider-value" id="min-freq-value">100</span>
+                    </div>
+                    <input type="range" id="min-freq" min="50" max="300" value="100">
+                </div>
+                <div class="slider-control">
+                    <div class="slider-label">
+                        <span>Max Frequency</span>
+                        <span class="slider-value" id="max-freq-value">800</span>
+                    </div>
+                    <input type="range" id="max-freq" min="400" max="2000" value="800">
+                </div>
+                <div class="info">
+                    <strong>Virtual Theremin</strong><br>
+                    ✋ <strong>Right hand</strong> - Open/close for pitch<br>
+                    🤚 <strong>Left hand</strong> - Open/close for volume<br>
+                    Fist = low/mute, Open = high/loud
+                </div>
+            </div>
+
+            <!-- RPS Mode Info -->
+            <div class="mode-info" id="info-rps">
+                <h2>Rock Paper Scissors</h2>
+                <div class="rps-result">
+                    <div>Your move:</div>
+                    <div class="big" id="rps-your-move">?</div>
+                    <div>vs Computer:</div>
+                    <div class="big" id="rps-computer-move">?</div>
+                    <div id="rps-result-text" style="margin-top: 8px; font-weight: bold;">Show your hand!</div>
+                </div>
+                <div class="rps-score">
+                    <div class="score-item">
+                        <div class="num" id="rps-wins" style="color: var(--success);">0</div>
+                        <div style="color: var(--text-dim); font-size: 11px;">Wins</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="num" id="rps-ties" style="color: var(--accent);">0</div>
+                        <div style="color: var(--text-dim); font-size: 11px;">Ties</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="num" id="rps-losses" style="color: var(--danger);">0</div>
+                        <div style="color: var(--text-dim); font-size: 11px;">Losses</div>
+                    </div>
+                </div>
+                <button id="rps-play-btn" style="margin-top: 12px;">Play Round</button>
+                <div class="info">
+                    <strong>Rock Paper Scissors</strong><br>
+                    ✊ Fist = Rock<br>
+                    ✋ Open Palm = Paper<br>
+                    ✌️ Peace = Scissors
+                </div>
+            </div>
+
+            <!-- Drawing Mode Info -->
+            <div class="mode-info" id="info-drawing">
+                <h2>Drawing</h2>
+                <div class="color-picker">
+                    <div class="color-btn active" data-color="#00ffff" style="background: #00ffff;"></div>
+                    <div class="color-btn" data-color="#00ff88" style="background: #00ff88;"></div>
+                    <div class="color-btn" data-color="#ffff00" style="background: #ffff00;"></div>
+                    <div class="color-btn" data-color="#ff6600" style="background: #ff6600;"></div>
+                    <div class="color-btn" data-color="#ff44ff" style="background: #ff44ff;"></div>
+                    <div class="color-btn" data-color="#ffffff" style="background: #ffffff;"></div>
+                </div>
+                <div class="slider-control">
+                    <div class="slider-label">
+                        <span>Brush Size</span>
+                        <span class="slider-value" id="brush-size-value">8</span>
+                    </div>
+                    <input type="range" id="brush-size" min="2" max="30" value="8">
+                </div>
+                <button id="clear-drawing-btn">Clear Canvas</button>
+                <div class="info">
+                    <strong>Air Drawing</strong><br>
+                    Point with your index finger to draw. Make a fist to stop drawing. Pinch (thumb + index) to erase!
+                </div>
+            </div>
+
+            <!-- Notes Mode Info -->
+            <div class="mode-info" id="info-notes">
+                <h2>Visual Notes</h2>
+                <div class="metric">
+                    <span class="metric-label">Status</span>
+                    <span class="metric-value" id="notes-mode">Ready</span>
+                </div>
+                <div class="color-picker" id="notes-colors">
+                    <div class="color-btn active" data-color="#00ffff" style="background: #00ffff;"></div>
+                    <div class="color-btn" data-color="#00ff88" style="background: #00ff88;"></div>
+                    <div class="color-btn" data-color="#ffff00" style="background: #ffff00;"></div>
+                    <div class="color-btn" data-color="#ff6600" style="background: #ff6600;"></div>
+                    <div class="color-btn" data-color="#ffffff" style="background: #ffffff;"></div>
+                </div>
+                <div class="slider-control">
+                    <div class="slider-label">
+                        <span>Pen Size</span>
+                        <span class="slider-value" id="notes-pen-size-value">6</span>
+                    </div>
+                    <input type="range" id="notes-pen-size" min="2" max="20" value="6">
+                </div>
+                <button id="notes-tool-erase" style="background: var(--danger); border-color: var(--danger); margin: 8px 0;">🧹 Toggle Erase Mode</button>
+                <div id="notes-text-input" style="margin: 10px 0;">
+                    <input type="text" id="notes-text" placeholder="Type your note..." style="width: 100%; padding: 8px; border-radius: 4px; font-size: 14px;">
+                    <button id="notes-add-text" style="margin-top: 8px;">Add Text (at cursor)</button>
+                </div>
+                <button id="clear-notes-btn">Clear Notes</button>
+                <button id="download-notes-btn" style="background: var(--accent-dim); border-color: var(--accent-bright); color: var(--accent-bright);">Download JPG</button>
+                <div class="info">
+                    <strong>Gestures:</strong><br>
+                    ☝️ <strong>Point (index only)</strong> = Draw<br>
+                    ✋ <strong>Open hand</strong> = Pause/Move<br>
+                    🧹 Click button to toggle erase mode
+                </div>
+            </div>
+
+            <h2>Settings</h2>
+            <div class="slider-control">
+                <div class="slider-label">
+                    <span>Detection Confidence</span>
+                    <span class="slider-value" id="detection-conf-value">0.75</span>
+                </div>
+                <input type="range" id="detection-conf" min="0.5" max="1.0" step="0.05" value="0.75">
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Controls (mode-specific buttons above toolbar) -->
+    <div id="floating-controls">
+        <!-- Dynamically populated based on mode -->
+    </div>
+
+    <!-- Mobile Bottom Toolbar -->
+    <div id="mobile-toolbar">
+        <div class="toolbar-mode">
+            <span class="toolbar-mode-icon" id="toolbar-mode-icon">👆</span>
+            <span class="toolbar-mode-name" id="toolbar-mode-name">Tracking</span>
+        </div>
+        <div class="toolbar-actions">
+            <button class="toolbar-btn" id="toolbar-camera" title="Toggle Camera">📷</button>
+            <button class="toolbar-btn" id="toolbar-menu" title="Open Menu">☰</button>
+        </div>
+    </div>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobile-menu-overlay"></div>
+
+    <!-- Mobile Slide-up Menu (Mode Selection Only) -->
+    <div id="mobile-menu">
+        <div class="menu-handle"></div>
+        <div class="menu-content">
+            <div class="menu-section">
+                <div class="menu-section-title">Select Mode</div>
+                <div class="mobile-mode-grid">
+                    <div class="mobile-mode-btn active" data-mode="tracking">
+                        <span class="icon">👆</span>
+                        <span class="label">Tracking</span>
+                    </div>
+                    <div class="mobile-mode-btn" data-mode="particles">
+                        <span class="icon">✨</span>
+                        <span class="label">Particles</span>
+                    </div>
+                    <div class="mobile-mode-btn" data-mode="theremin">
+                        <span class="icon">🎵</span>
+                        <span class="label">Theremin</span>
+                    </div>
+                    <div class="mobile-mode-btn" data-mode="rps">
+                        <span class="icon">✊</span>
+                        <span class="label">RPS Game</span>
+                    </div>
+                    <div class="mobile-mode-btn" data-mode="drawing">
+                        <span class="icon">🎨</span>
+                        <span class="label">Air Draw</span>
+                    </div>
+                    <div class="mobile-mode-btn" data-mode="notes">
+                        <span class="icon">📝</span>
+                        <span class="label">Notes</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Status Indicator (top left) -->
+    <div id="floating-status">
+        <span id="float-hands">0</span> ✋ <span id="float-gesture">--</span>
+    </div>
+
+    <script type="module">
+        // ═══════════════════════════════════════════════════════════════════════════
+        // CORE STATE
+        // ═══════════════════════════════════════════════════════════════════════════
+        let video, canvas, ctx, hands, camera;
+        let isRunning = false;
+        let currentMode = 'tracking';
+        let lastFrameTime = 0;
+        let frameCount = 0;
+        let fps = 0;
+
+        // Hand landmark indices
+        const WRIST = 0, THUMB_TIP = 4, INDEX_TIP = 8, MIDDLE_TIP = 12, RING_TIP = 16, PINKY_TIP = 20;
+        const THUMB_MCP = 2, INDEX_MCP = 5, MIDDLE_MCP = 9, RING_MCP = 13, PINKY_MCP = 17;
+        const FINGERTIPS = [THUMB_TIP, INDEX_TIP, MIDDLE_TIP, RING_TIP, PINKY_TIP];
+
+        // ═══════════════════════════════════════════════════════════════════════════
+        // PARTICLE SYSTEM
+        // ═══════════════════════════════════════════════════════════════════════════
+        const MAX_PARTICLES = 200; // Strict limit
+        let particles = [];
+        let particleSettings = { count: 50, trailLength: 20 };
+        let lastExplosionTime = 0;
+        let lastSpawnTime = 0;
+        let particleFrame = 0;
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 6;
+                this.vy = (Math.random() - 0.5) * 6;
+                this.life = 1.0;
+                this.decay = 0.04 + Math.random() * 0.03; // Faster decay
+                this.size = 2 + Math.random() * 4;
+                this.color = color;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.15; // gravity
+                this.vx *= 0.98; // friction
+                this.vy *= 0.98;
+                this.life -= this.decay;
+            }
+            draw(ctx) {
+                if (this.life <= 0) return;
+                const alpha = Math.floor(this.life * 255).toString(16).padStart(2, '0');
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, Math.max(1, this.size * this.life), 0, Math.PI * 2);
+                ctx.fillStyle = this.color + alpha;
+                ctx.fill();
+            }
+        }
+
+        function spawnParticles(x, y, count, color) {
+            // Only spawn every 3rd frame and respect limit
+            particleFrame++;
+            if (particleFrame % 3 !== 0) return;
+            if (particles.length >= MAX_PARTICLES) return;
+
+            const toAdd = Math.min(count, MAX_PARTICLES - particles.length);
+            for (let i = 0; i < toAdd; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        function explodeParticles(x, y) {
+            const now = performance.now();
+            if (now - lastExplosionTime < 1000) return; // 1 second cooldown
+            if (particles.length >= MAX_PARTICLES - 20) return; // Need room
+            lastExplosionTime = now;
+
+            const maxExplosion = Math.min(30, MAX_PARTICLES - particles.length);
+            for (let i = 0; i < maxExplosion; i++) {
+                const p = new Particle(x, y, ['#00ffff', '#00ff88', '#ffff00', '#ff6600'][Math.floor(Math.random() * 4)]);
+                p.vx = (Math.random() - 0.5) * 15;
+                p.vy = (Math.random() - 0.5) * 15;
+                p.size = 4 + Math.random() * 6;
+                particles.push(p);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════════
+        // THEREMIN
+        // ═══════════════════════════════════════════════════════════════════════════
+        let audioCtx = null;
+        let thereminOsc = null;
+        let thereminGain = null;
+        let thereminSettings = { minFreq: 100, maxFreq: 800 };
+        let isThereminPlaying = false;
+        let audioUnlocked = false;
+
+        // iOS requires AudioContext to be created and resumed during a user gesture
+        function unlockAudio() {
+            if (audioUnlocked && audioCtx && audioCtx.state === 'running') return true;
+
+            try {
+                // Create fresh AudioContext on each attempt
+                if (!audioCtx || audioCtx.state === 'closed') {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+
+                // Resume must happen during user gesture
+                const resumePromise = audioCtx.resume();
+
+                // Play test tone immediately (don't wait for promise)
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.value = 880; // Higher pitch, easier to hear
+                gain.gain.setValueAtTime(0.5, audioCtx.currentTime); // Louder
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.start(audioCtx.currentTime);
+                osc.stop(audioCtx.currentTime + 0.2);
+
+                audioUnlocked = true;
+                updateAudioUnlockUI();
+
+                // Log for debugging
+                console.log('Audio unlock attempted. State:', audioCtx.state);
+
+                return true;
+            } catch (err) {
+                console.error('Audio unlock error:', err);
+                // Show error to user
+                const msg = 'Audio error: ' + err.message + '\n\nTips:\n1. Make sure silent mode is OFF (check side switch)\n2. Turn up volume\n3. Try with headphones';
+                alert(msg);
+                return false;
+            }
+        }
+
+        function updateAudioUnlockUI() {
+            const unlockBtn = document.getElementById('audio-unlock-btn');
+            if (unlockBtn) {
+                unlockBtn.style.display = audioUnlocked ? 'none' : 'block';
+            }
+            // Also update floating controls if they exist
+            if (typeof updateFloatingControls === 'function') {
+                updateFloatingControls();
+            }
+        }
+
+        function initTheremin() {
+            // Try to unlock audio first
+            if (!unlockAudio()) {
+                // Audio not unlocked yet, show message
+                updateAudioUnlockUI();
+                return false;
+            }
+
+            if (!thereminOsc) {
+                thereminOsc = audioCtx.createOscillator();
+                thereminGain = audioCtx.createGain();
+                thereminOsc.connect(thereminGain);
+                thereminGain.connect(audioCtx.destination);
+                thereminOsc.type = 'sine';
+                thereminOsc.frequency.value = 440;
+                thereminGain.gain.value = 0;
+                thereminOsc.start();
+            }
+            return true;
+        }
+
+        // Calculate hand openness (0 = closed/curled, 1 = fully open)
+        function getHandOpenness(landmarks) {
+            // Check how extended each finger is by comparing tip to knuckle (MCP)
+            // When fingers are curled, tips are BELOW (higher Y) or AT the knuckles
+            // When fingers are extended, tips are ABOVE (lower Y) the knuckles
+
+            const mcps = [INDEX_MCP, MIDDLE_MCP, RING_MCP, PINKY_MCP];
+            const tips = [INDEX_TIP, MIDDLE_TIP, RING_TIP, PINKY_TIP];
+
+            let extendedCount = 0;
+            let totalExtension = 0;
+
+            for (let i = 0; i < 4; i++) {
+                const tipY = landmarks[tips[i]].y;
+                const mcpY = landmarks[mcps[i]].y;
+                const wristY = landmarks[WRIST].y;
+
+                // How far is the tip extended above the MCP relative to hand size
+                // Negative = finger curled, Positive = finger extended
+                const extension = mcpY - tipY;
+                const handSize = wristY - mcpY; // Rough hand height
+
+                if (handSize !== 0) {
+                    const normalizedExt = extension / Math.abs(handSize);
+                    // Finger is "extended" if tip is above MCP
+                    if (normalizedExt > 0.1) {
+                        extendedCount++;
+                        totalExtension += Math.min(1, normalizedExt);
+                    }
+                }
+            }
+
+            // Return 0 if no fingers extended, scale based on how many and how much
+            if (extendedCount === 0) return 0;
+            return Math.min(1, (extendedCount / 4) * (totalExtension / extendedCount));
+        }
+
+        function updateThereminTwoHands(rightOpenness, leftOpenness, hasRightHand, hasLeftHand) {
+            if (!thereminOsc) return;
+
+            // Right hand controls pitch with threshold
+            if (hasRightHand) {
+                const threshold = 0.15;
+                let freq = thereminSettings.minFreq;
+
+                if (rightOpenness > threshold) {
+                    // Scale remaining range to frequency
+                    const scaled = (rightOpenness - threshold) / (1 - threshold);
+                    const pitchNorm = Math.pow(scaled, 0.7); // Slight curve for smoother control
+                    freq = thereminSettings.minFreq + (pitchNorm * (thereminSettings.maxFreq - thereminSettings.minFreq));
+                }
+
+                thereminOsc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.02);
+                document.getElementById('theremin-freq').textContent = Math.round(freq) + ' Hz';
+            } else {
+                document.getElementById('theremin-freq').textContent = 'No hand';
+            }
+
+            // Left hand controls volume with hard cutoff
+            if (hasLeftHand) {
+                // Threshold: below 0.25 openness = completely silent
+                // Above 0.25, scale from 0 to max volume
+                const threshold = 0.25;
+                let vol = 0;
+                if (leftOpenness > threshold) {
+                    // Scale remaining range (0.25-1.0) to (0-0.5)
+                    vol = ((leftOpenness - threshold) / (1 - threshold)) * 0.5;
+                }
+                thereminGain.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.02);
+                document.getElementById('theremin-vol').textContent = vol > 0 ? Math.round(vol * 200) + '%' : 'Muted';
+                isThereminPlaying = vol > 0;
+            } else {
+                thereminGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+                document.getElementById('theremin-vol').textContent = 'No hand';
+                isThereminPlaying = false;
+            }
+        }
+
+        function stopTheremin() {
+            if (thereminGain) {
+                thereminGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.02);
+            }
+            document.getElementById('theremin-freq').textContent = '--';
+            document.getElementById('theremin-vol').textContent = '--';
+            isThereminPlaying = false;
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════════
+        // ROCK PAPER SCISSORS
+        // ═══════════════════════════════════════════════════════════════════════════
+        let rpsState = { wins: 0, ties: 0, losses: 0, playing: false, countdown: 0, countdownTimer: null };
+        const RPS_MOVES = ['rock', 'paper', 'scissors'];
+        const RPS_EMOJI = { rock: '✊', paper: '✋', scissors: '✌️' };
+
+        function detectRPSGesture(landmarks, fingerCount) {
+            if (fingerCount === 0) return 'rock';
+            if (fingerCount === 5) return 'paper';
+            const indexUp = landmarks[INDEX_TIP].y < landmarks[INDEX_MCP].y;
+            const middleUp = landmarks[MIDDLE_TIP].y < landmarks[MIDDLE_MCP].y;
+            if (indexUp && middleUp && fingerCount === 2) return 'scissors';
+            return null;
+        }
+
+        // Helper to update RPS display (both desktop and floating)
+        function updateRPSDisplay(yourMove, compMove, resultText) {
+            // Desktop elements
+            document.getElementById('rps-your-move').textContent = yourMove;
+            document.getElementById('rps-computer-move').textContent = compMove;
+            document.getElementById('rps-result-text').textContent = resultText;
+            // Floating elements (mobile)
+            const floatYour = document.getElementById('float-your-move');
+            const floatComp = document.getElementById('float-comp-move');
+            const floatResult = document.getElementById('float-rps-result');
+            if (floatYour) floatYour.textContent = yourMove;
+            if (floatComp) floatComp.textContent = compMove;
+            if (floatResult) floatResult.textContent = resultText;
+        }
+
+        function startRPSCountdown() {
+            // Clear any existing countdown
+            if (rpsState.countdownTimer) {
+                clearInterval(rpsState.countdownTimer);
+            }
+
+            rpsState.countdown = 3;
+            rpsState.playing = false;
+            updateRPSDisplay('3', '?', 'Get ready...');
+            document.getElementById('rps-play-btn').disabled = true;
+
+            rpsState.countdownTimer = setInterval(() => {
+                rpsState.countdown--;
+                if (rpsState.countdown > 0) {
+                    updateRPSDisplay(rpsState.countdown.toString(), '?', 'Get ready...');
+                } else if (rpsState.countdown === 0) {
+                    updateRPSDisplay('👊', '?', 'SHOW YOUR HAND!');
+                    rpsState.playing = true;
+                    clearInterval(rpsState.countdownTimer);
+                    rpsState.countdownTimer = null;
+                    document.getElementById('rps-play-btn').disabled = false;
+
+                    // Auto-timeout after 3 seconds if no valid gesture detected
+                    setTimeout(() => {
+                        if (rpsState.playing) {
+                            updateRPSDisplay('👊', '?', 'Timed out! Try again.');
+                            rpsState.playing = false;
+                        }
+                    }, 3000);
+                }
+            }, 1000);
+        }
+
+        function playRPS(playerMove) {
+            const computerMove = RPS_MOVES[Math.floor(Math.random() * 3)];
+            const yourEmoji = RPS_EMOJI[playerMove];
+            const compEmoji = RPS_EMOJI[computerMove];
+
+            let result;
+            if (playerMove === computerMove) {
+                result = "It's a tie!";
+                rpsState.ties++;
+            } else if (
+                (playerMove === 'rock' && computerMove === 'scissors') ||
+                (playerMove === 'paper' && computerMove === 'rock') ||
+                (playerMove === 'scissors' && computerMove === 'paper')
+            ) {
+                result = "You win!";
+                rpsState.wins++;
+            } else {
+                result = "You lose!";
+                rpsState.losses++;
+            }
+
+            // Update both desktop and floating displays
+            updateRPSDisplay(yourEmoji, compEmoji, result);
+
+            // Update score displays
+            document.getElementById('rps-wins').textContent = rpsState.wins;
+            document.getElementById('rps-ties').textContent = rpsState.ties;
+            document.getElementById('rps-losses').textContent = rpsState.losses;
+
+            rpsState.playing = false;
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════════
+        // AIR DRAWING
+        // ═══════════════════════════════════════════════════════════════════════════
+        let drawingCanvas, drawingCtx;
+        let drawingColor = '#00ffff';
+        let brushSize = 8;
+        let lastDrawPoint = null;
+        let isDrawing = false;
+
+        function initDrawingCanvas() {
+            drawingCanvas = document.createElement('canvas');
+            drawingCtx = drawingCanvas.getContext('2d');
+        }
+
+        function clearDrawing() {
+            if (drawingCtx) {
+                drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+            }
+        }
+
+        function drawLine(x1, y1, x2, y2, color, size) {
+            drawingCtx.beginPath();
+            drawingCtx.moveTo(x1, y1);
+            drawingCtx.lineTo(x2, y2);
+            drawingCtx.strokeStyle = color;
+            drawingCtx.lineWidth = size;
+            drawingCtx.lineCap = 'round';
+            drawingCtx.stroke();
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════════
+        // NOTES SYSTEM
+        // ═══════════════════════════════════════════════════════════════════════════
+        let notesCanvas, notesCtx;
+        let notesColor = '#00ffff';
+        let notesPenSize = 6;
+        let lastNotesPoint = null;
+        let notesTool = 'draw'; // draw, erase, pause - controlled by buttons
+        let textPlacementPos = null;
+        let lastNotesX = 0, lastNotesY = 0; // For text placement
+
+        function initNotesCanvas() {
+            notesCanvas = document.createElement('canvas');
+            notesCtx = notesCanvas.getContext('2d');
+        }
+
+        function clearNotes() {
+            if (notesCtx) {
+                notesCtx.clearRect(0, 0, notesCanvas.width, notesCanvas.height);
+            }
+        }
+
+        function downloadNotes() {
+            if (!notesCanvas) return;
+            // Create a temp canvas with white background + notes
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = notesCanvas.width || 1280;
+            tempCanvas.height = notesCanvas.height || 720;
+            const tempCtx = tempCanvas.getContext('2d');
+            // White background
+            tempCtx.fillStyle = '#ffffff';
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            // Draw notes on top
+            tempCtx.drawImage(notesCanvas, 0, 0);
+            // Download
+            const link = document.createElement('a');
+            link.download = 'handtrack-notes-' + Date.now() + '.jpg';
+            link.href = tempCanvas.toDataURL('image/jpeg', 0.9);
+            link.click();
+        }
+
+        function notesDrawLine(x1, y1, x2, y2, color, size) {
+            // Add glow effect
+            notesCtx.shadowColor = color;
+            notesCtx.shadowBlur = 15;
+            notesCtx.shadowOffsetX = 0;
+            notesCtx.shadowOffsetY = 0;
+
+            notesCtx.beginPath();
+            notesCtx.moveTo(x1, y1);
+            notesCtx.lineTo(x2, y2);
+            notesCtx.strokeStyle = color;
+            notesCtx.lineWidth = size;
+            notesCtx.lineCap = 'round';
+            notesCtx.stroke();
+
+            // Draw again without shadow for solid core
+            notesCtx.shadowBlur = 0;
+            notesCtx.stroke();
+        }
+
+        function notesErase(x, y, size) {
+            if (notesCtx) {
+                notesCtx.beginPath();
+                notesCtx.arc(x, y, size * 4, 0, Math.PI * 2);
+                notesCtx.globalCompositeOperation = 'destination-out';
+                notesCtx.fill();
+                notesCtx.globalCompositeOperation = 'source-over';
+            }
+        }
+
+        function addTextToNotes(text, x, y) {
+            if (notesCtx && text) {
+                // Add glow to text
+                notesCtx.shadowColor = notesColor;
+                notesCtx.shadowBlur = 15;
+                notesCtx.font = 'bold 28px sans-serif';
+                notesCtx.fillStyle = notesColor;
+                notesCtx.textAlign = 'center';
+                notesCtx.fillText(text, x, y);
+
+                // Draw again for solid core
+                notesCtx.shadowBlur = 0;
+                notesCtx.fillText(text, x, y);
+            }
+        }
+
+        // Simple check - is index finger pointing up?
+        function isIndexPointing(landmarks) {
+            const indexUp = landmarks[INDEX_TIP].y < landmarks[INDEX_MCP].y;
+            return indexUp;
+        }
+
+        // Is hand open (4+ fingers extended)?
+        function isHandOpen(landmarks) {
+            let extended = 0;
+            if (landmarks[INDEX_TIP].y < landmarks[INDEX_MCP].y) extended++;
+            if (landmarks[MIDDLE_TIP].y < landmarks[MIDDLE_MCP].y) extended++;
+            if (landmarks[RING_TIP].y < landmarks[RING_MCP].y) extended++;
+            if (landmarks[PINKY_TIP].y < landmarks[PINKY_MCP].y) extended++;
+            return extended >= 3;
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════════
+        // HAND DETECTION HELPERS
+        // ═══════════════════════════════════════════════════════════════════════════
+        function countExtendedFingers(landmarks, isRightHand) {
+            let count = 0;
+            // Thumb direction depends on which hand (after mirroring coordinates)
+            // Right hand: thumb extends to the LEFT (tip.x < mcp.x)
+            // Left hand: thumb extends to the RIGHT (tip.x > mcp.x)
+            if (isRightHand) {
+                if (landmarks[THUMB_TIP].x < landmarks[THUMB_MCP].x) count++;
+            } else {
+                if (landmarks[THUMB_TIP].x > landmarks[THUMB_MCP].x) count++;
+            }
+            // Other fingers: tip above (lower Y) than MCP = extended
+            for (let i = 1; i < 5; i++) {
+                if (landmarks[FINGERTIPS[i]].y < landmarks[[THUMB_MCP, INDEX_MCP, MIDDLE_MCP, RING_MCP, PINKY_MCP][i]].y) count++;
+            }
+            return count;
+        }
+
+        function detectGesture(landmarks, fingerCount) {
+            const indexUp = landmarks[INDEX_TIP].y < landmarks[INDEX_MCP].y;
+            const middleUp = landmarks[MIDDLE_TIP].y < landmarks[MIDDLE_MCP].y;
+            const ringUp = landmarks[RING_TIP].y < landmarks[RING_MCP].y;
+            const pinkyUp = landmarks[PINKY_TIP].y < landmarks[PINKY_MCP].y;
+            const thumbUp = landmarks[THUMB_TIP].y < landmarks[THUMB_MCP].y;
+
+            if (fingerCount === 0) return 'Fist';
+            if (fingerCount === 5) return 'Open Palm';
+            if (indexUp && !middleUp && !ringUp && !pinkyUp) return 'Pointing';
+            if (indexUp && middleUp && !ringUp && !pinkyUp) return 'Peace';
+            if (thumbUp && !indexUp && !middleUp && !ringUp && !pinkyUp) return 'Thumbs Up';
+            if (indexUp && pinkyUp && !middleUp && !ringUp) return 'Rock On';
+
+            // Pinch detection for drawing erase
+            const thumbIndex = Math.hypot(
+                landmarks[THUMB_TIP].x - landmarks[INDEX_TIP].x,
+                landmarks[THUMB_TIP].y - landmarks[INDEX_TIP].y
+            );
+            if (thumbIndex < 0.05) return 'Pinch';
+
+            return `${fingerCount} Fingers`;
+        }
+
+        function isPinching(landmarks) {
+            const dist = Math.hypot(
+                landmarks[THUMB_TIP].x - landmarks[INDEX_TIP].x,
+                landmarks[THUMB_TIP].y - landmarks[INDEX_TIP].y
+            );
+            return dist < 0.05;
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════════
+        // MAIN RENDER
+        // ═══════════════════════════════════════════════════════════════════════════
+        function onResults(results) {
+            // FPS counter
+            frameCount++;
+            const now = performance.now();
+            if (now - lastFrameTime >= 1000) {
+                fps = frameCount;
+                frameCount = 0;
+                lastFrameTime = now;
+                document.getElementById('fps').textContent = fps;
+                // Update mobile FPS
+                const mobileFps = document.getElementById('mobile-fps');
+                if (mobileFps) mobileFps.textContent = fps;
+            }
+
+            const w = results.image.width;
+            const h = results.image.height;
+            canvas.width = w;
+            canvas.height = h;
+
+            // Sync drawing canvas size
+            if (drawingCanvas && (drawingCanvas.width !== w || drawingCanvas.height !== h)) {
+                const temp = drawingCtx.getImageData(0, 0, drawingCanvas.width, drawingCanvas.height);
+                drawingCanvas.width = w;
+                drawingCanvas.height = h;
+                drawingCtx.putImageData(temp, 0, 0);
+            }
+
+            ctx.save();
+            ctx.clearRect(0, 0, w, h);
+
+            // Mirror the camera horizontally for natural interaction
+            ctx.translate(w, 0);
+            ctx.scale(-1, 1);
+
+            // Draw camera feed (dimmed for some modes)
+            if (currentMode === 'drawing' || currentMode === 'notes') {
+                ctx.globalAlpha = 0.3;
+            }
+            ctx.drawImage(results.image, 0, 0, w, h);
+            ctx.globalAlpha = 1.0;
+
+            // Restore transform for drawing overlays (they use mirrored coords)
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+            // Sync notes canvas size
+            if (notesCanvas && (notesCanvas.width !== w || notesCanvas.height !== h)) {
+                const temp = notesCtx.getImageData(0, 0, notesCanvas.width, notesCanvas.height);
+                notesCanvas.width = w;
+                notesCanvas.height = h;
+                notesCtx.putImageData(temp, 0, 0);
+            }
+
+            // Draw mode-specific overlays
+            if (currentMode === 'drawing' && drawingCanvas) {
+                ctx.drawImage(drawingCanvas, 0, 0);
+            }
+
+            if (currentMode === 'notes' && notesCanvas) {
+                ctx.drawImage(notesCanvas, 0, 0);
+            }
+
+            // Update particles
+            if (currentMode === 'particles') {
+                particles = particles.filter(p => p.life > 0);
+                particles.forEach(p => { p.update(); p.draw(ctx); });
+            }
+
+            // Process hands
+            const numHands = results.multiHandLandmarks?.length || 0;
+            document.getElementById('hands-count').textContent = numHands;
+            // Update floating status
+            const floatHands = document.getElementById('float-hands');
+            if (floatHands) floatHands.textContent = numHands;
+
+            if (results.multiHandLandmarks && results.multiHandedness) {
+                for (let i = 0; i < results.multiHandLandmarks.length; i++) {
+                    const rawLandmarks = results.multiHandLandmarks[i];
+                    // Mirror landmarks to match mirrored video
+                    const landmarks = rawLandmarks.map(lm => ({ x: 1 - lm.x, y: lm.y, z: lm.z }));
+                    const handedness = results.multiHandedness[i];
+                    // MediaPipe returns handedness from camera's view, but we mirror the display
+                    // So we need to swap: MediaPipe 'Left' = user's actual Right hand
+                    const isRightHand = handedness.label === 'Left';
+                    const fingerCount = countExtendedFingers(landmarks, isRightHand);
+                    const gesture = detectGesture(landmarks, fingerCount);
+
+                    if (i === 0) {
+                        document.getElementById('gesture').textContent = gesture;
+                        // Update mobile gesture
+                        const mobileGesture = document.getElementById('mobile-gesture');
+                        if (mobileGesture) mobileGesture.textContent = gesture;
+                        // Update floating status
+                        const floatGesture = document.getElementById('float-gesture');
+                        if (floatGesture) floatGesture.textContent = gesture;
+                    }
+
+                    // Mode-specific logic
+                    switch (currentMode) {
+                        case 'tracking':
+                            drawHandSkeleton(landmarks, isRightHand, w, h);
+                            // Draw finger count on screen with glow
+                            const handLabel = isRightHand ? 'R' : 'L';
+                            const countX = isRightHand ? w - 100 : 100;
+                            ctx.shadowColor = isRightHand ? '#00ff88' : '#00ffff';
+                            ctx.shadowBlur = 20;
+                            ctx.font = 'bold 72px Rajdhani, sans-serif';
+                            ctx.fillStyle = isRightHand ? '#00ff88' : '#00ffff';
+                            ctx.textAlign = 'center';
+                            ctx.fillText(fingerCount, countX, 80);
+                            ctx.font = 'bold 24px Rajdhani, sans-serif';
+                            ctx.fillText(handLabel + ' hand', countX, 110);
+                            ctx.shadowBlur = 0;
+                            break;
+
+                        case 'particles':
+                            drawHandSkeleton(landmarks, isRightHand, w, h);
+                            // Spawn particles at fingertips
+                            for (const tip of FINGERTIPS) {
+                                const x = landmarks[tip].x * w;
+                                const y = landmarks[tip].y * h;
+                                const colors = ['#00ffff', '#00ff88', '#ffff00', '#ff6600', '#ff44ff'];
+                                spawnParticles(x, y, 2, colors[FINGERTIPS.indexOf(tip)]);
+                            }
+                            // Explosion on fist
+                            if (gesture === 'Fist') {
+                                const wristX = landmarks[WRIST].x * w;
+                                const wristY = landmarks[WRIST].y * h;
+                                explodeParticles(wristX, wristY);
+                            }
+                            break;
+
+                        case 'theremin':
+                            // Just draw skeleton here, actual theremin processing happens after the loop
+                            drawHandSkeleton(landmarks, isRightHand, w, h);
+                            break;
+
+                        case 'rps':
+                            drawHandSkeleton(landmarks, isRightHand, w, h);
+                            if (rpsState.playing) {
+                                const move = detectRPSGesture(landmarks, fingerCount);
+                                if (move) {
+                                    playRPS(move);
+                                }
+                            }
+                            break;
+
+                        case 'drawing':
+                            const indexX = landmarks[INDEX_TIP].x * w;
+                            const indexY = landmarks[INDEX_TIP].y * h;
+
+                            // Draw cursor
+                            ctx.beginPath();
+                            ctx.arc(indexX, indexY, brushSize, 0, Math.PI * 2);
+                            ctx.fillStyle = drawingColor + '88';
+                            ctx.fill();
+                            ctx.strokeStyle = '#fff';
+                            ctx.lineWidth = 2;
+                            ctx.stroke();
+
+                            if (gesture === 'Pointing') {
+                                // Draw
+                                if (lastDrawPoint) {
+                                    drawLine(lastDrawPoint.x, lastDrawPoint.y, indexX, indexY, drawingColor, brushSize);
+                                }
+                                lastDrawPoint = { x: indexX, y: indexY };
+                            } else if (gesture === 'Pinch') {
+                                // Erase
+                                if (drawingCtx) {
+                                    drawingCtx.beginPath();
+                                    drawingCtx.arc(indexX, indexY, brushSize * 3, 0, Math.PI * 2);
+                                    drawingCtx.fillStyle = '#000';
+                                    drawingCtx.globalCompositeOperation = 'destination-out';
+                                    drawingCtx.fill();
+                                    drawingCtx.globalCompositeOperation = 'source-over';
+                                }
+                                lastDrawPoint = null;
+                            } else {
+                                lastDrawPoint = null;
+                            }
+                            break;
+
+                        case 'notes':
+                            const noteX = landmarks[INDEX_TIP].x * w;
+                            const noteY = landmarks[INDEX_TIP].y * h;
+
+                            // Store position for text placement
+                            textPlacementPos = { x: noteX, y: noteY };
+
+                            // Simple gesture detection:
+                            // - Index pointing (other fingers down) = DRAW
+                            // - Open hand (3+ fingers up) = PAUSE (move without drawing)
+                            // - Button override for ERASE mode
+
+                            const pointing = isIndexPointing(landmarks) && !isHandOpen(landmarks);
+                            const openHand = isHandOpen(landmarks);
+
+                            // Use button tool if set to erase, otherwise use gesture
+                            const effectiveTool = notesTool === 'erase' ? 'erase' : (pointing ? 'draw' : 'pause');
+
+                            if (effectiveTool === 'draw') {
+                                // Draw mode - pen cursor with glow
+                                ctx.shadowColor = notesColor;
+                                ctx.shadowBlur = 20;
+                                ctx.beginPath();
+                                ctx.arc(noteX, noteY, notesPenSize, 0, Math.PI * 2);
+                                ctx.fillStyle = notesColor;
+                                ctx.fill();
+                                ctx.shadowBlur = 0;
+
+                                // Actually draw
+                                if (lastNotesPoint) {
+                                    notesDrawLine(lastNotesPoint.x, lastNotesPoint.y, noteX, noteY, notesColor, notesPenSize);
+                                }
+                                lastNotesPoint = { x: noteX, y: noteY };
+                                document.getElementById('notes-mode').textContent = 'Drawing';
+
+                            } else if (effectiveTool === 'erase') {
+                                // Erase mode - eraser cursor with glow
+                                ctx.shadowColor = '#ff4444';
+                                ctx.shadowBlur = 25;
+                                ctx.beginPath();
+                                ctx.arc(noteX, noteY, notesPenSize * 4, 0, Math.PI * 2);
+                                ctx.strokeStyle = '#ff4444';
+                                ctx.lineWidth = 3;
+                                ctx.stroke();
+                                ctx.fillStyle = '#ff444444';
+                                ctx.fill();
+                                ctx.shadowBlur = 0;
+
+                                // Actually erase
+                                notesErase(noteX, noteY, notesPenSize);
+                                lastNotesPoint = null;
+                                document.getElementById('notes-mode').textContent = 'Erasing';
+
+                            } else {
+                                // Pause - show cursor with subtle glow
+                                ctx.shadowColor = '#ffffff';
+                                ctx.shadowBlur = 10;
+                                ctx.beginPath();
+                                ctx.arc(noteX, noteY, notesPenSize, 0, Math.PI * 2);
+                                ctx.fillStyle = notesColor + '66';
+                                ctx.fill();
+                                ctx.strokeStyle = '#fff';
+                                ctx.lineWidth = 1;
+                                ctx.stroke();
+                                ctx.shadowBlur = 0;
+                                lastNotesPoint = null;
+                                document.getElementById('notes-mode').textContent = 'Paused';
+                            }
+
+                            // Draw hand skeleton
+                            drawHandSkeleton(landmarks, isRightHand, w, h);
+                            break;
+                    }
+                }
+
+                // Theremin: process both hands together after the loop
+                if (currentMode === 'theremin') {
+                    initTheremin();
+                    let rightOpenness = 0, leftOpenness = 0;
+                    let hasRight = false, hasLeft = false;
+
+                    for (let i = 0; i < results.multiHandLandmarks.length; i++) {
+                        const rawLm = results.multiHandLandmarks[i];
+                        const lm = rawLm.map(l => ({ x: 1 - l.x, y: l.y, z: l.z }));
+                        const hand = results.multiHandedness[i];
+                        // Swap handedness since we mirror the display
+                        const isRight = hand.label === 'Left';
+
+                        const openness = getHandOpenness(lm);
+
+                        if (isRight) {
+                            rightOpenness = openness;
+                            hasRight = true;
+                        } else {
+                            leftOpenness = openness;
+                            hasLeft = true;
+                        }
+                    }
+
+                    updateThereminTwoHands(rightOpenness, leftOpenness, hasRight, hasLeft);
+                }
+            } else {
+                document.getElementById('gesture').textContent = '--';
+                // Update mobile gesture
+                const mobileGesture = document.getElementById('mobile-gesture');
+                if (mobileGesture) mobileGesture.textContent = '--';
+                // Update floating status
+                const floatGesture = document.getElementById('float-gesture');
+                if (floatGesture) floatGesture.textContent = '--';
+                lastDrawPoint = null;
+                lastNotesPoint = null;
+                // Stop theremin when no hand detected
+                if (currentMode === 'theremin') {
+                    stopTheremin();
+                }
+            }
+
+            ctx.restore();
+        }
+
+        function drawHandSkeleton(landmarks, isRightHand, w, h) {
+            const color = isRightHand ? '#00ff88' : '#00ffff';
+            const connections = [
+                [0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],
+                [0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],
+                [0,17],[17,18],[18,19],[19,20],[5,9],[9,13],[13,17]
+            ];
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            for (const [a, b] of connections) {
+                ctx.beginPath();
+                ctx.moveTo(landmarks[a].x * w, landmarks[a].y * h);
+                ctx.lineTo(landmarks[b].x * w, landmarks[b].y * h);
+                ctx.stroke();
+            }
+
+            for (let i = 0; i < landmarks.length; i++) {
+                const x = landmarks[i].x * w;
+                const y = landmarks[i].y * h;
+                const isTip = FINGERTIPS.includes(i);
+                ctx.beginPath();
+                ctx.arc(x, y, isTip ? 8 : 5, 0, Math.PI * 2);
+                ctx.fillStyle = isTip ? '#fff' : color;
+                ctx.fill();
+            }
+        }
+
+
+        // ═══════════════════════════════════════════════════════════════════════════
+        // UI SETUP
+        // ═══════════════════════════════════════════════════════════════════════════
+        async function init() {
+            console.log('Initializing...');
+
+            video = document.createElement('video');
+            video.autoplay = true;
+            video.playsInline = true;
+            video.muted = true;
+            video.style.display = 'none';
+            document.body.appendChild(video);
+
+            canvas = document.getElementById('canvas');
+            ctx = canvas.getContext('2d');
+            initDrawingCanvas();
+            initNotesCanvas();
+
+            hands = new Hands({
+                locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+            });
+            hands.setOptions({
+                maxNumHands: 2,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.75,
+                minTrackingConfidence: 0.5
+            });
+            hands.onResults(onResults);
+
+            // Mode selector is handled by selectMode() function defined later
+
+            // Camera button
+            document.getElementById('camera-btn').addEventListener('click', toggleCamera);
+
+            // Sliders
+            document.getElementById('detection-conf').addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                document.getElementById('detection-conf-value').textContent = val.toFixed(2);
+                hands.setOptions({ minDetectionConfidence: val, minTrackingConfidence: val - 0.15 });
+            });
+
+            document.getElementById('particle-count').addEventListener('input', (e) => {
+                particleSettings.count = parseInt(e.target.value);
+                document.getElementById('particle-count-value').textContent = e.target.value;
+            });
+
+            document.getElementById('trail-length').addEventListener('input', (e) => {
+                particleSettings.trailLength = parseInt(e.target.value);
+                document.getElementById('trail-length-value').textContent = e.target.value;
+            });
+
+            document.getElementById('brush-size').addEventListener('input', (e) => {
+                brushSize = parseInt(e.target.value);
+                document.getElementById('brush-size-value').textContent = e.target.value;
+            });
+
+            // Theremin sliders
+            document.getElementById('min-freq').addEventListener('input', (e) => {
+                thereminSettings.minFreq = parseInt(e.target.value);
+                document.getElementById('min-freq-value').textContent = e.target.value;
+            });
+
+            document.getElementById('max-freq').addEventListener('input', (e) => {
+                thereminSettings.maxFreq = parseInt(e.target.value);
+                document.getElementById('max-freq-value').textContent = e.target.value;
+            });
+
+            // Color picker
+            document.querySelectorAll('.color-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    drawingColor = btn.dataset.color;
+                });
+            });
+
+            // Clear drawing
+            document.getElementById('clear-drawing-btn').addEventListener('click', clearDrawing);
+
+            // RPS play button - starts countdown
+            document.getElementById('rps-play-btn').addEventListener('click', () => {
+                startRPSCountdown();
+            });
+
+            // Notes controls
+            document.getElementById('notes-pen-size').addEventListener('input', (e) => {
+                notesPenSize = parseInt(e.target.value);
+                document.getElementById('notes-pen-size-value').textContent = e.target.value;
+            });
+
+            document.querySelectorAll('#notes-colors .color-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('#notes-colors .color-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    notesColor = btn.dataset.color;
+                });
+            });
+
+            document.getElementById('clear-notes-btn').addEventListener('click', clearNotes);
+            document.getElementById('download-notes-btn').addEventListener('click', downloadNotes);
+
+            // Erase button - toggle between draw and erase mode
+            const eraseBtn = document.getElementById('notes-tool-erase');
+            eraseBtn.addEventListener('click', () => {
+                if (notesTool === 'erase') {
+                    notesTool = 'draw';
+                    lastNotesPoint = null;
+                    eraseBtn.style.background = 'var(--danger)';
+                    eraseBtn.style.borderColor = 'var(--danger)';
+                    eraseBtn.textContent = '🧹 Toggle Erase Mode';
+                } else {
+                    notesTool = 'erase';
+                    lastNotesPoint = null;
+                    eraseBtn.style.background = '#ff0000';
+                    eraseBtn.style.borderColor = '#ff0000';
+                    eraseBtn.style.boxShadow = '0 0 20px rgba(255,0,0,0.5)';
+                    eraseBtn.textContent = '🧹 ERASE MODE ON';
+                }
+            });
+
+            document.getElementById('notes-add-text').addEventListener('click', () => {
+                const text = document.getElementById('notes-text').value;
+                if (text && textPlacementPos) {
+                    addTextToNotes(text, textPlacementPos.x, textPlacementPos.y);
+                    document.getElementById('notes-text').value = '';
+                }
+            });
+
+            document.getElementById('notes-text').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    document.getElementById('notes-add-text').click();
+                }
+            });
+
+            // Audio unlock button - explicit user gesture for iOS
+            document.getElementById('audio-unlock-btn').addEventListener('click', () => {
+                unlockAudio();
+                // Force oscillator creation after unlock
+                if (audioUnlocked) {
+                    initTheremin();
+                    updateFloatingControls(); // Refresh to hide unlock button
+                }
+            });
+
+            // Also try to unlock audio on any user interaction (for iOS)
+            const tryUnlockAudio = () => {
+                if (!audioUnlocked && currentMode === 'theremin') {
+                    unlockAudio();
+                }
+            };
+            document.addEventListener('touchstart', tryUnlockAudio, { passive: true });
+            document.addEventListener('touchend', tryUnlockAudio, { passive: true });
+            document.addEventListener('click', tryUnlockAudio, { passive: true });
+
+            // ═══════════════════════════════════════════════════════════════════════════
+            // MOBILE MENU FUNCTIONALITY
+            // ═══════════════════════════════════════════════════════════════════════════
+            const mobileMenu = document.getElementById('mobile-menu');
+            const mobileOverlay = document.getElementById('mobile-menu-overlay');
+            const menuBtn = document.getElementById('toolbar-menu');
+
+            function openMobileMenu() {
+                mobileMenu.classList.add('open');
+                mobileOverlay.classList.add('visible');
+                updateMobileControls();
+            }
+
+            function closeMobileMenu() {
+                mobileMenu.classList.remove('open');
+                mobileOverlay.classList.remove('visible');
+            }
+
+            menuBtn?.addEventListener('click', openMobileMenu);
+            mobileOverlay?.addEventListener('click', closeMobileMenu);
+
+            // Mobile camera button (toolbar)
+            document.getElementById('toolbar-camera')?.addEventListener('click', toggleCamera);
+
+            // Mobile camera button (in menu)
+            document.getElementById('mobile-camera-btn')?.addEventListener('click', () => {
+                toggleCamera();
+                updateMobileCameraBtn();
+            });
+
+            function updateMobileCameraBtn() {
+                const btn = document.getElementById('mobile-camera-btn');
+                if (btn) {
+                    btn.textContent = isRunning ? '📷 Stop Camera' : '📷 Start Camera';
+                }
+            }
+
+            // Mobile mode selection
+            document.querySelectorAll('.mobile-mode-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const mode = btn.dataset.mode;
+                    selectMode(mode);
+                    closeMobileMenu();
+                });
+            });
+
+            // Common mode selection function (updates both desktop and mobile)
+            function selectMode(mode) {
+                // Stop theremin when switching away
+                if (currentMode === 'theremin') {
+                    stopTheremin();
+                }
+
+                currentMode = mode;
+
+                // Update desktop buttons
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector(`.mode-btn[data-mode="${mode}"]`)?.classList.add('active');
+
+                // Update desktop info panels
+                document.querySelectorAll('.mode-info').forEach(info => info.classList.remove('active'));
+                document.getElementById(`info-${mode}`)?.classList.add('active');
+
+                // Update mobile buttons
+                document.querySelectorAll('.mobile-mode-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector(`.mobile-mode-btn[data-mode="${mode}"]`)?.classList.add('active');
+
+                // Update toolbar
+                const modeIcons = { tracking: '👆', particles: '✨', theremin: '🎵', rps: '✊', drawing: '🎨', notes: '📝' };
+                const modeNames = { tracking: 'Tracking', particles: 'Particles', theremin: 'Theremin', rps: 'RPS Game', drawing: 'Air Draw', notes: 'Notes' };
+                document.getElementById('toolbar-mode-icon').textContent = modeIcons[mode] || '👆';
+                document.getElementById('toolbar-mode-name').textContent = modeNames[mode] || 'Tracking';
+
+                // Reset state
+                particles = [];
+                lastDrawPoint = null;
+                lastNotesPoint = null;
+
+                // Update floating controls (mobile)
+                updateFloatingControls();
+            }
+
+            // ═══════════════════════════════════════════════════════════════════════════
+            // FLOATING CONTROLS (mode-specific buttons on main screen)
+            // ═══════════════════════════════════════════════════════════════════════════
+            function updateFloatingControls() {
+                const container = document.getElementById('floating-controls');
+                if (!container) return;
+
+                let html = '';
+
+                switch (currentMode) {
+                    case 'theremin':
+                        if (!audioUnlocked) {
+                            html = `<button class="float-btn success" id="float-audio-unlock">🔊 TAP TO ENABLE SOUND</button>`;
+                        } else {
+                            html = `<span class="float-btn primary">🎵 Playing</span>`;
+                        }
+                        break;
+
+                    case 'rps':
+                        const yourMove = document.getElementById('rps-your-move')?.textContent || '?';
+                        const compMove = document.getElementById('rps-computer-move')?.textContent || '?';
+                        const resultText = document.getElementById('rps-result-text')?.textContent || 'Tap Play!';
+                        html = `
+                            <div class="float-rps-game">
+                                <div class="float-rps-moves">
+                                    <div class="float-rps-player">
+                                        <span class="float-rps-label">YOU</span>
+                                        <span class="float-rps-move" id="float-your-move">${yourMove}</span>
+                                    </div>
+                                    <span class="float-rps-vs">vs</span>
+                                    <div class="float-rps-player">
+                                        <span class="float-rps-label">CPU</span>
+                                        <span class="float-rps-move" id="float-comp-move">${compMove}</span>
+                                    </div>
+                                </div>
+                                <div class="float-rps-result" id="float-rps-result">${resultText}</div>
+                            </div>
+                            <button class="float-btn primary" id="float-rps-play">▶️ Play</button>
+                            <span class="float-btn">🏆 ${rpsState.wins}-${rpsState.ties}-${rpsState.losses}</span>
+                        `;
+                        break;
+
+                    case 'drawing':
+                        html = `
+                            <div class="float-color-picker">
+                                <div class="float-color ${drawingColor === '#00ffff' ? 'active' : ''}" data-color="#00ffff" style="background: #00ffff;"></div>
+                                <div class="float-color ${drawingColor === '#00ff88' ? 'active' : ''}" data-color="#00ff88" style="background: #00ff88;"></div>
+                                <div class="float-color ${drawingColor === '#ffff00' ? 'active' : ''}" data-color="#ffff00" style="background: #ffff00;"></div>
+                                <div class="float-color ${drawingColor === '#ff6600' ? 'active' : ''}" data-color="#ff6600" style="background: #ff6600;"></div>
+                                <div class="float-color ${drawingColor === '#ff44ff' ? 'active' : ''}" data-color="#ff44ff" style="background: #ff44ff;"></div>
+                                <div class="float-color ${drawingColor === '#ffffff' ? 'active' : ''}" data-color="#ffffff" style="background: #ffffff;"></div>
+                            </div>
+                            <button class="float-btn danger" id="float-clear-drawing">🗑️ Clear</button>
+                        `;
+                        break;
+
+                    case 'notes':
+                        html = `
+                            <div class="float-color-picker" id="float-notes-colors">
+                                <div class="float-color float-note-color ${notesColor === '#00ffff' ? 'active' : ''}" data-color="#00ffff" style="background: #00ffff;"></div>
+                                <div class="float-color float-note-color ${notesColor === '#00ff88' ? 'active' : ''}" data-color="#00ff88" style="background: #00ff88;"></div>
+                                <div class="float-color float-note-color ${notesColor === '#ffff00' ? 'active' : ''}" data-color="#ffff00" style="background: #ffff00;"></div>
+                                <div class="float-color float-note-color ${notesColor === '#ff6600' ? 'active' : ''}" data-color="#ff6600" style="background: #ff6600;"></div>
+                                <div class="float-color float-note-color ${notesColor === '#ffffff' ? 'active' : ''}" data-color="#ffffff" style="background: #ffffff;"></div>
+                            </div>
+                            <button class="float-btn ${notesTool === 'erase' ? 'active' : 'danger'}" id="float-erase-toggle">🧹 ${notesTool === 'erase' ? 'ERASING' : 'Erase'}</button>
+                            <button class="float-btn" id="float-clear-notes">🗑️</button>
+                            <button class="float-btn primary" id="float-save-notes">💾</button>
+                        `;
+                        break;
+
+                    case 'particles':
+                        html = `<span class="float-btn">✨ Make a fist for explosion!</span>`;
+                        break;
+
+                    default: // tracking
+                        html = ''; // No floating controls needed
+                }
+
+                container.innerHTML = html;
+                attachFloatingListeners();
+            }
+
+            function attachFloatingListeners() {
+                // Audio unlock
+                document.getElementById('float-audio-unlock')?.addEventListener('click', () => {
+                    unlockAudio();
+                    if (audioUnlocked) {
+                        initTheremin();
+                        updateFloatingControls();
+                    }
+                });
+
+                // RPS play
+                document.getElementById('float-rps-play')?.addEventListener('click', () => {
+                    startRPSCountdown();
+                });
+
+                // Drawing colors
+                document.querySelectorAll('#floating-controls .float-color:not(.float-note-color)').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        drawingColor = btn.dataset.color;
+                        updateFloatingControls();
+                        // Sync desktop
+                        document.querySelectorAll('#info-drawing .color-btn').forEach(b => {
+                            b.classList.toggle('active', b.dataset.color === drawingColor);
+                        });
+                    });
+                });
+
+                // Clear drawing
+                document.getElementById('float-clear-drawing')?.addEventListener('click', clearDrawing);
+
+                // Notes colors
+                document.querySelectorAll('.float-note-color').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        notesColor = btn.dataset.color;
+                        updateFloatingControls();
+                        // Sync desktop
+                        document.querySelectorAll('#notes-colors .color-btn').forEach(b => {
+                            b.classList.toggle('active', b.dataset.color === notesColor);
+                        });
+                    });
+                });
+
+                // Notes erase toggle
+                document.getElementById('float-erase-toggle')?.addEventListener('click', () => {
+                    notesTool = notesTool === 'erase' ? 'draw' : 'erase';
+                    lastNotesPoint = null;
+                    updateFloatingControls();
+                    // Sync desktop
+                    const desktopBtn = document.getElementById('notes-tool-erase');
+                    if (desktopBtn) {
+                        if (notesTool === 'erase') {
+                            desktopBtn.style.background = '#ff0000';
+                            desktopBtn.style.borderColor = '#ff0000';
+                            desktopBtn.textContent = '🧹 ERASE MODE ON';
+                        } else {
+                            desktopBtn.style.background = 'var(--danger)';
+                            desktopBtn.style.borderColor = 'var(--danger)';
+                            desktopBtn.textContent = '🧹 Toggle Erase Mode';
+                        }
+                    }
+                });
+
+                // Clear notes
+                document.getElementById('float-clear-notes')?.addEventListener('click', clearNotes);
+
+                // Save notes
+                document.getElementById('float-save-notes')?.addEventListener('click', downloadNotes);
+            }
+
+            // Mode-specific controls for mobile menu
+            function updateMobileControls() {
+                const container = document.getElementById('mobile-mode-controls-section');
+                if (!container) return;
+
+                let html = '';
+
+                switch (currentMode) {
+                    case 'theremin':
+                        html = `
+                            <div class="mobile-mode-controls">
+                                <h4>🎵 Theremin Controls</h4>
+                                <button id="mobile-audio-unlock" style="background: var(--success); border-color: var(--success); color: #000; margin-bottom: 10px;">
+                                    🔊 Tap to Enable Sound
+                                </button>
+                                <div class="mobile-slider">
+                                    <label><span>Min Frequency</span><span id="m-min-freq-val">${thereminSettings.minFreq}</span></label>
+                                    <input type="range" id="m-min-freq" min="50" max="300" value="${thereminSettings.minFreq}">
+                                </div>
+                                <div class="mobile-slider">
+                                    <label><span>Max Frequency</span><span id="m-max-freq-val">${thereminSettings.maxFreq}</span></label>
+                                    <input type="range" id="m-max-freq" min="400" max="2000" value="${thereminSettings.maxFreq}">
+                                </div>
+                            </div>`;
+                        break;
+
+                    case 'rps':
+                        html = `
+                            <div class="mobile-mode-controls">
+                                <h4>✊ Rock Paper Scissors</h4>
+                                <button id="mobile-rps-play" style="margin-bottom: 10px;">▶️ Play Round</button>
+                                <div style="display: flex; justify-content: space-around; text-align: center;">
+                                    <div><div style="font-size: 24px; color: var(--success);">${rpsState.wins}</div><div style="font-size: 10px; color: var(--text-dim);">Wins</div></div>
+                                    <div><div style="font-size: 24px; color: var(--accent);">${rpsState.ties}</div><div style="font-size: 10px; color: var(--text-dim);">Ties</div></div>
+                                    <div><div style="font-size: 24px; color: var(--danger);">${rpsState.losses}</div><div style="font-size: 10px; color: var(--text-dim);">Losses</div></div>
+                                </div>
+                            </div>`;
+                        break;
+
+                    case 'drawing':
+                        html = `
+                            <div class="mobile-mode-controls">
+                                <h4>🎨 Drawing Controls</h4>
+                                <div class="mobile-color-picker">
+                                    <div class="mobile-color-btn ${drawingColor === '#00ffff' ? 'active' : ''}" data-color="#00ffff" style="background: #00ffff;"></div>
+                                    <div class="mobile-color-btn ${drawingColor === '#00ff88' ? 'active' : ''}" data-color="#00ff88" style="background: #00ff88;"></div>
+                                    <div class="mobile-color-btn ${drawingColor === '#ffff00' ? 'active' : ''}" data-color="#ffff00" style="background: #ffff00;"></div>
+                                    <div class="mobile-color-btn ${drawingColor === '#ff6600' ? 'active' : ''}" data-color="#ff6600" style="background: #ff6600;"></div>
+                                    <div class="mobile-color-btn ${drawingColor === '#ff44ff' ? 'active' : ''}" data-color="#ff44ff" style="background: #ff44ff;"></div>
+                                    <div class="mobile-color-btn ${drawingColor === '#ffffff' ? 'active' : ''}" data-color="#ffffff" style="background: #ffffff;"></div>
+                                </div>
+                                <div class="mobile-slider">
+                                    <label><span>Brush Size</span><span id="m-brush-val">${brushSize}</span></label>
+                                    <input type="range" id="m-brush-size" min="2" max="30" value="${brushSize}">
+                                </div>
+                                <button id="mobile-clear-drawing" style="margin-top: 8px;">🗑️ Clear Canvas</button>
+                            </div>`;
+                        break;
+
+                    case 'notes':
+                        html = `
+                            <div class="mobile-mode-controls">
+                                <h4>📝 Notes Controls</h4>
+                                <div class="mobile-color-picker">
+                                    <div class="mobile-color-btn mobile-notes-color ${notesColor === '#00ffff' ? 'active' : ''}" data-color="#00ffff" style="background: #00ffff;"></div>
+                                    <div class="mobile-color-btn mobile-notes-color ${notesColor === '#00ff88' ? 'active' : ''}" data-color="#00ff88" style="background: #00ff88;"></div>
+                                    <div class="mobile-color-btn mobile-notes-color ${notesColor === '#ffff00' ? 'active' : ''}" data-color="#ffff00" style="background: #ffff00;"></div>
+                                    <div class="mobile-color-btn mobile-notes-color ${notesColor === '#ff6600' ? 'active' : ''}" data-color="#ff6600" style="background: #ff6600;"></div>
+                                    <div class="mobile-color-btn mobile-notes-color ${notesColor === '#ffffff' ? 'active' : ''}" data-color="#ffffff" style="background: #ffffff;"></div>
+                                </div>
+                                <div class="mobile-slider">
+                                    <label><span>Pen Size</span><span id="m-pen-val">${notesPenSize}</span></label>
+                                    <input type="range" id="m-pen-size" min="2" max="20" value="${notesPenSize}">
+                                </div>
+                                <button id="mobile-erase-toggle" style="background: ${notesTool === 'erase' ? '#ff0000' : 'var(--danger)'}; border-color: ${notesTool === 'erase' ? '#ff0000' : 'var(--danger)'}; margin-bottom: 8px;">
+                                    🧹 ${notesTool === 'erase' ? 'ERASE MODE ON' : 'Toggle Erase Mode'}
+                                </button>
+                                <div class="mobile-btn-group">
+                                    <button id="mobile-clear-notes">🗑️ Clear</button>
+                                    <button id="mobile-download-notes" style="background: var(--accent-dim); border-color: var(--accent-bright); color: var(--accent-bright);">💾 Save JPG</button>
+                                </div>
+                            </div>`;
+                        break;
+
+                    case 'particles':
+                        html = `
+                            <div class="mobile-mode-controls">
+                                <h4>✨ Particle Settings</h4>
+                                <div class="mobile-slider">
+                                    <label><span>Particle Count</span><span id="m-particle-val">${particleSettings.count}</span></label>
+                                    <input type="range" id="m-particle-count" min="10" max="200" value="${particleSettings.count}">
+                                </div>
+                                <div class="mobile-slider">
+                                    <label><span>Trail Length</span><span id="m-trail-val">${particleSettings.trailLength}</span></label>
+                                    <input type="range" id="m-trail-length" min="5" max="50" value="${particleSettings.trailLength}">
+                                </div>
+                            </div>`;
+                        break;
+
+                    default:
+                        html = `
+                            <div class="mobile-mode-controls">
+                                <h4>👆 Tracking Mode</h4>
+                                <p style="font-size: 12px; color: var(--text-dim);">Show your hands to see 21 landmarks tracked in real-time.</p>
+                            </div>`;
+                }
+
+                container.innerHTML = html;
+
+                // Attach event listeners to dynamically created elements
+                attachMobileControlListeners();
+            }
+
+            function attachMobileControlListeners() {
+                // Audio unlock
+                document.getElementById('mobile-audio-unlock')?.addEventListener('click', () => {
+                    unlockAudio();
+                    if (audioUnlocked) {
+                        initTheremin();
+                        document.getElementById('mobile-audio-unlock').style.display = 'none';
+                    }
+                });
+
+                // Theremin sliders
+                document.getElementById('m-min-freq')?.addEventListener('input', (e) => {
+                    thereminSettings.minFreq = parseInt(e.target.value);
+                    document.getElementById('m-min-freq-val').textContent = e.target.value;
+                    document.getElementById('min-freq').value = e.target.value;
+                    document.getElementById('min-freq-value').textContent = e.target.value;
+                });
+
+                document.getElementById('m-max-freq')?.addEventListener('input', (e) => {
+                    thereminSettings.maxFreq = parseInt(e.target.value);
+                    document.getElementById('m-max-freq-val').textContent = e.target.value;
+                    document.getElementById('max-freq').value = e.target.value;
+                    document.getElementById('max-freq-value').textContent = e.target.value;
+                });
+
+                // RPS play
+                document.getElementById('mobile-rps-play')?.addEventListener('click', () => {
+                    startRPSCountdown();
+                    closeMobileMenu();
+                });
+
+                // Drawing color
+                document.querySelectorAll('.mobile-color-btn:not(.mobile-notes-color)').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.mobile-color-btn:not(.mobile-notes-color)').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        drawingColor = btn.dataset.color;
+                        // Sync with desktop
+                        document.querySelectorAll('#info-drawing .color-btn').forEach(b => {
+                            b.classList.toggle('active', b.dataset.color === drawingColor);
+                        });
+                    });
+                });
+
+                // Drawing brush size
+                document.getElementById('m-brush-size')?.addEventListener('input', (e) => {
+                    brushSize = parseInt(e.target.value);
+                    document.getElementById('m-brush-val').textContent = e.target.value;
+                    document.getElementById('brush-size').value = e.target.value;
+                    document.getElementById('brush-size-value').textContent = e.target.value;
+                });
+
+                // Clear drawing
+                document.getElementById('mobile-clear-drawing')?.addEventListener('click', clearDrawing);
+
+                // Notes color
+                document.querySelectorAll('.mobile-notes-color').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.mobile-notes-color').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        notesColor = btn.dataset.color;
+                        // Sync with desktop
+                        document.querySelectorAll('#notes-colors .color-btn').forEach(b => {
+                            b.classList.toggle('active', b.dataset.color === notesColor);
+                        });
+                    });
+                });
+
+                // Notes pen size
+                document.getElementById('m-pen-size')?.addEventListener('input', (e) => {
+                    notesPenSize = parseInt(e.target.value);
+                    document.getElementById('m-pen-val').textContent = e.target.value;
+                    document.getElementById('notes-pen-size').value = e.target.value;
+                    document.getElementById('notes-pen-size-value').textContent = e.target.value;
+                });
+
+                // Notes erase toggle
+                document.getElementById('mobile-erase-toggle')?.addEventListener('click', () => {
+                    if (notesTool === 'erase') {
+                        notesTool = 'draw';
+                    } else {
+                        notesTool = 'erase';
+                    }
+                    lastNotesPoint = null;
+                    updateMobileControls();
+                    // Sync with desktop button
+                    const desktopBtn = document.getElementById('notes-tool-erase');
+                    if (desktopBtn) {
+                        if (notesTool === 'erase') {
+                            desktopBtn.style.background = '#ff0000';
+                            desktopBtn.style.borderColor = '#ff0000';
+                            desktopBtn.textContent = '🧹 ERASE MODE ON';
+                        } else {
+                            desktopBtn.style.background = 'var(--danger)';
+                            desktopBtn.style.borderColor = 'var(--danger)';
+                            desktopBtn.textContent = '🧹 Toggle Erase Mode';
+                        }
+                    }
+                });
+
+                // Clear notes
+                document.getElementById('mobile-clear-notes')?.addEventListener('click', clearNotes);
+
+                // Download notes
+                document.getElementById('mobile-download-notes')?.addEventListener('click', downloadNotes);
+
+                // Particle count
+                document.getElementById('m-particle-count')?.addEventListener('input', (e) => {
+                    particleSettings.count = parseInt(e.target.value);
+                    document.getElementById('m-particle-val').textContent = e.target.value;
+                    document.getElementById('particle-count').value = e.target.value;
+                    document.getElementById('particle-count-value').textContent = e.target.value;
+                });
+
+                // Trail length
+                document.getElementById('m-trail-length')?.addEventListener('input', (e) => {
+                    particleSettings.trailLength = parseInt(e.target.value);
+                    document.getElementById('m-trail-val').textContent = e.target.value;
+                    document.getElementById('trail-length').value = e.target.value;
+                    document.getElementById('trail-length-value').textContent = e.target.value;
+                });
+            }
+
+            // Update mode when desktop buttons are clicked (sync with mobile)
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    selectMode(btn.dataset.mode);
+                });
+            });
+
+            console.log('Initialized');
+        }
+
+        async function toggleCamera() {
+            const cameraBtn = document.getElementById('camera-btn');
+            const statusIndicator = document.getElementById('camera-status');
+            const statusText = document.getElementById('camera-status-text');
+            const noCamera = document.getElementById('no-camera');
+
+            if (isRunning) {
+                if (camera) { camera.stop(); camera = null; }
+                isRunning = false;
+                cameraBtn.textContent = 'Start Camera';
+                statusIndicator.classList.replace('active', 'inactive');
+                statusText.textContent = 'Off';
+                noCamera.style.display = 'block';
+                canvas.style.display = 'none';
+                // Update mobile camera button
+                const mobileCamBtn = document.getElementById('mobile-camera-btn');
+                if (mobileCamBtn) mobileCamBtn.textContent = '📷 Start Camera';
+            } else {
+                try {
+                    cameraBtn.disabled = true;
+                    cameraBtn.textContent = 'Loading ML Model...';
+                    statusText.textContent = 'Loading...';
+
+                    camera = new Camera(video, {
+                        onFrame: async () => { if (isRunning) await hands.send({ image: video }); },
+                        width: 1280,
+                        height: 720
+                    });
+
+                    await camera.start();
+                    isRunning = true;
+
+                    cameraBtn.textContent = 'Stop Camera';
+                    cameraBtn.disabled = false;
+                    statusIndicator.classList.replace('inactive', 'active');
+                    statusText.textContent = 'On';
+                    noCamera.style.display = 'none';
+                    canvas.style.display = 'block';
+                    // Update mobile camera button
+                    const mobileCamBtn = document.getElementById('mobile-camera-btn');
+                    if (mobileCamBtn) mobileCamBtn.textContent = '📷 Stop Camera';
+                } catch (err) {
+                    console.error('Camera error:', err);
+                    alert('Failed to start camera: ' + err.message);
+                    cameraBtn.textContent = 'Start Camera';
+                    cameraBtn.disabled = false;
+                    statusText.textContent = 'Error';
+                }
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

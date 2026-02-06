@@ -1,11 +1,11 @@
 //! Mesh generation for box geometry
 
-use glam::{Vec3, Vec4, Mat4};
+use glam::{Mat4, Vec3, Vec4};
 use web_sys::{WebGl2RenderingContext, WebGlBuffer};
 
 /// Simple mesh for rendering
 pub struct Mesh {
-    pub vertices: Vec<f32>,   // positions + normals (6 floats per vertex)
+    pub vertices: Vec<f32>, // positions + normals (6 floats per vertex)
     pub indices: Vec<u16>,
 }
 
@@ -13,15 +13,19 @@ impl Mesh {
     /// Apply a transformation matrix to the mesh
     pub fn transformed(&self, transform: &Mat4) -> Self {
         let mut new_vertices = Vec::with_capacity(self.vertices.len());
-        
+
         for i in (0..self.vertices.len()).step_by(6) {
-            let pos = Vec3::new(self.vertices[i], self.vertices[i+1], self.vertices[i+2]);
-            let normal = Vec3::new(self.vertices[i+3], self.vertices[i+4], self.vertices[i+5]);
-            
+            let pos = Vec3::new(self.vertices[i], self.vertices[i + 1], self.vertices[i + 2]);
+            let normal = Vec3::new(
+                self.vertices[i + 3],
+                self.vertices[i + 4],
+                self.vertices[i + 5],
+            );
+
             let new_pos = transform.transform_point3(pos);
             // transform_vector3 ignores translation, good for normals
             let new_normal = transform.transform_vector3(normal).normalize();
-            
+
             new_vertices.push(new_pos.x);
             new_vertices.push(new_pos.y);
             new_vertices.push(new_pos.z);
@@ -29,7 +33,7 @@ impl Mesh {
             new_vertices.push(new_normal.y);
             new_vertices.push(new_normal.z);
         }
-        
+
         Self {
             vertices: new_vertices,
             indices: self.indices.clone(),
@@ -107,19 +111,15 @@ pub struct MeshBuffer {
 impl MeshBuffer {
     /// Upload mesh to GPU
     pub fn from_mesh(gl: &WebGl2RenderingContext, mesh: &Mesh) -> Result<Self, String> {
-        use wasm_bindgen::JsCast;
         use js_sys::{Float32Array, Uint16Array};
+        use wasm_bindgen::JsCast;
 
         // Create vertex buffer
-        let vertex_buffer = gl
-            .create_buffer()
-            .ok_or("Failed to create vertex buffer")?;
+        let vertex_buffer = gl.create_buffer().ok_or("Failed to create vertex buffer")?;
 
         gl.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&vertex_buffer));
 
-        let vertex_array = unsafe {
-            Float32Array::view(&mesh.vertices)
-        };
+        let vertex_array = unsafe { Float32Array::view(&mesh.vertices) };
         gl.buffer_data_with_array_buffer_view(
             WebGl2RenderingContext::ARRAY_BUFFER,
             &vertex_array,
@@ -127,15 +127,14 @@ impl MeshBuffer {
         );
 
         // Create index buffer
-        let index_buffer = gl
-            .create_buffer()
-            .ok_or("Failed to create index buffer")?;
+        let index_buffer = gl.create_buffer().ok_or("Failed to create index buffer")?;
 
-        gl.bind_buffer(WebGl2RenderingContext::ELEMENT_ARRAY_BUFFER, Some(&index_buffer));
+        gl.bind_buffer(
+            WebGl2RenderingContext::ELEMENT_ARRAY_BUFFER,
+            Some(&index_buffer),
+        );
 
-        let index_array = unsafe {
-            Uint16Array::view(&mesh.indices)
-        };
+        let index_array = unsafe { Uint16Array::view(&mesh.indices) };
         gl.buffer_data_with_array_buffer_view(
             WebGl2RenderingContext::ELEMENT_ARRAY_BUFFER,
             &index_array,

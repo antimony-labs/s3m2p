@@ -125,7 +125,8 @@ impl ViewportTransform {
     pub fn world_to_screen(&self, coord: Coord) -> Coord {
         // Convert to tile coordinates at this zoom level
         let (tx, ty) = WebMercator::lonlat_to_tile_fraction(coord.x, coord.y, self.zoom as u8);
-        let (cx, cy) = WebMercator::lonlat_to_tile_fraction(self.pan.x, self.pan.y, self.zoom as u8);
+        let (cx, cy) =
+            WebMercator::lonlat_to_tile_fraction(self.pan.x, self.pan.y, self.zoom as u8);
 
         // 256 pixels per tile
         let tile_size = 256.0;
@@ -137,7 +138,8 @@ impl ViewportTransform {
 
     /// Screen coordinate to world coordinate
     pub fn screen_to_world(&self, screen: Coord) -> Coord {
-        let (cx, cy) = WebMercator::lonlat_to_tile_fraction(self.pan.x, self.pan.y, self.zoom as u8);
+        let (cx, cy) =
+            WebMercator::lonlat_to_tile_fraction(self.pan.x, self.pan.y, self.zoom as u8);
         let tile_size = 256.0;
 
         let tx = cx + (screen.x - self.width / 2.0) / tile_size;

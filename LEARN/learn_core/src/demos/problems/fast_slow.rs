@@ -5,8 +5,8 @@
 //! LAYER: LEARN -> learn_core -> demos -> problems
 //! ===============================================================================
 
+use crate::demos::pseudocode::{CodeLine, Pseudocode};
 use crate::Demo;
-use crate::demos::pseudocode::{Pseudocode, CodeLine};
 
 // Static pseudocode for each variant
 static CYCLE_DETECTION_CODE: &[CodeLine] = &[
@@ -117,12 +117,30 @@ impl FastSlowDemo {
     fn setup_cycle_detection(&mut self) {
         // Create list: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> (back to 3)
         self.nodes = vec![
-            ListNode { value: 1, next: Some(1) },
-            ListNode { value: 2, next: Some(2) },
-            ListNode { value: 3, next: Some(3) },
-            ListNode { value: 4, next: Some(4) },
-            ListNode { value: 5, next: Some(5) },
-            ListNode { value: 6, next: Some(2) }, // Cycle back to node 2 (value 3)
+            ListNode {
+                value: 1,
+                next: Some(1),
+            },
+            ListNode {
+                value: 2,
+                next: Some(2),
+            },
+            ListNode {
+                value: 3,
+                next: Some(3),
+            },
+            ListNode {
+                value: 4,
+                next: Some(4),
+            },
+            ListNode {
+                value: 5,
+                next: Some(5),
+            },
+            ListNode {
+                value: 6,
+                next: Some(2),
+            }, // Cycle back to node 2 (value 3)
         ];
         self.cycle_to = Some(2);
         self.slow = 0;
@@ -135,13 +153,34 @@ impl FastSlowDemo {
     fn setup_find_middle(&mut self) {
         // Create list: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
         self.nodes = vec![
-            ListNode { value: 1, next: Some(1) },
-            ListNode { value: 2, next: Some(2) },
-            ListNode { value: 3, next: Some(3) },
-            ListNode { value: 4, next: Some(4) },
-            ListNode { value: 5, next: Some(5) },
-            ListNode { value: 6, next: Some(6) },
-            ListNode { value: 7, next: None },
+            ListNode {
+                value: 1,
+                next: Some(1),
+            },
+            ListNode {
+                value: 2,
+                next: Some(2),
+            },
+            ListNode {
+                value: 3,
+                next: Some(3),
+            },
+            ListNode {
+                value: 4,
+                next: Some(4),
+            },
+            ListNode {
+                value: 5,
+                next: Some(5),
+            },
+            ListNode {
+                value: 6,
+                next: Some(6),
+            },
+            ListNode {
+                value: 7,
+                next: None,
+            },
         ];
         self.cycle_to = None;
         self.slow = 0;
@@ -154,12 +193,30 @@ impl FastSlowDemo {
     fn setup_cycle_start(&mut self) {
         // Create list with cycle: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> (back to 3)
         self.nodes = vec![
-            ListNode { value: 1, next: Some(1) },
-            ListNode { value: 2, next: Some(2) },
-            ListNode { value: 3, next: Some(3) },
-            ListNode { value: 4, next: Some(4) },
-            ListNode { value: 5, next: Some(5) },
-            ListNode { value: 6, next: Some(2) }, // Cycle back to node 2 (value 3)
+            ListNode {
+                value: 1,
+                next: Some(1),
+            },
+            ListNode {
+                value: 2,
+                next: Some(2),
+            },
+            ListNode {
+                value: 3,
+                next: Some(3),
+            },
+            ListNode {
+                value: 4,
+                next: Some(4),
+            },
+            ListNode {
+                value: 5,
+                next: Some(5),
+            },
+            ListNode {
+                value: 6,
+                next: Some(2),
+            }, // Cycle back to node 2 (value 3)
         ];
         self.cycle_to = Some(2);
         self.slow = 0;
@@ -226,8 +283,7 @@ impl FastSlowDemo {
         self.pseudocode.current_line = Some(3);
         self.message = format!(
             "slow at node {} (val {}), fast at node {} (val {})",
-            self.slow, self.nodes[self.slow].value,
-            self.fast, self.nodes[self.fast].value
+            self.slow, self.nodes[self.slow].value, self.fast, self.nodes[self.fast].value
         );
 
         // Check if they meet
@@ -235,8 +291,10 @@ impl FastSlowDemo {
             self.complete = true;
             self.found = true;
             self.pseudocode.current_line = Some(5);
-            self.message = format!("Cycle detected! Pointers met at node {} (val {})",
-                self.slow, self.nodes[self.slow].value);
+            self.message = format!(
+                "Cycle detected! Pointers met at node {} (val {})",
+                self.slow, self.nodes[self.slow].value
+            );
         }
     }
 
@@ -249,8 +307,10 @@ impl FastSlowDemo {
             self.complete = true;
             self.found = true;
             self.pseudocode.current_line = Some(4);
-            self.message = format!("Middle found! Node {} (val {})",
-                self.slow, self.nodes[self.slow].value);
+            self.message = format!(
+                "Middle found! Node {} (val {})",
+                self.slow, self.nodes[self.slow].value
+            );
             return;
         }
 
@@ -261,8 +321,7 @@ impl FastSlowDemo {
         self.pseudocode.current_line = Some(2);
         self.message = format!(
             "slow at node {} (val {}), fast at node {} (val {})",
-            self.slow, self.nodes[self.slow].value,
-            self.fast, self.nodes[self.fast].value
+            self.slow, self.nodes[self.slow].value, self.fast, self.nodes[self.fast].value
         );
     }
 
@@ -286,7 +345,10 @@ impl FastSlowDemo {
                 self.phase = 1;
                 self.slow = 0; // Reset slow to head
                 self.pseudocode.current_line = Some(7);
-                self.message = format!("Met at node {}! Reset slow to head", self.nodes[self.fast].value);
+                self.message = format!(
+                    "Met at node {}! Reset slow to head",
+                    self.nodes[self.fast].value
+                );
             }
         } else {
             // Phase 1: Find cycle start
@@ -294,8 +356,10 @@ impl FastSlowDemo {
                 self.complete = true;
                 self.found = true;
                 self.pseudocode.current_line = Some(11);
-                self.message = format!("Cycle starts at node {} (val {})",
-                    self.slow, self.nodes[self.slow].value);
+                self.message = format!(
+                    "Cycle starts at node {} (val {})",
+                    self.slow, self.nodes[self.slow].value
+                );
                 return;
             }
 
@@ -326,7 +390,10 @@ impl FastSlowDemo {
             self.complete = true;
             self.found = false;
             self.pseudocode.current_line = Some(7);
-            self.message = format!("{} is NOT a happy number (cycle detected)", self.current_num);
+            self.message = format!(
+                "{} is NOT a happy number (cycle detected)",
+                self.current_num
+            );
         }
     }
 

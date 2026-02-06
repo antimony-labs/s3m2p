@@ -14,8 +14,8 @@
 //! - Gain margin > 10 dB (preferably > 12 dB)
 //! - Crossover frequency < fsw/10 (ideally fsw/5 to fsw/10)
 
+use super::small_signal::{BodeData, Complex, TransferFunction};
 use std::f64::consts::PI;
-use super::small_signal::{Complex, TransferFunction, BodeData};
 
 // ============================================================================
 // STABILITY METRICS
@@ -190,11 +190,7 @@ pub fn assess_stability(pm_deg: f64, gm_db: f64) -> StabilityAssessment {
 }
 
 /// Find crossover frequency using bisection search
-fn find_crossover_frequency(
-    tf: &TransferFunction,
-    f_min: f64,
-    f_max: f64,
-) -> Option<f64> {
+fn find_crossover_frequency(tf: &TransferFunction, f_min: f64, f_max: f64) -> Option<f64> {
     let mag_min = tf.magnitude_db(f_min);
     let mag_max = tf.magnitude_db(f_max);
 
@@ -227,11 +223,7 @@ fn find_crossover_frequency(
 }
 
 /// Find phase crossover frequency (where phase = -180°)
-fn find_phase_crossover(
-    tf: &TransferFunction,
-    f_min: f64,
-    f_max: f64,
-) -> Option<f64> {
+fn find_phase_crossover(tf: &TransferFunction, f_min: f64, f_max: f64) -> Option<f64> {
     let phase_min = tf.phase_deg(f_min);
     let phase_max = tf.phase_deg(f_max);
 
@@ -339,15 +331,22 @@ impl LoopAnalysis {
         let mut recs = Vec::new();
 
         if self.stability.phase_margin_deg < 45.0 {
-            recs.push("Increase zero frequency or reduce crossover to improve phase margin".to_string());
+            recs.push(
+                "Increase zero frequency or reduce crossover to improve phase margin".to_string(),
+            );
         }
 
         if self.stability.gain_margin_db < 10.0 {
-            recs.push("Add high-frequency pole or reduce loop gain for better gain margin".to_string());
+            recs.push(
+                "Add high-frequency pole or reduce loop gain for better gain margin".to_string(),
+            );
         }
 
         if self.stability.crossover_freq < 1e3 {
-            recs.push("Crossover frequency is low - consider faster response if transients allow".to_string());
+            recs.push(
+                "Crossover frequency is low - consider faster response if transients allow"
+                    .to_string(),
+            );
         }
 
         // Check for RHP zero issues
@@ -604,10 +603,10 @@ pub fn annotated_bode_plot(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::power::control::small_signal::BuckSmallSignal;
     use crate::power::control::compensator::{
         design_compensator, CompensatorRequirements, CompensatorType,
     };
+    use crate::power::control::small_signal::BuckSmallSignal;
 
     #[test]
     fn test_stability_analysis() {
@@ -616,11 +615,11 @@ mod tests {
         // H(s) = K × (s + wz) / (s × (s + wp))
         // This has an integrator (pole at 0) ensuring high low-freq gain
         let tf = TransferFunction::new(
-            1e6,  // High gain
-            vec![Complex::new(-1000.0, 0.0)],  // Zero at 159 Hz
+            1e6,                              // High gain
+            vec![Complex::new(-1000.0, 0.0)], // Zero at 159 Hz
             vec![
-                Complex::new(-10.0, 0.0),      // Low-freq pole at 1.6 Hz
-                Complex::new(-100000.0, 0.0),  // High-freq pole at 16 kHz
+                Complex::new(-10.0, 0.0),     // Low-freq pole at 1.6 Hz
+                Complex::new(-100000.0, 0.0), // High-freq pole at 16 kHz
             ],
         );
 
@@ -628,7 +627,10 @@ mod tests {
 
         // Should find crossover (gain crosses 0 dB somewhere)
         println!("Stability metrics: {:?}", metrics);
-        assert!(metrics.crossover_freq > 0.0, "Expected crossover frequency > 0");
+        assert!(
+            metrics.crossover_freq > 0.0,
+            "Expected crossover frequency > 0"
+        );
 
         // Should be stable
         assert!(matches!(
@@ -658,8 +660,8 @@ mod tests {
         let analysis = LoopAnalysis::new(
             plant,
             comp_design.transfer_function,
-            1.0,  // modulator gain
-            0.2,  // feedback ratio (5V output, 1V reference)
+            1.0, // modulator gain
+            0.2, // feedback ratio (5V output, 1V reference)
             500e3,
         );
 
@@ -725,14 +727,8 @@ mod tests {
             assess_stability(20.0, 5.0),
             StabilityAssessment::ConditionallyStable
         );
-        assert_eq!(
-            assess_stability(-10.0, 15.0),
-            StabilityAssessment::Unstable
-        );
-        assert_eq!(
-            assess_stability(60.0, 15.0),
-            StabilityAssessment::Stable
-        );
+        assert_eq!(assess_stability(-10.0, 15.0), StabilityAssessment::Unstable);
+        assert_eq!(assess_stability(60.0, 15.0), StabilityAssessment::Stable);
         assert_eq!(
             assess_stability(40.0, 8.0),
             StabilityAssessment::MarginallyStable
@@ -766,7 +762,12 @@ mod tests {
 
         println!("Bode plot markers:");
         for marker in &annotated.markers {
-            println!("  {:?}: {} @ {:.1}kHz", marker.marker_type, marker.label, marker.freq / 1e3);
+            println!(
+                "  {:?}: {} @ {:.1}kHz",
+                marker.marker_type,
+                marker.label,
+                marker.freq / 1e3
+            );
         }
     }
 }

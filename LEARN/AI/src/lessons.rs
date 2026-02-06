@@ -283,7 +283,7 @@ pub static LESSONS: &[Lesson] = &[
     // ═══════════════════════════════════════════════════════════════════════════
     // PHASE 1: THE BIG PICTURE
     // ═══════════════════════════════════════════════════════════════════════════
-    
+
     // LESSON 0: What is AI?
     Lesson {
         id: 0,
@@ -291,7 +291,7 @@ pub static LESSONS: &[Lesson] = &[
         subtitle: "What AI Actually Does (and Doesn't Do)",
         icon: "🧠",
         why_it_matters: "Before we build AI, we need to understand what it really is: a sophisticated pattern-matching system that learns from examples, not a sentient being.",
-        
+
         intuition: r#"<h3>The Sorting Hat Analogy</h3>
 
 Imagine you are the Sorting Hat from Harry Potter. You have seen thousands of students and know which ones went to each house. Now, a new student sits beneath you. You feel their courage (maybe 7/10), their ambition (6/10), their loyalty (9/10), their wit (5/10).
@@ -322,22 +322,22 @@ graph LR
 </div>
 
 All the math we will learn—neural networks, transformers, reinforcement learning—is just different ways to find and apply patterns."#,
-        
+
         demo_explanation: r#"<strong>Try it yourself:</strong> The demo shows random shapes that you'll classify. Watch how your brain creates a "decision boundary" just like AI does.
 
 <strong>Key insight:</strong> Your brain is doing the same computation as a neural network - finding features and drawing boundaries."#,
-        
+
         key_takeaways: &[
             "AI learns patterns from examples, it does not reason like humans",
             "More data + better model = better predictions",
             "AI can be wrong, especially on data unlike its training set",
             "The goal is to minimize errors, not achieve perfection",
         ],
-        
+
         going_deeper: r#"The field splits into: <strong>Supervised Learning</strong> (labeled examples like 'this is a cat'), <strong>Unsupervised Learning</strong> (finding structure in unlabeled data), and <strong>Reinforcement Learning</strong> (learning from rewards like a dog learning tricks). Modern 'generative AI' like ChatGPT uses all three techniques.
 
 The Turing Test asked 'Can machines think?' but that's the wrong question. The right question is 'Can machines be useful?' And the answer is increasingly yes, even without 'true' understanding."#,
-        
+
         math_details: r#"<p>At its core, AI is function approximation. We want to learn a function:</p>
 
 $$f: X \rightarrow Y$$
@@ -352,7 +352,7 @@ $$\text{Loss}(\theta) = \sum_{i=1}^{n} L(f(x_i; \theta), y_i)$$
 <li><strong>Mean Squared Error</strong> (regression): $L = (y - \hat{y})^2$</li>
 <li><strong>Cross-Entropy</strong> (classification): $L = -y \log(\hat{y}) - (1-y)\log(1-\hat{y})$</li>
 </ul>"#,
-        
+
         implementation: r#"<h4>Building Your First AI Model</h4>
 
 <pre><code>import numpy as np
@@ -387,7 +387,7 @@ print(f"Probabilities: {probability[0]}")
         subtitle: "Fitting Curves to Chaos",
         icon: "📈",
         why_it_matters: "Every AI system, from spam filters to self-driving cars, is fundamentally trying to solve the same problem: find a pattern in messy data.",
-        
+
         intuition: r#"<h3>The Line of Best Fit</h3>
 
 Imagine you are a coffee shop owner. You notice that when it is hotter outside, you sell more iced coffee. You have 100 days of data: temperature and sales.
@@ -414,7 +414,7 @@ graph TD
 </div>
 
 <strong>Why it works:</strong> For most problems, if you keep going downhill, you eventually reach a valley. The learning rate controls step size - too big and you overshoot, too small and it takes forever."#,
-        
+
         demo_explanation: r#"<strong>🎮 Try This:</strong>
 1. Click on the canvas to add data points
 2. Watch the line try to fit your data
@@ -423,14 +423,14 @@ graph TD
 5. Add noise to see how the fit changes
 
 <strong>Key insight:</strong> The line moves toward the data, one small step at a time, guided by the gradient (slope)."#,
-        
+
         key_takeaways: &[
             "Learning = finding parameters that minimize error",
             "Gradient descent: small steps downhill on the error surface",
             "More data generally helps, but outliers can hurt",
             "The simplest model that works is usually best (Occam's Razor)",
         ],
-        
+
         going_deeper: r#"Linear regression has a closed-form solution (Normal Equation: $w = (X^TX)^{-1}X^Ty$), but gradient descent <strong>scales to billions of parameters</strong>. Modern deep learning is just gradient descent on enormous error landscapes with trillions of dimensions.
 
 <strong>Variations:</strong>
@@ -438,7 +438,7 @@ graph TD
 • <strong>Stochastic GD:</strong> Use one example per step (fast but noisy)
 • <strong>Mini-batch GD:</strong> Use small batches (best of both)
 • <strong>Adam, RMSprop:</strong> Adaptive learning rates that adjust per parameter"#,
-        
+
         math_details: r#"<p>Linear regression model:</p>
 
 $$\hat{y} = wx + b$$
@@ -459,7 +459,7 @@ $$w \leftarrow w - \alpha \frac{\partial L}{\partial w}$$
 $$b \leftarrow b - \alpha \frac{\partial L}{\partial b}$$
 
 <p>Where $\alpha$ is the learning rate (typically 0.01 to 0.1).</p>"#,
-        
+
         implementation: r#"<h4>Gradient Descent from Scratch</h4>
 
 <pre><code>import numpy as np
@@ -479,15 +479,15 @@ n_iterations = 1000
 for i in range(n_iterations):
     # Predictions
     y_pred = w * X + b
-    
+
     # Compute gradients
     dw = (2/len(X)) * np.sum((y_pred - y) * X)
     db = (2/len(X)) * np.sum(y_pred - y)
-    
+
     # Update parameters
     w -= learning_rate * dw
     b -= learning_rate * db
-    
+
     # Track loss
     if i % 100 == 0:
         loss = np.mean((y_pred - y)**2)
@@ -508,7 +508,7 @@ print(f"Final parameters: w = {w:.2f}, b = {b:.2f}")
         subtitle: "When Lines Become Decisions",
         icon: "✂️",
         why_it_matters: "Most real AI problems are classification: Is this email spam? Is this tumor malignant? Will this customer churn? Learning to draw decision boundaries is the key.",
-        
+
         intuition: r#"<h3>The Email Sorter</h3>
 
 Imagine you are sorting mail. You need to separate spam from legitimate emails. You notice patterns:
@@ -536,7 +536,7 @@ graph LR
 </div>
 
 <strong>Decision rule:</strong> If P ≥ 0.5, predict class 1; otherwise class 0."#,
-        
+
         demo_explanation: r#"<strong>🎮 Try This:</strong>
 1. Add points of class A (blue) and class B (orange)
 2. Watch the decision boundary form in real-time
@@ -545,7 +545,7 @@ graph LR
 5. Observe how the boundary maximizes separation
 
 <strong>Key insight:</strong> The model finds the line that minimizes misclassifications. The colored regions show probability - brighter means more confident."#,
-        
+
         key_takeaways: &[
             "Classification finds boundaries between categories",
             "Sigmoid converts scores to probabilities (0 to 1)",
@@ -553,7 +553,7 @@ graph LR
             "Overlapping classes mean some errors are unavoidable",
             "Logistic regression is linear - can only draw straight boundaries",
         ],
-        
+
         going_deeper: r#"<strong>Logistic regression</strong> is the foundation of neural networks. Each neuron is essentially a logistic regression unit.
 
 <strong>The XOR problem:</strong> Some datasets cannot be separated by a straight line. XOR (exclusive or) is the classic example:
@@ -565,7 +565,7 @@ graph LR
 No single line can separate these! This limitation led to the invention of <strong>multi-layer neural networks</strong>. By stacking layers, we can learn curved boundaries.
 
 <strong>Multi-class classification:</strong> For more than 2 classes, we use <strong>softmax</strong> instead of sigmoid. It outputs a probability distribution over all classes."#,
-        
+
         math_details: r#"<p>Logistic regression model:</p>
 
 $$P(y=1|x) = \sigma(w^T x + b) = \frac{1}{1 + e^{-(w^T x + b)}}$$
@@ -583,7 +583,7 @@ $$\frac{\partial L}{\partial w} = \frac{1}{n}\sum_{i=1}^{n}(\hat{y}_i - y_i) x_i
 <p>Multi-class softmax:</p>
 
 $$P(y=k|x) = \frac{e^{w_k^T x}}{\sum_{j=1}^{K} e^{w_j^T x}}$$"#,
-        
+
         implementation: r#"<h4>Logistic Regression Classifier</h4>
 
 <pre><code>import numpy as np
@@ -592,7 +592,7 @@ from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
 
 # Generate binary classification data
-X, y = make_classification(n_samples=200, n_features=2, 
+X, y = make_classification(n_samples=200, n_features=2,
                            n_informative=2, n_redundant=0,
                            n_clusters_per_class=1, random_state=42)
 
@@ -605,13 +605,13 @@ def plot_decision_boundary(model, X, y):
     h = 0.02  # Step size
     x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
     y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
-    
+
     xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
                         np.arange(y_min, y_max, h))
-    
+
     Z = model.predict_proba(np.c_[xx.ravel(), yy.ravel()])[:, 1]
     Z = Z.reshape(xx.shape)
-    
+
     plt.contourf(xx, yy, Z, alpha=0.3, cmap='RdYlBu')
     plt.scatter(X[:, 0], X[:, 1], c=y, cmap='RdYlBu', edgecolors='k')
     plt.title('Logistic Regression Decision Boundary')

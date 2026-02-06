@@ -70,8 +70,8 @@ impl UniverseDataManager {
             constellation_edges: Vec::new(),
             frame_times: [0.0; 60],
             frame_idx: 0,
-            lod_level: 6, // Start with good detail
-            mag_limit: 6.0, // Show naked-eye visible stars
+            lod_level: 6,     // Start with good detail
+            mag_limit: 6.0,   // Show naked-eye visible stars
             tile_cache: None, // Local mode
         }
     }
@@ -306,7 +306,7 @@ impl UniverseDataManager {
         // FIXED: Stars are at infinity - always render as background skybox!
         // They're 100s-1000s of light-years away, so position check doesn't work
         // at solar system scale. Just render based on direction.
-        true  // Always visible
+        true // Always visible
     }
 
     fn star_pos_at_time(&self, star: &Star, _jd: f64) -> DVec3 {

@@ -99,11 +99,25 @@ impl Diagram for FilesystemTree {
 
             // Name
             let color = if node.is_dir { "#64ffda" } else { "#e0e0e0" };
-            r.draw_text(&node.name, x + 25.0, y, "14px JetBrains Mono", color, TextAlign::Left);
+            r.draw_text(
+                &node.name,
+                x + 25.0,
+                y,
+                "14px JetBrains Mono",
+                color,
+                TextAlign::Left,
+            );
 
             // Permissions (octal)
             let perms = format!("{:04o}", node.permissions);
-            r.draw_text(&perms, x + 250.0, y, "12px JetBrains Mono", "#888", TextAlign::Left);
+            r.draw_text(
+                &perms,
+                x + 250.0,
+                y,
+                "12px JetBrains Mono",
+                "#888",
+                TextAlign::Left,
+            );
 
             y += 25.0;
         }

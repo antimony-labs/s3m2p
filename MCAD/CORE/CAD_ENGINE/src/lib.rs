@@ -68,22 +68,24 @@ pub use dna::cad::primitives::{
 };
 
 // Mesh triangulation and picking
-pub use dna::cad::mesh::{TriangleMesh, solid_to_mesh, PickableMesh, solid_to_pickable_mesh};
-pub use dna::cad::intersect::{ray_triangle_intersect, pick_face, FaceHit};
+pub use dna::cad::intersect::{pick_face, ray_triangle_intersect, FaceHit};
+pub use dna::cad::mesh::{solid_to_mesh, solid_to_pickable_mesh, PickableMesh, TriangleMesh};
 
 // Boolean operations
-pub use dna::cad::boolean::{BooleanOp, BooleanError, union, difference, intersection};
+pub use dna::cad::boolean::{difference, intersection, union, BooleanError, BooleanOp};
 
 // Sketcher
+pub use dna::cad::constraints::{Constraint, DimensionalConstraint, GeometricConstraint};
+pub use dna::cad::extrude::{extrude_sketch, ExtrudeError, ExtrudeParams};
+pub use dna::cad::pattern::{circular_pattern, linear_pattern};
+pub use dna::cad::revolve::{revolve_sketch, RevolveAxis, RevolveError, RevolveParams};
 pub use dna::cad::sketch::{
-    circumcenter, orient2d, ConstraintId, Point2, Sketch, SketchEntity, SketchEntityId, SketchPlane,
-    SketchPoint, SketchPointId, SketchCoordinateFrame,
+    circumcenter, orient2d, ConstraintId, Point2, Sketch, SketchCoordinateFrame, SketchEntity,
+    SketchEntityId, SketchPlane, SketchPoint, SketchPointId,
 };
-pub use dna::cad::constraints::{Constraint, GeometricConstraint, DimensionalConstraint};
-pub use dna::cad::solver::{ConstraintSolver, SolverConfig, SolverResult, DofStatus, ConstraintAnalysis};
-pub use dna::cad::extrude::{extrude_sketch, ExtrudeParams, ExtrudeError};
-pub use dna::cad::revolve::{revolve_sketch, RevolveParams, RevolveAxis, RevolveError};
-pub use dna::cad::pattern::{linear_pattern, circular_pattern};
+pub use dna::cad::solver::{
+    ConstraintAnalysis, ConstraintSolver, DofStatus, SolverConfig, SolverResult,
+};
 
 // ─────────────────────────────────────────────────────────────────────────────────
 // HIGH-LEVEL API
@@ -304,17 +306,22 @@ pub fn solid_to_step(solid: &Solid, name: &str) -> String {
     let mut writer = StepWriter::new();
 
     // Create points for all vertices
-    let point_ids: Vec<_> = solid.vertices.iter()
+    let point_ids: Vec<_> = solid
+        .vertices
+        .iter()
         .map(|v| writer.add_point(None, v.point.x as f64, v.point.y as f64, v.point.z as f64))
         .collect();
 
     // Create vertex_point entities
-    let vertex_ids: Vec<_> = point_ids.iter()
+    let vertex_ids: Vec<_> = point_ids
+        .iter()
         .map(|&pid| writer.add_vertex_point(None, pid))
         .collect();
 
     // Create edge_curve entities for each edge
-    let edge_ids: Vec<_> = solid.edges.iter()
+    let edge_ids: Vec<_> = solid
+        .edges
+        .iter()
         .map(|edge| {
             let start_pt = point_ids[edge.start.0 as usize];
 
@@ -335,7 +342,7 @@ pub fn solid_to_step(solid: &Solid, name: &str) -> String {
                     vertex_ids[edge.start.0 as usize],
                     vertex_ids[edge.end.0 as usize],
                     line_id,
-                    true
+                    true,
                 )
             } else {
                 // Degenerate edge - create placeholder
@@ -348,20 +355,23 @@ pub fn solid_to_step(solid: &Solid, name: &str) -> String {
                     vertex_ids[edge.start.0 as usize],
                     vertex_ids[edge.end.0 as usize],
                     line_id,
-                    true
+                    true,
                 )
             }
         })
         .collect();
 
     // Create faces
-    let face_ids: Vec<_> = solid.faces.iter()
+    let face_ids: Vec<_> = solid
+        .faces
+        .iter()
         .map(|face| {
             // Create oriented edges for the face loop
-            let oriented_edges: Vec<_> = face.outer_loop.edges.iter()
-                .map(|&edge_id| {
-                    writer.add_oriented_edge(None, edge_ids[edge_id.0 as usize], true)
-                })
+            let oriented_edges: Vec<_> = face
+                .outer_loop
+                .edges
+                .iter()
+                .map(|&edge_id| writer.add_oriented_edge(None, edge_ids[edge_id.0 as usize], true))
                 .collect();
 
             // Create face bound (loop)
@@ -369,7 +379,10 @@ pub fn solid_to_step(solid: &Solid, name: &str) -> String {
 
             // For planar faces, create a plane
             // Simplified: use first three vertices to define plane
-            let verts: Vec<&Vertex> = face.outer_loop.edges.iter()
+            let verts: Vec<&Vertex> = face
+                .outer_loop
+                .edges
+                .iter()
                 .take(3)
                 .filter_map(|&edge_id| solid.edge(edge_id))
                 .filter_map(|e| solid.vertex(e.start))
@@ -385,7 +398,8 @@ pub fn solid_to_step(solid: &Solid, name: &str) -> String {
                 let normal = v1.cross(v2).normalize();
 
                 let origin_id = writer.add_point(None, p0.x as f64, p0.y as f64, p0.z as f64);
-                let normal_id = writer.add_direction(None, normal.x as f64, normal.y as f64, normal.z as f64);
+                let normal_id =
+                    writer.add_direction(None, normal.x as f64, normal.y as f64, normal.z as f64);
                 writer.add_axis2_placement_3d(None, origin_id, Some(normal_id), None)
             } else {
                 // Fallback to origin

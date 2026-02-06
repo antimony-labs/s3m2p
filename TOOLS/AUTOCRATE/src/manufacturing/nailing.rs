@@ -1,16 +1,16 @@
 //! Nailing coordinate generation with datum references
 
-use crate::assembly::*;
-use crate::geometry::{Point3, BoundingBox};
 use super::part_numbers::generate_part_number;
+use crate::assembly::*;
+use crate::geometry::{BoundingBox, Point3};
 use serde::{Deserialize, Serialize};
 
 /// Datum reference frame
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DatumReference {
-    pub primary: String,    // "A" - Base plane (Z=0)
-    pub secondary: String,  // "B" - Width centerplane (YZ at X=0)
-    pub tertiary: String,   // "C" - Length centerplane (XZ at Y=0)
+    pub primary: String,   // "A" - Base plane (Z=0)
+    pub secondary: String, // "B" - Width centerplane (YZ at X=0)
+    pub tertiary: String,  // "C" - Length centerplane (XZ at Y=0)
 }
 
 impl Default for DatumReference {
@@ -27,12 +27,12 @@ impl Default for DatumReference {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NailingCoordinate {
     pub nail_id: String,
-    pub position: Point3,           // Absolute XYZ coordinates
-    pub direction: [f32; 3],        // Unit vector for nail direction
+    pub position: Point3,    // Absolute XYZ coordinates
+    pub direction: [f32; 3], // Unit vector for nail direction
     pub datum_references: DatumReference,
-    pub position_tolerance: f32,    // ±0.25" per ASTM spec
-    pub source_part: String,        // Part nail goes through
-    pub target_part: String,        // Part nail fastens to
+    pub position_tolerance: f32, // ±0.25" per ASTM spec
+    pub source_part: String,     // Part nail goes through
+    pub target_part: String,     // Part nail fastens to
     pub notes: String,
 }
 
@@ -41,19 +41,27 @@ pub fn generate_nailing_coordinates(assembly: &CrateAssembly) -> Vec<NailingCoor
     let mut coordinates = Vec::new();
 
     // Extract component nodes by type
-    let floorboards: Vec<_> = assembly.nodes.iter()
+    let floorboards: Vec<_> = assembly
+        .nodes
+        .iter()
         .filter(|n| matches!(n.component_type, ComponentType::Floorboard { .. }))
         .collect();
 
-    let skids: Vec<_> = assembly.nodes.iter()
+    let skids: Vec<_> = assembly
+        .nodes
+        .iter()
         .filter(|n| matches!(n.component_type, ComponentType::Skid { .. }))
         .collect();
 
-    let panels: Vec<_> = assembly.nodes.iter()
+    let panels: Vec<_> = assembly
+        .nodes
+        .iter()
         .filter(|n| matches!(n.component_type, ComponentType::Panel { .. }))
         .collect();
 
-    let cleats: Vec<_> = assembly.nodes.iter()
+    let cleats: Vec<_> = assembly
+        .nodes
+        .iter()
         .filter(|n| matches!(n.component_type, ComponentType::Cleat { .. }))
         .collect();
 
@@ -63,7 +71,8 @@ pub fn generate_nailing_coordinates(assembly: &CrateAssembly) -> Vec<NailingCoor
         for (skid_idx, skid) in skids.iter().enumerate() {
             if bounding_boxes_intersect(&floorboard.bounds, &skid.bounds) {
                 // Calculate intersection center
-                let intersection_center = calculate_intersection_center(&floorboard.bounds, &skid.bounds);
+                let intersection_center =
+                    calculate_intersection_center(&floorboard.bounds, &skid.bounds);
 
                 // Place 2 nails at ±8" offset (16" spacing)
                 for offset in [-8.0, 8.0] {
@@ -104,7 +113,8 @@ pub fn generate_nailing_coordinates(assembly: &CrateAssembly) -> Vec<NailingCoor
                     nail_counter += 1;
 
                     let z_offset = cleat.bounds.min.z + (i as f32) * spacing;
-                    let intersection_center = calculate_intersection_center(&cleat.bounds, &panel.bounds);
+                    let intersection_center =
+                        calculate_intersection_center(&cleat.bounds, &panel.bounds);
 
                     coordinates.push(NailingCoordinate {
                         nail_id: format!("NAIL-{:03}", nail_counter),
@@ -160,20 +170,44 @@ mod tests {
     #[test]
     fn test_bounding_box_intersection() {
         let box_a = BoundingBox {
-            min: Point3 { x: 0.0, y: 0.0, z: 0.0 },
-            max: Point3 { x: 10.0, y: 10.0, z: 10.0 },
+            min: Point3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            max: Point3 {
+                x: 10.0,
+                y: 10.0,
+                z: 10.0,
+            },
         };
 
         let box_b = BoundingBox {
-            min: Point3 { x: 5.0, y: 5.0, z: 5.0 },
-            max: Point3 { x: 15.0, y: 15.0, z: 15.0 },
+            min: Point3 {
+                x: 5.0,
+                y: 5.0,
+                z: 5.0,
+            },
+            max: Point3 {
+                x: 15.0,
+                y: 15.0,
+                z: 15.0,
+            },
         };
 
         assert!(bounding_boxes_intersect(&box_a, &box_b));
 
         let box_c = BoundingBox {
-            min: Point3 { x: 20.0, y: 20.0, z: 20.0 },
-            max: Point3 { x: 30.0, y: 30.0, z: 30.0 },
+            min: Point3 {
+                x: 20.0,
+                y: 20.0,
+                z: 20.0,
+            },
+            max: Point3 {
+                x: 30.0,
+                y: 30.0,
+                z: 30.0,
+            },
         };
 
         assert!(!bounding_boxes_intersect(&box_a, &box_c));
@@ -186,11 +220,21 @@ mod tests {
         // Add a skid
         let skid_id = assembly.create_node(
             "Skid 1".to_string(),
-            ComponentType::Skid { dimensions: [3.5, 3.5, 120.0] },
+            ComponentType::Skid {
+                dimensions: [3.5, 3.5, 120.0],
+            },
             LocalTransform::identity(),
             BoundingBox {
-                min: Point3 { x: -2.0, y: -60.0, z: 0.0 },
-                max: Point3 { x: 2.0, y: 60.0, z: 3.5 },
+                min: Point3 {
+                    x: -2.0,
+                    y: -60.0,
+                    z: 0.0,
+                },
+                max: Point3 {
+                    x: 2.0,
+                    y: 60.0,
+                    z: 3.5,
+                },
             },
         );
         assembly.add_child(assembly.root_id, skid_id);
@@ -198,11 +242,21 @@ mod tests {
         // Add a floorboard that crosses the skid
         let floor_id = assembly.create_node(
             "Floorboard 1".to_string(),
-            ComponentType::Floorboard { dimensions: [1.5, 5.5, 48.0] },
+            ComponentType::Floorboard {
+                dimensions: [1.5, 5.5, 48.0],
+            },
             LocalTransform::identity(),
             BoundingBox {
-                min: Point3 { x: -24.0, y: -3.0, z: 3.5 },
-                max: Point3 { x: 24.0, y: 2.5, z: 5.0 },
+                min: Point3 {
+                    x: -24.0,
+                    y: -3.0,
+                    z: 3.5,
+                },
+                max: Point3 {
+                    x: 24.0,
+                    y: 2.5,
+                    z: 5.0,
+                },
             },
         );
         assembly.add_child(assembly.root_id, floor_id);

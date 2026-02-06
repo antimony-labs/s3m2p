@@ -38,8 +38,8 @@ impl Material {
         Self {
             material_type: MaterialType::SoftwoodLumber,
             diffuse: Vec3::new(0.85, 0.75, 0.60), // Light tan
-            specular: Vec3::new(0.1, 0.1, 0.1),    // Low specular
-            shininess: 8.0,                        // Matte finish
+            specular: Vec3::new(0.1, 0.1, 0.1),   // Low specular
+            shininess: 8.0,                       // Matte finish
             has_texture: true,
         }
     }
@@ -49,7 +49,7 @@ impl Material {
         Self {
             material_type: MaterialType::HardwoodLumber,
             diffuse: Vec3::new(0.65, 0.45, 0.30), // Darker brown
-            specular: Vec3::new(0.2, 0.2, 0.2),    // Slight sheen
+            specular: Vec3::new(0.2, 0.2, 0.2),   // Slight sheen
             shininess: 16.0,
             has_texture: true,
         }
@@ -71,7 +71,7 @@ impl Material {
         Self {
             material_type: MaterialType::GalvanizedSteel,
             diffuse: Vec3::new(0.60, 0.65, 0.70), // Dull silver-gray
-            specular: Vec3::new(0.4, 0.4, 0.4),    // Moderate shine
+            specular: Vec3::new(0.4, 0.4, 0.4),   // Moderate shine
             shininess: 32.0,
             has_texture: false,
         }
@@ -82,7 +82,7 @@ impl Material {
         Self {
             material_type: MaterialType::BrightSteel,
             diffuse: Vec3::new(0.75, 0.75, 0.75), // Light metallic gray
-            specular: Vec3::new(0.8, 0.8, 0.8),    // High shine
+            specular: Vec3::new(0.8, 0.8, 0.8),   // High shine
             shininess: 64.0,
             has_texture: false,
         }
@@ -143,6 +143,9 @@ mod tests {
     fn test_lighting_normalized() {
         let lighting = Lighting::default();
         let len = lighting.light_dir.length();
-        assert!((len - 1.0).abs() < 0.001, "Light direction should be normalized");
+        assert!(
+            (len - 1.0).abs() < 0.001,
+            "Light direction should be normalized"
+        );
     }
 }

@@ -41,7 +41,3 @@ features = [
     "Event",
     "HtmlInputElement",
 ]
-
-[profile.release]
-opt-level = "z"
-lto = true

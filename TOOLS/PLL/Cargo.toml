@@ -36,7 +36,3 @@ features = [
     "CssStyleDeclaration",
     "DomRect",
 ]
-
-[profile.release]
-opt-level = "z"
-lto = true

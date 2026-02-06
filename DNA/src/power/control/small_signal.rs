@@ -352,10 +352,7 @@ impl BuckSmallSignal {
             // Underdamped - complex conjugate poles
             let sigma = w0 / (2.0 * q);
             let wd = w0 * (1.0 - 1.0 / (4.0 * q * q)).sqrt();
-            (
-                Complex::new(-sigma, wd),
-                Complex::new(-sigma, -wd),
-            )
+            (Complex::new(-sigma, wd), Complex::new(-sigma, -wd))
         } else {
             // Overdamped - two real poles
             let factor = (1.0 - 4.0 * q * q).sqrt();
@@ -515,10 +512,7 @@ impl BoostSmallSignal {
         let (p1, p2) = if q > 0.5 {
             let sigma = w0 / (2.0 * q);
             let wd = w0 * (1.0 - 1.0 / (4.0 * q * q)).sqrt();
-            (
-                Complex::new(-sigma, wd),
-                Complex::new(-sigma, -wd),
-            )
+            (Complex::new(-sigma, wd), Complex::new(-sigma, -wd))
         } else {
             let factor = (1.0 - 4.0 * q * q).sqrt();
             (
@@ -530,8 +524,8 @@ impl BoostSmallSignal {
         TransferFunction {
             dc_gain,
             zeros: vec![
-                Complex::new(w_rhp, 0.0),   // RHP zero (positive!)
-                Complex::new(-w_esr, 0.0),  // ESR zero (negative)
+                Complex::new(w_rhp, 0.0),  // RHP zero (positive!)
+                Complex::new(-w_esr, 0.0), // ESR zero (negative)
             ],
             poles: vec![p1, p2],
             description: "Boost Gvd(s) - WARNING: RHP zero".to_string(),
@@ -663,10 +657,7 @@ impl BuckBoostSmallSignal {
         let (p1, p2) = if q > 0.5 {
             let sigma = w0 / (2.0 * q);
             let wd = w0 * (1.0 - 1.0 / (4.0 * q * q)).sqrt();
-            (
-                Complex::new(-sigma, wd),
-                Complex::new(-sigma, -wd),
-            )
+            (Complex::new(-sigma, wd), Complex::new(-sigma, -wd))
         } else {
             let factor = (1.0 - 4.0 * q * q).sqrt();
             (
@@ -678,8 +669,8 @@ impl BuckBoostSmallSignal {
         TransferFunction {
             dc_gain,
             zeros: vec![
-                Complex::new(w_rhp, 0.0),   // RHP zero
-                Complex::new(-w_esr, 0.0),  // ESR zero
+                Complex::new(w_rhp, 0.0),  // RHP zero
+                Complex::new(-w_esr, 0.0), // ESR zero
             ],
             poles: vec![p1, p2],
             description: "Buck-Boost Gvd(s) - WARNING: RHP zero".to_string(),
@@ -790,10 +781,7 @@ impl FlybackSmallSignal {
         let (p1, p2) = if q > 0.5 {
             let sigma = w0 / (2.0 * q);
             let wd = w0 * (1.0 - 1.0 / (4.0 * q * q)).sqrt();
-            (
-                Complex::new(-sigma, wd),
-                Complex::new(-sigma, -wd),
-            )
+            (Complex::new(-sigma, wd), Complex::new(-sigma, -wd))
         } else {
             let factor = (1.0 - 4.0 * q * q).sqrt();
             (
@@ -804,10 +792,7 @@ impl FlybackSmallSignal {
 
         TransferFunction {
             dc_gain,
-            zeros: vec![
-                Complex::new(w_rhp, 0.0),
-                Complex::new(-w_esr, 0.0),
-            ],
+            zeros: vec![Complex::new(w_rhp, 0.0), Complex::new(-w_esr, 0.0)],
             poles: vec![p1, p2],
             description: "Flyback CCM Gvd(s) - WARNING: RHP zero".to_string(),
         }
@@ -816,8 +801,7 @@ impl FlybackSmallSignal {
     /// Get the RHP zero frequency
     pub fn rhp_zero_freq(&self) -> f64 {
         let d_prime = 1.0 - self.duty;
-        d_prime * d_prime * self.n * self.n * self.r_load
-            / (2.0 * PI * self.lm * self.duty)
+        d_prime * d_prime * self.n * self.n * self.r_load / (2.0 * PI * self.lm * self.duty)
     }
 
     /// Maximum recommended crossover frequency
@@ -918,16 +902,7 @@ pub struct ForwardSmallSignal {
 
 impl ForwardSmallSignal {
     /// Create a new forward converter small-signal model
-    pub fn new(
-        vin: f64,
-        vout: f64,
-        iout: f64,
-        l: f64,
-        c: f64,
-        esr: f64,
-        n: f64,
-        fsw: f64,
-    ) -> Self {
+    pub fn new(vin: f64, vout: f64, iout: f64, l: f64, c: f64, esr: f64, n: f64, fsw: f64) -> Self {
         // Forward: Vout = Vin × D × n
         let duty = vout / (vin * n);
         let r_load = if iout > 0.0 { vout / iout } else { 1e6 };
@@ -970,10 +945,7 @@ impl ForwardSmallSignal {
         let (p1, p2) = if q > 0.5 {
             let sigma = w0 / (2.0 * q);
             let wd = w0 * (1.0 - 1.0 / (4.0 * q * q)).sqrt();
-            (
-                Complex::new(-sigma, wd),
-                Complex::new(-sigma, -wd),
-            )
+            (Complex::new(-sigma, wd), Complex::new(-sigma, -wd))
         } else {
             let factor = (1.0 - 4.0 * q * q).sqrt();
             (
@@ -1310,11 +1282,7 @@ mod tests {
             vec![Complex::new(-100.0, 0.0)],
         );
 
-        let tf2 = TransferFunction::new(
-            2.0,
-            vec![],
-            vec![Complex::new(-10000.0, 0.0)],
-        );
+        let tf2 = TransferFunction::new(2.0, vec![], vec![Complex::new(-10000.0, 0.0)]);
 
         let cascade = tf1.cascade(&tf2);
 

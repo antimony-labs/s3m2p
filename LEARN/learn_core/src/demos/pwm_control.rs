@@ -15,49 +15,49 @@
 //!
 //! It is intentionally conceptual (units are correct, but it's not a full electrical model).
 //! Perfect for teaching ESP32 LEDC tradeoffs: duty resolution vs frequency.
- 
+
 use crate::{Demo, ParamMeta, Rng};
- 
+
 /// PWM demo showing raw waveform vs averaged output
 #[derive(Clone)]
 pub struct PwmControlDemo {
     /// Wall-clock simulation time (seconds)
     pub time: f32,
- 
+
     /// Duty cycle (0.0..=1.0)
     pub duty: f32,
- 
+
     /// PWM frequency in Hz (visualized; educational scale)
     pub frequency: f32,
- 
+
     /// Timer resolution in bits (1..=15 typical for ESP32 LEDC)
     pub resolution_bits: u8,
- 
+
     /// Duty after quantization to the current resolution (0.0..=1.0)
     pub quantized_duty: f32,
- 
+
     /// Current digital output state (after quantization)
     pub output_high: bool,
- 
+
     /// Low-pass filtered output (0.0..=1.0) ~ perceived brightness / average power
     pub avg: f32,
- 
+
     /// Recent digital history (for waveform plot)
     pub raw_history: Vec<bool>,
- 
+
     /// Recent averaged history
     pub avg_history: Vec<f32>,
- 
+
     history_len: usize,
     sample_timer: f32,
     sample_time: f32,
     sample_rate: f32,
     filter_tau: f32,
- 
+
     #[allow(dead_code)]
     rng: Rng,
 }
- 
+
 impl Default for PwmControlDemo {
     fn default() -> Self {
         let mut demo = Self {
@@ -81,32 +81,32 @@ impl Default for PwmControlDemo {
         demo
     }
 }
- 
+
 impl PwmControlDemo {
     fn recompute(&mut self) {
         self.quantized_duty = quantize_duty(self.duty, self.resolution_bits);
         self.sample_rate = compute_sample_rate(self.frequency);
     }
- 
+
     fn pwm_at(&self, t: f32) -> bool {
         let freq = self.frequency.max(1.0);
         let period = 1.0 / freq;
         let phase = (t / period).fract(); // 0..1
         phase < self.quantized_duty
     }
- 
+
     fn sample_once(&mut self, dt: f32) {
         let high = self.pwm_at(self.sample_time);
         self.output_high = high;
         let target = if high { 1.0 } else { 0.0 };
- 
+
         // First-order low-pass: avg += (target - avg) * alpha
         let alpha = (dt / self.filter_tau.max(1e-3)).clamp(0.0, 1.0);
         self.avg += (target - self.avg) * alpha;
- 
+
         self.raw_history.push(high);
         self.avg_history.push(self.avg);
- 
+
         while self.raw_history.len() > self.history_len {
             self.raw_history.remove(0);
         }
@@ -115,7 +115,7 @@ impl PwmControlDemo {
         }
     }
 }
- 
+
 impl Demo for PwmControlDemo {
     fn reset(&mut self, seed: u64) {
         self.rng = Rng::new(seed);
@@ -124,26 +124,26 @@ impl Demo for PwmControlDemo {
         self.sample_timer = 0.0;
         self.output_high = false;
         self.avg = 0.0;
- 
+
         self.recompute();
- 
+
         self.raw_history.clear();
         self.avg_history.clear();
         self.raw_history.reserve(self.history_len);
         self.avg_history.reserve(self.history_len);
- 
+
         for _ in 0..self.history_len {
             self.raw_history.push(false);
             self.avg_history.push(0.0);
         }
     }
- 
+
     fn step(&mut self, dt: f32) {
         // Slow down time progression for better visibility (0.1x speed)
         // This makes the waveform easier to observe
         let time_scale = 0.1;
         let scaled_dt = dt * time_scale;
-        
+
         self.time += scaled_dt.max(0.0);
 
         let sample_interval = 1.0 / self.sample_rate.max(1.0);
@@ -155,7 +155,7 @@ impl Demo for PwmControlDemo {
             self.sample_once(sample_interval);
         }
     }
- 
+
     fn set_param(&mut self, name: &str, value: f32) -> bool {
         match name {
             "duty" => {
@@ -180,7 +180,7 @@ impl Demo for PwmControlDemo {
             _ => false,
         }
     }
- 
+
     fn params() -> &'static [ParamMeta] {
         &[
             ParamMeta {
@@ -218,7 +218,7 @@ impl Demo for PwmControlDemo {
         ]
     }
 }
- 
+
 fn quantize_duty(duty: f32, bits: u8) -> f32 {
     let duty = duty.clamp(0.0, 1.0);
     let bits = bits.clamp(1, 16);
@@ -229,28 +229,28 @@ fn quantize_duty(duty: f32, bits: u8) -> f32 {
     }
     (duty * max_code).round() / max_code
 }
- 
+
 fn compute_sample_rate(freq_hz: f32) -> f32 {
     // Keep the waveform readable across frequencies:
     // aim for ~40 samples per period, but clamp to reasonable bounds.
     let freq = freq_hz.clamp(10.0, 2000.0);
     (freq * 40.0).clamp(200.0, 8000.0)
 }
- 
+
 #[cfg(test)]
 mod tests {
     use super::*;
- 
+
     #[test]
     fn test_quantize_duty_rounds_to_steps() {
         // 2-bit resolution => 4 steps => codes 0..3 => duty in {0, 1/3, 2/3, 1}
         let q = quantize_duty(0.33, 2);
         assert!((q - (1.0 / 3.0)).abs() < 0.02, "q={}", q);
- 
+
         let q2 = quantize_duty(0.9, 2);
         assert!((q2 - 1.0).abs() < 1e-6, "q2={}", q2);
     }
- 
+
     #[test]
     fn test_history_is_bounded() {
         let mut demo = PwmControlDemo::default();

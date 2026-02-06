@@ -172,10 +172,7 @@ use js_sys::Date;
 
 ## Testing
 
-Visual testing via Playwright:
-```bash
-npx playwright test tests/helios.spec.ts
-```
+No Playwright tests exist yet. Visual testing is manual.
 
 Manual testing checklist:
 - [ ] Canvas resizes with window

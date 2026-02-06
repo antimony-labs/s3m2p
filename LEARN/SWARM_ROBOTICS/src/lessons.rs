@@ -124,15 +124,15 @@ impl Agent {
     fn update(&mut self, acceleration: Vec2, dt: f32) {
         // Clamp acceleration
         let accel = acceleration.normalize() * acceleration.length().min(self.max_accel);
-        
+
         // Update velocity
         self.vel += accel * dt;
-        
+
         // Clamp speed
         if self.vel.length() > self.max_speed {
             self.vel = self.vel.normalize() * self.max_speed;
         }
-        
+
         // Update position
         self.pos += self.vel * dt;
     }
@@ -229,16 +229,16 @@ impl SwarmWorld {
     fn find_neighbors(&self, agent_id: usize, radius: f32) -> Vec<usize> {
         let agent = &self.agents[agent_id];
         let mut neighbors = Vec::new();
-        
+
         for (j, other) in self.agents.iter().enumerate() {
             if j == agent_id { continue; }
-            
+
             let dist = agent.pos.distance(other.pos);
             if dist <= radius {
                 neighbors.push(j);
             }
         }
-        
+
         neighbors
     }
 }
@@ -260,9 +260,9 @@ This reduces O(n²) to O(n) for large swarms."</pre>
         why_it_matters: "The communication graph IS the algorithm. Change the topology, \
                          change the behavior. Understanding graphs is understanding swarms.",
         intuition: r#"<h3>The Telephone Game Analogy</h3>
-            Remember the telephone game? One person whispers to the next, message spreads 
+            Remember the telephone game? One person whispers to the next, message spreads
             through the chain. But what if the chain breaks?<br><br>
-            <strong>In Swarms:</strong> Each robot is a node. Each connection is an edge. 
+            <strong>In Swarms:</strong> Each robot is a node. Each connection is an edge.
             The 'graph' is who talks to whom.<br><br>
             <strong>Key Insight:</strong> The graph structure determines EVERYTHING:
             <ul>
@@ -271,7 +271,7 @@ This reduces O(n²) to O(n) for large swarms."</pre>
             <li><strong>Dense graph:</strong> Fast consensus, but lots of communication</li>
             <li><strong>Sparse graph:</strong> Slow consensus, but efficient</li>
             </ul>
-            <strong>The Math:</strong> We'll use graph Laplacian $L$ to analyze connectivity. 
+            <strong>The Math:</strong> We'll use graph Laplacian $L$ to analyze connectivity.
             The second-smallest eigenvalue $\lambda_2$ tells us how 'well-connected' the graph is."#,
         demo_explanation: r#"
             <strong>Visualization:</strong>
@@ -342,7 +342,7 @@ $$\text{Error} \propto e^{-\lambda_2 t}$$
 fn build_adjacency(agents: &[Agent], radius: f32) -> Vec<Vec<bool>> {
     let n = agents.len();
     let mut adj = vec![vec![false; n]; n];
-    
+
     for i in 0..n {
         for j in (i+1)..n {
             let dist = agents[i].pos.distance(agents[j].pos);
@@ -352,7 +352,7 @@ fn build_adjacency(agents: &[Agent], radius: f32) -> Vec<Vec<bool>> {
             }
         }
     }
-    
+
     adj
 }
 </pre>
@@ -362,18 +362,18 @@ fn build_adjacency(agents: &[Agent], radius: f32) -> Vec<Vec<bool>> {
 fn compute_laplacian(adj: &[Vec<bool>]) -> Vec<Vec<f32>> {
     let n = adj.len();
     let mut L = vec![vec![0.0; n]; n];
-    
+
     for i in 0..n {
         let degree = adj[i].iter().filter(|&&x| x).count() as f32;
         L[i][i] = degree;
-        
+
         for j in 0..n {
             if adj[i][j] {
                 L[i][j] = -1.0;
             }
         }
     }
-    
+
     L
 }
 </pre>
@@ -454,33 +454,33 @@ $$a_i = a_i^{sep} + a_i^{ali} + a_i^{coh}$$
         implementation: r#"
 <h4>Boids Implementation</h4>
 <pre>
-fn compute_boids_forces(agent: &Agent, neighbors: &[&Agent], 
+fn compute_boids_forces(agent: &Agent, neighbors: &[&Agent],
                          k_sep: f32, k_ali: f32, k_coh: f32) -> Vec2 {
     let mut sep = Vec2::ZERO;
     let mut ali = Vec2::ZERO;
     let mut coh = Vec2::ZERO;
-    
+
     let n = neighbors.len() as f32;
     if n == 0.0 { return Vec2::ZERO; }
-    
+
     for neighbor in neighbors {
         let diff = agent.pos - neighbor.pos;
         let dist_sq = diff.length_squared() + 0.01; // epsilon
-        
+
         // Separation
         sep += diff / dist_sq;
-        
+
         // Alignment
         ali += neighbor.vel;
-        
+
         // Cohesion
         coh += neighbor.pos;
     }
-    
+
     sep = sep.normalize() * k_sep;
     ali = (ali / n - agent.vel).normalize() * k_ali;
     coh = ((coh / n) - agent.pos).normalize() * k_coh;
-    
+
     sep + ali + coh
 }
 </pre>
@@ -567,20 +567,20 @@ $$\nabla U = 0, \quad \nabla^2 U > 0$$
 fn compute_potential_force(agent: &Agent, neighbors: &[&Agent],
                            k_rep: f32, k_att: f32, p: f32) -> Vec2 {
     let mut force = Vec2::ZERO;
-    
+
     for neighbor in neighbors {
         let diff = agent.pos - neighbor.pos;
         let dist = diff.length().max(0.01);
-        
+
         // Repulsion
         let rep_mag = k_rep / dist.powi(p as i32);
         force += diff.normalize() * rep_mag;
-        
+
         // Attraction
         let att_mag = k_att * dist;
         force -= diff.normalize() * att_mag;
     }
-    
+
     force
 }
 </pre>
@@ -660,9 +660,9 @@ $$a_i \leftarrow a_i + k_{wall} \cdot t_{wall}$$
         implementation: r#"
 <h4>Stuck Detection</h4>
 <pre>
-fn is_stuck(agent: &Agent, force: Vec2, 
+fn is_stuck(agent: &Agent, force: Vec2,
             vel_threshold: f32, force_threshold: f32) -> bool {
-    agent.vel.length() < vel_threshold && 
+    agent.vel.length() < vel_threshold &&
     force.length() > force_threshold
 }
 </pre>
@@ -678,7 +678,7 @@ fn escape_local_minima(agent: &mut Agent, rng: &mut Rng,
             noise_strength
         );
         agent.accel += kick;
-        
+
         // Option 2: Wall following
         if let Some(tangent) = wall_tangent {
             agent.accel += tangent * 0.5;
@@ -707,7 +707,7 @@ fn escape_local_minima(agent: &mut Agent, rng: &mut Rng,
         why_it_matters: "How do robots agree on a value without a leader? Consensus algorithms \
                          enable distributed decision-making—the foundation of swarm coordination.",
         intuition: r#"<h3>The Pizza Party Analogy</h3>
-            You and friends want to split a pizza. No one is in charge. How do you agree on 
+            You and friends want to split a pizza. No one is in charge. How do you agree on
             how many slices each person gets?<br><br>
             <strong>Consensus Algorithm:</strong>
             <ol>
@@ -716,7 +716,7 @@ fn escape_local_minima(agent: &mut Agent, rng: &mut Rng,
             <li>Repeat until everyone has the same number</li>
             </ol>
             <strong>The Math:</strong> $x_i(t+1) = x_i(t) + \alpha \sum_{j \in N_i} (x_j(t) - x_i(t))$<br><br>
-            <strong>Key Insight:</strong> If the communication graph is connected, everyone 
+            <strong>Key Insight:</strong> If the communication graph is connected, everyone
             converges to the average. No leader needed!"#,
         demo_explanation: r#"
             <strong>🎮 Try This:</strong>
@@ -770,7 +770,7 @@ $$\|x(t) - \bar{x}\| \leq e^{-\alpha \lambda_2 t} \|x(0) - \bar{x}\|$$
 <pre>
 fn consensus_step(agents: &mut [Agent], alpha: f32, neighbors: &[Vec<usize>]) {
     let mut updates = vec![0.0; agents.len()];
-    
+
     for i in 0..agents.len() {
         let mut sum_diff = 0.0;
         for &j in &neighbors[i] {
@@ -778,7 +778,7 @@ fn consensus_step(agents: &mut [Agent], alpha: f32, neighbors: &[Vec<usize>]) {
         }
         updates[i] = alpha * sum_diff;
     }
-    
+
     for i in 0..agents.len() {
         agents[i].value += updates[i];
     }
@@ -802,12 +802,12 @@ fn consensus_step(agents: &mut [Agent], alpha: f32, neighbors: &[Vec<usize>]) {
         why_it_matters: "Continuous-time consensus is smoother and easier to analyze. \
                          It's the foundation for many advanced swarm algorithms.",
         intuition: r#"<h3>The Thermostat Analogy</h3>
-            Imagine rooms connected by open doors. Each room has a different temperature. 
+            Imagine rooms connected by open doors. Each room has a different temperature.
             Heat flows from hot to cold. Eventually, all rooms reach the same temperature.<br><br>
-            <strong>In Swarms:</strong> Instead of discrete updates, robots continuously adjust. 
+            <strong>In Swarms:</strong> Instead of discrete updates, robots continuously adjust.
             The rate of change is proportional to the difference with neighbors.<br><br>
             <strong>The Math:</strong> $\dot{x}_i = -\sum_{j \in N_i} (x_i - x_j)$<br><br>
-            <strong>Key Insight:</strong> This is gradient descent on the disagreement energy 
+            <strong>Key Insight:</strong> This is gradient descent on the disagreement energy
             $E = \frac{1}{2}\sum_{(i,j) \in E} (x_i - x_j)^2$."#,
         demo_explanation: r#"
             <strong>🎮 Try This:</strong>
@@ -865,7 +865,7 @@ $$\|x(t) - \bar{x}\| \leq e^{-\lambda_2 t} \|x(0) - \bar{x}\|$$
 <pre>
 fn laplacian_flow_step(agents: &mut [Agent], dt: f32, neighbors: &[Vec<usize>]) {
     let mut derivatives = vec![0.0; agents.len()];
-    
+
     for i in 0..agents.len() {
         let mut sum_diff = 0.0;
         for &j in &neighbors[i] {
@@ -873,7 +873,7 @@ fn laplacian_flow_step(agents: &mut [Agent], dt: f32, neighbors: &[Vec<usize>]) 
         }
         derivatives[i] = -sum_diff;
     }
-    
+
     for i in 0..agents.len() {
         agents[i].value += derivatives[i] * dt;
     }
@@ -949,19 +949,19 @@ $$\mathbb{E}[\|x(t) - \bar{x}\|^2] \leq (1 - \frac{\lambda_2}{n})^t \|x(0) - \ba
         implementation: r#"
 <h4>Gossip Implementation</h4>
 <pre>
-fn gossip_step(agents: &mut [Agent], rng: &mut Rng, 
+fn gossip_step(agents: &mut [Agent], rng: &mut Rng,
                neighbors: &[Vec<usize>], packet_loss: f32) {
     // Randomly select an agent
     let i = rng.range(0, agents.len());
     if neighbors[i].is_empty() { return; }
-    
+
     // Randomly select neighbor
     let j_idx = rng.range(0, neighbors[i].len());
     let j = neighbors[i][j_idx];
-    
+
     // Packet loss?
     if rng.range(0.0, 1.0) < packet_loss { return; }
-    
+
     // Average values
     let avg = (agents[i].value + agents[j].value) / 2.0;
     agents[i].value = avg;
@@ -1037,13 +1037,13 @@ $$\lim_{t \to \infty} p_i(t) = \frac{1}{n} \sum_{j=1}^n p_j(0)$$
 fn rendezvous_step(agents: &mut [Agent], alpha: f32, neighbors: &[Vec<usize>]) {
     for i in 0..agents.len() {
         if neighbors[i].is_empty() { continue; }
-        
+
         let mut avg_pos = Vec2::ZERO;
         for &j in &neighbors[i] {
             avg_pos += agents[j].pos;
         }
         avg_pos /= neighbors[i].len() as f32;
-        
+
         let direction = (avg_pos - agents[i].pos) * alpha;
         agents[i].vel = direction;
     }
@@ -1119,7 +1119,7 @@ fn formation_step(agents: &mut [Agent], target_distances: &[(usize, usize, f32)]
                   k: f32) {
     for i in 0..agents.len() {
         let mut force = Vec2::ZERO;
-        
+
         for &(j, k, d_target) in target_distances {
             if j == i {
                 let diff = agents[i].pos - agents[k].pos;
@@ -1128,7 +1128,7 @@ fn formation_step(agents: &mut [Agent], target_distances: &[(usize, usize, f32)]
                 force += diff.normalize() * error * k;
             }
         }
-        
+
         agents[i].accel = force;
     }
 }
@@ -1204,7 +1204,7 @@ $$k > 0, \quad \theta \in (-\pi/2, \pi/2)$$
 fn cyclic_pursuit_step(agents: &mut [Agent], k: f32, theta: f32) {
     let n = agents.len();
     let rot = Mat2::rotation(theta);
-    
+
     for i in 0..n {
         let next = (i + 1) % n;
         let diff = agents[next].pos - agents[i].pos;
@@ -1296,11 +1296,11 @@ one robot gets all far tasks.</p>
 fn greedy_assignment(robots: &[Vec2], tasks: &[Vec2]) -> Vec<usize> {
     let mut assignments = vec![usize::MAX; robots.len()];
     let mut assigned = vec![false; tasks.len()];
-    
+
     for i in 0..robots.len() {
         let mut best_j = None;
         let mut best_dist = f32::INFINITY;
-        
+
         for j in 0..tasks.len() {
             if assigned[j] { continue; }
             let dist = robots[i].distance(tasks[j]);
@@ -1309,13 +1309,13 @@ fn greedy_assignment(robots: &[Vec2], tasks: &[Vec2]) -> Vec<usize> {
                 best_j = Some(j);
             }
         }
-        
+
         if let Some(j) = best_j {
             assignments[i] = j;
             assigned[j] = true;
         }
     }
-    
+
     assignments
 }
 </pre>
@@ -1337,7 +1337,7 @@ fn greedy_assignment(robots: &[Vec2], tasks: &[Vec2]) -> Vec<usize> {
         why_it_matters: "Auction algorithms enable distributed task allocation—robots bid on \
                          tasks without central coordination. Scalable and robust.",
         intuition: r#"<h3>The Auction Analogy</h3>
-            Imagine an auction. Items (tasks) have prices. Bidders (robots) bid based on 
+            Imagine an auction. Items (tasks) have prices. Bidders (robots) bid based on
             value minus price. Highest bidder wins. Prices increase. Repeat.<br><br>
             <strong>Auction Algorithm:</strong>
             <ol>
@@ -1365,9 +1365,9 @@ fn greedy_assignment(robots: &[Vec2], tasks: &[Vec2]) -> Vec<usize> {
             "Prices coordinate without central controller",
             "Converges to near-optimal assignment",
         ],
-        going_deeper: r#"<strong>In Theory:</strong> Auction algorithm converges to $\epsilon$-optimal 
+        going_deeper: r#"<strong>In Theory:</strong> Auction algorithm converges to $\epsilon$-optimal
                        assignment. $\epsilon$ controls tradeoff between optimality and convergence speed.<br><br>
-                       <strong>In Practice:</strong> Used in: multi-robot task allocation, 
+                       <strong>In Practice:</strong> Used in: multi-robot task allocation,
                        distributed computing, and any system needing distributed coordination."#,
         math_details: r#"
 <h4>Bidding Rule</h4>
@@ -1399,12 +1399,12 @@ Assignment is $\epsilon$-optimal.</p>
 <pre>
 fn auction_step(robots: &[Agent], tasks: &mut [Task], epsilon: f32) -> bool {
     let mut changed = false;
-    
+
     for i in 0..robots.len() {
         // Find best task
         let mut best_j = None;
         let mut best_bid = f32::NEG_INFINITY;
-        
+
         for j in 0..tasks.len() {
             let dist = robots[i].pos.distance(tasks[j].pos);
             let bid = tasks[j].reward - dist - tasks[j].price;
@@ -1413,7 +1413,7 @@ fn auction_step(robots: &[Agent], tasks: &mut [Task], epsilon: f32) -> bool {
                 best_j = Some(j);
             }
         }
-        
+
         // Update assignment
         if let Some(j) = best_j {
             if robots[i].assigned_task != Some(j) {
@@ -1423,7 +1423,7 @@ fn auction_step(robots: &[Agent], tasks: &mut [Task], epsilon: f32) -> bool {
             }
         }
     }
-    
+
     changed
 }
 </pre>
@@ -1514,7 +1514,7 @@ struct UCB1Arm {
 impl UCB1Arm {
     fn ucb(&self, total_count: usize, c: f32) -> f32 {
         if self.count == 0 { return f32::INFINITY; }
-        
+
         let avg = self.rewards.iter().sum::<f32>() / self.count as f32;
         let exploration = c * (total_count as f32 / self.count as f32).ln().sqrt();
         avg + exploration
@@ -1604,7 +1604,7 @@ $$p_i \leftarrow c_i$$
 fn voronoi_coverage_step(agents: &mut [Agent], world: &World) {
     // Compute Voronoi cells (approximate on grid)
     let mut cells = vec![Vec::new(); agents.len()];
-    
+
     for y in 0..grid_height {
         for x in 0..grid_width {
             let p = grid_to_world(x, y);
@@ -1612,7 +1612,7 @@ fn voronoi_coverage_step(agents: &mut [Agent], world: &World) {
             cells[nearest].push(p);
         }
     }
-    
+
     // Move to centroids
     for i in 0..agents.len() {
         let centroid = compute_centroid(&cells[i]);
@@ -1695,14 +1695,14 @@ $$f^* = \arg\min_{f \in \text{Frontiers}} \|p_i - f\|$$
 <pre>
 fn frontier_exploration_step(agents: &mut [Agent], map: &OccupancyGrid) {
     let frontiers = detect_frontiers(map);
-    
+
     for agent in agents.iter_mut() {
         if frontiers.is_empty() { continue; }
-        
+
         // Find nearest frontier
         let mut nearest = None;
         let mut min_dist = f32::INFINITY;
-        
+
         for &frontier in &frontiers {
             let dist = agent.pos.distance(frontier);
             if dist < min_dist {
@@ -1710,7 +1710,7 @@ fn frontier_exploration_step(agents: &mut [Agent], map: &OccupancyGrid) {
                 nearest = Some(frontier);
             }
         }
-        
+
         if let Some(target) = nearest {
             agent.target = target;
         }
@@ -1804,10 +1804,10 @@ impl PheromoneField {
                 *cell *= 1.0 - self.decay;
             }
         }
-        
+
         // Diffusion (simplified)
         // ... diffusion step ...
-        
+
         // Deposit
         for deposit in deposits {
             let (x, y) = world_to_grid(deposit);
@@ -1895,11 +1895,11 @@ fn robust_consensus_step(agents: &mut [Agent], neighbors: &[Vec<usize>],
                         method: RobustMethod) {
     for i in 0..agents.len() {
         if agents[i].malicious { continue; } // Skip malicious agents
-        
+
         let values: Vec<f32> = neighbors[i].iter()
             .map(|&j| agents[j].value)
             .collect();
-        
+
         agents[i].value = match method {
             RobustMethod::Mean => values.iter().sum::<f32>() / values.len() as f32,
             RobustMethod::Median => median(&values),
@@ -2018,5 +2018,3 @@ fn evaluate_scenario(swarm: &Swarm, scenario: &Scenario) -> Score {
         "#,
     },
 ];
-
-

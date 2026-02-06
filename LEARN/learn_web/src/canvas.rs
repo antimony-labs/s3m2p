@@ -114,9 +114,7 @@ impl Canvas {
     pub fn fill_circle(&self, x: f64, y: f64, radius: f64, color: &str) {
         self.ctx.set_fill_style(&JsValue::from_str(color));
         self.ctx.begin_path();
-        let _ = self
-            .ctx
-            .arc(x, y, radius, 0.0, std::f64::consts::TAU);
+        let _ = self.ctx.arc(x, y, radius, 0.0, std::f64::consts::TAU);
         self.ctx.fill();
     }
 
@@ -125,9 +123,7 @@ impl Canvas {
         self.ctx.set_stroke_style(&JsValue::from_str(color));
         self.ctx.set_line_width(line_width);
         self.ctx.begin_path();
-        let _ = self
-            .ctx
-            .arc(x, y, radius, 0.0, std::f64::consts::TAU);
+        let _ = self.ctx.arc(x, y, radius, 0.0, std::f64::consts::TAU);
         self.ctx.stroke();
     }
 

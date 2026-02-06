@@ -5,8 +5,8 @@
 //! LAYER: LEARN -> learn_core -> demos -> problems
 //! ===============================================================================
 
+use crate::demos::pseudocode::{CodeLine, Pseudocode};
 use crate::Demo;
-use crate::demos::pseudocode::{Pseudocode, CodeLine};
 use std::collections::VecDeque;
 
 // Static pseudocode for each variant
@@ -134,11 +134,41 @@ impl TreeProblemsDemo {
         //         /  \
         //        15   7
         self.nodes = vec![
-            TreeNode { value: 3, left: Some(1), right: Some(2), x: 0.5, y: 0.1 },
-            TreeNode { value: 9, left: None, right: None, x: 0.25, y: 0.35 },
-            TreeNode { value: 20, left: Some(3), right: Some(4), x: 0.75, y: 0.35 },
-            TreeNode { value: 15, left: None, right: None, x: 0.625, y: 0.6 },
-            TreeNode { value: 7, left: None, right: None, x: 0.875, y: 0.6 },
+            TreeNode {
+                value: 3,
+                left: Some(1),
+                right: Some(2),
+                x: 0.5,
+                y: 0.1,
+            },
+            TreeNode {
+                value: 9,
+                left: None,
+                right: None,
+                x: 0.25,
+                y: 0.35,
+            },
+            TreeNode {
+                value: 20,
+                left: Some(3),
+                right: Some(4),
+                x: 0.75,
+                y: 0.35,
+            },
+            TreeNode {
+                value: 15,
+                left: None,
+                right: None,
+                x: 0.625,
+                y: 0.6,
+            },
+            TreeNode {
+                value: 7,
+                left: None,
+                right: None,
+                x: 0.875,
+                y: 0.6,
+            },
         ];
         self.visited = vec![false; self.nodes.len()];
     }
@@ -150,12 +180,48 @@ impl TreeProblemsDemo {
         //     / \   \
         //    2   4   8
         self.nodes = vec![
-            TreeNode { value: 5, left: Some(1), right: Some(2), x: 0.5, y: 0.1 },
-            TreeNode { value: 3, left: Some(3), right: Some(4), x: 0.25, y: 0.35 },
-            TreeNode { value: 7, left: None, right: Some(5), x: 0.75, y: 0.35 },
-            TreeNode { value: 2, left: None, right: None, x: 0.125, y: 0.6 },
-            TreeNode { value: 4, left: None, right: None, x: 0.375, y: 0.6 },
-            TreeNode { value: 8, left: None, right: None, x: 0.875, y: 0.6 },
+            TreeNode {
+                value: 5,
+                left: Some(1),
+                right: Some(2),
+                x: 0.5,
+                y: 0.1,
+            },
+            TreeNode {
+                value: 3,
+                left: Some(3),
+                right: Some(4),
+                x: 0.25,
+                y: 0.35,
+            },
+            TreeNode {
+                value: 7,
+                left: None,
+                right: Some(5),
+                x: 0.75,
+                y: 0.35,
+            },
+            TreeNode {
+                value: 2,
+                left: None,
+                right: None,
+                x: 0.125,
+                y: 0.6,
+            },
+            TreeNode {
+                value: 4,
+                left: None,
+                right: None,
+                x: 0.375,
+                y: 0.6,
+            },
+            TreeNode {
+                value: 8,
+                left: None,
+                right: None,
+                x: 0.875,
+                y: 0.6,
+            },
         ];
         self.visited = vec![false; self.nodes.len()];
     }
@@ -167,12 +233,48 @@ impl TreeProblemsDemo {
         //     / \   \
         //    6   2   8
         self.nodes = vec![
-            TreeNode { value: 3, left: Some(1), right: Some(2), x: 0.5, y: 0.1 },
-            TreeNode { value: 5, left: Some(3), right: Some(4), x: 0.25, y: 0.35 },
-            TreeNode { value: 1, left: None, right: Some(5), x: 0.75, y: 0.35 },
-            TreeNode { value: 6, left: None, right: None, x: 0.125, y: 0.6 },
-            TreeNode { value: 2, left: None, right: None, x: 0.375, y: 0.6 },
-            TreeNode { value: 8, left: None, right: None, x: 0.875, y: 0.6 },
+            TreeNode {
+                value: 3,
+                left: Some(1),
+                right: Some(2),
+                x: 0.5,
+                y: 0.1,
+            },
+            TreeNode {
+                value: 5,
+                left: Some(3),
+                right: Some(4),
+                x: 0.25,
+                y: 0.35,
+            },
+            TreeNode {
+                value: 1,
+                left: None,
+                right: Some(5),
+                x: 0.75,
+                y: 0.35,
+            },
+            TreeNode {
+                value: 6,
+                left: None,
+                right: None,
+                x: 0.125,
+                y: 0.6,
+            },
+            TreeNode {
+                value: 2,
+                left: None,
+                right: None,
+                x: 0.375,
+                y: 0.6,
+            },
+            TreeNode {
+                value: 8,
+                left: None,
+                right: None,
+                x: 0.875,
+                y: 0.6,
+            },
         ];
         self.visited = vec![false; self.nodes.len()];
         self.target_p = Some(3); // Node with value 6
@@ -218,9 +320,11 @@ impl TreeProblemsDemo {
         self.lca_result = None;
         self.pseudocode = Pseudocode::new("Lowest Common Ancestor", LCA_CODE);
         self.pseudocode.current_line = Some(0);
-        self.message = format!("Find LCA of nodes {} and {}",
+        self.message = format!(
+            "Find LCA of nodes {} and {}",
             self.nodes[self.target_p.unwrap_or(0)].value,
-            self.nodes[self.target_q.unwrap_or(0)].value);
+            self.nodes[self.target_q.unwrap_or(0)].value
+        );
     }
 
     pub fn step_algorithm(&mut self) {
@@ -267,7 +371,9 @@ impl TreeProblemsDemo {
         }
 
         // Check if level is complete (simplified - process all at once)
-        if self.queue.is_empty() || self.nodes[*self.queue.front().unwrap()].y > self.nodes[node_idx].y + 0.1 {
+        if self.queue.is_empty()
+            || self.nodes[*self.queue.front().unwrap()].y > self.nodes[node_idx].y + 0.1
+        {
             self.levels.push(self.current_level.clone());
             self.pseudocode.current_line = Some(10);
             self.message = format!("Level complete: {:?}", self.current_level);

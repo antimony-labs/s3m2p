@@ -31,7 +31,3 @@ web-sys = { version = "0.3", features = [
 ] }
 learn_core = { path = "../learn_core" }
 learn_web = { path = "../learn_web" }
-
-[profile.release]
-opt-level = "z"
-lto = true

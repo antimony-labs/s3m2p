@@ -11,20 +11,20 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
 use learn_core::demos::{
-    LinearRegressionDemo, PerceptronDemo, NeuralNetworkDemo,
-    CnnFilterDemo, AttentionDemo, GridWorldDemo, Cell,
+    AttentionDemo, Cell, CnnFilterDemo, GridWorldDemo, LinearRegressionDemo, NeuralNetworkDemo,
+    PerceptronDemo,
 };
 use learn_core::Demo;
 use learn_web::{AnimationLoop, Canvas};
 
 // Thread-local state for the currently running demos
 thread_local! {
-    static LINEAR_REGRESSION_DEMO: RefCell<Option<DemoRunner<LinearRegressionDemo>>> = RefCell::new(None);
-    static PERCEPTRON_DEMO: RefCell<Option<DemoRunner<PerceptronDemo>>> = RefCell::new(None);
-    static NEURAL_NETWORK_DEMO: RefCell<Option<DemoRunner<NeuralNetworkDemo>>> = RefCell::new(None);
-    static CNN_FILTER_DEMO: RefCell<Option<DemoRunner<CnnFilterDemo>>> = RefCell::new(None);
-    static ATTENTION_DEMO: RefCell<Option<DemoRunner<AttentionDemo>>> = RefCell::new(None);
-    static GRID_WORLD_DEMO: RefCell<Option<DemoRunner<GridWorldDemo>>> = RefCell::new(None);
+    static LINEAR_REGRESSION_DEMO: RefCell<Option<DemoRunner<LinearRegressionDemo>>> = const { RefCell::new(None) };
+    static PERCEPTRON_DEMO: RefCell<Option<DemoRunner<PerceptronDemo>>> = const { RefCell::new(None) };
+    static NEURAL_NETWORK_DEMO: RefCell<Option<DemoRunner<NeuralNetworkDemo>>> = const { RefCell::new(None) };
+    static CNN_FILTER_DEMO: RefCell<Option<DemoRunner<CnnFilterDemo>>> = const { RefCell::new(None) };
+    static ATTENTION_DEMO: RefCell<Option<DemoRunner<AttentionDemo>>> = const { RefCell::new(None) };
+    static GRID_WORLD_DEMO: RefCell<Option<DemoRunner<GridWorldDemo>>> = const { RefCell::new(None) };
 }
 
 /// Generic demo runner wrapper
@@ -197,9 +197,10 @@ fn render_linear_regression(runner: &DemoRunner<LinearRegressionDemo>) {
     let (target_w, target_b) = demo.target();
     ctx.set_stroke_style(&JsValue::from_str("rgba(255, 255, 100, 0.4)"));
     ctx.set_line_width(2.0);
-    ctx.set_line_dash(&js_sys::Array::of2(&JsValue::from(5), &JsValue::from(5))).ok();
+    ctx.set_line_dash(&js_sys::Array::of2(&JsValue::from(5), &JsValue::from(5)))
+        .ok();
     ctx.begin_path();
-    let y0 = target_w * -1.0 + target_b;
+    let y0 = -target_w + target_b;
     let y1 = target_w * 1.0 + target_b;
     ctx.move_to(to_canvas_x(-1.0), to_canvas_y(y0));
     ctx.line_to(to_canvas_x(1.0), to_canvas_y(y1));
@@ -210,7 +211,7 @@ fn render_linear_regression(runner: &DemoRunner<LinearRegressionDemo>) {
     ctx.set_stroke_style(&JsValue::from_str("#00ffaa"));
     ctx.set_line_width(3.0);
     ctx.begin_path();
-    let y0 = demo.w * -1.0 + demo.b;
+    let y0 = -demo.w + demo.b;
     let y1 = demo.w * 1.0 + demo.b;
     ctx.move_to(to_canvas_x(-1.0), to_canvas_y(y0));
     ctx.line_to(to_canvas_x(1.0), to_canvas_y(y1));
@@ -220,7 +221,14 @@ fn render_linear_regression(runner: &DemoRunner<LinearRegressionDemo>) {
     ctx.set_fill_style(&JsValue::from_str("#00aaff"));
     for p in demo.points() {
         ctx.begin_path();
-        ctx.arc(to_canvas_x(p.x), to_canvas_y(p.y), 5.0, 0.0, std::f64::consts::PI * 2.0).ok();
+        ctx.arc(
+            to_canvas_x(p.x),
+            to_canvas_y(p.y),
+            5.0,
+            0.0,
+            std::f64::consts::PI * 2.0,
+        )
+        .ok();
         ctx.fill();
     }
 
@@ -234,12 +242,20 @@ fn render_linear_regression(runner: &DemoRunner<LinearRegressionDemo>) {
 
     ctx.set_font("14px 'JetBrains Mono', monospace");
     ctx.set_fill_style(&JsValue::from_str("#e0e0e0"));
-    ctx.fill_text(&format!("w = {:.3}", demo.w), info_x, info_y + 30.0).ok();
-    ctx.fill_text(&format!("b = {:.3}", demo.b), info_x, info_y + 50.0).ok();
-    ctx.fill_text(&format!("Steps: {}", demo.step_count()), info_x, info_y + 80.0).ok();
+    ctx.fill_text(&format!("w = {:.3}", demo.w), info_x, info_y + 30.0)
+        .ok();
+    ctx.fill_text(&format!("b = {:.3}", demo.b), info_x, info_y + 50.0)
+        .ok();
+    ctx.fill_text(
+        &format!("Steps: {}", demo.step_count()),
+        info_x,
+        info_y + 80.0,
+    )
+    .ok();
 
     let loss = demo.compute_loss();
-    ctx.fill_text(&format!("Loss: {:.4}", loss), info_x, info_y + 100.0).ok();
+    ctx.fill_text(&format!("Loss: {:.4}", loss), info_x, info_y + 100.0)
+        .ok();
 
     // Draw loss history
     let history = demo.loss_history();
@@ -273,7 +289,8 @@ fn render_linear_regression(runner: &DemoRunner<LinearRegressionDemo>) {
     // Title
     ctx.set_font("bold 20px 'Rajdhani', sans-serif");
     ctx.set_fill_style(&JsValue::from_str("#ffffff"));
-    ctx.fill_text("Linear Regression with Gradient Descent", margin, 25.0).ok();
+    ctx.fill_text("Linear Regression with Gradient Descent", margin, 25.0)
+        .ok();
 }
 
 fn wire_linear_regression_controls() -> Result<(), JsValue> {
@@ -447,7 +464,14 @@ fn render_perceptron(runner: &DemoRunner<PerceptronDemo>) {
         let color = if p.label { "#00aaff" } else { "#ff6644" };
         ctx.set_fill_style(&JsValue::from_str(color));
         ctx.begin_path();
-        ctx.arc(to_canvas_x(p.pos.x), to_canvas_y(p.pos.y), 5.0, 0.0, std::f64::consts::PI * 2.0).ok();
+        ctx.arc(
+            to_canvas_x(p.pos.x),
+            to_canvas_y(p.pos.y),
+            5.0,
+            0.0,
+            std::f64::consts::PI * 2.0,
+        )
+        .ok();
         ctx.fill();
     }
 
@@ -462,11 +486,31 @@ fn render_perceptron(runner: &DemoRunner<PerceptronDemo>) {
     ctx.set_font("14px 'JetBrains Mono', monospace");
     ctx.set_fill_style(&JsValue::from_str("#e0e0e0"));
 
-    let mode = if demo.use_hidden_layer { "MLP (4 hidden)" } else { "Perceptron" };
-    ctx.fill_text(&format!("Mode: {}", mode), info_x, info_y + 30.0).ok();
-    ctx.fill_text(&format!("Dataset: {}", demo.dataset.name()), info_x, info_y + 50.0).ok();
-    ctx.fill_text(&format!("Steps: {}", demo.step_count), info_x, info_y + 70.0).ok();
-    ctx.fill_text(&format!("Accuracy: {:.1}%", demo.accuracy * 100.0), info_x, info_y + 90.0).ok();
+    let mode = if demo.use_hidden_layer {
+        "MLP (4 hidden)"
+    } else {
+        "Perceptron"
+    };
+    ctx.fill_text(&format!("Mode: {}", mode), info_x, info_y + 30.0)
+        .ok();
+    ctx.fill_text(
+        &format!("Dataset: {}", demo.dataset.name()),
+        info_x,
+        info_y + 50.0,
+    )
+    .ok();
+    ctx.fill_text(
+        &format!("Steps: {}", demo.step_count),
+        info_x,
+        info_y + 70.0,
+    )
+    .ok();
+    ctx.fill_text(
+        &format!("Accuracy: {:.1}%", demo.accuracy * 100.0),
+        info_x,
+        info_y + 90.0,
+    )
+    .ok();
 
     // Draw loss history
     if demo.loss_history.len() > 1 {
@@ -487,7 +531,11 @@ fn render_perceptron(runner: &DemoRunner<PerceptronDemo>) {
         for (i, &loss) in demo.loss_history.iter().enumerate() {
             let x = info_x + (i as f64 / demo.loss_history.len() as f64) * loss_w;
             let y = loss_y + 20.0 + (1.0 - (loss / max_loss) as f64) * loss_h;
-            if i == 0 { ctx.move_to(x, y); } else { ctx.line_to(x, y); }
+            if i == 0 {
+                ctx.move_to(x, y);
+            } else {
+                ctx.line_to(x, y);
+            }
         }
         ctx.stroke();
     }
@@ -495,7 +543,8 @@ fn render_perceptron(runner: &DemoRunner<PerceptronDemo>) {
     // Title
     ctx.set_font("bold 20px 'Rajdhani', sans-serif");
     ctx.set_fill_style(&JsValue::from_str("#ffffff"));
-    ctx.fill_text("Perceptron Decision Boundary", margin, 25.0).ok();
+    ctx.fill_text("Perceptron Decision Boundary", margin, 25.0)
+        .ok();
 }
 
 fn wire_perceptron_controls() -> Result<(), JsValue> {
@@ -554,7 +603,9 @@ fn wire_perceptron_controls() -> Result<(), JsValue> {
                     let checked = input.checked();
                     PERCEPTRON_DEMO.with(|d| {
                         if let Some(runner) = d.borrow_mut().as_mut() {
-                            runner.demo.set_param("hidden_layer", if checked { 1.0 } else { 0.0 });
+                            runner
+                                .demo
+                                .set_param("hidden_layer", if checked { 1.0 } else { 0.0 });
                         }
                     });
                 }
@@ -659,7 +710,14 @@ fn render_neural_network(runner: &DemoRunner<NeuralNetworkDemo>) {
         let color = if p.label > 0 { "#00aaff" } else { "#ff6644" };
         ctx.set_fill_style(&JsValue::from_str(color));
         ctx.begin_path();
-        ctx.arc(to_canvas_x(p.x), to_canvas_y(p.y), 4.0, 0.0, std::f64::consts::PI * 2.0).ok();
+        ctx.arc(
+            to_canvas_x(p.x),
+            to_canvas_y(p.y),
+            4.0,
+            0.0,
+            std::f64::consts::PI * 2.0,
+        )
+        .ok();
         ctx.fill();
     }
 
@@ -675,11 +733,32 @@ fn render_neural_network(runner: &DemoRunner<NeuralNetworkDemo>) {
     ctx.set_fill_style(&JsValue::from_str("#e0e0e0"));
 
     let arch: Vec<String> = demo.layer_sizes.iter().map(|n| n.to_string()).collect();
-    ctx.fill_text(&format!("Arch: {}", arch.join("-")), info_x, info_y + 25.0).ok();
-    ctx.fill_text(&format!("Activation: {}", demo.activation.name()), info_x, info_y + 45.0).ok();
-    ctx.fill_text(&format!("Dataset: {}", demo.dataset.name()), info_x, info_y + 65.0).ok();
-    ctx.fill_text(&format!("Steps: {}", demo.step_count), info_x, info_y + 85.0).ok();
-    ctx.fill_text(&format!("Accuracy: {:.1}%", demo.accuracy * 100.0), info_x, info_y + 105.0).ok();
+    ctx.fill_text(&format!("Arch: {}", arch.join("-")), info_x, info_y + 25.0)
+        .ok();
+    ctx.fill_text(
+        &format!("Activation: {}", demo.activation.name()),
+        info_x,
+        info_y + 45.0,
+    )
+    .ok();
+    ctx.fill_text(
+        &format!("Dataset: {}", demo.dataset.name()),
+        info_x,
+        info_y + 65.0,
+    )
+    .ok();
+    ctx.fill_text(
+        &format!("Steps: {}", demo.step_count),
+        info_x,
+        info_y + 85.0,
+    )
+    .ok();
+    ctx.fill_text(
+        &format!("Accuracy: {:.1}%", demo.accuracy * 100.0),
+        info_x,
+        info_y + 105.0,
+    )
+    .ok();
 
     // Draw network diagram (simplified)
     let net_y = info_y + 140.0;
@@ -698,7 +777,8 @@ fn render_neural_network(runner: &DemoRunner<NeuralNetworkDemo>) {
             let ny = start_y + n as f64 * 18.0;
             ctx.set_fill_style(&JsValue::from_str("rgba(0, 170, 255, 0.6)"));
             ctx.begin_path();
-            ctx.arc(lx, ny, neuron_radius, 0.0, std::f64::consts::PI * 2.0).ok();
+            ctx.arc(lx, ny, neuron_radius, 0.0, std::f64::consts::PI * 2.0)
+                .ok();
             ctx.fill();
         }
 
@@ -711,7 +791,8 @@ fn render_neural_network(runner: &DemoRunner<NeuralNetworkDemo>) {
     // Title
     ctx.set_font("bold 20px 'Rajdhani', sans-serif");
     ctx.set_fill_style(&JsValue::from_str("#ffffff"));
-    ctx.fill_text("Neural Network Playground", margin, 25.0).ok();
+    ctx.fill_text("Neural Network Playground", margin, 25.0)
+        .ok();
 }
 
 fn wire_neural_network_controls() -> Result<(), JsValue> {
@@ -871,7 +952,8 @@ fn render_cnn_filter(runner: &DemoRunner<CnnFilterDemo>) {
     // Draw title
     ctx.set_font("bold 20px 'Rajdhani', sans-serif");
     ctx.set_fill_style(&JsValue::from_str("#ffffff"));
-    ctx.fill_text("CNN Convolution Visualization", margin, 25.0).ok();
+    ctx.fill_text("CNN Convolution Visualization", margin, 25.0)
+        .ok();
 
     // Draw input image
     ctx.set_font("bold 14px 'Rajdhani', sans-serif");
@@ -881,7 +963,10 @@ fn render_cnn_filter(runner: &DemoRunner<CnnFilterDemo>) {
     for (y, row) in demo.input.iter().enumerate() {
         for (x, &val) in row.iter().enumerate() {
             let brightness = (val * 255.0) as u8;
-            ctx.set_fill_style(&JsValue::from_str(&format!("rgb({},{},{})", brightness, brightness, brightness)));
+            ctx.set_fill_style(&JsValue::from_str(&format!(
+                "rgb({},{},{})",
+                brightness, brightness, brightness
+            )));
             ctx.fill_rect(
                 input_x + x as f64 * grid_pixel,
                 input_y + y as f64 * grid_pixel,
@@ -903,7 +988,8 @@ fn render_cnn_filter(runner: &DemoRunner<CnnFilterDemo>) {
 
     // Draw kernel
     ctx.set_fill_style(&JsValue::from_str("#00ffaa"));
-    ctx.fill_text("Kernel (3x3)", kernel_x, kernel_y - 10.0).ok();
+    ctx.fill_text("Kernel (3x3)", kernel_x, kernel_y - 10.0)
+        .ok();
 
     ctx.set_font("12px 'JetBrains Mono', monospace");
     for y in 0..3 {
@@ -929,20 +1015,25 @@ fn render_cnn_filter(runner: &DemoRunner<CnnFilterDemo>) {
                 &format!("{:.1}", val),
                 kernel_x + x as f64 * 30.0 + 4.0,
                 kernel_y + y as f64 * 30.0 + 18.0,
-            ).ok();
+            )
+            .ok();
         }
     }
 
     // Draw output
     ctx.set_font("bold 14px 'Rajdhani', sans-serif");
     ctx.set_fill_style(&JsValue::from_str("#00ffaa"));
-    ctx.fill_text("Output Feature Map", output_x, output_y - 10.0).ok();
+    ctx.fill_text("Output Feature Map", output_x, output_y - 10.0)
+        .ok();
 
     let normalized = demo.normalized_output();
     for (y, row) in normalized.iter().enumerate() {
         for (x, &val) in row.iter().enumerate() {
             let brightness = (val * 255.0) as u8;
-            ctx.set_fill_style(&JsValue::from_str(&format!("rgb({},{},{})", brightness, brightness, brightness)));
+            ctx.set_fill_style(&JsValue::from_str(&format!(
+                "rgb({},{},{})",
+                brightness, brightness, brightness
+            )));
             ctx.fill_rect(
                 output_x + x as f64 * grid_pixel,
                 output_y + y as f64 * grid_pixel,
@@ -953,7 +1044,9 @@ fn render_cnn_filter(runner: &DemoRunner<CnnFilterDemo>) {
     }
 
     // Highlight current output position
-    if demo.current_y < normalized.len() && demo.current_x < normalized.get(0).map(|r| r.len()).unwrap_or(0) {
+    if demo.current_y < normalized.len()
+        && demo.current_x < normalized.first().map(|r| r.len()).unwrap_or(0)
+    {
         ctx.set_stroke_style(&JsValue::from_str("#ffaa00"));
         ctx.set_line_width(2.0);
         ctx.stroke_rect(
@@ -967,9 +1060,24 @@ fn render_cnn_filter(runner: &DemoRunner<CnnFilterDemo>) {
     // Show current computation
     ctx.set_font("14px 'JetBrains Mono', monospace");
     ctx.set_fill_style(&JsValue::from_str("#e0e0e0"));
-    ctx.fill_text(&format!("Position: ({}, {})", demo.current_x, demo.current_y), kernel_x, kernel_y + 120.0).ok();
-    ctx.fill_text(&format!("Sum: {:.2}", demo.current_sum), kernel_x, kernel_y + 140.0).ok();
-    ctx.fill_text(&format!("Filter: {}", demo.filter_type.name()), kernel_x, kernel_y + 160.0).ok();
+    ctx.fill_text(
+        &format!("Position: ({}, {})", demo.current_x, demo.current_y),
+        kernel_x,
+        kernel_y + 120.0,
+    )
+    .ok();
+    ctx.fill_text(
+        &format!("Sum: {:.2}", demo.current_sum),
+        kernel_x,
+        kernel_y + 140.0,
+    )
+    .ok();
+    ctx.fill_text(
+        &format!("Filter: {}", demo.filter_type.name()),
+        kernel_x,
+        kernel_y + 160.0,
+    )
+    .ok();
 }
 
 fn wire_cnn_filter_controls() -> Result<(), JsValue> {
@@ -1014,7 +1122,9 @@ fn wire_cnn_filter_controls() -> Result<(), JsValue> {
                     let checked = input.checked();
                     CNN_FILTER_DEMO.with(|d| {
                         if let Some(runner) = d.borrow_mut().as_mut() {
-                            runner.demo.set_param("animate", if checked { 1.0 } else { 0.0 });
+                            runner
+                                .demo
+                                .set_param("animate", if checked { 1.0 } else { 0.0 });
                         }
                     });
                 }
@@ -1083,7 +1193,8 @@ fn render_attention(runner: &DemoRunner<AttentionDemo>) {
     // Title
     ctx.set_font("bold 20px 'Rajdhani', sans-serif");
     ctx.set_fill_style(&JsValue::from_str("#ffffff"));
-    ctx.fill_text("Attention Mechanism Visualization", margin, 25.0).ok();
+    ctx.fill_text("Attention Mechanism Visualization", margin, 25.0)
+        .ok();
 
     // Draw tokens
     ctx.set_font("bold 14px 'Rajdhani', sans-serif");
@@ -1095,7 +1206,11 @@ fn render_attention(runner: &DemoRunner<AttentionDemo>) {
 
         // Token box
         let is_selected = i == demo.selected_query;
-        let color = if is_selected { "#00ffaa" } else { "rgba(100, 255, 218, 0.3)" };
+        let color = if is_selected {
+            "#00ffaa"
+        } else {
+            "rgba(100, 255, 218, 0.3)"
+        };
         ctx.set_stroke_style(&JsValue::from_str(color));
         ctx.set_line_width(if is_selected { 3.0 } else { 1.0 });
         ctx.stroke_rect(x, tokens_y, token_width, token_height);
@@ -1104,7 +1219,8 @@ fn render_attention(runner: &DemoRunner<AttentionDemo>) {
         ctx.set_font("14px 'JetBrains Mono', monospace");
         ctx.set_fill_style(&JsValue::from_str("#ffffff"));
         ctx.set_text_align("center");
-        ctx.fill_text(token, x + token_width / 2.0, tokens_y + 22.0).ok();
+        ctx.fill_text(token, x + token_width / 2.0, tokens_y + 22.0)
+            .ok();
     }
     ctx.set_text_align("left");
 
@@ -1115,7 +1231,17 @@ fn render_attention(runner: &DemoRunner<AttentionDemo>) {
 
         ctx.set_font("bold 14px 'Rajdhani', sans-serif");
         ctx.set_fill_style(&JsValue::from_str("#00ffaa"));
-        ctx.fill_text(&format!("Attention from '{}':", demo.tokens.get(demo.selected_query).unwrap_or(&"?".to_string())), margin, arc_y).ok();
+        ctx.fill_text(
+            &format!(
+                "Attention from '{}':",
+                demo.tokens
+                    .get(demo.selected_query)
+                    .unwrap_or(&"?".to_string())
+            ),
+            margin,
+            arc_y,
+        )
+        .ok();
 
         let bar_y = arc_y + 20.0;
         let bar_height = 25.0;
@@ -1127,7 +1253,12 @@ fn render_attention(runner: &DemoRunner<AttentionDemo>) {
             // Token label
             ctx.set_font("12px 'JetBrains Mono', monospace");
             ctx.set_fill_style(&JsValue::from_str("#888"));
-            ctx.fill_text(demo.tokens.get(i).unwrap_or(&"?".to_string()), margin, y + 17.0).ok();
+            ctx.fill_text(
+                demo.tokens.get(i).unwrap_or(&"?".to_string()),
+                margin,
+                y + 17.0,
+            )
+            .ok();
 
             // Weight bar
             let bar_x = margin + 80.0;
@@ -1138,7 +1269,8 @@ fn render_attention(runner: &DemoRunner<AttentionDemo>) {
 
             // Weight value
             ctx.set_fill_style(&JsValue::from_str("#ffffff"));
-            ctx.fill_text(&format!("{:.2}", weight), bar_x + bar_w + 10.0, y + 17.0).ok();
+            ctx.fill_text(&format!("{:.2}", weight), bar_x + bar_w + 10.0, y + 17.0)
+                .ok();
         }
     }
 
@@ -1149,14 +1281,18 @@ fn render_attention(runner: &DemoRunner<AttentionDemo>) {
 
     ctx.set_font("bold 14px 'Rajdhani', sans-serif");
     ctx.set_fill_style(&JsValue::from_str("#00ffaa"));
-    ctx.fill_text("Attention Matrix", matrix_x, matrix_y - 15.0).ok();
+    ctx.fill_text("Attention Matrix", matrix_x, matrix_y - 15.0)
+        .ok();
 
     let n = demo.attention_weights.len().min(6);
     for q in 0..n {
         for k in 0..n.min(demo.attention_weights.get(q).map(|r| r.len()).unwrap_or(0)) {
             let weight = demo.attention_weights[q][k];
             let brightness = (weight * 255.0) as u8;
-            ctx.set_fill_style(&JsValue::from_str(&format!("rgb(0, {}, {})", brightness, brightness)));
+            ctx.set_fill_style(&JsValue::from_str(&format!(
+                "rgb(0, {}, {})",
+                brightness, brightness
+            )));
             ctx.fill_rect(
                 matrix_x + k as f64 * cell_size,
                 matrix_y + q as f64 * cell_size,
@@ -1205,7 +1341,14 @@ fn wire_attention_controls() -> Result<(), JsValue> {
                         ATTENTION_DEMO.with(|d| {
                             if let Some(runner) = d.borrow_mut().as_mut() {
                                 runner.demo.set_param("selected_query", value);
-                                update_text("query-value", runner.demo.tokens.get(value as usize).unwrap_or(&"?".to_string()));
+                                update_text(
+                                    "query-value",
+                                    runner
+                                        .demo
+                                        .tokens
+                                        .get(value as usize)
+                                        .unwrap_or(&"?".to_string()),
+                                );
                             }
                         });
                     }
@@ -1324,7 +1467,10 @@ fn render_grid_world(runner: &DemoRunner<GridWorldDemo>) {
 
             if matches!(cell, Cell::Empty) {
                 let v = values.get(y).and_then(|r| r.get(x)).copied().unwrap_or(0.5);
-                ctx.set_fill_style(&JsValue::from_str(&format!("rgba(100, 200, 255, {})", v * 0.5)));
+                ctx.set_fill_style(&JsValue::from_str(&format!(
+                    "rgba(100, 200, 255, {})",
+                    v * 0.5
+                )));
             } else {
                 ctx.set_fill_style(&JsValue::from_str(color));
             }
@@ -1340,7 +1486,8 @@ fn render_grid_world(runner: &DemoRunner<GridWorldDemo>) {
                         &action.symbol().to_string(),
                         cx + cell_size / 2.0,
                         cy + cell_size / 2.0 + 7.0,
-                    ).ok();
+                    )
+                    .ok();
                 }
             }
         }
@@ -1352,7 +1499,8 @@ fn render_grid_world(runner: &DemoRunner<GridWorldDemo>) {
     let ay = grid_y + demo.agent_y as f64 * cell_size + cell_size / 2.0;
     ctx.set_fill_style(&JsValue::from_str("#ffaa00"));
     ctx.begin_path();
-    ctx.arc(ax, ay, cell_size / 3.0, 0.0, std::f64::consts::PI * 2.0).ok();
+    ctx.arc(ax, ay, cell_size / 3.0, 0.0, std::f64::consts::PI * 2.0)
+        .ok();
     ctx.fill();
 
     // Draw info panel
@@ -1365,10 +1513,26 @@ fn render_grid_world(runner: &DemoRunner<GridWorldDemo>) {
 
     ctx.set_font("14px 'JetBrains Mono', monospace");
     ctx.set_fill_style(&JsValue::from_str("#e0e0e0"));
-    ctx.fill_text(&format!("Episode: {}", demo.episode), info_x, info_y + 25.0).ok();
-    ctx.fill_text(&format!("Epsilon: {:.2}", demo.epsilon), info_x, info_y + 45.0).ok();
-    ctx.fill_text(&format!("Avg Reward: {:.2}", demo.avg_reward()), info_x, info_y + 65.0).ok();
-    ctx.fill_text(&format!("Layout: {}", demo.layout.name()), info_x, info_y + 85.0).ok();
+    ctx.fill_text(&format!("Episode: {}", demo.episode), info_x, info_y + 25.0)
+        .ok();
+    ctx.fill_text(
+        &format!("Epsilon: {:.2}", demo.epsilon),
+        info_x,
+        info_y + 45.0,
+    )
+    .ok();
+    ctx.fill_text(
+        &format!("Avg Reward: {:.2}", demo.avg_reward()),
+        info_x,
+        info_y + 65.0,
+    )
+    .ok();
+    ctx.fill_text(
+        &format!("Layout: {}", demo.layout.name()),
+        info_x,
+        info_y + 85.0,
+    )
+    .ok();
 
     // Legend
     let legend_y = info_y + 120.0;
@@ -1487,16 +1651,19 @@ impl PlaceholderDemoRunner {
 
         ctx.set_font("16px 'Inter', sans-serif");
         ctx.set_fill_style(&JsValue::from_str("#888888"));
-        ctx.fill_text("Interactive demo coming soon...", w / 2.0, h / 2.0 + 20.0).ok();
+        ctx.fill_text("Interactive demo coming soon...", w / 2.0, h / 2.0 + 20.0)
+            .ok();
 
         ctx.set_stroke_style(&JsValue::from_str("rgba(0, 255, 170, 0.2)"));
         ctx.set_line_width(2.0);
         ctx.begin_path();
-        ctx.arc(w / 2.0, h / 2.0, 80.0, 0.0, std::f64::consts::PI * 2.0).ok();
+        ctx.arc(w / 2.0, h / 2.0, 80.0, 0.0, std::f64::consts::PI * 2.0)
+            .ok();
         ctx.stroke();
 
         ctx.begin_path();
-        ctx.arc(w / 2.0, h / 2.0, 100.0, 0.0, std::f64::consts::PI * 2.0).ok();
+        ctx.arc(w / 2.0, h / 2.0, 100.0, 0.0, std::f64::consts::PI * 2.0)
+            .ok();
         ctx.stroke();
 
         Ok(())
@@ -1518,4 +1685,3 @@ fn update_text(id: &str, text: &str) {
         el.set_text_content(Some(text));
     }
 }
-

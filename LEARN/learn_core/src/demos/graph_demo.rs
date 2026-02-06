@@ -5,8 +5,8 @@
 //! LAYER: LEARN -> learn_core -> demos
 //! ===============================================================================
 
+use super::pseudocode::{graph as pc_graph, Pseudocode};
 use crate::{Demo, ParamMeta, Rng, Vec2};
-use super::pseudocode::{Pseudocode, graph as pc_graph};
 
 /// A vertex in the graph
 #[derive(Clone, Debug)]
@@ -21,9 +21,9 @@ pub struct Vertex {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum VertexState {
     Unvisited,
-    Discovered,  // In queue/stack (frontier)
-    Visited,     // Fully processed
-    Current,     // Currently being processed
+    Discovered, // In queue/stack (frontier)
+    Visited,    // Fully processed
+    Current,    // Currently being processed
 }
 
 /// An edge in the graph
@@ -38,8 +38,8 @@ pub struct Edge {
 /// Graph traversal algorithm
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TraversalAlgorithm {
-    BFS,  // Breadth-first search
-    DFS,  // Depth-first search
+    BFS, // Breadth-first search
+    DFS, // Depth-first search
 }
 
 /// Animation state for graph operations
@@ -53,7 +53,11 @@ pub enum GraphAnimation {
         current: Option<usize>,
         progress: f32,
     },
-    AddingEdge { from: usize, to: usize, progress: f32 },
+    AddingEdge {
+        from: usize,
+        to: usize,
+        progress: f32,
+    },
 }
 
 /// Graph visualization demo
@@ -103,12 +107,12 @@ impl GraphDemo {
 
         // Create a sample graph with 6 vertices
         let positions = [
-            (300.0, 100.0),  // 0: A
-            (150.0, 200.0),  // 1: B
-            (450.0, 200.0),  // 2: C
-            (100.0, 350.0),  // 3: D
-            (300.0, 350.0),  // 4: E
-            (500.0, 350.0),  // 5: F
+            (300.0, 100.0), // 0: A
+            (150.0, 200.0), // 1: B
+            (450.0, 200.0), // 2: C
+            (100.0, 350.0), // 3: D
+            (300.0, 350.0), // 4: E
+            (500.0, 350.0), // 5: F
         ];
 
         let labels = ["A", "B", "C", "D", "E", "F"];
@@ -124,10 +128,13 @@ impl GraphDemo {
 
         // Add edges (undirected graph)
         let edges = [
-            (0, 1), (0, 2),  // A-B, A-C
-            (1, 3), (1, 4),  // B-D, B-E
-            (2, 4), (2, 5),  // C-E, C-F
-            (3, 4),          // D-E
+            (0, 1),
+            (0, 2), // A-B, A-C
+            (1, 3),
+            (1, 4), // B-D, B-E
+            (2, 4),
+            (2, 5), // C-E, C-F
+            (3, 4), // D-E
         ];
 
         for (from, to) in edges {
@@ -137,15 +144,26 @@ impl GraphDemo {
 
     /// Add edge immediately without animation
     fn add_edge_immediate(&mut self, from: usize, to: usize) {
-        self.edges.push(Edge { from, to, weight: None, highlighted: false });
+        self.edges.push(Edge {
+            from,
+            to,
+            weight: None,
+            highlighted: false,
+        });
         if !self.directed {
-            self.edges.push(Edge { from: to, to: from, weight: None, highlighted: false });
+            self.edges.push(Edge {
+                from: to,
+                to: from,
+                weight: None,
+                highlighted: false,
+            });
         }
     }
 
     /// Get neighbors of a vertex
     pub fn neighbors(&self, vertex: usize) -> Vec<usize> {
-        self.edges.iter()
+        self.edges
+            .iter()
             .filter(|e| e.from == vertex)
             .map(|e| e.to)
             .collect()
@@ -211,13 +229,21 @@ impl GraphDemo {
             return;
         }
 
-        self.message = format!("Adding edge {}-{}", self.vertices[from].label, self.vertices[to].label);
-        self.animation = GraphAnimation::AddingEdge { from, to, progress: 0.0 };
+        self.message = format!(
+            "Adding edge {}-{}",
+            self.vertices[from].label, self.vertices[to].label
+        );
+        self.animation = GraphAnimation::AddingEdge {
+            from,
+            to,
+            progress: 0.0,
+        };
     }
 
     /// Get traversal order as labels
     pub fn get_traversal_labels(&self) -> Vec<String> {
-        self.traversal_order.iter()
+        self.traversal_order
+            .iter()
             .filter_map(|&id| self.vertices.get(id).map(|v| v.label.clone()))
             .collect()
     }
@@ -250,7 +276,13 @@ impl Demo for GraphDemo {
 
         self.animation = match anim {
             GraphAnimation::Idle => GraphAnimation::Idle,
-            GraphAnimation::Traversing { algorithm, mut frontier, mut visited, current, progress } => {
+            GraphAnimation::Traversing {
+                algorithm,
+                mut frontier,
+                mut visited,
+                current,
+                progress,
+            } => {
                 let new_progress = progress + speed;
                 if new_progress >= 1.0 {
                     // Process current vertex
@@ -316,10 +348,17 @@ impl Demo for GraphDemo {
                 let new_progress = progress + speed;
                 if new_progress >= 1.0 {
                     self.add_edge_immediate(from, to);
-                    self.message = format!("Added edge {}-{}", self.vertices[from].label, self.vertices[to].label);
+                    self.message = format!(
+                        "Added edge {}-{}",
+                        self.vertices[from].label, self.vertices[to].label
+                    );
                     GraphAnimation::Idle
                 } else {
-                    GraphAnimation::AddingEdge { from, to, progress: new_progress }
+                    GraphAnimation::AddingEdge {
+                        from,
+                        to,
+                        progress: new_progress,
+                    }
                 }
             }
         };
@@ -327,22 +366,23 @@ impl Demo for GraphDemo {
 
     fn set_param(&mut self, name: &str, value: f32) -> bool {
         match name {
-            "speed" => { self.speed = value; true }
+            "speed" => {
+                self.speed = value;
+                true
+            }
             _ => false,
         }
     }
 
     fn params() -> &'static [ParamMeta] {
-        &[
-            ParamMeta {
-                name: "speed",
-                label: "Animation Speed",
-                min: 0.25,
-                max: 4.0,
-                step: 0.25,
-                default: 1.0,
-            },
-        ]
+        &[ParamMeta {
+            name: "speed",
+            label: "Animation Speed",
+            min: 0.25,
+            max: 4.0,
+            step: 0.25,
+            default: 1.0,
+        }]
     }
 }
 

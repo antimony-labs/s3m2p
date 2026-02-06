@@ -120,11 +120,22 @@ pub fn canny_edge(input: &ImageData, low_threshold: f32, high_threshold: f32) ->
     let mut gray = vec![0f32; (width * height) as usize];
     for i in 0..(width * height) as usize {
         let idx = i * 4;
-        gray[i] = 0.299 * data[idx] as f32 + 0.587 * data[idx + 1] as f32 + 0.114 * data[idx + 2] as f32;
+        gray[i] =
+            0.299 * data[idx] as f32 + 0.587 * data[idx + 1] as f32 + 0.114 * data[idx + 2] as f32;
     }
 
     // Step 2: Apply Gaussian blur (simplified 3x3)
-    let blur_kernel = [1.0 / 16.0, 2.0 / 16.0, 1.0 / 16.0, 2.0 / 16.0, 4.0 / 16.0, 2.0 / 16.0, 1.0 / 16.0, 2.0 / 16.0, 1.0 / 16.0];
+    let blur_kernel = [
+        1.0 / 16.0,
+        2.0 / 16.0,
+        1.0 / 16.0,
+        2.0 / 16.0,
+        4.0 / 16.0,
+        2.0 / 16.0,
+        1.0 / 16.0,
+        2.0 / 16.0,
+        1.0 / 16.0,
+    ];
     let mut blurred = vec![0f32; gray.len()];
     convolve_gray(&gray, width, height, &blur_kernel, 3, &mut blurred);
 
@@ -155,11 +166,18 @@ pub fn canny_edge(input: &ImageData, low_threshold: f32, high_threshold: f32) ->
             let mag = magnitude[idx];
 
             // Quantize angle to 4 directions
-            let (dx, dy) = if angle < -std::f32::consts::FRAC_PI_8 * 3.0 || angle >= std::f32::consts::FRAC_PI_8 * 3.0 {
+            let (dx, dy) = if !(-std::f32::consts::FRAC_PI_8 * 3.0
+                ..std::f32::consts::FRAC_PI_8 * 3.0)
+                .contains(&angle)
+            {
                 (1, 0) // Horizontal
-            } else if angle >= std::f32::consts::FRAC_PI_8 && angle < std::f32::consts::FRAC_PI_8 * 3.0 {
+            } else if (std::f32::consts::FRAC_PI_8..std::f32::consts::FRAC_PI_8 * 3.0)
+                .contains(&angle)
+            {
                 (1, 1) // Diagonal 45
-            } else if angle >= -std::f32::consts::FRAC_PI_8 * 3.0 && angle < -std::f32::consts::FRAC_PI_8 {
+            } else if (-std::f32::consts::FRAC_PI_8 * 3.0..-std::f32::consts::FRAC_PI_8)
+                .contains(&angle)
+            {
                 (1, -1) // Diagonal -45
             } else {
                 (0, 1) // Vertical
@@ -208,7 +226,11 @@ pub fn canny_edge(input: &ImageData, low_threshold: f32, high_threshold: f32) ->
                         break;
                     }
                 }
-                if connected { 255 } else { 0 }
+                if connected {
+                    255
+                } else {
+                    0
+                }
             } else {
                 0
             };
@@ -224,7 +246,14 @@ pub fn canny_edge(input: &ImageData, low_threshold: f32, high_threshold: f32) ->
 }
 
 /// Apply convolution to grayscale image
-fn convolve_gray(input: &[f32], width: i32, height: i32, kernel: &[f32], ksize: i32, output: &mut [f32]) {
+fn convolve_gray(
+    input: &[f32],
+    width: i32,
+    height: i32,
+    kernel: &[f32],
+    ksize: i32,
+    output: &mut [f32],
+) {
     let half = ksize / 2;
 
     for y in 0..height {
@@ -275,7 +304,8 @@ pub fn harris_corners(input: &ImageData, threshold: f32) -> Vec<u8> {
     let mut gray = vec![0f32; (width * height) as usize];
     for i in 0..(width * height) as usize {
         let idx = i * 4;
-        gray[i] = 0.299 * data[idx] as f32 + 0.587 * data[idx + 1] as f32 + 0.114 * data[idx + 2] as f32;
+        gray[i] =
+            0.299 * data[idx] as f32 + 0.587 * data[idx + 1] as f32 + 0.114 * data[idx + 2] as f32;
     }
 
     // Compute gradients
@@ -533,12 +563,8 @@ pub fn simple_face_detection(input: &ImageData) -> Vec<u8> {
             let b = data[idx + 2] as f32;
 
             // Simple skin detection rules
-            let is_skin = r > 95.0
-                && g > 40.0
-                && b > 20.0
-                && (r - g).abs() > 15.0
-                && r > g
-                && r > b;
+            let is_skin =
+                r > 95.0 && g > 40.0 && b > 20.0 && (r - g).abs() > 15.0 && r > g && r > b;
 
             if is_skin {
                 // Tint skin regions slightly

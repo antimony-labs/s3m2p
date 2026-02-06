@@ -44,7 +44,7 @@ impl CommentStore {
 
     pub fn add_comment(&self, lesson_id: String, author: String, content: String) -> Comment {
         let mut comments = self.comments.lock().unwrap();
-        
+
         let new_comment = Comment {
             id: Uuid::new_v4().to_string(),
             lesson_id,

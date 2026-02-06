@@ -16,7 +16,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::power::components::diode::{find_suitable_diodes, DiodePreference, DiodeSpec, DiodeType};
+use crate::power::components::diode::{
+    find_suitable_diodes, DiodePreference, DiodeSpec, DiodeType,
+};
 use crate::power::components::mosfet::{find_suitable_mosfets, MOSFETPreference, MOSFETSpec};
 use crate::power::magnetics::{
     auto_design_transformer, ferrite_database, CoreMaterial, CoreType, IsolationClass,
@@ -359,7 +361,9 @@ pub fn design_flyback(req: &FlybackRequirements) -> Result<FlybackDesign, String
     let p_in = req.estimated_input_power();
 
     // Select operating mode
-    let mode = req.mode.unwrap_or_else(|| select_operating_mode(p_out, req.switching_freq));
+    let mode = req
+        .mode
+        .unwrap_or_else(|| select_operating_mode(p_out, req.switching_freq));
 
     // Calculate duty cycles at min and max input voltage
     let primary_output = req.primary_output();
@@ -371,13 +375,8 @@ pub fn design_flyback(req: &FlybackRequirements) -> Result<FlybackDesign, String
     );
 
     // Calculate primary currents
-    let (i_pri_peak, i_pri_rms) = calculate_primary_currents(
-        p_in,
-        req.vin.min_v,
-        d_max,
-        mode,
-        req.switching_freq,
-    );
+    let (i_pri_peak, i_pri_rms) =
+        calculate_primary_currents(p_in, req.vin.min_v, d_max, mode, req.switching_freq);
 
     // Design transformer
     let material = select_core_material(req.switching_freq);
@@ -430,7 +429,13 @@ pub fn design_flyback(req: &FlybackRequirements) -> Result<FlybackDesign, String
     let input_capacitor = size_input_capacitor(req.vin.min_v, p_in, req.switching_freq, d_max);
 
     // Design clamp circuit
-    let clamp = design_clamp(l_leak, i_pri_peak, v_reflected, req.vin.max_v, req.switching_freq);
+    let clamp = design_clamp(
+        l_leak,
+        i_pri_peak,
+        v_reflected,
+        req.vin.max_v,
+        req.switching_freq,
+    );
 
     // Calculate losses
     let losses = calculate_losses(
@@ -481,12 +486,7 @@ fn select_operating_mode(power: f64, frequency: f64) -> FlybackMode {
 }
 
 /// Calculate duty cycles at minimum and maximum input voltage
-fn calculate_duty_cycles(
-    vin_min: f64,
-    vin_max: f64,
-    _vout: f64,
-    max_duty: f64,
-) -> (f64, f64) {
+fn calculate_duty_cycles(vin_min: f64, vin_max: f64, _vout: f64, max_duty: f64) -> (f64, f64) {
     // For flyback: D = (Vout × N) / (Vin + Vout × N)
     // where N = Np/Ns (turns ratio)
     // At design, we often work with Vout_reflected = Vout × N
@@ -833,7 +833,11 @@ impl FlybackDesign {
         s.push_str("                    FLYBACK CONVERTER DESIGN\n");
         s.push_str("═══════════════════════════════════════════════════════════════\n\n");
 
-        s.push_str(&format!("Mode: {:?} - {}\n\n", self.mode, self.mode.description()));
+        s.push_str(&format!(
+            "Mode: {:?} - {}\n\n",
+            self.mode,
+            self.mode.description()
+        ));
 
         s.push_str("OPERATING CONDITIONS\n");
         s.push_str("────────────────────\n");
@@ -861,10 +865,12 @@ impl FlybackDesign {
         s.push_str("───────────\n");
         s.push_str(&format!(
             "Core: {} ({})\n",
-            self.transformer.core.part_number,
-            self.transformer.material.name
+            self.transformer.core.part_number, self.transformer.material.name
         ));
-        s.push_str(&format!("Primary: {} turns\n", self.transformer.primary.turns));
+        s.push_str(&format!(
+            "Primary: {} turns\n",
+            self.transformer.primary.turns
+        ));
         s.push_str(&format!(
             "Magnetizing inductance: {}\n",
             format_inductance(self.l_mag)
@@ -874,10 +880,7 @@ impl FlybackDesign {
             format_inductance(self.l_leak),
             self.l_leak / self.l_mag * 100.0
         ));
-        s.push_str(&format!(
-            "Flux density: {:.3} T\n",
-            self.transformer.b_peak
-        ));
+        s.push_str(&format!("Flux density: {:.3} T\n", self.transformer.b_peak));
         s.push_str(&format!(
             "Fill factor: {:.1}%\n\n",
             self.transformer.fill_factor * 100.0
@@ -926,7 +929,10 @@ impl FlybackDesign {
 
         s.push_str("EFFICIENCY & LOSSES\n");
         s.push_str("───────────────────\n");
-        s.push_str(&format!("Estimated efficiency: {:.1}%\n", self.efficiency * 100.0));
+        s.push_str(&format!(
+            "Estimated efficiency: {:.1}%\n",
+            self.efficiency * 100.0
+        ));
         s.push_str(&format!("Total losses: {:.2}W\n", self.losses.total));
         s.push_str(&format!(
             "  MOSFET: {:.2}W ({:.2}W cond, {:.2}W sw)\n",
@@ -975,7 +981,10 @@ mod tests {
 
         let d = design.unwrap();
         assert!(d.efficiency > 0.75, "Efficiency should be >75%");
-        assert!(d.transformer.b_peak < 0.35, "Flux density should be reasonable");
+        assert!(
+            d.transformer.b_peak < 0.35,
+            "Flux density should be reasonable"
+        );
         assert!(d.i_pri_peak > 0.0, "Peak current should be positive");
 
         println!("{}", d.summary());
@@ -1023,7 +1032,10 @@ mod tests {
         let clamp = design_clamp(5e-6, 2.0, 30.0, 72.0, 100e3);
 
         assert_eq!(clamp.clamp_type, ClampType::RCD);
-        assert!(clamp.clamp_voltage > 30.0, "Clamp voltage should exceed reflected");
+        assert!(
+            clamp.clamp_voltage > 30.0,
+            "Clamp voltage should exceed reflected"
+        );
         assert!(clamp.resistor > 0.0);
         assert!(clamp.capacitor > 0.0);
     }

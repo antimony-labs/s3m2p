@@ -251,8 +251,7 @@ async fn fetch_text(url: &str) -> Result<String, JsValue> {
 async fn load_posts() -> Result<(BlogIndex, Vec<Post>), JsValue> {
     // Fetch the posts index
     let index_text = fetch_text("/posts/index.json").await?;
-    let posts_index: PostsIndex =
-        serde_json::from_str(&index_text).map_err(|e| e.to_string())?;
+    let posts_index: PostsIndex = serde_json::from_str(&index_text).map_err(|e| e.to_string())?;
 
     let mut all_posts: Vec<Post> = Vec::new();
     let mut index = BlogIndex::new();
@@ -265,7 +264,10 @@ async fn load_posts() -> Result<(BlogIndex, Vec<Post>), JsValue> {
                 if let Some((meta, body)) = parse_frontmatter(&content) {
                     if !meta.draft {
                         index.posts.push(meta.clone());
-                        all_posts.push(Post { meta, content: body });
+                        all_posts.push(Post {
+                            meta,
+                            content: body,
+                        });
                     }
                 }
             }
@@ -425,16 +427,24 @@ This is the content.
                 title: "Test".into(),
                 slug: "test".into(),
                 date: "2025-01-15".into(),
+                updated: None,
+                author: None,
+                series: None,
+                series_part: None,
                 tags: vec![],
                 summary: "".into(),
+                hero: None,
+                hero_caption: None,
                 draft: false,
                 ai_generated: false,
+                featured: false,
+                start_here: false,
             },
             content: "# Heading\n\nParagraph with **bold**.".into(),
         };
 
         let html = post.render_html();
-        assert!(html.contains("<h1>Heading</h1>"));
+        assert!(html.contains("<h1 id=\"heading\">Heading</h1>"));
         assert!(html.contains("<strong>bold</strong>"));
     }
 }

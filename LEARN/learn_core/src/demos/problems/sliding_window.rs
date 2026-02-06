@@ -5,8 +5,8 @@
 //! LAYER: LEARN -> learn_core -> demos -> problems
 //! ===============================================================================
 
+use crate::demos::pseudocode::{CodeLine, Pseudocode};
 use crate::Demo;
-use crate::demos::pseudocode::{Pseudocode, CodeLine};
 use std::collections::{HashMap, VecDeque};
 
 // Static pseudocode
@@ -106,7 +106,10 @@ impl SlidingWindowDemo {
         self.window_end = 0;
         self.best_result = 0;
         self.char_freq.clear();
-        self.pseudocode = Pseudocode::new("Longest Substring Without Repeating", LONGEST_SUBSTRING_CODE);
+        self.pseudocode = Pseudocode::new(
+            "Longest Substring Without Repeating",
+            LONGEST_SUBSTRING_CODE,
+        );
         self.pseudocode.current_line = Some(0);
         self.message = "Find longest substring without repeating characters".to_string();
     }
@@ -182,10 +185,17 @@ impl SlidingWindowDemo {
         let c = chars[self.window_end];
         self.pseudocode.current_line = Some(2);
 
-        if let Some(&prev_idx) = self.char_freq.get(&c).filter(|&&idx| idx >= self.window_start) {
+        if let Some(&prev_idx) = self
+            .char_freq
+            .get(&c)
+            .filter(|&&idx| idx >= self.window_start)
+        {
             self.window_start = prev_idx + 1;
             self.pseudocode.current_line = Some(4);
-            self.message = format!("'{}' seen at {}, move start to {}", c, prev_idx, self.window_start);
+            self.message = format!(
+                "'{}' seen at {}, move start to {}",
+                c, prev_idx, self.window_start
+            );
         } else {
             let len = self.window_end - self.window_start + 1;
             if len as i32 > self.best_result {
@@ -212,12 +222,16 @@ impl SlidingWindowDemo {
             return;
         }
 
-        while !self.deque.is_empty() && self.deque.front().copied().unwrap_or(0) + self.k <= self.window_end {
+        while !self.deque.is_empty()
+            && self.deque.front().copied().unwrap_or(0) + self.k <= self.window_end
+        {
             self.deque.pop_front();
             self.pseudocode.current_line = Some(4);
         }
 
-        while !self.deque.is_empty() && self.arr[*self.deque.back().unwrap()] < self.arr[self.window_end] {
+        while !self.deque.is_empty()
+            && self.arr[*self.deque.back().unwrap()] < self.arr[self.window_end]
+        {
             self.deque.pop_back();
             self.pseudocode.current_line = Some(7);
         }
@@ -235,7 +249,10 @@ impl SlidingWindowDemo {
                 self.window_start, self.window_end, max_val
             );
         } else {
-            self.message = format!("Building window, added arr[{}] = {}", self.window_end, self.arr[self.window_end]);
+            self.message = format!(
+                "Building window, added arr[{}] = {}",
+                self.window_end, self.arr[self.window_end]
+            );
         }
 
         self.window_end += 1;

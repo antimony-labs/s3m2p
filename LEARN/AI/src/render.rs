@@ -586,7 +586,8 @@ impl LessonRenderer {
                         <strong>Coming soon:</strong> Interactive visualization for this lesson.
                     </div>
                 </div>
-                "#.to_string()
+                "#
+                .to_string()
             }
         }
     }

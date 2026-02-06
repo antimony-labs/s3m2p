@@ -14,7 +14,8 @@ pub mod geojson {
 
     /// Parse a GeoJSON FeatureCollection
     pub fn parse_feature_collection(json: &str) -> Result<FeatureCollection, ParseError> {
-        let value: Value = serde_json::from_str(json).map_err(|e| ParseError::Json(e.to_string()))?;
+        let value: Value =
+            serde_json::from_str(json).map_err(|e| ParseError::Json(e.to_string()))?;
 
         let features_array = value
             .get("features")
@@ -66,30 +67,32 @@ pub mod geojson {
 
         match geom_type {
             "Point" => {
-                let coord = parse_coord(coords.ok_or_else(|| {
-                    ParseError::InvalidFormat("Missing coordinates".into())
-                })?)?;
+                let coord = parse_coord(
+                    coords
+                        .ok_or_else(|| ParseError::InvalidFormat("Missing coordinates".into()))?,
+                )?;
                 Ok(Geometry::Point(coord))
             }
             "LineString" => {
-                let coords = parse_coord_array(coords.ok_or_else(|| {
-                    ParseError::InvalidFormat("Missing coordinates".into())
-                })?)?;
+                let coords = parse_coord_array(
+                    coords
+                        .ok_or_else(|| ParseError::InvalidFormat("Missing coordinates".into()))?,
+                )?;
                 Ok(Geometry::LineString(LineString::new(coords)))
             }
             "Polygon" => {
-                let rings = parse_polygon_rings(coords.ok_or_else(|| {
-                    ParseError::InvalidFormat("Missing coordinates".into())
-                })?)?;
+                let rings = parse_polygon_rings(
+                    coords
+                        .ok_or_else(|| ParseError::InvalidFormat("Missing coordinates".into()))?,
+                )?;
                 let mut rings_iter = rings.into_iter();
                 let exterior = rings_iter.next().unwrap_or_else(|| Ring::new(vec![]));
                 let holes: Vec<Ring> = rings_iter.collect();
                 Ok(Geometry::Polygon(Polygon::with_holes(exterior, holes)))
             }
             "MultiPolygon" => {
-                let polygons_value = coords.ok_or_else(|| {
-                    ParseError::InvalidFormat("Missing coordinates".into())
-                })?;
+                let polygons_value = coords
+                    .ok_or_else(|| ParseError::InvalidFormat("Missing coordinates".into()))?;
                 let polygons = parse_multipolygon(polygons_value)?;
                 Ok(Geometry::MultiPolygon(MultiPolygon::new(polygons)))
             }
@@ -102,7 +105,9 @@ pub mod geojson {
             .as_array()
             .ok_or_else(|| ParseError::InvalidFormat("Expected coordinate array".into()))?;
         if arr.len() < 2 {
-            return Err(ParseError::InvalidFormat("Coordinate needs at least 2 values".into()));
+            return Err(ParseError::InvalidFormat(
+                "Coordinate needs at least 2 values".into(),
+            ));
         }
         let x = arr[0]
             .as_f64()
@@ -361,7 +366,7 @@ pub fn read_binary(data: &[u8]) -> Result<FeatureCollection, ParseError> {
     }
 
     // Verify magic
-    if &data[0..4] != &binary::MAGIC {
+    if data[0..4] != binary::MAGIC {
         return Err(ParseError::InvalidFormat("Invalid magic bytes".into()));
     }
 

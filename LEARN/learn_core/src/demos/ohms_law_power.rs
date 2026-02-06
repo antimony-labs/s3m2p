@@ -155,4 +155,3 @@ impl Demo for OhmsLawPowerDemo {
         ]
     }
 }
-

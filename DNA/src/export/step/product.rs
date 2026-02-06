@@ -118,7 +118,7 @@ pub struct ProductDefinition {
     pub id: EntityId,
     pub id_string: String,
     pub description: Option<String>,
-    pub formation: EntityId, // ProductDefinitionFormation
+    pub formation: EntityId,          // ProductDefinitionFormation
     pub frame_of_reference: EntityId, // ProductDefinitionContext
 }
 
@@ -193,7 +193,7 @@ impl StepEntity for ShapeRepresentation {
 /// SHAPE_DEFINITION_REPRESENTATION - links shape to representation
 pub struct ShapeDefinitionRepresentation {
     pub id: EntityId,
-    pub definition: EntityId, // ProductDefinitionShape
+    pub definition: EntityId,          // ProductDefinitionShape
     pub used_representation: EntityId, // ShapeRepresentation
 }
 

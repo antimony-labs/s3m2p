@@ -21,11 +21,11 @@ pub fn generate_part_number(component_type: &ComponentType, index: usize) -> Str
         ComponentType::Cleat { is_vertical, .. } => {
             let prefix = if *is_vertical { "V" } else { "H" };
             format!("CLT-2X4-{}{:03}", prefix, index + 1)
-        },
+        }
 
         ComponentType::Panel { panel_type, .. } => {
             format!("PNL-PLY-{}", panel_type_name(*panel_type))
-        },
+        }
 
         ComponentType::Nail { .. } => format!("NAIL-16D-{:03}", index + 1),
 
@@ -34,7 +34,7 @@ pub fn generate_part_number(component_type: &ComponentType, index: usize) -> Str
         ComponentType::BaseAssembly => "ASSY-BASE".to_string(),
         ComponentType::WallAssembly(panel_type) => {
             format!("ASSY-WALL-{}", panel_type_name(*panel_type))
-        },
+        }
     }
 }
 
@@ -55,7 +55,9 @@ mod tests {
 
     #[test]
     fn test_skid_part_number() {
-        let component = ComponentType::Skid { dimensions: [3.5, 3.5, 120.0] };
+        let component = ComponentType::Skid {
+            dimensions: [3.5, 3.5, 120.0],
+        };
         assert_eq!(generate_part_number(&component, 0), "SKD-4X4-001");
         assert_eq!(generate_part_number(&component, 1), "SKD-4X4-002");
         assert_eq!(generate_part_number(&component, 99), "SKD-4X4-100");
@@ -63,7 +65,9 @@ mod tests {
 
     #[test]
     fn test_floorboard_part_number() {
-        let component = ComponentType::Floorboard { dimensions: [1.5, 5.5, 48.0] };
+        let component = ComponentType::Floorboard {
+            dimensions: [1.5, 5.5, 48.0],
+        };
         assert_eq!(generate_part_number(&component, 0), "FLR-2X6-001");
     }
 
@@ -71,13 +75,13 @@ mod tests {
     fn test_cleat_part_number() {
         let vert_cleat = ComponentType::Cleat {
             dimensions: [1.5, 3.5, 36.0],
-            is_vertical: true
+            is_vertical: true,
         };
         assert_eq!(generate_part_number(&vert_cleat, 0), "CLT-2X4-V001");
 
         let horz_cleat = ComponentType::Cleat {
             dimensions: [1.5, 3.5, 36.0],
-            is_vertical: false
+            is_vertical: false,
         };
         assert_eq!(generate_part_number(&horz_cleat, 0), "CLT-2X4-H001");
     }
@@ -88,7 +92,7 @@ mod tests {
             thickness: 0.75,
             width: 48.0,
             height: 36.0,
-            panel_type: PanelType::Front
+            panel_type: PanelType::Front,
         };
         assert_eq!(generate_part_number(&front_panel, 0), "PNL-PLY-FRONT");
 
@@ -96,7 +100,7 @@ mod tests {
             thickness: 0.75,
             width: 48.0,
             height: 48.0,
-            panel_type: PanelType::Top
+            panel_type: PanelType::Top,
         };
         assert_eq!(generate_part_number(&top_panel, 0), "PNL-PLY-TOP");
     }
@@ -109,7 +113,7 @@ mod tests {
             z: 4.0,
             diameter: 0.162,
             length: 3.5,
-            direction: [0.0, 0.0, -1.0]
+            direction: [0.0, 0.0, -1.0],
         };
         assert_eq!(generate_part_number(&nail, 0), "NAIL-16D-001");
         assert_eq!(generate_part_number(&nail, 99), "NAIL-16D-100");

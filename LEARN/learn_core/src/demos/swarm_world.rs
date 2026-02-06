@@ -15,8 +15,8 @@ pub struct Agent {
     pub pos: Vec2,
     pub vel: Vec2,
     pub heading: f32,
-    pub value: f32,      // Generic scalar for consensus demos
-    pub health: f32,     // For robustness demos
+    pub value: f32,                   // Generic scalar for consensus demos
+    pub health: f32,                  // For robustness demos
     pub assigned_task: Option<usize>, // For allocation demos
 }
 
@@ -94,7 +94,7 @@ impl SwarmWorld {
         self.grid.clear();
         for (i, agent) in self.agents.iter().enumerate() {
             let cell = self.cell_of(agent.pos);
-            self.grid.entry(cell).or_insert_with(Vec::new).push(i);
+            self.grid.entry(cell).or_default().push(i);
         }
     }
 
@@ -141,7 +141,7 @@ impl SwarmWorld {
         for agent in &mut self.agents {
             // Velocity update is handled by demos (they set acceleration)
             // This just updates position based on current velocity
-            
+
             // Clamp speed (will be set by demos)
             let max_speed = 0.5;
             if agent.vel.length() > max_speed {
@@ -154,13 +154,13 @@ impl SwarmWorld {
             // Wrap around (torus world)
             let width = self.bounds_max.x - self.bounds_min.x;
             let height = self.bounds_max.y - self.bounds_min.y;
-            
+
             if agent.pos.x < self.bounds_min.x {
                 agent.pos.x += width;
             } else if agent.pos.x > self.bounds_max.x {
                 agent.pos.x -= width;
             }
-            
+
             if agent.pos.y < self.bounds_min.y {
                 agent.pos.y += height;
             } else if agent.pos.y > self.bounds_max.y {
@@ -238,4 +238,3 @@ impl SwarmWorld {
         self.time += self.dt;
     }
 }
-

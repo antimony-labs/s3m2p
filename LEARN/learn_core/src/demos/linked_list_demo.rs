@@ -5,15 +5,15 @@
 //! LAYER: LEARN -> learn_core -> demos
 //! ===============================================================================
 
+use super::pseudocode::{linked_list as pc_linked_list, Pseudocode};
 use crate::{Demo, ParamMeta, Rng, Vec2};
-use super::pseudocode::{Pseudocode, linked_list as pc_linked_list};
 
 /// A node in the linked list
 #[derive(Clone, Debug)]
 pub struct ListNode {
     pub value: i32,
-    pub next: Option<usize>,  // Index into nodes vector
-    pub position: Vec2,       // For rendering animation
+    pub next: Option<usize>, // Index into nodes vector
+    pub position: Vec2,      // For rendering animation
     pub target_position: Vec2,
 }
 
@@ -21,11 +21,27 @@ pub struct ListNode {
 #[derive(Clone, Debug, PartialEq)]
 pub enum ListAnimation {
     Idle,
-    InsertingHead { value: i32, progress: f32 },
-    InsertingTail { value: i32, progress: f32 },
-    Deleting { index: usize, progress: f32 },
-    Searching { value: i32, current: usize, progress: f32 },
-    Traversing { current: usize, progress: f32 },
+    InsertingHead {
+        value: i32,
+        progress: f32,
+    },
+    InsertingTail {
+        value: i32,
+        progress: f32,
+    },
+    Deleting {
+        index: usize,
+        progress: f32,
+    },
+    Searching {
+        value: i32,
+        current: usize,
+        progress: f32,
+    },
+    Traversing {
+        current: usize,
+        progress: f32,
+    },
 }
 
 /// Linked list visualization demo
@@ -137,7 +153,10 @@ impl LinkedListDemo {
 
     /// Start insert at head animation
     pub fn insert_head(&mut self, value: i32) {
-        self.animation = ListAnimation::InsertingHead { value, progress: 0.0 };
+        self.animation = ListAnimation::InsertingHead {
+            value,
+            progress: 0.0,
+        };
         self.message = format!("Inserting {} at head - O(1)", value);
         self.pseudocode = Pseudocode::new("Insert Head", pc_linked_list::INSERT_HEAD);
         self.pseudocode.set_line(0);
@@ -145,7 +164,10 @@ impl LinkedListDemo {
 
     /// Start insert at tail animation
     pub fn insert_tail(&mut self, value: i32) {
-        self.animation = ListAnimation::InsertingTail { value, progress: 0.0 };
+        self.animation = ListAnimation::InsertingTail {
+            value,
+            progress: 0.0,
+        };
         self.message = format!("Inserting {} at tail - O(n) traversal", value);
         self.pseudocode = Pseudocode::new("Insert Tail", pc_linked_list::INSERT_TAIL);
         self.pseudocode.set_line(0);
@@ -155,7 +177,10 @@ impl LinkedListDemo {
     pub fn delete_head(&mut self) {
         self.pseudocode = Pseudocode::new("Delete Head", pc_linked_list::DELETE_HEAD);
         if let Some(head_idx) = self.head {
-            self.animation = ListAnimation::Deleting { index: head_idx, progress: 0.0 };
+            self.animation = ListAnimation::Deleting {
+                index: head_idx,
+                progress: 0.0,
+            };
             self.message = "Deleting head - O(1)".to_string();
             self.pseudocode.set_line(0);
         } else {
@@ -168,7 +193,11 @@ impl LinkedListDemo {
     pub fn search(&mut self, value: i32) {
         self.pseudocode = Pseudocode::new("Search", pc_linked_list::SEARCH);
         if let Some(head_idx) = self.head {
-            self.animation = ListAnimation::Searching { value, current: head_idx, progress: 0.0 };
+            self.animation = ListAnimation::Searching {
+                value,
+                current: head_idx,
+                progress: 0.0,
+            };
             self.message = format!("Searching for {} - O(n)", value);
             self.pseudocode.set_line(0);
         } else {
@@ -206,7 +235,7 @@ impl Demo for LinkedListDemo {
         for node in &mut self.nodes {
             let diff = node.target_position - node.position;
             if diff.length() > 0.1 {
-                node.position = node.position + diff * 0.1;
+                node.position += diff * 0.1;
             } else {
                 node.position = node.target_position;
             }
@@ -288,7 +317,11 @@ impl Demo for LinkedListDemo {
                     self.animation = ListAnimation::Idle;
                 }
             }
-            ListAnimation::Searching { value, current, progress } => {
+            ListAnimation::Searching {
+                value,
+                current,
+                progress,
+            } => {
                 *progress += speed * 0.5;
                 // Update pseudocode line based on progress
                 if *progress < 0.3 {
@@ -339,22 +372,23 @@ impl Demo for LinkedListDemo {
 
     fn set_param(&mut self, name: &str, value: f32) -> bool {
         match name {
-            "speed" => { self.speed = value; true }
+            "speed" => {
+                self.speed = value;
+                true
+            }
             _ => false,
         }
     }
 
     fn params() -> &'static [ParamMeta] {
-        &[
-            ParamMeta {
-                name: "speed",
-                label: "Animation Speed",
-                min: 0.25,
-                max: 4.0,
-                step: 0.25,
-                default: 1.0,
-            },
-        ]
+        &[ParamMeta {
+            name: "speed",
+            label: "Animation Speed",
+            min: 0.25,
+            max: 4.0,
+            step: 0.25,
+            default: 1.0,
+        }]
     }
 }
 
@@ -376,7 +410,9 @@ mod tests {
         demo.reset(42);
         let initial_size = demo.size;
         demo.insert_head(99);
-        for _ in 0..100 { demo.step(0.016); }
+        for _ in 0..100 {
+            demo.step(0.016);
+        }
         assert_eq!(demo.size, initial_size + 1);
     }
 }

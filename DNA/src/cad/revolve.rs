@@ -8,8 +8,8 @@
 use super::geometry::{Point3, Vector3};
 use super::sketch::{Point2, Sketch, SketchEntity};
 use super::topology::{
-    CurveType, Edge, EdgeId, Face, FaceId, FaceOrientation, Loop, Shell, ShellId, Solid, SurfaceType,
-    Vertex, VertexId,
+    CurveType, Edge, EdgeId, Face, FaceId, FaceOrientation, Loop, Shell, ShellId, Solid,
+    SurfaceType, Vertex, VertexId,
 };
 use serde::{Deserialize, Serialize};
 
@@ -57,7 +57,11 @@ pub fn revolve_sketch(sketch: &Sketch, params: &RevolveParams) -> Result<Solid, 
 
     let angle_rad = params.angle_degrees.to_radians();
     let full = (params.angle_degrees - 360.0).abs() < 1e-3;
-    let segs = if full { params.segments } else { params.segments.max(1) };
+    let segs = if full {
+        params.segments
+    } else {
+        params.segments.max(1)
+    };
     let steps = if full { segs } else { segs + 1 };
 
     let mut solid = Solid::new();
@@ -162,7 +166,12 @@ fn extract_profile_polyline(sketch: &Sketch) -> Result<Vec<Point2>, RevolveError
         return Err(RevolveError::NoProfile);
     }
     // Add last end point if possible to make a polyline
-    if let Some(SketchEntity::Line { end, .. }) = sketch.entities.iter().rev().find(|e| matches!(e, SketchEntity::Line { .. })) {
+    if let Some(SketchEntity::Line { end, .. }) = sketch
+        .entities
+        .iter()
+        .rev()
+        .find(|e| matches!(e, SketchEntity::Line { .. }))
+    {
         if let Some(p) = sketch.point(*end) {
             pts.push(p.position);
         }
@@ -196,11 +205,29 @@ fn add_cap_face(solid: &mut Solid, ring: &[VertexId], start_cap: bool) {
         let b = ring[i];
         let c = ring[i + 1];
         let e0 = EdgeId(solid.edges.len() as u32);
-        solid.edges.push(Edge { id: e0, start: a, end: b, curve: CurveType::Linear, faces: Vec::new() });
+        solid.edges.push(Edge {
+            id: e0,
+            start: a,
+            end: b,
+            curve: CurveType::Linear,
+            faces: Vec::new(),
+        });
         let e1 = EdgeId(solid.edges.len() as u32);
-        solid.edges.push(Edge { id: e1, start: b, end: c, curve: CurveType::Linear, faces: Vec::new() });
+        solid.edges.push(Edge {
+            id: e1,
+            start: b,
+            end: c,
+            curve: CurveType::Linear,
+            faces: Vec::new(),
+        });
         let e2 = EdgeId(solid.edges.len() as u32);
-        solid.edges.push(Edge { id: e2, start: c, end: a, curve: CurveType::Linear, faces: Vec::new() });
+        solid.edges.push(Edge {
+            id: e2,
+            start: c,
+            end: a,
+            curve: CurveType::Linear,
+            faces: Vec::new(),
+        });
 
         edges.push(e0);
         edges.push(e1);
@@ -212,10 +239,17 @@ fn add_cap_face(solid: &mut Solid, ring: &[VertexId], start_cap: bool) {
     solid.faces.push(Face {
         id: fid,
         surface: SurfaceType::Planar { normal: Vector3::Z },
-        outer_loop: Loop { edges, directions: vec![true; edge_count] },
+        outer_loop: Loop {
+            edges,
+            directions: vec![true; edge_count],
+        },
         inner_loops: Vec::new(),
         // v1: keep orientation simple for now; topology validity checks don't inspect normals.
-        orientation: if start_cap { FaceOrientation::Outward } else { FaceOrientation::Outward },
+        orientation: if start_cap {
+            FaceOrientation::Outward
+        } else {
+            FaceOrientation::Outward
+        },
         shell: Some(ShellId(0)),
     });
 }
@@ -223,20 +257,29 @@ fn add_cap_face(solid: &mut Solid, ring: &[VertexId], start_cap: bool) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cad::sketch::{SketchPlane, SketchEntityId};
+    use crate::cad::sketch::{SketchEntityId, SketchPlane};
 
     #[test]
     fn test_revolve_simple_profile() {
         let mut sketch = Sketch::new(SketchPlane::XY);
         let p0 = sketch.add_point(Point2::new(10.0, 0.0));
         let p1 = sketch.add_point(Point2::new(10.0, 20.0));
-        sketch.add_entity(SketchEntity::Line { id: SketchEntityId(0), start: p0, end: p1 });
+        sketch.add_entity(SketchEntity::Line {
+            id: SketchEntityId(0),
+            start: p0,
+            end: p1,
+        });
 
-        let solid = revolve_sketch(&sketch, &RevolveParams { segments: 8, ..RevolveParams::default() }).unwrap();
+        let solid = revolve_sketch(
+            &sketch,
+            &RevolveParams {
+                segments: 8,
+                ..RevolveParams::default()
+            },
+        )
+        .unwrap();
         assert!(solid.vertices.len() > 0);
         assert!(solid.faces.len() > 0);
         assert!(solid.is_valid());
     }
 }
-
-

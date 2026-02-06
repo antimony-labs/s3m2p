@@ -22,14 +22,37 @@ pub enum PartCategory {
 /// Specific part kind (semantic meaning within the crate).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CratePartKind {
-    Skid { index: usize },
-    Floorboard { index: usize },
-    Panel { panel: PanelType },
-    Cleat { panel: PanelType, is_vertical: bool, index: usize },
-    PanelStop { location: String },
-    Klimp { edge: String, index: usize },
-    LagScrew { panel: PanelType, index: usize, component: String },
-    Decal { panel: PanelType, kind: String, index: usize },
+    Skid {
+        index: usize,
+    },
+    Floorboard {
+        index: usize,
+    },
+    Panel {
+        panel: PanelType,
+    },
+    Cleat {
+        panel: PanelType,
+        is_vertical: bool,
+        index: usize,
+    },
+    PanelStop {
+        location: String,
+    },
+    Klimp {
+        edge: String,
+        index: usize,
+    },
+    LagScrew {
+        panel: PanelType,
+        index: usize,
+        component: String,
+    },
+    Decal {
+        panel: PanelType,
+        kind: String,
+        index: usize,
+    },
 }
 
 /// Material metadata for a part.
@@ -147,7 +170,12 @@ impl CrateDesign {
             let panel_name = cleat.panel.name();
             let orient = if cleat.is_vertical { "V" } else { "H" };
             parts.push(CratePart {
-                id: format!("CLEAT-{}-{}-{:02}", panel_name.to_uppercase(), orient, cleat_index + 1),
+                id: format!(
+                    "CLEAT-{}-{}-{:02}",
+                    panel_name.to_uppercase(),
+                    orient,
+                    cleat_index + 1
+                ),
                 name: format!("{} {} Cleat {}", panel_name, orient, cleat_index + 1),
                 category: PartCategory::Lumber,
                 kind: CratePartKind::Cleat {
@@ -285,7 +313,10 @@ fn generate_panel_stops(spec: &CrateSpec, geometry: &CrateGeometry) -> Vec<Crate
                 thickness_in: thickness,
             },
             bounds: b,
-            metadata: Some(format!("3/8\" x 2\" plywood stop, length {:.2}\"", stop_length)),
+            metadata: Some(format!(
+                "3/8\" x 2\" plywood stop, length {:.2}\"",
+                stop_length
+            )),
         });
     }
 
@@ -308,7 +339,10 @@ fn generate_panel_stops(spec: &CrateSpec, geometry: &CrateGeometry) -> Vec<Crate
             thickness_in: thickness,
         },
         bounds: b,
-        metadata: Some(format!("3/8\" x 2\" plywood stop, length {:.2}\"", stop_length)),
+        metadata: Some(format!(
+            "3/8\" x 2\" plywood stop, length {:.2}\"",
+            stop_length
+        )),
     });
 
     // Optional: if export requires ISPM-15, include the stop length note as part metadata only.
@@ -413,10 +447,22 @@ fn generate_lag_screws(spec: &CrateSpec, geometry: &CrateGeometry) -> Vec<CrateP
 
         // Choose outside face coordinate for the screw axis.
         let (axis_min, axis_max) = match panel {
-            PanelType::Left => (panel_bounds.min.x - head_height, panel_bounds.min.x + shank_length),
-            PanelType::Right => (panel_bounds.max.x - shank_length, panel_bounds.max.x + head_height),
-            PanelType::Front => (panel_bounds.min.y - head_height, panel_bounds.min.y + shank_length),
-            PanelType::Back => (panel_bounds.max.y - shank_length, panel_bounds.max.y + head_height),
+            PanelType::Left => (
+                panel_bounds.min.x - head_height,
+                panel_bounds.min.x + shank_length,
+            ),
+            PanelType::Right => (
+                panel_bounds.max.x - shank_length,
+                panel_bounds.max.x + head_height,
+            ),
+            PanelType::Front => (
+                panel_bounds.min.y - head_height,
+                panel_bounds.min.y + shank_length,
+            ),
+            PanelType::Back => (
+                panel_bounds.max.y - shank_length,
+                panel_bounds.max.y + head_height,
+            ),
             _ => (0.0, 0.0),
         };
 
@@ -438,14 +484,12 @@ fn generate_lag_screws(spec: &CrateSpec, geometry: &CrateGeometry) -> Vec<CrateP
             (centers[0], centers[centers.len() - 1])
         } else {
             match panel {
-                PanelType::Left | PanelType::Right => (
-                    panel_bounds.min.y + head_r,
-                    panel_bounds.max.y - head_r,
-                ),
-                PanelType::Front | PanelType::Back => (
-                    panel_bounds.min.x + head_r,
-                    panel_bounds.max.x - head_r,
-                ),
+                PanelType::Left | PanelType::Right => {
+                    (panel_bounds.min.y + head_r, panel_bounds.max.y - head_r)
+                }
+                PanelType::Front | PanelType::Back => {
+                    (panel_bounds.min.x + head_r, panel_bounds.max.x - head_r)
+                }
                 _ => (0.0, 0.0),
             }
         };
@@ -535,23 +579,52 @@ fn generate_decals(spec: &CrateSpec, geometry: &CrateGeometry) -> Vec<CratePart>
             let (w, h) = dims;
 
             let (u_min, u_max, v_min, v_max, n, outward_positive) = match panel {
-                PanelType::Front => (bounds.min.x, bounds.max.x, bounds.min.z, bounds.max.z, bounds.min.y, false),
-                PanelType::Back => (bounds.min.x, bounds.max.x, bounds.min.z, bounds.max.z, bounds.max.y, true),
-                PanelType::Left => (bounds.min.y, bounds.max.y, bounds.min.z, bounds.max.z, bounds.min.x, false),
-                PanelType::Right => (bounds.min.y, bounds.max.y, bounds.min.z, bounds.max.z, bounds.max.x, true),
-                PanelType::Top => (bounds.min.x, bounds.max.x, bounds.min.y, bounds.max.y, bounds.max.z, true),
+                PanelType::Front => (
+                    bounds.min.x,
+                    bounds.max.x,
+                    bounds.min.z,
+                    bounds.max.z,
+                    bounds.min.y,
+                    false,
+                ),
+                PanelType::Back => (
+                    bounds.min.x,
+                    bounds.max.x,
+                    bounds.min.z,
+                    bounds.max.z,
+                    bounds.max.y,
+                    true,
+                ),
+                PanelType::Left => (
+                    bounds.min.y,
+                    bounds.max.y,
+                    bounds.min.z,
+                    bounds.max.z,
+                    bounds.min.x,
+                    false,
+                ),
+                PanelType::Right => (
+                    bounds.min.y,
+                    bounds.max.y,
+                    bounds.min.z,
+                    bounds.max.z,
+                    bounds.max.x,
+                    true,
+                ),
+                PanelType::Top => (
+                    bounds.min.x,
+                    bounds.max.x,
+                    bounds.min.y,
+                    bounds.max.y,
+                    bounds.max.z,
+                    true,
+                ),
             };
 
             let (u_center, v_center) = match placement {
                 "center" => ((u_min + u_max) / 2.0, (v_min + v_max) / 2.0),
-                "upper_right" => (
-                    u_max - edge_offset - w / 2.0,
-                    v_max - edge_offset - h / 2.0,
-                ),
-                "lower_left" => (
-                    u_min + edge_offset + w / 2.0,
-                    v_min + edge_offset + h / 2.0,
-                ),
+                "upper_right" => (u_max - edge_offset - w / 2.0, v_max - edge_offset - h / 2.0),
+                "lower_left" => (u_min + edge_offset + w / 2.0, v_min + edge_offset + h / 2.0),
                 _ => ((u_min + u_max) / 2.0, (v_min + v_max) / 2.0),
             };
 
@@ -559,17 +632,30 @@ fn generate_decals(spec: &CrateSpec, geometry: &CrateGeometry) -> Vec<CratePart>
             let (v0, v1) = (v_center - h / 2.0, v_center + h / 2.0);
 
             // Normal thickness goes outward from panel face.
-            let (n0, n1) = if outward_positive { (n, n + t) } else { (n - t, n) };
+            let (n0, n1) = if outward_positive {
+                (n, n + t)
+            } else {
+                (n - t, n)
+            };
 
             let (min, max) = match panel {
-                PanelType::Front | PanelType::Back => (Point3::new(u0, n0, v0), Point3::new(u1, n1, v1)),
-                PanelType::Left | PanelType::Right => (Point3::new(n0, u0, v0), Point3::new(n1, u1, v1)),
+                PanelType::Front | PanelType::Back => {
+                    (Point3::new(u0, n0, v0), Point3::new(u1, n1, v1))
+                }
+                PanelType::Left | PanelType::Right => {
+                    (Point3::new(n0, u0, v0), Point3::new(n1, u1, v1))
+                }
                 PanelType::Top => (Point3::new(u0, v0, n0), Point3::new(u1, v1, n1)),
             };
 
             let idx = parts.len();
             parts.push(CratePart {
-                id: format!("DECAL-{}-{}-{:02}", kind, panel.name().to_uppercase(), idx + 1),
+                id: format!(
+                    "DECAL-{}-{}-{:02}",
+                    kind,
+                    panel.name().to_uppercase(),
+                    idx + 1
+                ),
                 name: format!("{} Decal ({})", kind, panel.name()),
                 category: PartCategory::Decal,
                 kind: CratePartKind::Decal {
@@ -587,37 +673,63 @@ fn generate_decals(spec: &CrateSpec, geometry: &CrateGeometry) -> Vec<CratePart>
         };
 
     // Fragile + handling + autocrate text: place on side and end panels (not top).
-    for panel in [PanelType::Front, PanelType::Back, PanelType::Left, PanelType::Right] {
+    for panel in [
+        PanelType::Front,
+        PanelType::Back,
+        PanelType::Left,
+        PanelType::Right,
+    ] {
         if spec.markings.fragile_stencil {
             add_on_panel(panel, fragile.2, (fragile.0, fragile.1), "center", None);
         }
         if spec.markings.handling_symbols {
-            add_on_panel(panel, handling.2, (handling.0, handling.1), "upper_right", None);
+            add_on_panel(
+                panel,
+                handling.2,
+                (handling.0, handling.1),
+                "upper_right",
+                None,
+            );
         }
         if spec.markings.autocrate_text {
-            add_on_panel(panel, autocrate_text.2, (autocrate_text.0, autocrate_text.1), "center", None);
+            add_on_panel(
+                panel,
+                autocrate_text.2,
+                (autocrate_text.0, autocrate_text.1),
+                "center",
+                None,
+            );
         }
     }
 
     // ISPM-15 marking (export compliance) — include if required and enabled.
     if spec.requirements.ispm15.required && spec.markings.ispm15_mark {
-        let text = spec
-            .requirements
-            .ispm15
-            .mark_text
-            .clone()
-            .or_else(|| match spec.requirements.ispm15.treatment {
+        let text = spec.requirements.ispm15.mark_text.clone().or_else(|| {
+            match spec.requirements.ispm15.treatment {
                 Some(super::types::Ismp15Treatment::HeatTreated) => Some("ISPM15 HT".to_string()),
-                Some(super::types::Ismp15Treatment::MethylBromideFumigated) => Some("ISPM15 MB".to_string()),
+                Some(super::types::Ismp15Treatment::MethylBromideFumigated) => {
+                    Some("ISPM15 MB".to_string())
+                }
                 None => Some("ISPM15".to_string()),
-            });
+            }
+        });
 
         // Place on two opposite panels for redundancy.
-        add_on_panel(PanelType::Left, "ISPM15_MARK", (6.0, 4.0), "lower_left", text.clone());
-        add_on_panel(PanelType::Right, "ISPM15_MARK", (6.0, 4.0), "lower_left", text);
+        add_on_panel(
+            PanelType::Left,
+            "ISPM15_MARK",
+            (6.0, 4.0),
+            "lower_left",
+            text.clone(),
+        );
+        add_on_panel(
+            PanelType::Right,
+            "ISPM15_MARK",
+            (6.0, 4.0),
+            "lower_left",
+            text,
+        );
     }
 
     parts
 }
-
-

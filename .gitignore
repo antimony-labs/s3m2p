@@ -7,11 +7,13 @@ node_modules/
 
 # Trunk/WASM build artifacts
 *.wasm
-!too.foo/dist/*.wasm
+.trunk/
 
 # IDE
 .idea/
-
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
 *.swp
 *.swo
 
@@ -23,6 +25,8 @@ Thumbs.db
 TESTS/results/
 TESTS/report/
 TESTS/logs/
+test-results/
+playwright-report/
 
 # Logs
 *.log
@@ -38,3 +42,23 @@ temp/
 *.zip
 __MACOSX/
 
+# Binaries that should never be committed
+*.deb
+*.rpm
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Speech/ML models
+nerd-dictation/
+*.onnx
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Coverage
+lcov.info
+tarpaulin-report.html

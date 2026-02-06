@@ -87,9 +87,9 @@ impl Default for EkfSlamDemo {
             true_landmarks,
             robot_path: Vec::new(),
             est_path: Vec::new(),
-            motion_noise: 0.005,     // BEST: minimum noise
-            sensor_noise: 0.01,      // BEST: minimum sensor noise
-            sensor_range: 0.6,       // BEST: maximum range
+            motion_noise: 0.005, // BEST: minimum noise
+            sensor_noise: 0.01,  // BEST: minimum sensor noise
+            sensor_range: 0.6,   // BEST: maximum range
             time: 0.0,
             rng: Rng::new(42),
             max_history: 200,
@@ -334,7 +334,7 @@ impl Demo for EkfSlamDemo {
                 min: 0.005,
                 max: 0.1,
                 step: 0.005,
-                default: 0.005,   // BEST: minimum noise
+                default: 0.005, // BEST: minimum noise
             },
             ParamMeta {
                 name: "sensor_noise",
@@ -342,7 +342,7 @@ impl Demo for EkfSlamDemo {
                 min: 0.01,
                 max: 0.1,
                 step: 0.01,
-                default: 0.01,    // BEST: minimum noise
+                default: 0.01, // BEST: minimum noise
             },
             ParamMeta {
                 name: "sensor_range",
@@ -350,7 +350,7 @@ impl Demo for EkfSlamDemo {
                 min: 0.1,
                 max: 0.6,
                 step: 0.05,
-                default: 0.6,     // BEST: maximum range
+                default: 0.6, // BEST: maximum range
             },
         ]
     }

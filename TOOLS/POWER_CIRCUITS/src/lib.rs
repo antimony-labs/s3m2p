@@ -10,18 +10,33 @@ use std::cell::RefCell;
 use std::f64::consts::PI;
 use wasm_bindgen::prelude::*;
 use web_sys::{
-    CanvasRenderingContext2d, Document, HtmlCanvasElement, HtmlElement,
-    HtmlInputElement, HtmlSelectElement, MouseEvent, WheelEvent,
+    CanvasRenderingContext2d, Document, HtmlCanvasElement, HtmlElement, HtmlInputElement,
+    HtmlSelectElement, MouseEvent, WheelEvent,
 };
-use js_sys;
 
 use power_engine::{
-    design_boost, design_buck, design_ldo, BoostDesign, BoostRequirements, BuckDesign, BuckRequirements,
-    DesignPriority, DesignReport, LDODesign, LDORequirements, PowerDesignResult, RippleSpec,
-    TopologyType, VoltageRange,
+    boost_duty_for_vout,
     // Transient simulation
-    buck_duty_for_vout, boost_duty_for_vout, simulate_buck, simulate_boost,
-    TransientConfig, TransientResult,
+    buck_duty_for_vout,
+    design_boost,
+    design_buck,
+    design_ldo,
+    simulate_boost,
+    simulate_buck,
+    BoostDesign,
+    BoostRequirements,
+    BuckDesign,
+    BuckRequirements,
+    DesignPriority,
+    DesignReport,
+    LDODesign,
+    LDORequirements,
+    PowerDesignResult,
+    RippleSpec,
+    TopologyType,
+    TransientConfig,
+    TransientResult,
+    VoltageRange,
 };
 
 // ============================================================================
@@ -100,7 +115,6 @@ impl WaveformView {
             self.t_start = (self.t_end - new_duration).max(0.0);
         }
     }
-
 }
 
 struct AppState {
@@ -280,7 +294,8 @@ fn setup_waveform_events(document: &Document) -> Result<(), JsValue> {
     let wheel_closure = Closure::wrap(Box::new(move |event: WheelEvent| {
         event.prevent_default();
 
-        let canvas_width = event.target()
+        let canvas_width = event
+            .target()
             .and_then(|t| t.dyn_into::<HtmlCanvasElement>().ok())
             .map(|c| c.width() as f64)
             .unwrap_or(600.0);
@@ -314,7 +329,10 @@ fn setup_waveform_events(document: &Document) -> Result<(), JsValue> {
             s.waveform_view.drag_t_start = s.waveform_view.t_start;
         });
     }) as Box<dyn FnMut(MouseEvent)>);
-    canvas.add_event_listener_with_callback("mousedown", mousedown_closure.as_ref().unchecked_ref())?;
+    canvas.add_event_listener_with_callback(
+        "mousedown",
+        mousedown_closure.as_ref().unchecked_ref(),
+    )?;
     mousedown_closure.forget();
 
     // Mouse move: pan if dragging
@@ -324,7 +342,8 @@ fn setup_waveform_events(document: &Document) -> Result<(), JsValue> {
             return;
         }
 
-        let canvas_width = event.target()
+        let canvas_width = event
+            .target()
             .and_then(|t| t.dyn_into::<HtmlCanvasElement>().ok())
             .map(|c| c.width() as f64)
             .unwrap_or(600.0);
@@ -339,15 +358,18 @@ fn setup_waveform_events(document: &Document) -> Result<(), JsValue> {
             let dt = -dx_pixels * duration / plot_width;
 
             // Calculate new t_start from drag origin
-            let new_t_start = (s.waveform_view.drag_t_start + dt)
-                .clamp(0.0, s.waveform_view.t_max - duration);
+            let new_t_start =
+                (s.waveform_view.drag_t_start + dt).clamp(0.0, s.waveform_view.t_max - duration);
             s.waveform_view.t_start = new_t_start;
             s.waveform_view.t_end = new_t_start + duration;
         });
 
         redraw_waveform();
     }) as Box<dyn FnMut(MouseEvent)>);
-    canvas.add_event_listener_with_callback("mousemove", mousemove_closure.as_ref().unchecked_ref())?;
+    canvas.add_event_listener_with_callback(
+        "mousemove",
+        mousemove_closure.as_ref().unchecked_ref(),
+    )?;
     mousemove_closure.forget();
 
     // Mouse up: end drag
@@ -365,14 +387,18 @@ fn setup_waveform_events(document: &Document) -> Result<(), JsValue> {
             state.borrow_mut().waveform_view.is_dragging = false;
         });
     }) as Box<dyn FnMut(MouseEvent)>);
-    canvas.add_event_listener_with_callback("mouseleave", mouseleave_closure.as_ref().unchecked_ref())?;
+    canvas.add_event_listener_with_callback(
+        "mouseleave",
+        mouseleave_closure.as_ref().unchecked_ref(),
+    )?;
     mouseleave_closure.forget();
 
     // Double-click: reset view
     let dblclick_closure = Closure::wrap(Box::new(move |_event: MouseEvent| {
         reset_waveform_view();
     }) as Box<dyn FnMut(MouseEvent)>);
-    canvas.add_event_listener_with_callback("dblclick", dblclick_closure.as_ref().unchecked_ref())?;
+    canvas
+        .add_event_listener_with_callback("dblclick", dblclick_closure.as_ref().unchecked_ref())?;
     dblclick_closure.forget();
 
     Ok(())
@@ -672,8 +698,12 @@ fn run_simulation() -> Result<(), JsValue> {
     let (inductance, capacitance) = STATE.with(|state| {
         let s = state.borrow();
         match &s.design {
-            CurrentDesign::Buck(d) => (d.inductor.selected_value, d.output_capacitor.selected_value),
-            CurrentDesign::Boost(d) => (d.inductor.selected_value, d.output_capacitor.selected_value),
+            CurrentDesign::Buck(d) => {
+                (d.inductor.selected_value, d.output_capacitor.selected_value)
+            }
+            CurrentDesign::Boost(d) => {
+                (d.inductor.selected_value, d.output_capacitor.selected_value)
+            }
             _ => (22e-6, 100e-6), // Default values
         }
     });
@@ -726,12 +756,15 @@ fn run_simulation() -> Result<(), JsValue> {
     draw_waveforms(&document, &result, vout)?;
 
     // Log stats
-    web_sys::console::log_1(&format!(
-        "Simulation complete: {} cycles, Vout_avg={:.2}V, Efficiency~{:.1}%",
-        result.stats.cycles,
-        result.stats.avg_vout,
-        result.stats.efficiency_estimate * 100.0
-    ).into());
+    web_sys::console::log_1(
+        &format!(
+            "Simulation complete: {} cycles, Vout_avg={:.2}V, Efficiency~{:.1}%",
+            result.stats.cycles,
+            result.stats.avg_vout,
+            result.stats.efficiency_estimate * 100.0
+        )
+        .into(),
+    );
 
     Ok(())
 }
@@ -754,8 +787,12 @@ fn clear_waveform_canvas(document: &Document) -> Result<(), JsValue> {
 
     canvas.set_width((css_width * dpr) as u32);
     canvas.set_height((css_height * dpr) as u32);
-    let _ = canvas.style().set_property("width", &format!("{}px", css_width));
-    let _ = canvas.style().set_property("height", &format!("{}px", css_height));
+    let _ = canvas
+        .style()
+        .set_property("width", &format!("{}px", css_width));
+    let _ = canvas
+        .style()
+        .set_property("height", &format!("{}px", css_height));
 
     ctx.scale(dpr, dpr)?;
 
@@ -770,13 +807,21 @@ fn clear_waveform_canvas(document: &Document) -> Result<(), JsValue> {
     ctx.set_fill_style(&JsValue::from_str("#404050"));
     ctx.set_font("14px Monaco, monospace");
     ctx.set_text_align("center");
-    let _ = ctx.fill_text("Click 'Run Simulation' to see waveforms", width / 2.0, height / 2.0);
+    let _ = ctx.fill_text(
+        "Click 'Run Simulation' to see waveforms",
+        width / 2.0,
+        height / 2.0,
+    );
     ctx.set_text_align("left");
 
     Ok(())
 }
 
-fn draw_waveforms(document: &Document, result: &TransientResult, target_vout: f64) -> Result<(), JsValue> {
+fn draw_waveforms(
+    document: &Document,
+    result: &TransientResult,
+    target_vout: f64,
+) -> Result<(), JsValue> {
     let window = web_sys::window().ok_or("No window")?;
     let canvas = document
         .get_element_by_id("waveform-canvas")
@@ -795,8 +840,12 @@ fn draw_waveforms(document: &Document, result: &TransientResult, target_vout: f6
     // Set canvas size for high-DPI
     canvas.set_width((css_width * dpr) as u32);
     canvas.set_height((css_height * dpr) as u32);
-    let _ = canvas.style().set_property("width", &format!("{}px", css_width));
-    let _ = canvas.style().set_property("height", &format!("{}px", css_height));
+    let _ = canvas
+        .style()
+        .set_property("width", &format!("{}px", css_width));
+    let _ = canvas
+        .style()
+        .set_property("height", &format!("{}px", css_height));
 
     // Scale context for high-DPI
     ctx.scale(dpr, dpr)?;
@@ -847,26 +896,33 @@ fn draw_waveforms(document: &Document, result: &TransientResult, target_vout: f6
 
     // Find data indices within view window (with small margin for continuity)
     let margin_t = view_duration * 0.01;
-    let start_idx = result.time.iter()
+    let start_idx = result
+        .time
+        .iter()
         .position(|&t| t >= view_t_start - margin_t)
         .unwrap_or(0);
-    let end_idx = result.time.iter()
+    let end_idx = result
+        .time
+        .iter()
         .position(|&t| t > view_t_end + margin_t)
         .unwrap_or(result.time.len());
 
     // Get voltage range for visible data
-    let v_max = result.v_out[start_idx..end_idx].iter()
+    let v_max = result.v_out[start_idx..end_idx]
+        .iter()
         .copied()
         .fold(0.0_f64, f64::max)
         .max(target_vout * 1.1);
-    let v_min = result.v_out[start_idx..end_idx].iter()
+    let v_min = result.v_out[start_idx..end_idx]
+        .iter()
         .copied()
         .fold(f64::INFINITY, f64::min)
         .min(0.0);
     let v_range = (v_max - v_min).max(0.1);
 
     // Get current range for visible data
-    let i_max = result.i_l[start_idx..end_idx].iter()
+    let i_max = result.i_l[start_idx..end_idx]
+        .iter()
         .copied()
         .fold(0.0_f64, f64::max)
         .max(0.001);
@@ -881,7 +937,10 @@ fn draw_waveforms(document: &Document, result: &TransientResult, target_vout: f6
         ctx.set_stroke_style(&JsValue::from_str("#00ffaa"));
         ctx.set_line_width(1.5);
         ctx.begin_path();
-        ctx.move_to(map_x(result.time[start_idx]), map_v(result.v_out[start_idx]));
+        ctx.move_to(
+            map_x(result.time[start_idx]),
+            map_v(result.v_out[start_idx]),
+        );
         for i in (start_idx + 1)..end_idx {
             ctx.line_to(map_x(result.time[i]), map_v(result.v_out[i]));
         }
@@ -922,26 +981,50 @@ fn draw_waveforms(document: &Document, result: &TransientResult, target_vout: f6
 
     // Y-axis labels
     ctx.set_text_align("right");
-    let _ = ctx.fill_text(&format!("{:.2}V", v_max), margin_left - 5.0, margin_top + 5.0);
-    let _ = ctx.fill_text(&format!("{:.2}V", v_min), margin_left - 5.0, height - margin_bottom);
+    let _ = ctx.fill_text(
+        &format!("{:.2}V", v_max),
+        margin_left - 5.0,
+        margin_top + 5.0,
+    );
+    let _ = ctx.fill_text(
+        &format!("{:.2}V", v_min),
+        margin_left - 5.0,
+        height - margin_bottom,
+    );
 
     // X-axis labels (show current view range)
     ctx.set_text_align("center");
     let t_start_us = view_t_start * 1e6;
     let t_end_us = view_t_end * 1e6;
-    let _ = ctx.fill_text(&format!("{:.1}us", t_start_us), margin_left, height - margin_bottom + 15.0);
-    let _ = ctx.fill_text(&format!("{:.1}us", t_end_us), width - margin_right, height - margin_bottom + 15.0);
+    let _ = ctx.fill_text(
+        &format!("{:.1}us", t_start_us),
+        margin_left,
+        height - margin_bottom + 15.0,
+    );
+    let _ = ctx.fill_text(
+        &format!("{:.1}us", t_end_us),
+        width - margin_right,
+        height - margin_bottom + 15.0,
+    );
 
     // Middle time label
     let t_mid_us = (t_start_us + t_end_us) / 2.0;
-    let _ = ctx.fill_text(&format!("{:.1}us", t_mid_us), width / 2.0, height - margin_bottom + 15.0);
+    let _ = ctx.fill_text(
+        &format!("{:.1}us", t_mid_us),
+        width / 2.0,
+        height - margin_bottom + 15.0,
+    );
 
     // Legend (left side)
     ctx.set_text_align("left");
     ctx.set_fill_style(&JsValue::from_str("#00ffaa"));
     let _ = ctx.fill_text("Vout", margin_left + 10.0, margin_top + 12.0);
     ctx.set_fill_style(&JsValue::from_str("#ffaa00"));
-    let _ = ctx.fill_text(&format!("iL ({:.2}A)", i_max), margin_left + 50.0, margin_top + 12.0);
+    let _ = ctx.fill_text(
+        &format!("iL ({:.2}A)", i_max),
+        margin_left + 50.0,
+        margin_top + 12.0,
+    );
 
     // Stats (right side)
     let ripple_mv = result.output_ripple_pp() * 1000.0;
@@ -949,10 +1032,14 @@ fn draw_waveforms(document: &Document, result: &TransientResult, target_vout: f6
     ctx.set_text_align("right");
     ctx.set_fill_style(&JsValue::from_str("#808090"));
     let _ = ctx.fill_text(
-        &format!("Ripple: {:.1}mV | Settle: {:.0}us | {:.0}x",
-                 ripple_mv, result.stats.settling_time * 1e6, zoom_pct / 100.0),
+        &format!(
+            "Ripple: {:.1}mV | Settle: {:.0}us | {:.0}x",
+            ripple_mv,
+            result.stats.settling_time * 1e6,
+            zoom_pct / 100.0
+        ),
         width - margin_right,
-        margin_top + 12.0
+        margin_top + 12.0,
     );
 
     Ok(())
@@ -1041,8 +1128,12 @@ fn draw_schematic(document: &Document, topology: TopologyType) -> Result<(), JsV
 
     canvas.set_width((css_width * dpr) as u32);
     canvas.set_height((css_height * dpr) as u32);
-    let _ = canvas.style().set_property("width", &format!("{}px", css_width));
-    let _ = canvas.style().set_property("height", &format!("{}px", css_height));
+    let _ = canvas
+        .style()
+        .set_property("width", &format!("{}px", css_width));
+    let _ = canvas
+        .style()
+        .set_property("height", &format!("{}px", css_height));
 
     ctx.scale(dpr, dpr)?;
 
@@ -1091,9 +1182,15 @@ fn draw_schematic(document: &Document, topology: TopologyType) -> Result<(), JsV
 
     // Draw topology-specific schematic with values
     match topology {
-        TopologyType::Buck => draw_buck_schematic(&ctx, width, height, vin, vout, l_val, cout_val, r_load),
-        TopologyType::Boost => draw_boost_schematic(&ctx, width, height, vin, vout, l_val, cout_val, r_load),
-        TopologyType::LDO => draw_ldo_schematic(&ctx, width, height, vin, vout, cin_val, cout_val, r_load),
+        TopologyType::Buck => {
+            draw_buck_schematic(&ctx, width, height, vin, vout, l_val, cout_val, r_load)
+        }
+        TopologyType::Boost => {
+            draw_boost_schematic(&ctx, width, height, vin, vout, l_val, cout_val, r_load)
+        }
+        TopologyType::LDO => {
+            draw_ldo_schematic(&ctx, width, height, vin, vout, cin_val, cout_val, r_load)
+        }
         _ => Ok(()),
     }
 }
@@ -1140,7 +1237,16 @@ fn draw_grid(ctx: &CanvasRenderingContext2d, width: f64, height: f64) {
     }
 }
 
-fn draw_buck_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64, vin: f64, vout: f64, l_val: f64, cout_val: f64, r_load: f64) -> Result<(), JsValue> {
+fn draw_buck_schematic(
+    ctx: &CanvasRenderingContext2d,
+    width: f64,
+    height: f64,
+    vin: f64,
+    vout: f64,
+    l_val: f64,
+    cout_val: f64,
+    r_load: f64,
+) -> Result<(), JsValue> {
     let cx = width / 2.0;
     let cy = height / 2.0;
 
@@ -1156,15 +1262,15 @@ fn draw_buck_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64, 
     //             |       |
     // Vin- -------+-------+--GND
 
-    let top_y = cy - 50.0;      // Top rail (Vin)
-    let mid_y = cy - 10.0;      // Switch output / inductor input level
-    let bot_y = cy + 70.0;      // Bottom rail (ground)
-    let left_x = cx - 220.0;    // Vin position
-    let sw_x = cx - 120.0;      // High-side switch
-    let junc_x = cx - 40.0;     // Junction (SW output, D cathode, L input)
-    let ind_x = cx + 60.0;      // Inductor center
-    let out_x = cx + 160.0;     // Output node
-    let load_x = cx + 220.0;    // Load position
+    let top_y = cy - 50.0; // Top rail (Vin)
+    let mid_y = cy - 10.0; // Switch output / inductor input level
+    let bot_y = cy + 70.0; // Bottom rail (ground)
+    let left_x = cx - 220.0; // Vin position
+    let sw_x = cx - 120.0; // High-side switch
+    let junc_x = cx - 40.0; // Junction (SW output, D cathode, L input)
+    let ind_x = cx + 60.0; // Inductor center
+    let out_x = cx + 160.0; // Output node
+    let load_x = cx + 220.0; // Load position
 
     // Title
     ctx.set_fill_style(&JsValue::from_str("#ffaa00"));
@@ -1288,7 +1394,16 @@ fn draw_buck_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64, 
     Ok(())
 }
 
-fn draw_boost_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64, vin: f64, vout: f64, l_val: f64, cout_val: f64, r_load: f64) -> Result<(), JsValue> {
+fn draw_boost_schematic(
+    ctx: &CanvasRenderingContext2d,
+    width: f64,
+    height: f64,
+    vin: f64,
+    vout: f64,
+    l_val: f64,
+    cout_val: f64,
+    r_load: f64,
+) -> Result<(), JsValue> {
     let cx = width / 2.0;
     let cy = height / 2.0;
 
@@ -1304,14 +1419,14 @@ fn draw_boost_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64,
     //             |       |
     // Vin- -------+-------+--GND
 
-    let top_y = cy - 50.0;      // Top rail (positive)
-    let bot_y = cy + 70.0;      // Bottom rail (ground)
-    let left_x = cx - 220.0;    // Vin position
-    let ind_x = cx - 100.0;     // Inductor center
-    let junc_x = cx;            // Junction point (L output, SW top, D input)
-    let diode_x = cx + 80.0;    // Diode center
-    let out_x = cx + 160.0;     // Output node
-    let load_x = cx + 220.0;    // Load position
+    let top_y = cy - 50.0; // Top rail (positive)
+    let bot_y = cy + 70.0; // Bottom rail (ground)
+    let left_x = cx - 220.0; // Vin position
+    let ind_x = cx - 100.0; // Inductor center
+    let junc_x = cx; // Junction point (L output, SW top, D input)
+    let diode_x = cx + 80.0; // Diode center
+    let out_x = cx + 160.0; // Output node
+    let load_x = cx + 220.0; // Load position
 
     // Title
     ctx.set_fill_style(&JsValue::from_str("#ffaa00"));
@@ -1351,7 +1466,7 @@ fn draw_boost_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64,
 
     // Vin+ to inductor input
     ctx.begin_path();
-    ctx.move_to(left_x, cy - 20.0);  // Top of Vin source
+    ctx.move_to(left_x, cy - 20.0); // Top of Vin source
     ctx.line_to(left_x, top_y);
     ctx.line_to(ind_x - 40.0, top_y);
     ctx.stroke();
@@ -1405,7 +1520,7 @@ fn draw_boost_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64,
 
     // === GROUND RAIL ===
     ctx.begin_path();
-    ctx.move_to(left_x, cy + 20.0);  // Bottom of Vin
+    ctx.move_to(left_x, cy + 20.0); // Bottom of Vin
     ctx.line_to(left_x, bot_y);
     ctx.line_to(load_x, bot_y);
     ctx.stroke();
@@ -1434,7 +1549,16 @@ fn draw_boost_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64,
     Ok(())
 }
 
-fn draw_ldo_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64, vin: f64, vout: f64, cin_val: f64, cout_val: f64, r_load: f64) -> Result<(), JsValue> {
+fn draw_ldo_schematic(
+    ctx: &CanvasRenderingContext2d,
+    width: f64,
+    height: f64,
+    vin: f64,
+    vout: f64,
+    cin_val: f64,
+    cout_val: f64,
+    r_load: f64,
+) -> Result<(), JsValue> {
     let cx = width / 2.0;
     let cy = height / 2.0;
 
@@ -1448,13 +1572,13 @@ fn draw_ldo_schematic(ctx: &CanvasRenderingContext2d, width: f64, height: f64, v
     //          |      |      |       |
     // GND -----+------+------+-------+
 
-    let top_y = cy - 50.0;      // Top rail
-    let bot_y = cy + 70.0;      // Ground rail
-    let left_x = cx - 220.0;    // Vin position
-    let cin_x = cx - 120.0;     // Input cap
-    let ldo_x = cx;             // LDO IC center
-    let cout_x = cx + 120.0;    // Output cap
-    let load_x = cx + 200.0;    // Load
+    let top_y = cy - 50.0; // Top rail
+    let bot_y = cy + 70.0; // Ground rail
+    let left_x = cx - 220.0; // Vin position
+    let cin_x = cx - 120.0; // Input cap
+    let ldo_x = cx; // LDO IC center
+    let cout_x = cx + 120.0; // Output cap
+    let load_x = cx + 200.0; // Load
 
     // Title
     ctx.set_fill_style(&JsValue::from_str("#ffaa00"));
@@ -1602,7 +1726,6 @@ fn draw_voltage_source(ctx: &CanvasRenderingContext2d, x: f64, y: f64, label: &s
     // Label
     let _ = ctx.fill_text(label, x - 10.0, y - 28.0);
 }
-
 
 fn draw_ground(ctx: &CanvasRenderingContext2d, x: f64, y: f64) {
     ctx.begin_path();

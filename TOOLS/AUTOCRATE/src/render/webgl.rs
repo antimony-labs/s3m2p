@@ -3,7 +3,7 @@
 use glam::{Mat4, Vec3, Vec4};
 use std::f32::consts::PI;
 use wasm_bindgen::JsCast;
-use web_sys::{WebGl2RenderingContext, WebGlProgram, WebGlShader, HtmlCanvasElement};
+use web_sys::{HtmlCanvasElement, WebGl2RenderingContext, WebGlProgram, WebGlShader};
 
 /// Projection type
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -42,8 +42,8 @@ impl Default for Camera {
         Self {
             target: Vec3::ZERO,
             distance: 150.0,
-            azimuth: PI / 4.0,      // 45° from +X axis
-            elevation: PI / 6.0,    // 30° above XY plane
+            azimuth: PI / 4.0,   // 45° from +X axis
+            elevation: PI / 6.0, // 30° above XY plane
             fov: 45.0,
             aspect: 1.0,
             near: 0.1,
@@ -77,7 +77,14 @@ impl Camera {
             ProjectionType::Orthographic => {
                 let height = self.orthographic_size;
                 let width = height * self.aspect;
-                Mat4::orthographic_rh(-width / 2.0, width / 2.0, -height / 2.0, height / 2.0, self.near, self.far)
+                Mat4::orthographic_rh(
+                    -width / 2.0,
+                    width / 2.0,
+                    -height / 2.0,
+                    height / 2.0,
+                    self.near,
+                    self.far,
+                )
             }
         }
     }
@@ -90,7 +97,8 @@ impl Camera {
     /// Orbit camera (delta in radians)
     pub fn orbit(&mut self, delta_azimuth: f32, delta_elevation: f32) {
         self.azimuth += delta_azimuth;
-        self.elevation = (self.elevation + delta_elevation).clamp(-PI / 2.0 + 0.01, PI / 2.0 - 0.01);
+        self.elevation =
+            (self.elevation + delta_elevation).clamp(-PI / 2.0 + 0.01, PI / 2.0 - 0.01);
     }
 
     /// Zoom camera (negative = zoom in, positive = zoom out)
@@ -200,7 +208,9 @@ impl WebGLRenderer {
     pub fn clear(&self) {
         // Lighter dark background for better visibility
         self.gl.clear_color(0.12, 0.12, 0.15, 1.0); // Lighter than too.foo for better contrast
-        self.gl.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT | WebGl2RenderingContext::DEPTH_BUFFER_BIT);
+        self.gl.clear(
+            WebGl2RenderingContext::COLOR_BUFFER_BIT | WebGl2RenderingContext::DEPTH_BUFFER_BIT,
+        );
     }
 
     /// Begin frame
@@ -219,8 +229,14 @@ impl WebGLRenderer {
             self.gl.use_program(Some(program));
 
             // Bind buffers
-            self.gl.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&mesh_buffer.vertex_buffer));
-            self.gl.bind_buffer(WebGl2RenderingContext::ELEMENT_ARRAY_BUFFER, Some(&mesh_buffer.index_buffer));
+            self.gl.bind_buffer(
+                WebGl2RenderingContext::ARRAY_BUFFER,
+                Some(&mesh_buffer.vertex_buffer),
+            );
+            self.gl.bind_buffer(
+                WebGl2RenderingContext::ELEMENT_ARRAY_BUFFER,
+                Some(&mesh_buffer.index_buffer),
+            );
 
             // Set up vertex attributes
             let position_loc = self.gl.get_attrib_location(program, "a_position") as u32;
@@ -230,8 +246,22 @@ impl WebGLRenderer {
             self.gl.enable_vertex_attrib_array(normal_loc);
 
             let stride = 6 * 4; // 6 floats * 4 bytes
-            self.gl.vertex_attrib_pointer_with_i32(position_loc, 3, WebGl2RenderingContext::FLOAT, false, stride, 0);
-            self.gl.vertex_attrib_pointer_with_i32(normal_loc, 3, WebGl2RenderingContext::FLOAT, false, stride, 3 * 4);
+            self.gl.vertex_attrib_pointer_with_i32(
+                position_loc,
+                3,
+                WebGl2RenderingContext::FLOAT,
+                false,
+                stride,
+                0,
+            );
+            self.gl.vertex_attrib_pointer_with_i32(
+                normal_loc,
+                3,
+                WebGl2RenderingContext::FLOAT,
+                false,
+                stride,
+                3 * 4,
+            );
 
             // Set uniforms
             let model_loc = self.gl.get_uniform_location(program, "u_model");
@@ -247,35 +277,57 @@ impl WebGLRenderer {
 
             // Model matrix (identity for now)
             let model = Mat4::IDENTITY;
-            self.gl.uniform_matrix4fv_with_f32_array(model_loc.as_ref(), false, &model.to_cols_array());
+            self.gl.uniform_matrix4fv_with_f32_array(
+                model_loc.as_ref(),
+                false,
+                &model.to_cols_array(),
+            );
 
             // View-projection matrix
             let vp = self.camera.view_projection();
-            self.gl.uniform_matrix4fv_with_f32_array(vp_loc.as_ref(), false, &vp.to_cols_array());
+            self.gl
+                .uniform_matrix4fv_with_f32_array(vp_loc.as_ref(), false, &vp.to_cols_array());
 
             // Normal matrix (upper-left 3x3 of inverse transpose of model)
             let normal_matrix = Mat4::IDENTITY.inverse().transpose();
             let normal_mat3 = [
-                normal_matrix.x_axis.x, normal_matrix.x_axis.y, normal_matrix.x_axis.z,
-                normal_matrix.y_axis.x, normal_matrix.y_axis.y, normal_matrix.y_axis.z,
-                normal_matrix.z_axis.x, normal_matrix.z_axis.y, normal_matrix.z_axis.z,
+                normal_matrix.x_axis.x,
+                normal_matrix.x_axis.y,
+                normal_matrix.x_axis.z,
+                normal_matrix.y_axis.x,
+                normal_matrix.y_axis.y,
+                normal_matrix.y_axis.z,
+                normal_matrix.z_axis.x,
+                normal_matrix.z_axis.y,
+                normal_matrix.z_axis.z,
             ];
-            self.gl.uniform_matrix3fv_with_f32_array(normal_matrix_loc.as_ref(), false, &normal_mat3);
+            self.gl.uniform_matrix3fv_with_f32_array(
+                normal_matrix_loc.as_ref(),
+                false,
+                &normal_mat3,
+            );
 
             // Lighting (brighter for better visibility)
             let light_dir = Vec3::new(0.5, 0.5, 0.7).normalize();
-            self.gl.uniform3f(light_dir_loc.as_ref(), light_dir.x, light_dir.y, light_dir.z);
+            self.gl.uniform3f(
+                light_dir_loc.as_ref(),
+                light_dir.x,
+                light_dir.y,
+                light_dir.z,
+            );
             self.gl.uniform3f(light_color_loc.as_ref(), 1.0, 0.98, 0.95);
             self.gl.uniform3f(ambient_loc.as_ref(), 0.5, 0.5, 0.55); // Much brighter ambient
 
             // Material
-            self.gl.uniform3f(diffuse_loc.as_ref(), color.x, color.y, color.z);
+            self.gl
+                .uniform3f(diffuse_loc.as_ref(), color.x, color.y, color.z);
             self.gl.uniform3f(specular_loc.as_ref(), 0.3, 0.3, 0.3);
             self.gl.uniform1f(shininess_loc.as_ref(), 32.0);
 
             // Camera position
             let cam_pos = self.camera.position();
-            self.gl.uniform3f(camera_pos_loc.as_ref(), cam_pos.x, cam_pos.y, cam_pos.z);
+            self.gl
+                .uniform3f(camera_pos_loc.as_ref(), cam_pos.x, cam_pos.y, cam_pos.z);
 
             // Draw
             self.gl.draw_elements_with_i32(
@@ -370,7 +422,8 @@ fn compile_shader(
     gl.shader_source(&shader, source);
     gl.compile_shader(&shader);
 
-    if gl.get_shader_parameter(&shader, WebGl2RenderingContext::COMPILE_STATUS)
+    if gl
+        .get_shader_parameter(&shader, WebGl2RenderingContext::COMPILE_STATUS)
         .as_bool()
         .unwrap_or(false)
     {
@@ -398,7 +451,8 @@ fn create_shader_program(
     gl.attach_shader(&program, &frag_shader);
     gl.link_program(&program);
 
-    if gl.get_program_parameter(&program, WebGl2RenderingContext::LINK_STATUS)
+    if gl
+        .get_program_parameter(&program, WebGl2RenderingContext::LINK_STATUS)
         .as_bool()
         .unwrap_or(false)
     {

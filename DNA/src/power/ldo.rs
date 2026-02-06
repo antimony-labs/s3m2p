@@ -42,11 +42,7 @@ pub fn check_dropout(vin: f64, vout: f64, dropout: f64) -> bool {
 
 /// Calculate junction temperature
 /// T_j = T_ambient + P_diss * Theta_JA
-pub fn calculate_junction_temperature(
-    p_diss: f64,
-    theta_ja: f64,
-    t_ambient: f64,
-) -> f64 {
+pub fn calculate_junction_temperature(p_diss: f64, theta_ja: f64, t_ambient: f64) -> f64 {
     t_ambient + p_diss * theta_ja
 }
 
@@ -188,7 +184,8 @@ pub fn design_ldo(requirements: &LDORequirements) -> Result<LDODesign, String> {
     let requires_heatsink = t_junction > requirements.max_junction_temp_c - 10.0;
     let heatsink_theta = if requires_heatsink {
         // Calculate required heatsink thermal resistance
-        let target_theta = (requirements.max_junction_temp_c - 10.0 - requirements.ambient_temp_c) / p_diss_max;
+        let target_theta =
+            (requirements.max_junction_temp_c - 10.0 - requirements.ambient_temp_c) / p_diss_max;
         Some(target_theta)
     } else {
         None
@@ -238,8 +235,8 @@ pub fn design_ldo(requirements: &LDORequirements) -> Result<LDODesign, String> {
     // Output cap: 10uF typical for ceramic, need low ESR for stability
     let cout_ideal = calculate_output_capacitance(
         requirements.iout_max,
-        50.0,  // 50us transient response
-        50.0,  // 50mV tolerance
+        50.0, // 50us transient response
+        50.0, // 50mV tolerance
     );
     let cout_selected = next_higher_capacitor(cout_ideal).max(10e-6); // Minimum 10uF
 
@@ -252,13 +249,9 @@ pub fn design_ldo(requirements: &LDORequirements) -> Result<LDODesign, String> {
         .with_tolerance(20.0)
         .with_note(&format!(
             "ESR: {:.3}-{:.3} Ohm for stability",
-            requirements.output_cap_esr_range.0,
-            requirements.output_cap_esr_range.1
+            requirements.output_cap_esr_range.0, requirements.output_cap_esr_range.1
         ))
-        .with_note(&format!(
-            "Voltage rating > {:.1}V",
-            requirements.vout * 1.5
-        ));
+        .with_note(&format!("Voltage rating > {:.1}V", requirements.vout * 1.5));
 
     let input_capacitor = SelectedComponent::new("Cin", cin_ideal, cin_selected, "F")
         .with_tolerance(20.0)
@@ -366,9 +359,15 @@ mod tests {
         println!("LDO Design Summary:");
         println!("  Headroom (min): {:.2}V", design.headroom_min_v);
         println!("  Efficiency (nom): {:.1}%", design.efficiency_nom_percent);
-        println!("  Power dissipation: {:.2}W", design.power_dissipation_max_w);
+        println!(
+            "  Power dissipation: {:.2}W",
+            design.power_dissipation_max_w
+        );
         println!("  Junction temp: {:.1}C", design.thermal.junction_temp_c);
-        println!("  Max thermal current: {:.2}A", design.max_current_thermal_a);
+        println!(
+            "  Max thermal current: {:.2}A",
+            design.max_current_thermal_a
+        );
     }
 
     #[test]
@@ -390,7 +389,10 @@ mod tests {
 
         let design = result.unwrap();
         // Should have thermal warning
-        assert!(design.warnings.iter().any(|w| matches!(w, DesignWarning::ThermalConcern { .. })));
+        assert!(design
+            .warnings
+            .iter()
+            .any(|w| matches!(w, DesignWarning::ThermalConcern { .. })));
         // Should flag heatsink requirement
         assert!(design.thermal.requires_heatsink);
     }
@@ -410,6 +412,9 @@ mod tests {
 
         let design = result.unwrap();
         assert!(!design.meets_dropout);
-        assert!(design.warnings.iter().any(|w| matches!(w, DesignWarning::InsufficientHeadroom { .. })));
+        assert!(design
+            .warnings
+            .iter()
+            .any(|w| matches!(w, DesignWarning::InsufficientHeadroom { .. })));
     }
 }

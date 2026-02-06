@@ -21,10 +21,10 @@ impl StepEntity for CartesianPoint {
         } else {
             write!(w, "$")?;
         }
-        write!(w, ",({:.6},{:.6},{:.6})",
-            self.coordinates[0],
-            self.coordinates[1],
-            self.coordinates[2]
+        write!(
+            w,
+            ",({:.6},{:.6},{:.6})",
+            self.coordinates[0], self.coordinates[1], self.coordinates[2]
         )
     }
 }
@@ -47,10 +47,10 @@ impl StepEntity for Direction {
         } else {
             write!(w, "$")?;
         }
-        write!(w, ",({:.6},{:.6},{:.6})",
-            self.ratios[0],
-            self.ratios[1],
-            self.ratios[2]
+        write!(
+            w,
+            ",({:.6},{:.6},{:.6})",
+            self.ratios[0], self.ratios[1], self.ratios[2]
         )
     }
 }
@@ -59,11 +59,10 @@ impl StepEntity for Direction {
 pub struct Axis2Placement3D {
     pub id: EntityId,
     pub name: Option<String>,
-    pub location: EntityId,      // CARTESIAN_POINT
-    pub axis: Option<EntityId>,  // DIRECTION (Z axis)
+    pub location: EntityId,              // CARTESIAN_POINT
+    pub axis: Option<EntityId>,          // DIRECTION (Z axis)
     pub ref_direction: Option<EntityId>, // DIRECTION (X axis)
 }
-
 
 impl StepEntity for Axis2Placement3D {
     fn entity_name(&self) -> &'static str {
