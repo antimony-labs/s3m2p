@@ -30,11 +30,11 @@ cmd_up() {
         local pids=()
 
         # Define project groups
-        local -a MAIN_PROJECTS=(welcome helios blog arch mcad)
+        local -a MAIN_PROJECTS=(welcome helios blog arch mcad atlas)
         local -a ML_PROJECTS=(learn)
-        local -a LEARN_PROJECTS=(ubuntu esp32 slam ai opencv arduino swarm python)
-        local -a TOOLS_PROJECTS=(pll autocrate sensors power)
-        local -a SIM_PROJECTS=(chladni coming_soon)
+        local -a LEARN_PROJECTS=(ubuntu esp32 slam ai opencv arduino swarm python git ds)
+        local -a TOOLS_PROJECTS=(pll autocrate sensors power spice)
+        local -a SIM_PROJECTS=(chladni handtrack powerlaw)
 
         # Function to start a project
         start_project() {
@@ -152,6 +152,9 @@ case "${1:-}" in
         shift
         cmd_deploy "$@"
         ;;
+    dashboard)
+        python3 "$SCRIPT_DIR/dashboard.py"
+        ;;
     check)
         cargo check --workspace
         ;;
@@ -160,6 +163,7 @@ case "${1:-}" in
         echo ""
         echo "Commands:"
         echo "  up [app]    Start dev servers (default: all)"
+        echo "  dashboard   Launch web dashboard on port 9000"
         echo "  test        Run unit & integration tests"
         echo "  deploy      Deploy to Cloudflare"
         echo "  check       Run cargo check"
