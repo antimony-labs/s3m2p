@@ -471,7 +471,9 @@ mod tests {
     fn test_feed_from_sources_out_of_range() {
         let mut arena: BoidArena<100> = BoidArena::new();
         let genes = Genome::default();
-        let idx = arena.spawn(Vec2::new(500.0, 500.0), Vec2::ZERO, genes).index as usize;
+        let idx = arena
+            .spawn(Vec2::new(500.0, 500.0), Vec2::ZERO, genes)
+            .index as usize;
         arena.energy[idx] = 50.0;
 
         let mut food_sources = vec![FoodSource::new(50.0, 50.0)];
@@ -525,10 +527,7 @@ mod tests {
 
         trigger_earthquake(&mut arena);
 
-        assert!(
-            arena.energy[idx] < 100.0,
-            "Earthquake should drain energy"
-        );
+        assert!(arena.energy[idx] < 100.0, "Earthquake should drain energy");
         // Velocity should be randomized (unlikely to stay at exactly zero)
         let vel = arena.velocities[idx];
         assert!(
@@ -616,9 +615,21 @@ mod tests {
         let (hue, sat, lightness) = get_boid_color(&arena, idx);
 
         // Herbivore default: hue ~120 (green), sat ~70
-        assert!(hue >= 100 && hue <= 160, "Herbivore hue should be green range, got {}", hue);
-        assert!(sat >= 50 && sat <= 100, "Saturation should be in valid range, got {}", sat);
-        assert!(lightness >= 25 && lightness <= 80, "Lightness should scale with energy, got {}", lightness);
+        assert!(
+            hue >= 100 && hue <= 160,
+            "Herbivore hue should be green range, got {}",
+            hue
+        );
+        assert!(
+            sat >= 50 && sat <= 100,
+            "Saturation should be in valid range, got {}",
+            sat
+        );
+        assert!(
+            lightness >= 25 && lightness <= 80,
+            "Lightness should scale with energy, got {}",
+            lightness
+        );
     }
 
     #[test]
@@ -630,7 +641,10 @@ mod tests {
         for _ in 0..1000 {
             food.consume(1.0);
         }
-        assert!(food.is_depleted(), "Food should be depleted after heavy consumption");
+        assert!(
+            food.is_depleted(),
+            "Food should be depleted after heavy consumption"
+        );
 
         // Regenerate
         for _ in 0..200 {
@@ -653,7 +667,11 @@ mod tests {
 
         // Summer should have high food multiplier
         let mult = season.food_multiplier();
-        assert!(mult > 1.0, "Summer food multiplier should be high, got {}", mult);
+        assert!(
+            mult > 1.0,
+            "Summer food multiplier should be high, got {}",
+            mult
+        );
     }
 
     #[test]
@@ -665,6 +683,9 @@ mod tests {
         for _ in 0..1000 {
             zone.update(1.0);
         }
-        assert!(!zone.active, "Predator zone should deactivate after lifetime");
+        assert!(
+            !zone.active,
+            "Predator zone should deactivate after lifetime"
+        );
     }
 }
