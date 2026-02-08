@@ -62,3 +62,4 @@ nerd-dictation/
 # Coverage
 lcov.info
 tarpaulin-report.html
+SCRIPTS/__pycache__

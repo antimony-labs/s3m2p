@@ -45,6 +45,8 @@ declare -A PROJECT_PORTS=(
     ["python"]="8110"
     ["mcad"]="8088"
     ["atlas"]="8089"
+    ["powerlaw"]="8122"
+    ["spice"]="8123"
 )
 
 # Project Directory Mappings (Relative to REPO_ROOT)
@@ -72,6 +74,8 @@ declare -A PROJECT_DIRS=(
     ["python"]="LEARN/PYTHON"
     ["mcad"]="MCAD"
     ["atlas"]="ATLAS"
+    ["powerlaw"]="SIMULATION/POWERLAW"
+    ["spice"]="TOOLS/SPICE"
 )
 
 # Cloudflare Pages Project Names (Mapping from config keys)

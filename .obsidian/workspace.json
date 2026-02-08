@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "CLAUDE.md",
+                "file": "REFACTOR.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "CLAUDE"
+              "title": "REFACTOR"
             }
           }
         ]
@@ -183,20 +183,24 @@
       "bases:Create new base": false
     }
   },
-  "active": "f503d2d0570ad7d3",
+  "active": "8175e23c48409267",
   "lastOpenFiles": [
+    "target/wasm32-unknown-unknown/debug/incremental/helios-11ri7ysovzqct/s-hfka9tfqhv-1skahzt-1qgn7cdsiklgxrulke69yaple/work-products.bin",
+    "target/wasm32-unknown-unknown/debug/incremental/helios-11ri7ysovzqct/s-hfka9tfqhv-1skahzt-1qgn7cdsiklgxrulke69yaple/query-cache.bin",
+    "target/wasm32-unknown-unknown/debug/incremental/helios-11ri7ysovzqct/s-hfka9tfqhv-1skahzt-1qgn7cdsiklgxrulke69yaple/f4ko7qq4sv9r5mdhajfxwhqxq.o",
+    "target/wasm32-unknown-unknown/debug/incremental/helios-11ri7ysovzqct/s-hfka9tfqhv-1skahzt-1qgn7cdsiklgxrulke69yaple/f2y92j6k0asniz9m9scxwuxtr.o",
+    "target/wasm32-unknown-unknown/debug/incremental/helios-11ri7ysovzqct/s-hfka9tfqhv-1skahzt-1qgn7cdsiklgxrulke69yaple/f2vz036lq1ku7ndyomr0z1fje.o",
+    "target/wasm32-unknown-unknown/debug/incremental/helios-11ri7ysovzqct/s-hfka9tfqhv-1skahzt-1qgn7cdsiklgxrulke69yaple/f2eww3n67qxd58lg03ip1m8hv.o",
+    "target/wasm32-unknown-unknown/debug/incremental/helios-11ri7ysovzqct/s-hfka9tfqhv-1skahzt-1qgn7cdsiklgxrulke69yaple/ey84mm0gov0w4ql3ck9lzruzr.o",
+    "target/wasm32-unknown-unknown/debug/incremental/helios-11ri7ysovzqct/s-hfka9tfqhv-1skahzt-1qgn7cdsiklgxrulke69yaple/evc0h7x09ztwm67b250kiqona.o",
+    "target/wasm32-unknown-unknown/debug/incremental/helios-11ri7ysovzqct/s-hfka9tfqhv-1skahzt-1qgn7cdsiklgxrulke69yaple/esn2856jm5227zumc51c1jltm.o",
+    "target/wasm32-unknown-unknown/debug/incremental/helios-11ri7ysovzqct/s-hfka9tfqhv-1skahzt-1qgn7cdsiklgxrulke69yaple/erbzli5vzy3o2dkcvs4hupua2.o",
+    "target/wasm32-unknown-unknown/debug/incremental/helios-11ri7ysovzqct/s-hfka9tfqhv-1skahzt-1qgn7cdsiklgxrulke69yaple/eoywj0narsvlxsz3qfy6qwrwl.o",
     "PLANNER.md",
-    "target/debug/incremental/welcome-192bvg7x8xbdk/s-hdt5js6gno-068tayz-18spqgfxqtgle187gbas3uahg/work-products.bin",
-    "target/debug/incremental/welcome-192bvg7x8xbdk/s-hdt5js6gno-068tayz-18spqgfxqtgle187gbas3uahg/query-cache.bin",
-    "target/debug/incremental/welcome-192bvg7x8xbdk/s-hdt5js6gno-068tayz-18spqgfxqtgle187gbas3uahg/dep-graph.bin",
-    "target/debug/incremental/welcome-192bvg7x8xbdk/s-hdt5js6gno-068tayz-18spqgfxqtgle187gbas3uahg",
-    "target/debug/incremental/welcome-1tp8j0qluh8rr/s-hdt5js6gno-1tx56gu-9ecmn2spr9211laxgphcxdhhp/work-products.bin",
-    "target/debug/incremental/welcome-1tp8j0qluh8rr/s-hdt5js6gno-1tx56gu-9ecmn2spr9211laxgphcxdhhp/query-cache.bin",
-    "target/debug/incremental/welcome-1tp8j0qluh8rr/s-hdt5js6gno-1tx56gu-9ecmn2spr9211laxgphcxdhhp/dep-graph.bin",
-    "target/debug/incremental/welcome-1tp8j0qluh8rr/s-hdt5js6gno-1tx56gu-9ecmn2spr9211laxgphcxdhhp",
-    "target/debug/incremental/welcome-192bvg7x8xbdk/s-hdt5js6gno-068tayz-working/work-products.bin",
-    "target/debug/incremental/welcome-192bvg7x8xbdk/s-hdt5js6gno-068tayz-working/query-cache.bin",
+    "NETWORK_DEV.md",
+    "KILO.md",
     "FIELD_MANUAL.md",
+    "CLAUDE.md",
     "HELIOS/CLAUDE.md",
     "ARCH/CLAUDE.md"
   ]
